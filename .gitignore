@@ -1,7 +1,7 @@
 *.RData
 *.Rhistory
-.csv
-.txt
+*.csv
+*.txt
 /Data
 data/
 .Rproj.user
