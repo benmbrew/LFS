@@ -1,6 +1,7 @@
-
-
-# Data 
-*.txt 
-*.csv
 *.RData
+*.Rhistory
+.csv
+.txt
+/Data
+data/
+.Rproj.user
