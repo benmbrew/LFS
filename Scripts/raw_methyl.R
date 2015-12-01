@@ -1,6 +1,6 @@
 ###################################################
 # this script is for reading in raw methylation files. 
-setwd('/home/benbrew/Documents/li_fraumeni/Data/')
+setwd('/home/benbrew/Documents/LFS/Data/')
 library(dplyr)
 
 
@@ -10,7 +10,7 @@ if("raw_methylation.RData" %in% dir()){
 # Load libraries
 # Initialize folders
 home_folder <- '/home/benbrew/Documents'
-project_folder <- paste(home_folder, 'li_fraumeni', sep = '/')
+project_folder <- paste(home_folder, 'LFS', sep = '/')
 data_folder <- paste(project_folder, 'Data', sep = '/')
 methyl_data <- paste(data_folder, 'methyl_files/', sep = '/')
 data_name <- 'Chr'
