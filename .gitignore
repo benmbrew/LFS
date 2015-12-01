@@ -1,16 +1,6 @@
-# History files
-.Rhistory
-.Rapp.history
 
-# RStudio files
-.Rproj.user/
-
-# produced vignettes
-vignettes/*.html
-vignettes/*.pdf
 
 # Data 
-Data 
 *.txt 
 *.csv
 *.RData
