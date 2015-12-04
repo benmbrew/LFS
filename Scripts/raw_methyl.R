@@ -24,21 +24,25 @@ num_sets <- 23
 dat <-  vector('list', num_sets)
 
 # read in raw methylation files. 
-for(i in (1:num_sets)[-13]){
+for(i in (1:num_sets)){
   dat[[i]] <- read.delim(paste(methyl_data, data_name, i, '.txt', sep = ''))
 }
 
 # save Rdata file 
-setwd('/home/benbrew/Documents/li_fraumeni/Data')
+setwd('/home/benbrew/Documents/LFS/Data')
 save.image('raw_methylation.RData')
 }
-
 ### examine elements of the dat list that have ch.i as a column 
+
+### Clean dates in clinical data, column V11
 
 ####################################################
 # Make a list to store the concatenated clinical ids that have a methylation id within it
 # subset clinical data by methylation data from nardin.
 
+if("clinical.RData" %in% dir()){
+  load("clinical.RData")
+}else{
 # helper functions
 is.NullOb <- function(x) is.null(x) | all(sapply(x, is.null))
 rmNullObs <- function(x) {
@@ -144,10 +148,6 @@ clin_raw <- clinMatch(clin, id_raw[[1]])
 colnames(clin_raw) <- c("id", "tp53", "cancer", "cancer_indicator", "age_of_onset",
                            "gdna", "protein", "codon_72", "pin_3", "mdm2","date", "gender")
 
-cancers <- clin_raw %>%
-  group_by(as.factor(cancer)) %>%
-  summarise(counts = n())
-
 ################################################################################################
 # ids raw methylation data with ids from nardine's methylation data by comparing id_methyl and 
 # id_raw[[1]]. Because there are repeating ids in id_raw[[1]], check to see how many id_methyl 
@@ -167,8 +167,10 @@ clin_full <- rbind(clin_raw, clin_methyl[!clin_methyl$id %in% clin_raw$id,])
 id_17 <- methyl_17[1,]
 id_17 <- as.character(id_17[which(!is.na(id_17))])
 
-# subset clin by these ids 
-clin_17 <- clin[clin$V1 %in% id_17,]
+# apply clinMatch to 17 methylation data
+clin_17 <- clinMatch(clin, id_17)
+
+
 # the ids across all sets are identical. See which one of these matches with malkin ids
 colnames(clin_17) <- c("id", "tp53", "cancer", "cancer_indicator", "age_of_onset",
                         "gdna", "protein", "codon_72", "pin_3", "mdm2","date", "gender")
@@ -182,11 +184,57 @@ id_full_overlap <- id_17[clin_17$id %in% clin_full$id] # 12 of id_17 are in clin
 id_full_extra <- id_17[!clin_17$id %in% clin_full$id] # 6 of 1d_17 are not in clin_full
 
 # combine clin_17 and clin_full using by rbinding the observations not in clin_raw to clin_raw
-clin_full <- rbind(clin_full, clin_17[!clin_17$id %in% clin_full$id,]) # 6 were added 
+clin_full <- rbind(clin_full, clin_17[!clin_17$id %in% clin_full$id,]) # 6 were added
+
+setwd('/home/benbrew/Documents/LFS/Data')
+save.image('clinical.RData')
+}
 
 # now group by cancer and summarise to get stats 
-cancers_full <- clin_full %>%
+cancers <- clin_full %>%
   group_by(as.factor(cancer), tp53) %>%
   summarise(n = n())
 
-# check if the remanining of the 139 are for sure not in malkin ids. 
+# Avegage age for each cancer and tp53 status 
+age <- clin_full %>%
+  group_by(as.factor(cancer), tp53) %>%
+  summarise(mean_age = mean(age_of_onset, na.rm = T))
+
+# Cancer by gender 
+gender <- clin_full %>% 
+  group_by(cancer) %>%
+  summarise(female = sum(gender == 1, na.rm = T),
+            male = sum(gender == 0, na.rm = T))
+            
+
+###########################################################################################
+# # read in full clinical data 
+# full_clin <- read.csv('full_clin.csv')
+# 
+# # get ids from full clin and compare to methylation data
+# full_clin_ids <- as.character(full_clin[,2])
+# 
+# # first check if clin ids are in full clin. 
+# clin_ids <- as.character(clin[,1])
+# clin_ids %in% full_clin_ids
+# 
+# # not all clin_ids are in full_clin_ids which is odd. Examine those ones closer 
+# clin_none <- clin[!clin_ids %in% full_clin_ids,]
+# full_clin_none <- full_clin[!full_clin_ids %in% clin_ids,]
+# 
+# # Use clinMatch to match methylation data ids with full_clin ids 
+# # first remove first column of full_clin, so that the new first column is the id, 
+# # as the function needs. replace column name with V1 as well. 
+# full_clin <- full_clin[,-1]
+# colnames(full_clin)[1] <- 'V1'
+# 
+# full_clin_methyl <- clinMatch(full_clin, id_methyl)
+# full_clin_raw <- clinMatch(full_clin, id_raw[[1]])
+# full_clin_17 <- clinMatch(full_clin, id_17)
+# 
+# # combine these three data sets without creating duplicates. 
+# full_clin_total <- rbind(full_clin_raw, full_clin_17[!full_clin_17$V1 %in% full_clin_raw$V1,])
+# full_clin_total <- rbind(full_clin_total, full_clin_methyl[!full_clin_methyl$V1 %in% full_clin_raw$V1,])
+# 
+# # full_clin_total has 57 IDs. How many of these are in clin_full
+# clin_match <- full_clin_total[!full_clin_total$V1 %in% clin_full$id,]
