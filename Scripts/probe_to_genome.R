@@ -4,7 +4,8 @@
 library(minfi)
 library(affy)
 library(ArrayExpress)
-
+library(annotate)
+library(hgu133a.db)
 # Initialize folders
 home_folder <- '/home/benbrew/Documents'
 project_folder <- paste(home_folder, 'LFS', sep = '/')
@@ -16,6 +17,10 @@ load('cleaned.RData')
 
 # transopse methylation data so that probes are rows and columns are ids
 methylation_raw <- as.data.frame(t(methylation_raw), stringsAsFactors = FALSE)
+
+PROBES<- as.character(FCMATRIX$probe)
+
+OUT <- select(rat2302.db, PROBES, c("SYMBOL", "ENTREZID", "GENENAME"))
 
 # Make the first row column names
 colnames(methylation_raw) <- methylation_raw[1,]
