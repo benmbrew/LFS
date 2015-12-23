@@ -3,12 +3,13 @@
 # Initialize folders
 home_folder <- '/home/benbrew/Documents'
 project_folder <- paste(home_folder, 'LFS', sep = '/')
-data_folder <- paste(project_folder, 'Data', sep = '/')
-methyl_data <- paste(data_folder, 'methyl_files/', sep = '/')
+data_folder <- paste(project_folder, 'Data/', sep = '/')
+clin_data <- paste(data_folder, 'clin_data', sep ='/')
+methyl_data <- paste(data_folder, 'methyl_data/', sep = '/')
 data_name <- 'Chr'
 
 # Read in clinical data 
-clin <- read.csv(paste(data_folder, 'clin_all.csv', sep = '/'), header = FALSE)
+clin <- read.csv(paste(data_folder, 'clin_all.csv', sep = ''), header = FALSE)
 
 # Identify rows with two ids and create a new row for each one. One row has 
 # duplicates 1087 and 1087/1094
@@ -29,6 +30,8 @@ data <- data[!grepl('/', data$V1),]
 duplicates$V1 <- NULL
 colnames(duplicates)[1] <- 'V1'
 data <- rbind(data, duplicates)
+rownames(data) <- NULL
+return(data)
 
 }
 duplicates <- data.frame(matrix(ncol = 12, nrow = 0))
@@ -36,6 +39,7 @@ clin <- splitClinRows(clin, duplicates)
 
 # There is a duplicate id 1087. remove the first one because it has less data in row 62
 clin <- clin[!duplicated(clin$V1, fromLast = TRUE),]
+rownames(clin) <- NULL
 
 # name columns according to the tables in google drive  
 colnames(clin) <- c("id", "tp53", "cancer", "cancer_indicator", "age_of_onset",
@@ -62,11 +66,15 @@ clin$gender <- as.factor(clin$gender)
 clin$mdm2 <- as.character(clin$mdm2)
 clin$mdm2 <- as.factor(ifelse(clin$mdm2 == '', 'missing', clin$mdm2)) 
 
+# write clin to data_folder so it can be loaded to database
+write.csv(clin, paste(clin_data,'clinical.csv', sep ='/'), row.names = FALSE)
+
 #####################################################################
 
 # Read in methylation data 
-methylation24 <- read.table(paste(data_folder,'methyl.txt', sep = '/'), header = TRUE)
-methylation17 <- read.csv(paste(data_folder, 'methyl_17.csv', sep = '/'), header = TRUE)
+methylation24 <- read.table(paste(data_folder,'methyl.txt', sep = ''), header = TRUE)
+methylation17 <- read.csv(paste(data_folder, 'methyl_17.csv', sep = ''), header = TRUE)
+
 
 
 # Change into format so that it can be combined with clin 
@@ -80,6 +88,7 @@ cleanMethyl <- function(data){
   split <- strsplit(as.character(data$id), 'X')
   last_split <- lapply(split, function(x) x[length(x)])
   data$id <- unlist(last_split)
+  data <- t(data)
   return(data)
   
 }
@@ -93,7 +102,8 @@ methylation_raw <-  vector('list', num_sets)
 
 # read in raw methylation files. 
 for(i in (1:num_sets)){
-  methylation_raw[[i]] <- read.delim(paste(methyl_data, data_name, i, '.txt', sep = ''))
+  methylation_raw[[i]] <- read.delim(paste(data_folder, data_name, i, '.txt', sep = ''))
+  
 }
 
 # Aggregate list 
@@ -112,13 +122,42 @@ combineMethyl <- function(methylation_data, num_sets){
     }
   }
   methylation <- do.call('cbind', methylation_data)
-  return(methylation)
+  methylation <- as.data.frame(t(methylation), stringsAsFactors = FALSE)
+  data <- cbind(x = rownames(methylation), methylation)
+  colnames(data) <- data[1,]
+  data <- data[-1,]
+  names(data)[1] <- 'probe'
+  rownames(data) <- NULL  
+  return(data)
 }
 
-methylation_raw <- combineMethyl(methylation_raw, num_sets)
+
+methylation <- combineMethyl(methylation_raw, num_sets)
+
+cleanProbe <- function(data){
+  for(i in 2:ncol(data)){
+  data[,i] <- as.numeric(data[,i])
+  }
+data <- data[!grepl('ch', data$probe),]
+data <- data[!grepl('_', data$probe),]
+colnames(data) <- gsub('-', '_', colnames(data))
+rownames(data) <- NULL
+data <- data[data$probe != 'X.1',]
+
+return(data)
+}
+
+methylation <- cleanProbe(methylation)
+
+# Clean raw methylation- getting rid of Ch information and blanks
+
+# write methylation_raw to methyl_data folder as csv
+write.csv(methylation, paste(methyl_data, 'methylation.csv', sep = ''), row.names= FALSE)
 
 # save data image
 rm(duplicates)
 setwd('/home/benbrew/Documents/LFS/Data')
 save.image('cleaned.RData')
+
+
 
