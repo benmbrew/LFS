@@ -34,4 +34,6 @@ rownames(probe_info) <- NULL
 # join probe_info with methylation. 
 methyl_gene <- left_join(methylation, probe_info, by = 'probe')
 
+# Keep only the relevant variables.
+
 

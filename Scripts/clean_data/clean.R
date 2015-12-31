@@ -57,8 +57,10 @@ clin$protein <- as.factor(ifelse(clin$protein == 'N/A', 'missing',
 
 clin$codon_72 <- as.character(clin$codon_72)
 clin$codon_72 <- as.factor(ifelse(clin$codon_72 == 'arg?', 'missing',
-                                       ifelse(clin$codon_72 == 'arg homo', 'arg/arg',
-                                              ifelse(clin$codon_72 == '', 'missing', clin$codon_72))))
+                                  ifelse(clin$codon == 'arg pro', 'arg/pro',
+                                         ifelse(clin$codon == 'arg/pro?', 'arg/pro',
+                                              ifelse(clin$codon_72 == 'arg homo', 'arg/arg',
+                                                  ifelse(clin$codon_72 == '', 'missing', clin$codon_72))))))
 
 clin$gender<- as.factor(ifelse(clin$gender == 1, 'female', 'male'))
 clin$gender <- as.factor(clin$gender)
