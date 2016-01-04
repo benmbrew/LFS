@@ -7,23 +7,23 @@ library(FDb.InfiniumMethylation.hg19)
 library(dplyr)
 # Initialize folders
 home_folder <- '/home/benbrew/Documents'
-project_folder <- paste(home_folder, 'LFS', sep = '/')
-data_folder <- paste(project_folder, 'Data', sep = '/')
+project_folder <- paste0(home_folder, '/LFS')
+data_folder <- paste0(project_folder, '/Data')
 
 # set working directory and load data 
 setwd(data_folder)
 load('cleaned.RData')
 
-# Load the 450k data from hg19
+# Load the 450k data from hg19 (bioconductor, library is FDb.InfiniumMethylation.hg19)
 hm450 <- get450k()
 
-# Get probe names 
+# Get probe names from our methylation data  
 probe_names <- as.character(methylation$probe)
 
 # remove probes that have less than 10 characters.
 probe_names <- probe_names[nchar(probe_names) ==10]
 
-# subset probes that do not have cg
+# get probes from hm450
 probes <- hm450[probe_names]
 
 #get the nearest gene to each probe location.
@@ -31,9 +31,19 @@ probe_info <- getNearestGene(probes)
 probe_info <- cbind(probe = rownames(probe_info), probe_info)
 rownames(probe_info) <- NULL
 
-# join probe_info with methylation. 
-methyl_gene <- left_join(methylation, probe_info, by = 'probe')
+# join probe_info with methylation. This keeps all of the probes that we could match in hm450 and drops the others.
+methyl_gene <- left_join(probe_info, methylation, by = 'probe')
 
-# Keep only the relevant variables.
+# Get rid of extra variables.
+methyl_gene$probe <- NULL
+methyl_gene$queryHits <- NULL
+methyl_gene$subjectHits <- NULL
+methyl_gene$distance<- NULL
+
+
+
+
+
+
 
 

@@ -1,41 +1,41 @@
 ## Script for reading, cleaning, and combining methylation data and clinical data.
+library(data.table)
 
 # Initialize folders
 home_folder <- '/home/benbrew/Documents'
-project_folder <- paste(home_folder, 'LFS', sep = '/')
-data_folder <- paste(project_folder, 'Data/', sep = '/')
-clin_data <- paste(data_folder, 'clin_data', sep ='/')
-methyl_data <- paste(data_folder, 'methyl_data/', sep = '/')
-data_name <- 'Chr'
+project_folder <- paste0(home_folder, '/LFS')
+data_folder <- paste0(project_folder, '/Data')
+clin_data <- paste0(data_folder, '/clin_data')
+methyl_data <- paste0(data_folder, '/methyl_data')
+data_name <- '/Chr'
 
 # Read in clinical data 
-clin <- read.csv(paste(data_folder, 'clin_all.csv', sep = ''), header = FALSE)
+clin <- read.csv(paste(data_folder, '/clin_all.csv', sep = ''), header = FALSE)
 
 # Identify rows with two ids and create a new row for each one. One row has 
 # duplicates 1087 and 1087/1094
 
-splitClinRows <- function(data, duplicates){
+splitRows <- function(data, duplicate_table){
   
   for (i in 1:nrow(data)){
-  sub_data <- data[i,]
-  if(grepl('/', sub_data$V1)){
-    split_id <- strsplit(as.character(sub_data$V1), '/')
-    split_id <- cbind(unlist(split_id))
-    duplicate <- cbind(split_id, sub_data)
-    duplicates <- rbind(duplicates, duplicate)
-  }
+    sub_data <- data[i,]
+      if(grepl('/', sub_data$V1)){
+        split_id <- strsplit(as.character(sub_data$V1), '/')
+        split_id <- cbind(unlist(split_id))
+        duplicate <- cbind(split_id, sub_data)
+        duplicate_table <- rbind(duplicate_table, duplicate)
+      }
   
-}
-data <- data[!grepl('/', data$V1),]
-duplicates$V1 <- NULL
-colnames(duplicates)[1] <- 'V1'
-data <- rbind(data, duplicates)
-rownames(data) <- NULL
-return(data)
+  }
+  data <- data[!grepl('/', data$V1),]
+  duplicate_table$V1 <- NULL
+  colnames(duplicate_table)[1] <- 'V1'
+  data <- rbind(data, duplicate_table)
+  return(data)
 
 }
-duplicates <- data.frame(matrix(ncol = 12, nrow = 0))
-clin <- splitClinRows(clin, duplicates)
+empty_table <- data.frame(matrix(ncol = ncol(clin), nrow = 0))
+clin <- splitRows(clin, empty_table)
 
 # There is a duplicate id 1087. remove the first one because it has less data in row 62
 clin <- clin[!duplicated(clin$V1, fromLast = TRUE),]
@@ -74,8 +74,8 @@ write.csv(clin, paste(clin_data,'clinical.csv', sep ='/'), row.names = FALSE)
 #####################################################################
 
 # Read in methylation data 
-methylation24 <- read.table(paste(data_folder,'methyl.txt', sep = ''), header = TRUE)
-methylation17 <- read.csv(paste(data_folder, 'methyl_17.csv', sep = ''), header = TRUE)
+methylation24 <- read.table(paste(data_folder,'/methyl.txt', sep = ''), header = TRUE)
+methylation17 <- read.csv(paste(data_folder, '/methyl_17.csv', sep = ''), header = TRUE)
 
 
 
@@ -90,7 +90,6 @@ cleanMethyl <- function(data){
   split <- strsplit(as.character(data$id), 'X')
   last_split <- lapply(split, function(x) x[length(x)])
   data$id <- unlist(last_split)
-  data <- t(data)
   return(data)
   
 }
@@ -109,7 +108,7 @@ for(i in (1:num_sets)){
 }
 
 # Aggregate list 
-# Attach methylation data to clin_full 
+# Attach methylation data to clin_full
 combineMethyl <- function(methylation_data, num_sets){
   
   for (i in 1:num_sets){
@@ -138,13 +137,13 @@ methylation <- combineMethyl(methylation_raw, num_sets)
 
 cleanProbe <- function(data){
   for(i in 2:ncol(data)){
-  data[,i] <- as.numeric(data[,i])
+    data[,i] <- as.numeric(data[,i])
   }
-data <- data[!grepl('ch', data$probe),]
-data <- data[!grepl('_', data$probe),]
-colnames(data) <- gsub('-', '_', colnames(data))
-rownames(data) <- NULL
-data <- data[data$probe != 'X.1',]
+  data <- data[!grepl('ch', data$probe),]
+  data <- data[!grepl('_', data$probe),]
+  colnames(data) <- gsub('-', '_', colnames(data))
+  rownames(data) <- NULL
+  data <- data[data$probe != 'X.1',]
 
 return(data)
 }
@@ -154,10 +153,10 @@ methylation <- cleanProbe(methylation)
 # Clean raw methylation- getting rid of Ch information and blanks
 
 # write methylation_raw to methyl_data folder as csv
-write.csv(methylation, paste(methyl_data, 'methylation.csv', sep = ''), row.names= FALSE)
+write.csv(methylation, paste(methyl_data, '/methylation.csv', sep = ''), row.names= FALSE)
 
 # save data image
-rm(duplicates)
+rm(empty_table)
 setwd('/home/benbrew/Documents/LFS/Data')
 save.image('cleaned.RData')
 
