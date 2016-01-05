@@ -1,6 +1,6 @@
 ##### This script maps cgp probe sites to nearest genome using the fdb.infiniumMethylation.hg19 data
 # base, and primarily, the getNearestGene function.
-
+library(data.table)
 library(FDb.InfiniumMethylation.hg19)
 library(dplyr)
 
@@ -9,6 +9,10 @@ home_folder <- '/home/benbrew/Documents'
 project_folder <- paste0(home_folder, '/LFS')
 data_folder <- paste0(project_folder, '/Data')
 methyl_data <- paste0(data_folder, '/methyl_data')
+
+#################################################################
+# Read in cleaned methylation data and match with hm450
+#################################################################
 
 # Read in methylation data 
 methylation <- read.csv(paste0(methyl_data, '/methylation.csv'), header = TRUE, check.names = FALSE)
@@ -38,6 +42,16 @@ methyl_gene$probe <- NULL
 methyl_gene$queryHits <- NULL
 methyl_gene$subjectHits <- NULL
 methyl_gene$distance<- NULL
+
+###################################################################
+# Transpose data and put in formate for analysis
+###################################################################
+# break data into 100 data sets into a list 
+
+n <- methyl_gene$nearestGeneSymbol
+temp <- as.data.frame(t(methyl_gene))
+names(temp)<- n
+temp <-
 
 
 
