@@ -43,17 +43,30 @@ methyl_gene$queryHits <- NULL
 methyl_gene$subjectHits <- NULL
 methyl_gene$distance<- NULL
 
+# add _1 duplicate ids 
+for(i in ncol(methyl_gene):1){
+  if(names(methyl_gene[i]) %in% names(methyl_gene)[duplicated(names(methyl_gene), fromLast = FALSE)]){
+     names(methyl_gene)[i] <- paste0(names(methyl_gene)[i], '_dup')
+    }
+}
+
+# get rid of duplicate columns names 
+# temp <- methyl_gene[, !duplicated(colnames(methyl_gene))]
+
+# group by gene and sum probe values. 
+methyl_summarised <- methyl_gene %>%
+  group_by(nearestGeneSymbol) %>%
+  summarise_each(funs(sum))
+
 ###################################################################
 # Transpose data and put in formate for analysis
 ###################################################################
-# break data into 100 data sets into a list 
-
-n <- methyl_gene$nearestGeneSymbol
-temp <- as.data.frame(t(methyl_gene))
-names(temp)<- n
-temp <-
-
-
+# n <- methyl_summarised$nearestGeneSymbol
+# methyl <- as.data.frame(t(methyl_summarised))
+# names(methyl)<- n
+# methyl <- cbind(x = rownames(methyl), methyl)
+# methyl <- methyl[-1,]
+# names(methyl)[1] <- 'ID'
 
 
 
