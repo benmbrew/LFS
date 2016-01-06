@@ -1,6 +1,5 @@
 ##### This script maps cgp probe sites to nearest genome using the fdb.infiniumMethylation.hg19 data
 # base, and primarily, the getNearestGene function.
-library(data.table)
 library(FDb.InfiniumMethylation.hg19)
 library(dplyr)
 
@@ -24,7 +23,7 @@ hm450 <- get450k()
 probe_names <- as.character(methylation$Probe)
 
 # remove probes that have less than 10 characters.
-probe_names <- probe_names[nchar(probe_names) ==10]
+probe_names <- probe_names[nchar(probe_names) == 10]
 
 # get probes from hm450
 probes <- hm450[probe_names]
@@ -45,7 +44,7 @@ methyl_gene$distance<- NULL
 
 # add _1 duplicate ids 
 for(i in ncol(methyl_gene):1){
-  if(names(methyl_gene[i]) %in% names(methyl_gene)[duplicated(names(methyl_gene), fromLast = FALSE)]){
+  if(names(methyl_gene)[i] %in% names(methyl_gene)[duplicated(names(methyl_gene), fromLast = FALSE)]){
      names(methyl_gene)[i] <- paste0(names(methyl_gene)[i], '_dup')
     }
 }
@@ -56,18 +55,36 @@ for(i in ncol(methyl_gene):1){
 # group by gene and sum probe values. 
 methyl_summarised <- methyl_gene %>%
   group_by(nearestGeneSymbol) %>%
-  summarise_each(funs(sum))
+  summarise_each(funs(mean))
 
 ###################################################################
 # Transpose data and put in formate for analysis
 ###################################################################
-# n <- methyl_summarised$nearestGeneSymbol
-# methyl <- as.data.frame(t(methyl_summarised))
-# names(methyl)<- n
-# methyl <- cbind(x = rownames(methyl), methyl)
-# methyl <- methyl[-1,]
-# names(methyl)[1] <- 'ID'
+col_names <- methyl_summarised$nearestGeneSymbol
+methyl <- as.data.frame(t(methyl_summarised))
+names(methyl)<- col_names
+methyl <- cbind(x = rownames(methyl), methyl) 
+methyl <- methyl[2:nrow(methyl),]
+names(methyl)[1] <- 'ID'
+rownames(methyl) <- NULL
+methyl[, 2:ncol(methyl)] <-
+  apply(methyl[,2:ncol(methyl)], 2, function(x){as.numeric(as.character(x))})
+methyl <- as.data.frame(methyl)
 
+write.csv(methyl, paste0(methyl_data, '/methyl.csv'))
+
+# library(IlluminaHumanMethylation27k.db)
+# ProbeToSymbol <- IlluminaHumanMethylation27kSYMBOL
+# mapped_probes <- mappedkeys(ProbeToSymbol)
+# mapped_probes_List <- as.list(ProbeToSymbol[mapped_probes])
+# list <- do.call('rbind', mapped_probes_List)
+# list <- cbind(rownames(list), list)
+# rownames(list) <- NULL
+# list <- as.data.frame(list)
+# 
+# same <- list[list$V2 %in% prprobe_info$nearestGeneSymbol,]
+# probes <- probe_info[probe_info$nearestGeneSymbol == 'HOXD3',] 
+# probes2 <- list[list$V2 == 'HOXD3',]
 
 
 
