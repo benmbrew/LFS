@@ -42,7 +42,7 @@ methyl_gene$queryHits <- NULL
 methyl_gene$subjectHits <- NULL
 methyl_gene$distance<- NULL
 
-# add _1 duplicate ids 
+# add _dup for duplicate ids. This is done so dplyr summarise_each will work 
 for(i in ncol(methyl_gene):1){
   if(names(methyl_gene)[i] %in% names(methyl_gene)[duplicated(names(methyl_gene), fromLast = FALSE)]){
      names(methyl_gene)[i] <- paste0(names(methyl_gene)[i], '_dup')
@@ -57,6 +57,14 @@ methyl_summarised <- methyl_gene %>%
   group_by(nearestGeneSymbol) %>%
   summarise_each(funs(mean))
 
+# change _dup back to normal so there are duplicate IDs
+for(i in 1:ncol(methyl_summarised)){
+  if(grepl( '_dup',names(methyl_summarised)[i])){
+    split <- strsplit(names(methyl_summarised)[i], '_dup')
+    names(methyl_summarised)[i] <- split
+  }
+}
+
 ###################################################################
 # Transpose data and put in formate for analysis
 ###################################################################
@@ -65,13 +73,15 @@ methyl <- as.data.frame(t(methyl_summarised))
 names(methyl)<- col_names
 methyl <- cbind(x = rownames(methyl), methyl) 
 methyl <- methyl[2:nrow(methyl),]
-names(methyl)[1] <- 'ID'
+names(methyl)[1] <- 'id'
 rownames(methyl) <- NULL
 methyl[, 2:ncol(methyl)] <-
   apply(methyl[,2:ncol(methyl)], 2, function(x){as.numeric(as.character(x))})
 methyl <- as.data.frame(methyl)
 
-write.csv(methyl, paste0(methyl_data, '/methyl.csv'))
+#
+
+write.csv(methyl, paste0(methyl_data, '/methyl.csv'), row.names = FALSE)
 
 # library(IlluminaHumanMethylation27k.db)
 # ProbeToSymbol <- IlluminaHumanMethylation27kSYMBOL
