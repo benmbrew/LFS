@@ -95,6 +95,25 @@ plot(fit_ridge)
 print(fit_ridge)
 fit_ridge$lambda.min
 
+
+##################################################################################
+# Linear mixed model with cancer as random effect and age as dependent
+##################################################################################
+
+full_data <- full_data[!is.na(full_data$cancer_indicator),]
+short_data <- full_data[, 1:12]
+short_data$age_fac <- ifelse(short_data$age_of_onset > 5, TRUE, FALSE)
+short_data[is.na(short_data)] <- 0
+
+lmer(age_of_onset ~ tp53 + protein + pin_3 + mdm2 + gender +(1|cancer), 
+     data = short_data)
+
+
+
+
+
+
+
 # kFolds <- length(folds) # list of data split into 5 
 # 
 # for (test.i in 1:kFolds) {
