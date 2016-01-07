@@ -4,7 +4,8 @@ library(stringr)
 library(dplyr)
 library(glmnet)
 library(lme4)
-library(glmmLasso)
+library(impute)
+
 
 # Initialize folders
 home_folder <- '/home/benbrew/Documents'
@@ -18,8 +19,8 @@ clin_data <- paste0(data_folder, '/clin_data')
 ################################################################
 
 # Read in data 
-methyl <- read.csv(paste0(methyl_data, '/methyl.csv'))
-clin <- read.csv(paste0(clin_data, '/clinical.csv'))
+methyl <- read.csv(paste0(methyl_data, '/methyl.csv'), stringsAsFactors = FALSE)
+clin <- read.csv(paste0(clin_data, '/clinical.csv'), stringsAsFactors = FALSE)
 
 # remove everthing by numbers in the ids for both data sets 
 removePun <- function(data){
@@ -57,10 +58,6 @@ full_data$cancer_indicator <- ifelse(full_data$cancer_indicator == 1, TRUE, FALS
 # formula <- as.formula(paste("cancer_indicator ~", paste(n[!n %in% "cancer_indicator"], collapse = " + ")))
 # formula
 # mod <- glm(cancer_indicator ~ ZWINT , data = full_data, lambda = 10, famliy = gaussian)
-
-full_data <- full_data[!is.na(full_data$cancer_indicator),]
-x_train <- full_data
-y_train <- full_data[,4]
 # impute NAS
 # first remove rows that have NAs in excess of 30
 # run model 
@@ -72,39 +69,54 @@ y_train <- full_data[,4]
 #                        standardize = F)
 
 # radomly remove some columns before running. Currently cannot process 19804 columns in model.
+full_data <- full_data[!is.na(full_data$cancer_indicator),]
+x_train <- full_data[, 1:1000]
+y_train <- as.factor(x_train[,4])
+x_train$cancer_indicator <- as.factor(x_train$cancer_indicator)
+x_train[is.na(x_train)] <- 0
+length(y_train)
 
-fit_lasso <- glmnet(model.matrix(cancer_indicator ~., data = x_train), 
+n <- names(x_train)[1:length(names(x_train))]
+formula <- as.formula(paste("cancer_indicator ~", paste(n[!n %in% c("cancer_indicator", 
+                                                                    "date", 
+                                                                    "cancer", 
+                                                                    "id", 
+                                                                    "folds")], 
+                                                        collapse = " + ")))
+
+
+fit_ridge <- cv.glmnet(model.matrix(formula, data = x_train), 
                        y_train, 
-                       family = 'binomial', 
-                       alpha = 1,
-                       standardize = F)
+                       family = 'binomial',
+                       nfolds = 3,
+                       alpha = 0)
+plot(fit_ridge)
+plot(fit_ridge)
+print(fit_ridge)
+fit_ridge$lambda.min
 
-kFolds <- length(folds) # list of data split into 5 
-
-for (test.i in 1:kFolds) {
-  test <- folds[[test.i]]
-  train.folds <- folds[-test.i]
-  for (valid.i in 1:(kFolds - 1)) {
-    valid <- train.folds[[valid.i]]
-    train <- do.call("rbind", train.folds[-valid.i])
-    for (parameter.i in 1:length(parameters)) {
-      # train model on "train" with the this parameter
-      # predict outcomes on "valid" and save the score
-      #mod <- glmmLasso(fix = formula , rnd = NULL, data = clinical, lambda = 10)
-      
-    }
-  }
-  train.total <- do.call("rbind", train.folds)
-  # train model on "train.total" using the parameter value with the best average score on the validation sets
-  # predict outcomes on "test" and save the score
-}
-# average the scores on the test set to get an estimate of your procedure's ability to generalize to new data
-
-# Note: you might not want to follow this procedure if you have a lot of data to start with
-
-
-
-
+# kFolds <- length(folds) # list of data split into 5 
+# 
+# for (test.i in 1:kFolds) {
+#   test <- folds[[test.i]]
+#   train.folds <- folds[-test.i]
+#   for (valid.i in 1:(kFolds - 1)) {
+#     valid <- train.folds[[valid.i]]
+#     train <- do.call("rbind", train.folds[-valid.i])
+#     for (parameter.i in 1:length(parameters)) {
+#       # train model on "train" with the this parameter
+#       # predict outcomes on "valid" and save the score
+#       #mod <- glmmLasso(fix = formula , rnd = NULL, data = clinical, lambda = 10)
+#       
+#     }
+#   }
+#   train.total <- do.call("rbind", train.folds)
+#   # train model on "train.total" using the parameter value with the best average score on the validation sets
+#   # predict outcomes on "test" and save the score
+# }
+# # average the scores on the test set to get an estimate of your procedure's ability to generalize to new data
+# 
+# # Note: you might not want to follow this procedure if you have a lot of data to start with
 
 
 
