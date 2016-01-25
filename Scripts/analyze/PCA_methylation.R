@@ -99,6 +99,9 @@ pca_methyl <- pca(full_data, exclude)
 
  save.image(paste0(data_folder, '/methyl_lsa.RData'))
 }
+# create variable for over age 6 
+summary(full_data$age_of_onset)
+full_data$age_fac <- as.factor(ifelse(full_data$age_of_onset > 5, 'over_5', "under_5"))
 # make character vectors factors true and false
 pcaPlot <- function(pca, 
                     data, 
@@ -176,6 +179,11 @@ pcaPlot(pca_methyl,
         clin_var = 'age_of_onset', 
         name = 'age_of_onset')
 
+pcaPlot(pca_methyl, 
+        data = full_data, 
+        clin_var = 'age_fac', 
+        name = 'age_fac',
+        numeric = FALSE)
 
 pcaPlot(pca_methyl, data = full_data, 
         clin_var = 'cancer', 
@@ -218,6 +226,14 @@ pcaPlot(pca_methyl,
         clin_var = 'age_of_onset', 
         name = 'age_of_onset',
         PCA1 = 1, 
+        PCA2 = 3)
+
+pcaPlot(pca_methyl, 
+        data = full_data, 
+        clin_var = 'age_fac', 
+        name = 'age_fac',
+        numeric = FALSE,
+        PCA1 = 1,
         PCA2 = 3)
 
 
