@@ -67,5 +67,7 @@ clin$mdm2 <- as.factor(ifelse(clin$mdm2 == '', 'missing', clin$mdm2))
 
 clin$cancer_indicator <- ifelse(clin$cancer_indicator == 1, TRUE, FALSE)
 
+clin$age_fac <- ifelse(clin$age_of_onset > 5, 'older_5', 'younger_5')
+
 # write clin to data_folder so it can be loaded to database
 write.csv(clin, paste(clin_data,'clinical.csv', sep ='/'), row.names = FALSE)
