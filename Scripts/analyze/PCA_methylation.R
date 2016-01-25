@@ -115,6 +115,7 @@ pcaPlot <- function(pca,
   data <- data[!is.na(data[, clin_var]),]
   data <- data[!is.na(data$cancer_indicator),]
   data$cancer_indicator <- factor(data$cancer_indicator, levels = unique(data$cancer_indicator))
+  
   if(numeric){
     
     data[, clin_var] <- (data[, clin_var])/mean(data[, clin_var])
