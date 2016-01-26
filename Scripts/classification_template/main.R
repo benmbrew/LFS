@@ -1,4 +1,5 @@
-home_folder <- '/home/benbrew/Documents'
+
+home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
 classification_folder <- paste0(project_folder, '/Scripts/classification_template')
 data_folder <- paste0(project_folder, '/Data')
@@ -102,7 +103,7 @@ print("completed!")
 plot_models_performance(models.methyl,
                         NUM_OF_PARTITION,
                         "",
-                        "Classifiers_test_results.pdf",
+                        paste0(results_folder,"/Classifiers_test_results.pdf"),
                         "Classification using methyl. markers"
                         )
 
