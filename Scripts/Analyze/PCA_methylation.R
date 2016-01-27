@@ -8,10 +8,12 @@ library(impute)
 # Initialize folders
 home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
+test <- paste0(project_folder, '/Scripts/Analyze')
 data_folder <- paste0(project_folder, '/Data')
 methyl_data <- paste0(data_folder, '/methyl_data')
 clin_data <- paste0(data_folder, '/clin_data')
-results_folder <- paste0(project_folder, '/Results')
+results_folder <- paste0(test, '/Results')
+
 setwd(data_folder)
 
 if('methyl_lsa.RData' %in% dir()){
@@ -45,34 +47,45 @@ if('methyl_lsa.RData' %in% dir()){
   methyl <- methyl[!duplicated(methyl$id),]
   methyl <- data.matrix(methyl)
   
-  # Scale and impute NA with 0s
-  scaleData <- function(matrix_data){ 
-    id <- matrix_data[,1]
-    scaled_matrix <- scale(matrix_data[,-1])  
-    scaled_data <- cbind(id, scaled_matrix)
-    scaled_data[,1] <- as.character(scaled_data[,1])
-    return(scaled_data)
-  }
+#   # Scale and impute NA with 0s
+#   scaleData <- function(matrix_data){ 
+#     id <- matrix_data[,1]
+#     scaled_matrix <- scale(matrix_data[,-1])  
+#     scaled_data <- cbind(id, scaled_matrix)
+#     scaled_data[,1] <- as.character(scaled_data[,1])
+#     return(scaled_data)
+#   }
   
-  methyl <- scaleData(methyl)
+  methyl_scale <- scaleData(methyl)
   
   # remove na from ids
-  methyl <- methyl[!is.na(methyl[,1]),]
+#   methyl_scale <- methyl[!is.na(methyl_scale[,1]),]
   
-  # make id rownames
-  methyl <- apply(methyl, 2, function(x) as.numeric(x))
+#   # make id rownames
+#   methyl_scale <- apply(methyl_scale, 2, function(x) as.numeric(x))
+#   rownames(methyl_scale) <- methyl_scale[,1]
+#   methyl_scale <- methyl_scale[, -1]
+#   
+  # sub_methyl <- methyl[1:126, 1:10000]# 110 is the cutoff. Something about column 111.
+  
+  # Make methyl 
+
+  methyl <- methyl[!is.na(methyl[, 1]),]
   rownames(methyl) <- methyl[,1]
   methyl <- methyl[, -1]
   
-  #sub_methyl <- methyl[1:126, 1:10000]# 110 is the cutoff. Something about column 111.
-  
   # run lsaImputaion of methylation data
-  methyl_impute <- lsaImputation(incomplete_data = methyl, sample_rows = TRUE)
-  
+  # methyl_impute <- lsaImputation(incomplete_data = methyl_scale, sample_rows = TRUE)
+  methyl_impute_raw <- lsaImputation(incomplete_data = methyl, sample_rows = TRUE)
   
   # join rownames and methyl_impute and then erase rownames
   methyl_impute <- cbind(id = rownames(methyl_impute), methyl_impute)
   rownames(methyl_impute) <- NULL
+
+  # join rownames and methyl_impute and then erase rownames
+  methyl_impute_raw <- cbind(id = rownames(methyl_impute_raw), methyl_impute_raw)
+  rownames(methyl_impute_raw) <- NULL
+
   
   # remove everthing but numbers in the ids for both data sets 
   removePun <- function(data){
@@ -89,6 +102,12 @@ if('methyl_lsa.RData' %in% dir()){
   # inner_join clin
   full_data <- inner_join(clin, methyl_impute,
                           by = 'id')
+  
+  # Save data to be used later
+  write.csv(full_data, paste0(data_folder, '/full_data.csv'))
+  write.csv(methyl_impute, paste0(data_folder, '/methyl_impute.csv'))
+  write.csv(methyl_impute_raw, paste0(data_folder, '/methyl_impute_raw.csv'))
+  write.csv(clin, paste0(data_folder, '/clin.csv'))
   
   # PCA function that takes only methylation data
   exclude <- ncol(clin)

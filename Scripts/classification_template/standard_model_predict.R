@@ -10,7 +10,7 @@ standard_model_predict <- function(data, ground_truth, partition, selected_featu
   require("ROCR")
   require("caret")
   require("nnet")
-  source(paste0(classification_folder, "/multiclass.R"))
+  source(paste0(test, "/multiclass.R"))
   
   stopifnot(dim(data)[1] > 10)
   stopifnot(dim(data)[2] > 10)

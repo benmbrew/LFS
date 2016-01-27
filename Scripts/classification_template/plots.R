@@ -53,7 +53,7 @@ plot_models_performance <- function(models, num.of.partition, features.name, pdf
   #     source(con)
   # close(con)
   ## read SystematicInvestor from local file instead of downloading it
-  sit <- gzcon(file(paste0(classification_folder,"/sit.gz"), "rb"))
+  sit <- gzcon(file(paste0(test,"/sit.gz"), "rb"))
   source(sit)
 
   alltabs <- foreach (temp.ind = 1:num.of.partition, .combine=rbind) %do% {
