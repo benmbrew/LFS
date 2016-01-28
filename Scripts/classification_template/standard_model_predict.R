@@ -12,29 +12,30 @@ standard_model_predict <- function(data, ground_truth, partition, selected_featu
   require("nnet")
   source(paste0(test, "/multiclass.R"))
   
-  stopifnot(dim(data)[1] > 10)
+  stopifnot(dim(data)[1] > 10) # dimensions of data must be greater than 10
   stopifnot(dim(data)[2] > 10)
-  stopifnot(typeof(partition) == "list")  
+  stopifnot(typeof(partition) == "list")  # partition must be list
   #stopifnot(length(ground_truth) == dim(data)[1])  
   
-  if (is.null(selected_features)) {
+  if (is.null(selected_features)) { # Null, which is the default, then selected_features
+    # is all columns
     selected_features = 1:dim(data)[2]
   }
   
-  type_measure.glmnet = "auc"
-  type_measure.other_models = "ROC"
-  type_measure.performance = "auc"   
+  type_measure.glmnet = "auc" # evaluate glmnet with auc
+  type_measure.other_models = "ROC" # evaluate other models with ROC
+  type_measure.performance = "auc"   # evalute perfomance auc
   
-  if (length(partition[[run_ind]]$train_index) < 30) {
+  if (length(partition[[run_ind]]$train_index) < 30) { # length of training set less that 30
     type_measure.glmnet = "class"
   }
   
   if (type_measure == "auc") {
     ground_truth <- as.factor(ground_truth)  
-    #stopifnot(length(levels(ground_truth)) == 2)
+    #stopifnot(length(levels(ground_truth)) == 2)  # changes false to a and true to b
     levels(ground_truth) = c("a", "b", "c", "d", "e", "f", "g", "h")[1:length(levels(ground_truth))]
   } else if (type_measure == "acc") {
-    ground_truth <- as.numeric(ground_truth)  
+    ground_truth <- as.numeric(ground_truth)  # default is auc, so this is probably not relevant
     type_measure.glmnet = "class"
     type_measure.other_models = "ROC"
     type_measure.performance = "acc"    
@@ -43,48 +44,53 @@ standard_model_predict <- function(data, ground_truth, partition, selected_featu
   #if (length(levels(ground_truth)) == 2) {
   #  type_family <- "binomial"
   #} else {
-    type_family <- "multinomial"
+    type_family <- "multinomial" # packages will treat binomial and multinomial the same. 
   #}
   
   # Setup ---------------------------------
   # 0) Decision Tree
-  dtree.gt <- ground_truth[partition[[run_ind]]$train_index]
-  dtree.x <- data[partition[[run_ind]]$train_index, selected_features]
+  dtree.gt <- ground_truth[partition[[run_ind]]$train_index] # get ground truth for training
+  dtree.x <- data[partition[[run_ind]]$train_index, selected_features] # gets training x matrix 
   dtree.model <- rpart(
                   dtree.gt ~ .
-                  , data=data.frame(dtree.x)
+                  , data=data.frame(dtree.x) 
                   , method='class'
-                  , parms = list(split = "information")
-                  , control=rpart.control(xval = NFOLDS, minbucket = 5, cp = 0)
+                  , parms = list(split = "information") # splitting criteria
+                  , control=rpart.control(xval = NFOLDS, minbucket = 5, cp = 0) # cross validates, 
+                  #minbucket = the minimum number of observations in any terminal <leaf> node. 
+                  #cp = complexity parameter. Any split that does not decrease the overall lack of fit by a factor of 
+                  # cp is not attempted. overall R squared must increase by cp at each step. 
   )
   printcp(dtree.model)
 
-  temp.predictions <- predict(
+  temp.predictions <- predict(# predicts on new data.
                       dtree.model
                       , newdata = data.frame(data[partition[[run_ind]]$test_index, selected_features])
-                      , type = "prob"
+                      , type = "prob" # gives probability
   )
   print(dim(temp.predictions))
   dtree.predictions <- temp.predictions
   #print(head(dtree.predictions))
 
-  test.ground_truth <- ground_truth[partition[[run_ind]]$test_index]
-  test.ground_truth_1inN <- class.ind(ground_truth[partition[[run_ind]]$test_index])
+  test.ground_truth <- ground_truth[partition[[run_ind]]$test_index] #get the real results for the current test
+  test.ground_truth_1inN <- class.ind(ground_truth[partition[[run_ind]]$test_index]) # creates matrix of 0 and 1 for T and F
   #print(table(levels(test.ground_truth)[apply(dtree.predictions, 1, which.is.max)], test.ground_truth))
   # AUC
   #create ROCR prediction object
   temp.predictions <- prediction(dtree.predictions, test.ground_truth_1inN)
   dtree.test_auc <- unlist(slot(performance(temp.predictions, type_measure.performance), "y.values"))          
   print(paste("Decision Tree test AUC:", dtree.test_auc))  
-  # Accuracy
+  # Accuracy - the accuracy is the proportion of true results (both true positives and true negatives) 
+  # among the total number of cases examined
   dtree.test_acc <- sum(levels(test.ground_truth)[apply(dtree.predictions, 1, which.is.max)] == test.ground_truth) / dim(dtree.predictions)[1]
-  print(paste("Decision Tree test acc:", dtree.test_acc))  
+  # basically anything, whether true or false, that the model got right/total observations. 
+  print(paste("Decision Tree test acc:", dtree.test_acc)) 
   # Compute Confusion Matrix and Statistics
   #confusionMatrix(pred, truth)
   dtree.test_stats <- confusionMatrix(levels(test.ground_truth)[apply(dtree.predictions, 1, which.is.max)], test.ground_truth)
   print(dtree.test_stats)
 
-  dtree = list(
+  dtree = list( # saves everything in list
     # model = dtree.model
     # , predict = dtree.predictions
     # , 
@@ -99,7 +105,8 @@ standard_model_predict <- function(data, ground_truth, partition, selected_featu
   # 1) Elastic Net Logistic Regression
   elastic_net.cv_error = vector()
   elastic_net.cv_model = list()
-  elastic_net.ALPHA <- c(1:9) / 10
+  elastic_net.ALPHA <- c(1:9) / 10 # creates decimals
+  # alpha controls the relative weighting of the ridge and lasso constraints. 
   
   temp.cv_error_matrix <- foreach (temp = 1:N_CV_REPEATS, .combine=rbind, .errorhandling="stop") %do% {      
     for (alpha_index in 1:length(elastic_net.ALPHA))
