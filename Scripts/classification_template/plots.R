@@ -1,11 +1,13 @@
 plot_models_performance <- function(models, num.of.partition, features.name, pdf.name, plot.title) {
   #plot_models_performance(cp2.other_model.all, NUM_OF_PARTITION, "exp+metyl", "Classifiers_Group4_c4_expANDmethyl.pdf", "Group4 c4 using Top1% of exp. & methyl.")
   #plot_models_performance(models.all, NUM_OF_PARTITION, "", "Classifiers_Group4_c4_expANDmethyl.pdf", "Group4 c4 using Top1% of exp. & methyl.")
-
+  # This function takes models = models.methyl, num partitions, features.name ="",  "",
+  # pdf.name = paste0(results_folder,"/Classifiers_test_results.pdf"), plot.title = "Classification using methyl. markers"
   require("doParallel")
   #require("vioplot")
 
   # Boxplot Data ---------------------------------
+  # for each parition run this to create matrix with auc values 
   boxplot_matrix_auc <- foreach (temp.ind = 1:num.of.partition, .combine=rbind) %do% {
     c(
       mean(models[[temp.ind]]$elasticNet$test_auc)
@@ -67,6 +69,7 @@ plot_models_performance <- function(models, num.of.partition, features.name, pdf
       , models[[temp.ind]]$svmRadial$test_stats$table
     )  
   }
+  
   # print(alltabs)
   # print(models[[1]]$lasso$test_stats$table)
   # print(Reduce(`+`, alltabs[, 1]))
@@ -113,9 +116,9 @@ plot_models_performance <- function(models, num.of.partition, features.name, pdf
   )
 
   for (i in 1:7){
-    A <- Reduce(`+`, alltabs[, i])
+    A <- Reduce(`+`, alltabs[, i]) # adds up confusion matrix for each parition
     #A <- A/rowSums(A)        # row normalize
-    A <- t(t(A)/colSums(A))   # column normalize
+    A <- t(t(A)/colSums(A))   # column normalize c
     A <- round(A, digits=3)
     plot.table(A, temp.names[i])
   }

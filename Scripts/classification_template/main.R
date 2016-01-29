@@ -45,7 +45,7 @@ methyl_cor$id <- as.factor(methyl_cor$id)
 ## Create different variabes in clin to be used as label later
 # acc or not 
 # 
-#  clin$acc_status <- ifelse(clin$cancer == 'ACC', TRUE, FALSE)
+clin$acc_status <- ifelse(clin$cancer == 'ACC', TRUE, FALSE)
 clin$age_six <- ifelse(clin$age_of_onset > 6, TRUE, FALSE)
 clin$age_six[is.na(clin$age_six)] <- FALSE
 
@@ -60,10 +60,11 @@ ground_truth <- as.factor(label)
 table(ground_truth)
 
 # Select only the methylaion variables in model_data 
-x_matrix <- model_data[1:71, 16:50]
+x_matrix <- model_data[1:71, 17:50]
 
 # Scale data 
 x.methyl <- scale(x_matrix)
+x.methyl <- cbind(model_data$acc_status, x.methyl)
 dim(x.methyl)
 
 #### Generate random partitions ---------------------------------

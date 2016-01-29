@@ -108,37 +108,43 @@ standard_model_predict <- function(data, ground_truth, partition, selected_featu
   elastic_net.ALPHA <- c(1:9) / 10 # creates decimals
   # alpha controls the relative weighting of the ridge and lasso constraints. 
   
+  # create error matrix for default twice and combine with rows
+  # for opitmal alpha
   temp.cv_error_matrix <- foreach (temp = 1:N_CV_REPEATS, .combine=rbind, .errorhandling="stop") %do% {      
-    for (alpha_index in 1:length(elastic_net.ALPHA))
+    for (alpha_index in 1:length(elastic_net.ALPHA)) # for i in 1:9 - the model will run 9 times
     {      
       elastic_net.cv_model[[alpha_index]] = cv.glmnet(data[partition[[run_ind]]$train_index, selected_features],
                                           ground_truth[partition[[run_ind]]$train_index],
-                                          alpha = elastic_net.ALPHA[alpha_index]
+                                          alpha = elastic_net.ALPHA[alpha_index] # first time with 0.1 and so on
                                           , type.measure = type_measure.glmnet
                                           , family = type_family
                                           , standardize = FALSE 
-                                          , nfolds = NFOLDS
+                                          , nfolds = NFOLDS # five folds
                                           , nlambda = 100
                                           , parallel = TRUE
       )
       elastic_net.cv_error[alpha_index] = min(elastic_net.cv_model[[alpha_index]]$cvm)
     }
-    elastic_net.cv_error    
+    elastic_net.cv_error # stores 9 errors    
   }
   
   if (N_CV_REPEATS == 1) {
     temp.cv_error_mean = temp.cv_error_matrix
   } else {
-    temp.cv_error_mean = apply(temp.cv_error_matrix, 2, mean)  
+    temp.cv_error_mean = apply(temp.cv_error_matrix, 2, mean) # take the mean of all the iterations  
   }
   
   stopifnot(length(temp.cv_error_mean) == length(elastic_net.ALPHA))
+  # get index of best alpha (lowest alpha)
   temp.best_alpha_index = which(min(temp.cv_error_mean) == temp.cv_error_mean)[length(which(min(temp.cv_error_mean) == temp.cv_error_mean))] 
-  print(paste("Best ALPHA:", elastic_net.ALPHA[temp.best_alpha_index]))
+  print(paste("Best ALPHA:", elastic_net.ALPHA[temp.best_alpha_index])) # print the value for alpha
   
+  # get optimal lambda
   temp.non_zero_coeff = 0
   temp.loop_count = 0
-  while (temp.non_zero_coeff < 3) {
+  while (temp.non_zero_coeff < 3) { # loop runs initially because temp.non_zero coefficient <3 and then stops 
+    # usually after one iteration because the nzero variable selected by lambda is greater that 3. if it keeps looping
+    # it they are never greater than 3, then the model does not converge. 
     elastic_net.cv_model = cv.glmnet(
                           data[partition[[run_ind]]$train_index, selected_features]
                           , ground_truth[partition[[run_ind]]$train_index]
@@ -150,20 +156,22 @@ standard_model_predict <- function(data, ground_truth, partition, selected_featu
                           , nfolds = NFOLDS
                           , parallel = TRUE
     )
-    temp.min_lambda_index = which(elastic_net.cv_model$lambda == elastic_net.cv_model$lambda.min)
-    temp.non_zero_coeff = elastic_net.cv_model$nzero[temp.min_lambda_index]    
+    temp.min_lambda_index = which(elastic_net.cv_model$lambda == elastic_net.cv_model$lambda.min) # get the min lambda
+    # after 100 folds of cross validation
+    temp.non_zero_coeff = elastic_net.cv_model$nzero[temp.min_lambda_index] # number of non zero coefficients at that lambda    
     temp.loop_count = temp.loop_count + 1
     as.numeric(Sys.time())-> t 
-    set.seed((t - floor(t)) * 1e8 -> seed) 
+    set.seed((t - floor(t)) * 1e8 -> seed) # floor is opposite of ceiling. This just sets seed
     #print(paste0("seed: ", seed))
     if (temp.loop_count > 5) {
       print("diverged")
-      temp.min_lambda_index = 50
+      temp.min_lambda_index = 50 # if it loops more than 5 times, then model did not converge
       break
     }
-  } 
+  }# while loop ends 
   print(temp.non_zero_coeff)  
   
+  # Now that optimal level of alpha is chosen and the model does not diverge, run the model.
   elasticNet.model = glmnet(data[partition[[run_ind]]$train_index, selected_features], 
                             ground_truth[partition[[run_ind]]$train_index], 
                             alpha = elastic_net.ALPHA[temp.best_alpha_index],
@@ -171,9 +179,10 @@ standard_model_predict <- function(data, ground_truth, partition, selected_featu
                             nlambda = 100,
                             family = type_family)
   
+  # This returns 100 prediction with 1-100 lambdas
   temp.predictions <- predict(elasticNet.model, data[partition[[run_ind]]$test_index, selected_features], type = "response")
   #print(dim(temp.predictions))
-  elasticNet.predictions <- temp.predictions[, , temp.min_lambda_index]  
+  elasticNet.predictions <- temp.predictions[, , temp.min_lambda_index]  # this grabs the opitmal lambda 
   temp.l <- min(length(elastic_net.cv_model$lambda), length(elasticNet.model$lambda)) 
   stopifnot(elastic_net.cv_model$lambda[1:temp.l] == elasticNet.model$lambda[1:temp.l])  
   
@@ -351,9 +360,10 @@ standard_model_predict <- function(data, ground_truth, partition, selected_featu
     summaryFunc <- multiClassSummary
   }
 
-  fitControl <- trainControl(
-    method = "repeatedcv",
-    number = min(10, NFOLDS),
+  # determines how you train the model.
+  fitControl <- trainControl( 
+    method = "repeatedcv",  # could train on boostrap resample, here use repeated cross validation.
+    number = min(10, NFOLDS), 
     classProbs = TRUE,     
     repeats = 1,
     allowParallel = TRUE,
@@ -405,7 +415,7 @@ standard_model_predict <- function(data, ground_truth, partition, selected_featu
                            , method = "svmLinear"
                            , trControl = fitControl                   
                            , verbose = FALSE
-                           , metric = type_measure.other_models                 
+                           , metric = type_measure.other_models # ROC instead of AUC                
   )
   
   svmLinear.predictions <- predict(svmLinear.model 
