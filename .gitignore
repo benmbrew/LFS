@@ -2,6 +2,7 @@
 *.Rhistory
 *.csv
 *.txt
+*.xlsx
 /Data
 data/
 .Rproj.user
