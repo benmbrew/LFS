@@ -116,6 +116,47 @@ clin <- as.data.frame(apply(clin, 2, function(x) gsub('N/A', 'NA', x)))
 # clean white spaces 
 clin <- as.data.frame(apply(clin, 2, function(x) gsub('\\s+', '', x)))
 
+##########################################################################
+# clean malkin ids 
+clin$blood_dna_malkin_lab_ <- as.character(clin$blood_dna_malkin_lab_)
+
+cleanIds <- 
+  
+  function(data, column_name) { 
+    
+    id_vector <- data[, column_name]
+    
+    for(i in 1:length(id_vector)) {
+      
+      temp_id <- id_vector[i]
+      
+      if(grepl('NA', temp_id)) {
+        temp_id <- NA
+      }
+      
+      if(grepl('A', temp_id) || grepl('B', temp_id)) {
+        temp_id <- substring(temp_id, 1, 4)
+      }
+      
+      if(grepl('nogermlineDNA', temp_id) || grepl('nosample', temp_id) || grepl('Nosample', temp_id)) {
+        temp_id <- NA
+      }
+      
+      if(grepl('received', temp_id)) {
+        temp.2_id <- strsplit(temp_id, '(receivedBMtransplant)', , fixed = TRUE)
+        temp.3_id <- strsplit(temp.2_id[[1]][2], '-')
+        temp.4_id <- paste(unlist(temp.2_id[[1]][1]), temp.3_id[[1]][1], sep = '/')
+        temp_id <- temp.4_id
+      }
+      id_vector[i] <- temp_id
+    }
+    data[, column_name] <- id_vector
+    return(data)
+}
+
+clin <- cleanIds(clin, column_name = 'blood_dna_malkin_lab_')
+
+
 ##############################################
 # take any rows with double samples and split them into the number of rows equal to the number of samples.
 
@@ -239,5 +280,147 @@ substrRight <- function(x, n){
 clin$yob <- as.numeric(substrRight(as.character(clin$dob), 4))
 clin$age <- 2016 - clin$yob
 
+
 ############################################################
+# clean p53
+clin$p53_germline <- as.character(clin$p53_germline)
+
+cleanp53 <- 
+  
+  function(data, column_name) {
+    
+    p53_vector <- data[, column_name]
+    
+    for(i in 1:length(p53_vector)){
+      
+      temp_p53 <- p53_vector[i]
+      
+      if (grepl('noresult', temp_p53, fixed = TRUE) || grepl('nottested', temp_p53, fixed = TRUE) && 
+            !grepl('WT', temp_p53) || 
+            grepl('Nottested', temp_p53, fixed = TRUE)) {
+        temp_p53 <- NA
+        }
+      
+      if (grepl('Mut', temp_p53, fixed = TRUE)) {
+        temp_p53 <- 'Mut'
+      }
+      
+       if (grepl('WT', temp_p53, fixed = TRUE) && grepl('nottested', temp_p53)) {
+        temp_p53 <- 'WT'
+      }
+      
+      if (grepl('WT', temp_p53, fixed = TRUE) && !grepl('nottested', temp_p53)) {
+        temp_p53 <- 'WT'
+      }
+     
+      p53_vector[i] <- temp_p53
+    }
+  data[, column_name] <- p53_vector
+  return(data)
+}
+
+clin <- cleanp53(clin, column_name = 'p53_germline')
+
+############################################################
+# clean cancer_diagnoses
+# clean p53
+clin$cancer_diagnosis_diagnoses <- as.character(clin$cancer_diagnosis_diagnoses)
+
+cleanCancer <- 
+  
+  function(data, column_name) {
+    
+    cancer_vector <- data[, column_name]
+    
+    for(i in 1:length(cancer_vector)){
+      
+      temp_cancer <- cancer_vector[i]
+      
+      if(grepl('P', temp_cancer) && grepl('-', temp_cancer) && grepl('OS', temp_cancer) && !grepl('/', temp_cancer)) {
+        temp.2_cancer <- strsplit(temp_cancer, '-')
+        temp.3_cancer <- unlist(temp.2_cancer[[1]][2])
+        temp.4_cancer <- gsub('?Lowgrade', '', temp.3_cancer, fixed = TRUE)
+        temp_cancer <- temp.4_cancer
+      }
+      
+      if(grepl('P', temp_cancer) && grepl('-', temp_cancer) && !grepl('OS', temp_cancer) && !grepl('/', temp_cancer)) {
+        temp.2_cancer <- strsplit(temp_cancer, '-')
+        temp.3_cancer <- unlist(temp.2_cancer[[1]][2])
+        temp.4_cancer <- gsub('?Lowgrade', '', temp.3_cancer, fixed = TRUE)
+        temp_cancer <- temp.4_cancer
+      }
+      
+      if(grepl('P', temp_cancer) && grepl('OS', temp_cancer) && grepl('-', temp_cancer) && grepl('left', temp_cancer)) {
+        temp.2_cancer <- strsplit(temp_cancer, '-')
+        temp.3_cancer <- strsplit(temp.2_cancer[[1]][2], ',')
+        temp.4_cancer <- temp.3_cancer[[1]][1]
+        temp_cancer <- temp.4_cancer
+      }
+      
+      if(grepl('P', temp_cancer) && grepl('OS', temp_cancer) && grepl('-', temp_cancer) && grepl('right', temp_cancer)) {
+        temp.2_cancer <- strsplit(temp_cancer, '-')
+        temp.3_cancer <- strsplit(temp.2_cancer[[1]][2], ',')
+        temp.4_cancer <- temp.3_cancer[[1]][1]
+        temp_cancer <- temp.4_cancer
+      }
+      
+      if(grepl('P', temp_cancer) && grepl('-', temp_cancer) && grepl('/', temp_cancer)) {
+        temp.2_cancer <- strsplit(temp_cancer, '-')
+        temp.3_cancer <- unlist(temp.2_cancer[[1]][2])
+        temp.4_cancer <- strsplit(temp.3_cancer, '/')
+        temp.5_cancer <- paste(unlist(temp.4_cancer[[1]][1]),unlist(temp.4_cancer[[1]][2]), sep = '_')
+        temp_cancer <- temp.5_cancer
+      }
+      
+      if(grepl('P', temp_cancer) && grepl('-', temp_cancer) && !grepl('/', temp_cancer) && !grepl('?', temp_cancer)) {
+        temp.2_cancer <- strsplit(temp_cancer, '-')
+        temp.3_cancer <- unlist(temp.2_cancer[[1]][2])
+        temp_cancer <- temp.3_cancer
+      }
+      
+      
+      if(grepl(',', temp_cancer, fixed = TRUE)) {
+        temp_cancer <- gsub(',', '_', temp_cancer)
+      }
+      
+      if(grepl('?', temp_cancer, fixed = TRUE)) {
+        temp_cancer <- gsub('?', '', temp_cancer)
+      }
+      
+      if(grepl('&', temp_cancer, fixed = TRUE)) {
+        temp_cancer <- gsub('&', '_', temp_cancer)
+      }
+      
+      if(grepl('notdocumented', temp_cancer, fixed = TRUE)) {
+        temp_cancer <- NA
+      }
+      
+      if(grepl('unknown', temp_cancer, fixed = TRUE)) {
+        temp_cancer <- NA
+      }
+      
+      if(grepl('Unaffected', temp_cancer)) {
+        temp_cancer <- 'Unaffected'
+      }
+    
+      cancer_vector[i] <- temp_cancer
+    }
+    
+    data[, column_name] <- cancer_vector
+    return(data)
+}
+
+
+clin <- cleanCancer(clin, column_name = 'cancer_diagnosis_diagnoses')
+    
+# write clin to data_folder so it can be loaded to database
+write.csv(clin, paste(clin_data,'clinical_two.csv', sep ='/'), row.names = FALSE)
+
+# group_by cancer and p53 status and get counts 
+# clin$age_diagnosis <- as.numeric(clin$age_diagnosis)
+# counts <- clin %>%
+#   filter(!is.na(p53_germline)) %>%
+#   group_by(cancer_diagnosis_diagnoses, p53_germline) %>%
+#   summarise(counts = n(),
+#             mean_age = mean(age_diagnosis, na.rm = T))
 

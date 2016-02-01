@@ -82,9 +82,14 @@ methyl[, 2:ncol(methyl)] <-
   apply(methyl[,2:ncol(methyl)], 2, function(x){as.numeric(as.character(x))})
 methyl <- as.data.frame(methyl)
 
-#
+# drop duplicates from methylation so LSA work
+methyl <- methyl[!duplicated(methyl$id),]
+methyl <- methyl[!is.na(methyl$id),]
+rownames(methyl) <- methyl[,1]
+methyl <- methyl[, -1]
 
-write.csv(methyl, paste0(methyl_data, '/methyl.csv'), row.names = FALSE)
+
+write.csv(methyl, paste0(methyl_data, '/methyl.csv'), row.names = TRUE)
 
 # library(IlluminaHumanMethylation27k.db)
 # ProbeToSymbol <- IlluminaHumanMethylation27kSYMBOL
