@@ -4,7 +4,7 @@
 # Initialize folders
 home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects/'
 project_folder <- paste0(home_folder, '/LFS')
-test <- paste0(project_folder, '/Scripts/classification_template')
+test <- paste0(project_folder, '/Scripts/regression_template')
 data_folder <- paste0(project_folder, '/Data')
 methyl_data <- paste0(data_folder, '/methyl_data')
 clin_data <- paste0(data_folder, '/clin_data')
@@ -29,43 +29,18 @@ registerDoParallel(1)
 NUM_OF_PARTITION <- 2
 ## TO MODIFY:
 
-# Load in clinical data
-clin <- read.csv(paste0(data_folder, '/clin.csv'))
-
-# subset clin so that it only has Mut 
-clin <- clin[!is.na(clin$p53_germline),]
-clin <- clin[clin$p53_germline == 'Mut',]
-
 ##########################
 # Load in methylation data. methyl_cor is a subset of features, excluding features with correlation 
-# over .8
-
-# methyl_impute <- read.csv(paste0(data_folder, '/methyl_impute.csv'))
-# methyl_impute_raw <- read.csv(paste0(data_folder, '/methyl_impute_raw.csv'))
 methyl_cor <- read.csv(paste0(data_folder, '/methyl_cor.csv'))
-methyl_cor$id <- as.factor(methyl_cor$id)
-
+methyl <- methyl_cor[, 1:20]
 #########################
-## Create different variabes in clin to be used as label later
-# over age 6 or not
-clin$age_diagnosis <- as.numeric(as.character(clin$age_diagnosis))
-clin$age_fac <- ifelse(clin$age_diagnosis > 6, TRUE, FALSE)
-clin$blood_dna_malkin_lab_ <- as.factor(clin$blood_dna_malkin_lab_)
 
-# inner_join clin and methylation, retrieving only the ids in both
-model_data <- inner_join(clin, methyl_cor,
-                         by = c('blood_dna_malkin_lab_' = 'id'))
-model_data <- model_data[!is.na(model_data$age_fac),]
-
-# Create label for the model using one of the variables created in clin
-
-label<- model_data$age_fac
-ground_truth <- as.factor(label)
-table(ground_truth)
+# Create y variable, numeric continuous for the model using one of the variables created in clin
+label <- sample(1:50, nrow(methyl), replace = TRUE)
+ground_truth <- as.numeric(label)
 
 # Select only the methylaion variables in model_data 
-
-x_matrix <- model_data[1:43, 20:50]#14250]
+x_matrix <- methyl
 
 # Scale data 
 x.methyl <- scale(x_matrix)
@@ -80,12 +55,14 @@ partition <- foreach (temp.run_ind = 1:NUM_OF_PARTITION, .errorhandling="stop") 
   temp.good_split <- FALSE # set equal to false so while loop runs once
   while (! temp.good_split) {
     temp.train_index <- sample(temp.data_ind, length(temp.data_ind) * 0.70)# samples length of data 2/3 of data times
-    temp.complement <- setdiff(temp.data_ind, temp.train_index) # gets index of obsverations not in train. 
-    temp.l.train <- length(unique(ground_truth[temp.train_index])) # 2 labels
-    temp.l.test <- length(unique(ground_truth[temp.complement])) # 2 labels
-    temp.good_split <- ( temp.l.train == temp.l.test && temp.l.test == length(levels(ground_truth)) )
+    temp.complement <- setdiff(temp.data_ind, temp.train_index) # gets index of obsverations not in train.
+#     temp.l.train <- length(unique(ground_truth[temp.train_index])) # 2 labels
+#     temp.l.test <- length(unique(ground_truth[temp.complement])) # 2 labels
+#     temp.good_split <- ( temp.l.train == temp.l.test && temp.l.test == length(ground_truth) )
     # checks to see if label lengths are equal and that they are equal to ground_truth
     # while loops forces it to run until temp.good_split is true
+  temp.good_split <- TRUE
+
   }
 
   ## Make test set without validation set
@@ -134,11 +111,11 @@ models.methyl <- foreach (temp.run_ind = 1:NUM_OF_PARTITION, .errorhandling="sto
                         run_ind = temp.run_ind)
 }
 print("completed!")
-# save(models.methyl, file="trained_modelsNresults.RData")
+save(models.methyl, file="trained_modelsNresults_regression.RData")
 plot_models_performance(models.methyl,
                         NUM_OF_PARTITION,
                         "",
                         paste0(results_folder,"/Classifiers_test_results.pdf"),
-                        "Classification using methyl. markers"
+                        "regression using methyl. markers"
                         )
 
