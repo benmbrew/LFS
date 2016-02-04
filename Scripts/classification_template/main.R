@@ -65,7 +65,7 @@ table(ground_truth)
 
 # Select only the methylaion variables in model_data 
 
-x_matrix <- model_data[1:43, 20:50]#14250]
+x_matrix <- model_data[1:43, 19:50]#14250]
 
 # Scale data 
 x.methyl <- scale(x_matrix)

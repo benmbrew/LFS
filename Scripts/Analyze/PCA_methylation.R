@@ -79,56 +79,21 @@ if('methyl_lsa.RData' %in% dir()){
 
 }
 
-# make character vectors factors true and false
 pcaPlot <- function(pca, 
                     data, 
                     clin_var, 
                     name,
-                    numeric = TRUE,
                     PCA1 = 1,
                     PCA2 = 2){
   data <- data[!is.na(data[, clin_var]),]
-  data <- data[!is.na(data$cancer_indicator),]
-  data$cancer_indicator <- factor(data$cancer_indicator, levels = unique(data$cancer_indicator))
+  data[, clin_var] <- factor(data[, clin_var], levels = unique(data[, clin_var]))
   
-  if(numeric){
-    
-    data[, clin_var] <- (data[, clin_var])/mean(data[, clin_var])
-    
+          
     plot(pca$x[,PCA1], 
          pca$x[,PCA2],
          xlab = paste0('PCA', PCA1),
          ylab = paste0('PCA', PCA2),
-         cex = ((data[, clin_var])/1.1),
-         main = name,
-         pch = 16,
-         col = as.factor(data$cancer_indicator)
-    )
-    
-    abline(v = c(0,0),
-           h = c(0,0))
-    legend('bottomleft',
-           legend = unique(data$cancer_indicator),
-           col=1:length(data$cancer_indicator),
-           pch=16,
-           cex = 0.7)
-
-
-  }else{
-    
-    if(clin_var != 'cancer_indicator' && clin_var != 'cancer'){
-      
-      data[, clin_var] <- interaction(data[, clin_var], data$cancer_indicator)  
-      data[, clin_var] <- as.character(data[, clin_var])
-      data[, clin_var] <- ifelse(grepl('FALSE', data[, clin_var]), 'None', data[, clin_var])
-      data[, clin_var] <- factor(data[ ,clin_var])
-      data[, clin_var] <- factor(data[, clin_var], levels = unique(data[, clin_var]))
-    }
-    plot(pca$x[, PCA1], 
-         pca$x[, PCA2],
-         xlab = paste0('PCA', PCA1),
-         ylab = paste0('PCA', PCA2),
-         cex = 1,
+         cex = 1, #((data[, clin_var])/1.1),
          main = name,
          pch = 16,
          col = as.factor(data[, clin_var])
@@ -136,189 +101,42 @@ pcaPlot <- function(pca,
     
     abline(v = c(0,0),
            h = c(0,0))
-    
     legend('bottomleft',
-           legend = unique(data[, clin_var]),
-           col=1:length(data[, clin_var]),
+           legend = unique(data[,clin_var]),
+           col=1:length(data[,clin_var]),
            pch=16,
            cex = 0.7)
-  
   }
-
-}
-
 plot(pca_methyl, type = 'l')
 
-# Plot PCA 1 and 2
-pcaPlot(pca_methyl, 
-        data = full_data, 
-        clin_var = 'age_of_onset', 
-        name = 'age_of_onset')
-
-pcaPlot(pca_methyl, 
-        data = full_data, 
-        clin_var = 'age_fac', 
-        name = 'age_fac',
-        numeric = FALSE)
-
-pcaPlot(pca_methyl, data = full_data, 
-        clin_var = 'cancer', 
-        name = 'cancer', 
-        numeric = FALSE)
-
-pcaPlot(pca_methyl, data = full_data, 
-        clin_var = 'cancer_indicator', 
-        name = 'cancer_indicator', 
-        numeric = FALSE)
-
-pcaPlot(pca_methyl, data = full_data, 
-        clin_var = 'tp53', 
-        name = 'tp53', 
-        numeric = FALSE)
-
-pcaPlot(pca_methyl, data = full_data, 
-        clin_var = 'gender', 
-        name = 'gender', 
-        numeric = FALSE)
-
-pcaPlot(pca_methyl, data = full_data, 
-        clin_var = 'mdm2', 
-        name = 'mdm2', 
-        numeric = FALSE)
-
-pcaPlot(pca_methyl, data = full_data, 
-        clin_var = 'pin_3', 
-        name = 'pin_3', 
-        numeric = FALSE)
-
-pcaPlot(pca_methyl, data = full_data, 
-        clin_var = 'codon_72', 
-        name = 'codon_72', 
-        numeric = FALSE)
-
-# Plot PCA 1 and 3
-pcaPlot(pca_methyl, 
-        data = full_data, 
-        clin_var = 'age_of_onset', 
-        name = 'age_of_onset',
-        PCA1 = 1, 
-        PCA2 = 3)
-
-pcaPlot(pca_methyl, 
-        data = full_data, 
-        clin_var = 'age_fac', 
-        name = 'age_fac',
-        numeric = FALSE,
+pcaPlot(pca_methyl,
+        data = full_data,
+        clin_var = 'p53_germline',
+        name = 'P53',
         PCA1 = 1,
         PCA2 = 3)
 
 
-pcaPlot(pca_methyl, data = full_data, 
-        clin_var = 'cancer', 
-        name = 'cancer', 
-        numeric = FALSE,
-        PCA1 = 1, 
-        PCA2 = 3)
-
-
-pcaPlot(pca_methyl, data = full_data, 
-        clin_var = 'cancer_indicator', 
-        name = 'cancer_indicator', 
-        numeric = FALSE,
-        PCA1 = 1, 
-        PCA2 = 3)
-
-pcaPlot(pca_methyl, data = full_data, 
-        clin_var = 'tp53', 
-        name = 'tp53', 
-        numeric = FALSE,
-        PCA1 = 1, 
-        PCA2 = 3)
-
-pcaPlot(pca_methyl, data = full_data, 
-        clin_var = 'gender', 
-        name = 'gender', 
-        numeric = FALSE,
-        PCA1 = 1, 
-        PCA2 = 3)
-
-pcaPlot(pca_methyl, data = full_data, 
-        clin_var = 'mdm2', 
-        name = 'mdm2', 
-        numeric = FALSE,
-        PCA1 = 1, 
-        PCA2 = 3)
-
-pcaPlot(pca_methyl, data = full_data, 
-        clin_var = 'pin_3', 
-        name = 'pin_3', 
-        numeric = FALSE, 
-        PCA1 = 1, 
-        PCA2 = 3)
-
-pcaPlot(pca_methyl, data = full_data, 
-        clin_var = 'codon_72', 
-        name = 'codon_72', 
-        numeric = FALSE, 
-        PCA1 = 1, 
-        PCA2 = 3)
-
-# Plot PCA 2 and 3
+full_data$cancer <- ifelse(full_data$cancer_diagnosis_diagnoses != 'Unaffected', TRUE, FALSE)
 pcaPlot(pca_methyl, 
         data = full_data, 
-        clin_var = 'age_of_onset', 
-        name = 'age_of_onset',
-        PCA1 = 2, 
-        PCA2 = 3)
-
-
-pcaPlot(pca_methyl, data = full_data, 
         clin_var = 'cancer', 
-        name = 'cancer', 
-        numeric = FALSE,
-        PCA1 = 2, 
+        name = 'cancer',
+        PCA1 = 1, 
         PCA2 = 3)
 
+pcaPlot(pca_methyl, 
+        data = full_data, 
+        clin_var = 'cancer_diagnosis_diagnoses', 
+        name = 'cancer_diagnosis_diagnoses',
+        PCA1 = 1, 
+        PCA = 3)
 
-pcaPlot(pca_methyl, data = full_data, 
-        clin_var = 'cancer_indicator', 
-        name = 'cancer_indicator', 
-        numeric = FALSE,
-        PCA1 = 2, 
-        PCA2 = 3)
-
-pcaPlot(pca_methyl, data = full_data, 
-        clin_var = 'tp53', 
-        name = 'tp53', 
-        numeric = FALSE,
-        PCA1 = 2, 
-        PCA2 = 3)
-
-pcaPlot(pca_methyl, data = full_data, 
-        clin_var = 'gender', 
-        name = 'gender', 
-        numeric = FALSE,
-        PCA1 = 2, 
-        PCA2 = 3)
-
-pcaPlot(pca_methyl, data = full_data, 
-        clin_var = 'mdm2', 
-        name = 'mdm2', 
-        numeric = FALSE,
-        PCA1 = 2, 
-        PCA2 = 3)
-
-pcaPlot(pca_methyl, data = full_data, 
-        clin_var = 'pin_3', 
-        name = 'pin_3', 
-        numeric = FALSE, 
-        PCA1 = 2, 
-        PCA2 = 3)
-
-pcaPlot(pca_methyl, data = full_data, 
-        clin_var = 'codon_72', 
-        name = 'codon_72', 
-        numeric = FALSE, 
-        PCA1 = 2, 
-        PCA2 = 3)
+full_data$acc <- ifelse(full_data$cancer_diagnosis_diagnoses == 'ACC', TRUE, FALSE)
+pcaPlot(pca_methyl, 
+        data = full_data, 
+        clin_var = 'acc', 
+        name = 'acc',
+        PCA1 = 1,
+        PCA2 =3)
 

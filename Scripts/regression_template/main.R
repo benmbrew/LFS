@@ -25,26 +25,48 @@ library(dplyr)
 library(preprocessCore)
 
 #### Set the "hyper" parameters 
-registerDoParallel(1)
+#registerDoParallel(1)
 NUM_OF_PARTITION <- 2
 ## TO MODIFY:
 
+# Load in clinical data
+clin <- read.csv(paste0(data_folder, '/clin.csv'))
+
+# subset clin so that it only has Mut 
+clin <- clin[!is.na(clin$p53_germline),]
+clin <- clin[clin$p53_germline == 'Mut',]
+
+# make age of diagnoses numeric
+clin$age_diagnosis <-as.numeric(as.character(clin$age_diagnosis))
+clin$blood_dna_malkin_lab_ <- as.factor(clin$blood_dna_malkin_lab_)
+
 ##########################
 # Load in methylation data. methyl_cor is a subset of features, excluding features with correlation 
+# over .8
+# methyl_impute <- read.csv(paste0(data_folder, '/methyl_impute.csv'))
+# methyl_impute_raw <- read.csv(paste0(data_folder, '/methyl_impute_raw.csv'))
 methyl_cor <- read.csv(paste0(data_folder, '/methyl_cor.csv'))
-methyl <- methyl_cor[, 1:20]
-#########################
+methyl_cor$id <- as.factor(methyl_cor$id)
 
-# Create y variable, numeric continuous for the model using one of the variables created in clin
-label <- sample(1:50, nrow(methyl), replace = TRUE)
-ground_truth <- as.numeric(label)
+#
+# inner_join clin and methylation, retrieving only the ids in both
+model_data <- inner_join(clin, methyl_cor,
+                         by = c('blood_dna_malkin_lab_' = 'id'))
 
-# Select only the methylaion variables in model_data 
-x_matrix <- methyl
+# get rid of NA in age of diagnoses
+model_data <- model_data[!is.na(model_data$age_diagnosis),]
+
+x_matrix <- model_data[1:43, 18:14249]
 
 # Scale data 
 x.methyl <- scale(x_matrix)
 dim(x.methyl)
+
+# groud truth
+label<- model_data$age_diagnosis
+ground_truth <- as.numeric(label)
+table(ground_truth)
+
 
 #### Generate random partitions ---------------------------------
 temp.data_ind <- 1:dim(x.methyl)[1]
