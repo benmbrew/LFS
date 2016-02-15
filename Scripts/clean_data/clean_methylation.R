@@ -1,6 +1,6 @@
 ## Script for reading, cleaning, and combining methylation data.
 
-home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects/'
+home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
 test <- paste0(project_folder, '/Scripts/classification_template')
 data_folder <- paste0(project_folder, '/Data')
@@ -91,11 +91,27 @@ return(data)
 }
 
 methylation <- cleanProbe(methylation)
-
 # write methylation_raw to methyl_data folder as csv
 write.csv(methylation, paste(methyl_data, '/methylation.csv', sep = ''), row.names= FALSE)
 
+###########################################################
+# Read in methylation data from tanya and clean it
+###########################################################
 
+methyl_tumor <- read.delim(paste0(methyl_data, '/methylation_tumor.txt'), check.names = FALSE)
+
+# subset columns that just contain beta values 
+methyl_beta <- methyl_tumor[, grepl('TargetID|Beta',  names(methyl_tumor))]
+col_names <- names(methyl_beta)
+column_split <- strsplit(col_names, '.', fixed = TRUE)
+first_digits <- lapply(column_split, function(x) x[1])
+col_names <- unlist(first_digits)
+
+# add new column names
+colnames(methyl_beta) <- col_names
+colnames(methyl_beta)[1] <- 'Probe'
+
+write.csv(methyl_beta, paste(methyl_data, '/methylation_tumor.csv', sep = ''), row.names= FALSE)
 
 
 

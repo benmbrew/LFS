@@ -4,7 +4,7 @@
 # Initialize folders
 home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects/'
 project_folder <- paste0(home_folder, '/LFS')
-test <- paste0(project_folder, '/Scripts/regression_template')
+test <- paste0(project_folder, '/Scripts/classification_template_con')
 data_folder <- paste0(project_folder, '/Data')
 methyl_data <- paste0(data_folder, '/methyl_data')
 clin_data <- paste0(data_folder, '/clin_data')
@@ -25,7 +25,7 @@ library(dplyr)
 library(preprocessCore)
 
 #### Set the "hyper" parameters 
-#registerDoParallel(1)
+registerDoParallel(1)
 NUM_OF_PARTITION <- 2
 ## TO MODIFY:
 
@@ -33,41 +33,58 @@ NUM_OF_PARTITION <- 2
 clin <- read.csv(paste0(data_folder, '/clin.csv'))
 
 # subset clin so that it only has Mut 
-# clin <- clin[!is.na(clin$p53_germline),]
-#clin <- clin[clin$p53_germline == 'Mut',]
-
-# make age of diagnoses numeric
-clin$acc <- ifelse(clin$cancer_diagnosis_diagnoses == 'ACC', TRUE, FALSE)
-clin$age_diagnosis <-as.numeric(as.character(clin$age_diagnosis))
-clin$blood_dna_malkin_lab_ <- as.factor(clin$blood_dna_malkin_lab_)
+clin <- clin[!is.na(clin$p53_germline),]
+clin <- clin[clin$p53_germline == 'Mut',]
 
 ##########################
 # Load in methylation data. methyl_cor is a subset of features, excluding features with correlation 
 # over .8
+
 # methyl_impute <- read.csv(paste0(data_folder, '/methyl_impute.csv'))
 # methyl_impute_raw <- read.csv(paste0(data_folder, '/methyl_impute_raw.csv'))
 methyl_cor <- read.csv(paste0(data_folder, '/methyl_cor.csv'))
 methyl_cor$id <- as.factor(methyl_cor$id)
 
-#
+#########################
+## Create different variabes in clin to be used as label later
+# over age 6 or not
+clin$age_diagnosis <- as.numeric(as.character(clin$age_diagnosis))
+clin$age_fac <- ifelse(clin$age_diagnosis > 6, TRUE, FALSE)
+
+# over age 6 or not for sample collection
+clin$age_sample_collection <- as.numeric(as.character(clin$age_sample_collection))
+clin$age_fac_sample <- ifelse(clin$age_sample_collection > 6, TRUE, FALSE)
+
+# make id a factor for merge
+clin$blood_dna_malkin_lab_ <- as.factor(clin$blood_dna_malkin_lab_)
+
+
 # inner_join clin and methylation, retrieving only the ids in both
 model_data <- inner_join(clin, methyl_cor,
                          by = c('blood_dna_malkin_lab_' = 'id'))
+model_data <- model_data[!is.na(model_data$age_fac),]
 
-# get rid of NA in age of diagnoses
-model_data <- model_data[!is.na(model_data$age_diagnosis),]
+# Create label for the model using one of the variables created in clin
 
-x_matrix <- model_data[1:43, 18:14249]
+label<- model_data$age_fac
+ground_truth <- as.factor(label)
+ground_truth <- relevel(ground_truth, ref = 'TRUE')
+table(ground_truth)
+
+# Create label for the model using one of the variables created in clin
+
+label_sample<- model_data$age_fac_sample
+ground_truth_sam <- as.factor(label_sample)
+ground_truth_sam <- relevel(ground_truth_sam, ref = 'TRUE')
+table(ground_truth_sam)
+
+# Select only the methylaion variables in model_data 
+
+x_matrix <- model_data[1:56, 20:14250]
 
 # Scale data 
 x.methyl <- scale(x_matrix)
 dim(x.methyl)
-
-# groud truth
-label<- model_data$age_diagnosis
-ground_truth <- as.numeric(label)
-table(ground_truth)
-
 
 #### Generate random partitions ---------------------------------
 temp.data_ind <- 1:dim(x.methyl)[1]
@@ -78,14 +95,12 @@ partition <- foreach (temp.run_ind = 1:NUM_OF_PARTITION, .errorhandling="stop") 
   temp.good_split <- FALSE # set equal to false so while loop runs once
   while (! temp.good_split) {
     temp.train_index <- sample(temp.data_ind, length(temp.data_ind) * 0.70)# samples length of data 2/3 of data times
-    temp.complement <- setdiff(temp.data_ind, temp.train_index) # gets index of obsverations not in train.
-#     temp.l.train <- length(unique(ground_truth[temp.train_index])) # 2 labels
-#     temp.l.test <- length(unique(ground_truth[temp.complement])) # 2 labels
-#     temp.good_split <- ( temp.l.train == temp.l.test && temp.l.test == length(ground_truth) )
+    temp.complement <- setdiff(temp.data_ind, temp.train_index) # gets index of obsverations not in train. 
+    temp.l.train <- length(unique(ground_truth[temp.train_index])) # 2 labels
+    temp.l.test <- length(unique(ground_truth[temp.complement])) # 2 labels
+    temp.good_split <- ( temp.l.train == temp.l.test && temp.l.test == length(levels(ground_truth)) )
     # checks to see if label lengths are equal and that they are equal to ground_truth
     # while loops forces it to run until temp.good_split is true
-  temp.good_split <- TRUE
-
   }
 
   ## Make test set without validation set
@@ -134,11 +149,11 @@ models.methyl <- foreach (temp.run_ind = 1:NUM_OF_PARTITION, .errorhandling="sto
                         run_ind = temp.run_ind)
 }
 print("completed!")
-save(models.methyl, file="trained_modelsNresults_regression.RData")
+# save(models.methyl, file="trained_modelsNresults.RData")
 plot_models_performance(models.methyl,
                         NUM_OF_PARTITION,
                         "",
                         paste0(results_folder,"/Classifiers_test_results.pdf"),
-                        "regression using methyl. markers"
+                        "Classification using methyl. markers"
                         )
 

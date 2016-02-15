@@ -4,7 +4,7 @@
 # Initialize folders
 home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects/'
 project_folder <- paste0(home_folder, '/LFS')
-test <- paste0(project_folder, '/Scripts/regression_template')
+test <- paste0(project_folder, '/Scripts/regression_template_con')
 data_folder <- paste0(project_folder, '/Data')
 methyl_data <- paste0(data_folder, '/methyl_data')
 clin_data <- paste0(data_folder, '/clin_data')
@@ -34,12 +34,14 @@ clin <- read.csv(paste0(data_folder, '/clin.csv'))
 
 # subset clin so that it only has Mut 
 # clin <- clin[!is.na(clin$p53_germline),]
-#clin <- clin[clin$p53_germline == 'Mut',]
+# clin <- clin[clin$p53_germline == 'Mut',]
 
 # make age of diagnoses numeric
-clin$acc <- ifelse(clin$cancer_diagnosis_diagnoses == 'ACC', TRUE, FALSE)
 clin$age_diagnosis <-as.numeric(as.character(clin$age_diagnosis))
 clin$blood_dna_malkin_lab_ <- as.factor(clin$blood_dna_malkin_lab_)
+
+# make age of sample collection numeric.
+clin$age_sample_collection <- as.numeric(as.character(clin$age_sample_collection))
 
 ##########################
 # Load in methylation data. methyl_cor is a subset of features, excluding features with correlation 
@@ -57,7 +59,7 @@ model_data <- inner_join(clin, methyl_cor,
 # get rid of NA in age of diagnoses
 model_data <- model_data[!is.na(model_data$age_diagnosis),]
 
-x_matrix <- model_data[1:43, 18:14249]
+x_matrix <- model_data[1:56, 18:14249]
 
 # Scale data 
 x.methyl <- scale(x_matrix)
@@ -67,6 +69,11 @@ dim(x.methyl)
 label<- model_data$age_diagnosis
 ground_truth <- as.numeric(label)
 table(ground_truth)
+
+# groud truth_sam
+label_sam<- model_data$age_sample_collection
+ground_truth_sam <- as.numeric(label_sam)
+table(ground_truth_sam)
 
 
 #### Generate random partitions ---------------------------------

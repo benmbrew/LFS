@@ -18,26 +18,39 @@ results_folder <- paste0(test, '/Results')
 
 # Read in methylation data 
 methylation <- read.csv(paste0(methyl_data, '/methylation.csv'), header = TRUE, check.names = FALSE)
+methylation_tumor <- read.csv(paste0(methyl_data, '/methylation_tumor.csv'), header = TRUE, check.names = FALSE)
 
 # Load the 450k data from hg19 (bioconductor, library is FDb.InfiniumMethylation.hg19)
 hm450 <- get450k()
 
 # Get probe names from our methylation data  
 probe_names <- as.character(methylation$Probe)
+probe_names_tumor <- as.character(methylation_tumor$Probe)
+#probe_names <- 'cg09087961'
+
 
 # remove probes that have less than 10 characters.
 probe_names <- probe_names[nchar(probe_names) == 10]
+probe_names_tumor <- probe_names_tumor[nchar(probe_names_tumor) == 10]
 
 # get probes from hm450
 probes <- hm450[probe_names]
+probes_tumor <- hm450[probe_names_tumor]
+
 
 #get the nearest gene to each probe location.
 probe_info <- getNearestGene(probes)
 probe_info <- cbind(probe = rownames(probe_info), probe_info)
 rownames(probe_info) <- NULL
 
+probe_info_tumor <- getNearestGene(probes_tumor)
+probe_info_tumor <- cbind(probe = rownames(probe_info_tumor), probe_info_tumor)
+rownames(probe_info_tumor) <- NULL
+
 # join probe_info with methylation. This keeps all of the probes that we could match in hm450 and drops the others.
 methyl_gene <- left_join(probe_info, methylation, by = c('probe'= 'Probe'))
+methyl_gene_tumor <- left_join(probe_info_tumor, methylation_tumor, by = c('probe'= 'Probe'))
+
 
 # Get rid of extra variables.
 methyl_gene$probe <- NULL
@@ -45,11 +58,24 @@ methyl_gene$queryHits <- NULL
 methyl_gene$subjectHits <- NULL
 methyl_gene$distance<- NULL
 
+# Get rid of extra variables.
+methyl_gene_tumor$probe <- NULL
+methyl_gene_tumor$queryHits <- NULL
+methyl_gene_tumor$subjectHits <- NULL
+methyl_gene_tumor$distance<- NULL
+
 # add _dup for duplicate ids. This is done so dplyr summarise_each will work 
 for(i in ncol(methyl_gene):1){
   if(names(methyl_gene)[i] %in% names(methyl_gene)[duplicated(names(methyl_gene), fromLast = FALSE)]){
      names(methyl_gene)[i] <- paste0(names(methyl_gene)[i], '_dup')
     }
+}
+
+# add _dup for duplicate ids. This is done so dplyr summarise_each will work 
+for(i in ncol(methyl_gene_tumor):1){
+  if(names(methyl_gene_tumor)[i] %in% names(methyl_gene_tumor)[duplicated(names(methyl_gene_tumor), fromLast = FALSE)]){
+    names(methyl_gene_tumor)[i] <- paste0(names(methyl_gene_tumor)[i], '_dup')
+  }
 }
 
 # get rid of duplicate columns names 
@@ -60,11 +86,24 @@ methyl_summarised <- methyl_gene %>%
   group_by(nearestGeneSymbol) %>%
   summarise_each(funs(mean))
 
+# group by gene and sum probe values. 
+methyl_summarised_tumor <- methyl_gene_tumor %>%
+  group_by(nearestGeneSymbol) %>%
+  summarise_each(funs(mean))
+
 # change _dup back to normal so there are duplicate IDs
 for(i in 1:ncol(methyl_summarised)){
   if(grepl( '_dup',names(methyl_summarised)[i])){
     split <- strsplit(names(methyl_summarised)[i], '_dup')
     names(methyl_summarised)[i] <- split
+  }
+}
+
+# change _dup back to normal so there are duplicate IDs
+for(i in 1:ncol(methyl_summarised_tumor)){
+  if(grepl( '_dup',names(methyl_summarised_tumor)[i])){
+    split <- strsplit(names(methyl_summarised_tumor)[i], '_dup')
+    names(methyl_summarised_tumor)[i] <- split
   }
 }
 
@@ -90,6 +129,30 @@ methyl <- methyl[, -1]
 
 
 write.csv(methyl, paste0(methyl_data, '/methyl.csv'), row.names = TRUE)
+
+
+###################################################################
+# Transpose data and put in formate for analysis
+###################################################################
+col_names <- methyl_summarised_tumor$nearestGeneSymbol
+methyl_tumor <- as.data.frame(t(methyl_summarised_tumor))
+names(methyl_tumor)<- col_names
+methyl_tumor <- cbind(x = rownames(methyl_tumor), methyl_tumor) 
+methyl_tumor <- methyl_tumor[2:nrow(methyl_tumor),]
+names(methyl_tumor)[1] <- 'id'
+rownames(methyl_tumor) <- NULL
+methyl_tumor[, 2:ncol(methyl_tumor)] <-
+  apply(methyl_tumor[,2:ncol(methyl_tumor)], 2, function(x){as.numeric(as.character(x))})
+methyl_tumor <- as.data.frame(methyl_tumor)
+
+# drop duplicates from methyl_tumoration so LSA work
+methyl_tumor <- methyl_tumor[!duplicated(methyl_tumor$id),]
+methyl_tumor <- methyl_tumor[!is.na(methyl_tumor$id),]
+rownames(methyl_tumor) <- methyl_tumor[,1]
+methyl_tumor <- methyl_tumor[, -1]
+
+
+write.csv(methyl_tumor, paste0(methyl_data, '/methyl_tumor.csv'), row.names = TRUE)
 
 # library(IlluminaHumanMethylation27k.db)
 # ProbeToSymbol <- IlluminaHumanMethylation27kSYMBOL

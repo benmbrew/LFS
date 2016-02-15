@@ -73,8 +73,8 @@ standard_model_predict <- function(data, ground_truth, partition, selected_featu
   dtree.predictions <- temp.predictions
   #print(head(dtree.predictions))
 
-  test.ground_truth <- ground_truth[partition[[run_ind]]$test_index] #get the real results for the current test
-  test.ground_truth_1inN <- class.ind(ground_truth[partition[[run_ind]]$test_index]) # creates matrix of 0 and 1 for T and F
+  test.ground_truth <- ground_truth_sam[partition[[run_ind]]$test_index] #get the real results for the current test
+  test.ground_truth_1inN <- class.ind(ground_truth_sam[partition[[run_ind]]$test_index]) # creates matrix of 0 and 1 for T and F
   #print(table(levels(test.ground_truth)[apply(dtree.predictions, 1, which.is.max)], test.ground_truth))
   # AUC
   #create ROCR prediction object
@@ -83,7 +83,7 @@ standard_model_predict <- function(data, ground_truth, partition, selected_featu
   print(paste("Decision Tree test AUC:", dtree.test_auc))  
   # Accuracy - the accuracy is the proportion of true results (both true positives and true negatives) 
   # among the total number of cases examined
-  dtree.test_acc <- sum(levels(test.ground_truth)[apply(dtree.predictions, 1, which.is.max)] == test.ground_truth) / dim(dtree.predictions)[1]
+  dtree.test_acc <- sum(levels(test.ground_truth)[apply(dtree.predictions, 1, which.is.max)] == test.ground_truth, na.rm = T) / dim(dtree.predictions)[1]
   # basically anything, whether true or false, that the model got right/total observations. 
   print(paste("Decision Tree test acc:", dtree.test_acc)) 
   # Compute Confusion Matrix and Statistics
@@ -187,8 +187,8 @@ standard_model_predict <- function(data, ground_truth, partition, selected_featu
   temp.l <- min(length(elastic_net.cv_model$lambda), length(elasticNet.model$lambda)) 
   stopifnot(elastic_net.cv_model$lambda[1:temp.l] == elasticNet.model$lambda[1:temp.l])  
   
-  test.ground_truth <- ground_truth[partition[[run_ind]]$test_index]
-  test.ground_truth_1inN <- class.ind(ground_truth[partition[[run_ind]]$test_index])
+  test.ground_truth <- ground_truth_sam[partition[[run_ind]]$test_index]
+  test.ground_truth_1inN <- class.ind(ground_truth_sam[partition[[run_ind]]$test_index])
   #print(table(levels(test.ground_truth)[apply(elasticNet.predictions, 1, which.is.max)], test.ground_truth))
   # AUC
   #create ROCR prediction object
@@ -196,7 +196,7 @@ standard_model_predict <- function(data, ground_truth, partition, selected_featu
   elasticNet.test_auc <- unlist(slot(performance(temp.predictions, type_measure.performance), "y.values"))          
   print(paste("Elastic Net test AUC:", elasticNet.test_auc))  
   # Accuracy
-  elasticNet.test_acc <- sum(levels(test.ground_truth)[apply(elasticNet.predictions, 1, which.is.max)] == test.ground_truth) / dim(elasticNet.predictions)[1]
+  elasticNet.test_acc <- sum(levels(test.ground_truth)[apply(elasticNet.predictions, 1, which.is.max)] == test.ground_truth, na.rm = T) / dim(elasticNet.predictions)[1]
   print(paste("Elastic Net test acc:", elasticNet.test_acc))  
   # Compute Confusion Matrix and Statistics
   #confusionMatrix(pred, truth)
@@ -256,8 +256,8 @@ standard_model_predict <- function(data, ground_truth, partition, selected_featu
   temp.predictions <- predict(lasso.model, data[partition[[run_ind]]$test_index, selected_features], type = "response")  
   lasso.predictions <- temp.predictions[, , temp.min_lambda_index]  
   
-  test.ground_truth <- ground_truth[partition[[run_ind]]$test_index]
-  test.ground_truth_1inN <- class.ind(ground_truth[partition[[run_ind]]$test_index])
+  test.ground_truth <- ground_truth_sam[partition[[run_ind]]$test_index]
+  test.ground_truth_1inN <- class.ind(ground_truth_sam[partition[[run_ind]]$test_index])
   #print(table(levels(test.ground_truth)[apply(lasso.predictions, 1, which.is.max)], test.ground_truth))
   # AUC
   #create ROCR prediction object
@@ -265,7 +265,7 @@ standard_model_predict <- function(data, ground_truth, partition, selected_featu
   lasso.test_auc <- unlist(slot(performance(temp.predictions, type_measure.performance), "y.values"))          
   print(paste("lasso test AUC:", lasso.test_auc))  
   # Accuracy
-  lasso.test_acc <- sum(levels(test.ground_truth)[apply(lasso.predictions, 1, which.is.max)] == test.ground_truth) / dim(lasso.predictions)[1]
+  lasso.test_acc <- sum(levels(test.ground_truth)[apply(lasso.predictions, 1, which.is.max)] == test.ground_truth, na.rm =T) / dim(lasso.predictions)[1]
   print(paste("lasso test acc:", lasso.test_acc))  
   # Compute Confusion Matrix and Statistics
   #confusionMatrix(pred, truth)
@@ -323,8 +323,8 @@ standard_model_predict <- function(data, ground_truth, partition, selected_featu
   temp.predictions <- predict(ridge.model, data[partition[[run_ind]]$test_index, selected_features], type = "response")  
   ridge.predictions <- temp.predictions[, , temp.min_lambda_index]  
   
-  test.ground_truth <- ground_truth[partition[[run_ind]]$test_index]
-  test.ground_truth_1inN <- class.ind(ground_truth[partition[[run_ind]]$test_index])
+  test.ground_truth <- ground_truth_sam[partition[[run_ind]]$test_index]
+  test.ground_truth_1inN <- class.ind(ground_truth_sam[partition[[run_ind]]$test_index])
   #print(table(levels(test.ground_truth)[apply(ridge.predictions, 1, which.is.max)], test.ground_truth))
   # AUC
   #create ROCR prediction object
@@ -332,7 +332,7 @@ standard_model_predict <- function(data, ground_truth, partition, selected_featu
   ridge.test_auc <- unlist(slot(performance(temp.predictions, type_measure.performance), "y.values"))          
   print(paste("Ridge test AUC:", ridge.test_auc))  
   # Accuracy
-  ridge.test_acc <- sum(levels(test.ground_truth)[apply(ridge.predictions, 1, which.is.max)] == test.ground_truth) / dim(ridge.predictions)[1]
+  ridge.test_acc <- sum(levels(test.ground_truth)[apply(ridge.predictions, 1, which.is.max)] == test.ground_truth, na.rm = T) / dim(ridge.predictions)[1]
   print(paste("Ridge test acc:", ridge.test_acc))
   # Compute Confusion Matrix and Statistics
   #confusionMatrix(pred, truth)
@@ -381,8 +381,8 @@ standard_model_predict <- function(data, ground_truth, partition, selected_featu
                         , newdata = data[partition[[run_ind]]$test_index, selected_features]
                         , type = "prob")
   
-  test.ground_truth <- ground_truth[partition[[run_ind]]$test_index]
-  test.ground_truth_1inN <- class.ind(ground_truth[partition[[run_ind]]$test_index])
+  test.ground_truth <- ground_truth_sam[partition[[run_ind]]$test_index]
+  test.ground_truth_1inN <- class.ind(ground_truth_sam[partition[[run_ind]]$test_index])
   #print(table(levels(test.ground_truth)[apply(rf.predictions, 1, which.is.max)], test.ground_truth))
   # AUC
   #create ROCR prediction object
@@ -390,7 +390,7 @@ standard_model_predict <- function(data, ground_truth, partition, selected_featu
   rf.test_auc <- unlist(slot(performance(temp.predict, "auc"), "y.values"))  
   print(paste("RF test AUC:", rf.test_auc))  
   # Accuracy
-  rf.test_acc <- sum(levels(test.ground_truth)[apply(rf.predictions, 1, which.is.max)] == test.ground_truth) / dim(rf.predictions)[1]
+  rf.test_acc <- sum(levels(test.ground_truth)[apply(rf.predictions, 1, which.is.max)] == test.ground_truth, na.rm = T) / dim(rf.predictions)[1]
   print(paste("RF test acc:", rf.test_acc))  
   # Compute Confusion Matrix and Statistics
   #confusionMatrix(pred, truth)
@@ -423,8 +423,8 @@ standard_model_predict <- function(data, ground_truth, partition, selected_featu
                                , newdata = data[partition[[run_ind]]$test_index, selected_features]
                                , type = "prob")
 
-  test.ground_truth <- ground_truth[partition[[run_ind]]$test_index]
-  test.ground_truth_1inN <- class.ind(ground_truth[partition[[run_ind]]$test_index])
+  test.ground_truth <- ground_truth_sam[partition[[run_ind]]$test_index]
+  test.ground_truth_1inN <- class.ind(ground_truth_sam[partition[[run_ind]]$test_index])
   #print(table(levels(test.ground_truth)[apply(svmLinear.predictions, 1, which.is.max)], test.ground_truth))
   # AUC
   #create ROCR prediction object
@@ -432,7 +432,7 @@ standard_model_predict <- function(data, ground_truth, partition, selected_featu
   svmLinear.test_auc <- unlist(slot(performance(temp.predict, "auc"), "y.values"))  
   print(paste("SVM linear test AUC:", svmLinear.test_auc))     
   # Accuracy
-  svmLinear.test_acc <- sum(levels(test.ground_truth)[apply(svmLinear.predictions, 1, which.is.max)] == test.ground_truth) / dim(svmLinear.predictions)[1]
+  svmLinear.test_acc <- sum(levels(test.ground_truth)[apply(svmLinear.predictions, 1, which.is.max)] == test.ground_truth, na.rm = T) / dim(svmLinear.predictions)[1]
   print(paste("SVM linear test acc:", svmLinear.test_acc))    
   # Compute Confusion Matrix and Statistics
   #confusionMatrix(pred, truth)
@@ -464,8 +464,8 @@ standard_model_predict <- function(data, ground_truth, partition, selected_featu
                                , newdata = data[partition[[run_ind]]$test_index, selected_features]
                                , type = "prob")
 
-  test.ground_truth <- ground_truth[partition[[run_ind]]$test_index]
-  test.ground_truth_1inN <- class.ind(ground_truth[partition[[run_ind]]$test_index])
+  test.ground_truth <- ground_truth_sam[partition[[run_ind]]$test_index]
+  test.ground_truth_1inN <- class.ind(ground_truth_sam[partition[[run_ind]]$test_index])
   #print(table(levels(test.ground_truth)[apply(svmRadial.predictions, 1, which.is.max)], test.ground_truth))
   # AUC
   #create ROCR prediction object
@@ -473,7 +473,7 @@ standard_model_predict <- function(data, ground_truth, partition, selected_featu
   svmRadial.test_auc <- unlist(slot(performance(temp.predict, "auc"), "y.values"))  
   print(paste("SVM radial test AUC:", svmRadial.test_auc))     
   # Accuracy
-  svmRadial.test_acc <- sum(levels(test.ground_truth)[apply(svmRadial.predictions, 1, which.is.max)] == test.ground_truth) / dim(svmRadial.predictions)[1]
+  svmRadial.test_acc <- sum(levels(test.ground_truth)[apply(svmRadial.predictions, 1, which.is.max)] == test.ground_truth, na.rm = T) / dim(svmRadial.predictions)[1]
   print(paste("SVM radial test acc:", svmRadial.test_acc))
   # Compute Confusion Matrix and Statistics
   #confusionMatrix(pred, truth)

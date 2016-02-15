@@ -336,35 +336,35 @@ cleanCancer <-
       
       temp_cancer <- cancer_vector[i]
       
-      if(grepl('P', temp_cancer) && grepl('-', temp_cancer) && grepl('OS', temp_cancer) && !grepl('/', temp_cancer)) {
+      if (grepl('P', temp_cancer) && grepl('-', temp_cancer) && grepl('OS', temp_cancer) && !grepl('/', temp_cancer)) {
         temp.2_cancer <- strsplit(temp_cancer, '-')
         temp.3_cancer <- unlist(temp.2_cancer[[1]][2])
         temp.4_cancer <- gsub('?Lowgrade', '', temp.3_cancer, fixed = TRUE)
         temp_cancer <- temp.4_cancer
       }
       
-      if(grepl('P', temp_cancer) && grepl('-', temp_cancer) && !grepl('OS', temp_cancer) && !grepl('/', temp_cancer)) {
+      if (grepl('P', temp_cancer) && grepl('-', temp_cancer) && !grepl('OS', temp_cancer) && !grepl('/', temp_cancer)) {
         temp.2_cancer <- strsplit(temp_cancer, '-')
         temp.3_cancer <- unlist(temp.2_cancer[[1]][2])
         temp.4_cancer <- gsub('?Lowgrade', '', temp.3_cancer, fixed = TRUE)
         temp_cancer <- temp.4_cancer
       }
       
-      if(grepl('P', temp_cancer) && grepl('OS', temp_cancer) && grepl('-', temp_cancer) && grepl('left', temp_cancer)) {
+      if (grepl('P', temp_cancer) && grepl('OS', temp_cancer) && grepl('-', temp_cancer) && grepl('left', temp_cancer)) {
         temp.2_cancer <- strsplit(temp_cancer, '-')
         temp.3_cancer <- strsplit(temp.2_cancer[[1]][2], ',')
         temp.4_cancer <- temp.3_cancer[[1]][1]
         temp_cancer <- temp.4_cancer
       }
       
-      if(grepl('P', temp_cancer) && grepl('OS', temp_cancer) && grepl('-', temp_cancer) && grepl('right', temp_cancer)) {
+      if (grepl('P', temp_cancer) && grepl('OS', temp_cancer) && grepl('-', temp_cancer) && grepl('right', temp_cancer)) {
         temp.2_cancer <- strsplit(temp_cancer, '-')
         temp.3_cancer <- strsplit(temp.2_cancer[[1]][2], ',')
         temp.4_cancer <- temp.3_cancer[[1]][1]
         temp_cancer <- temp.4_cancer
       }
       
-      if(grepl('P', temp_cancer) && grepl('-', temp_cancer) && grepl('/', temp_cancer)) {
+      if (grepl('P', temp_cancer) && grepl('-', temp_cancer) && grepl('/', temp_cancer)) {
         temp.2_cancer <- strsplit(temp_cancer, '-')
         temp.3_cancer <- unlist(temp.2_cancer[[1]][2])
         temp.4_cancer <- strsplit(temp.3_cancer, '/')
@@ -372,34 +372,34 @@ cleanCancer <-
         temp_cancer <- temp.5_cancer
       }
       
-      if(grepl('P', temp_cancer) && grepl('-', temp_cancer) && !grepl('/', temp_cancer) && !grepl('?', temp_cancer)) {
+      if (grepl('P', temp_cancer) && grepl('-', temp_cancer) && !grepl('/', temp_cancer) && !grepl('?', temp_cancer)) {
         temp.2_cancer <- strsplit(temp_cancer, '-')
         temp.3_cancer <- unlist(temp.2_cancer[[1]][2])
         temp_cancer <- temp.3_cancer
       }
       
       
-      if(grepl(',', temp_cancer, fixed = TRUE)) {
+      if (grepl(',', temp_cancer, fixed = TRUE)) {
         temp_cancer <- gsub(',', '_', temp_cancer)
       }
       
-      if(grepl('?', temp_cancer, fixed = TRUE)) {
+      if (grepl('?', temp_cancer, fixed = TRUE)) {
         temp_cancer <- gsub('?', '', temp_cancer)
       }
       
-      if(grepl('&', temp_cancer, fixed = TRUE)) {
+      if (grepl('&', temp_cancer, fixed = TRUE)) {
         temp_cancer <- gsub('&', '_', temp_cancer)
       }
       
-      if(grepl('notdocumented', temp_cancer, fixed = TRUE)) {
+      if (grepl('notdocumented', temp_cancer, fixed = TRUE)) {
         temp_cancer <- NA
       }
       
-      if(grepl('unknown', temp_cancer, fixed = TRUE)) {
+      if (grepl('unknown', temp_cancer, fixed = TRUE)) {
         temp_cancer <- NA
       }
       
-      if(grepl('Unaffected', temp_cancer)) {
+      if (grepl('Unaffected', temp_cancer)) {
         temp_cancer <- 'Unaffected'
       }
     
