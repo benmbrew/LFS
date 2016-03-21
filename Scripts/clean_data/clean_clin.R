@@ -119,7 +119,8 @@ clin <- as.data.frame(apply(clin, 2, function(x) gsub('\\s+', '', x)))
 ##########################################################################
 # clean malkin ids 
 clin$blood_dna_malkin_lab_ <- as.character(clin$blood_dna_malkin_lab_)
-
+NAs <- 'NA|nogermlineDNA|nosample|Nosample'
+ABs <- 'A|B'
 cleanIds <- 
   
   function(data, column_name) { 
@@ -130,16 +131,12 @@ cleanIds <-
       
       temp_id <- id_vector[i]
       
-      if(grepl('NA', temp_id)) {
+      if(grepl(NAs, temp_id)) {
         temp_id <- NA
       }
       
-      if(grepl('A', temp_id) || grepl('B', temp_id)) {
+      if(grepl(ABs, temp_id)) {
         temp_id <- substring(temp_id, 1, 4)
-      }
-      
-      if(grepl('nogermlineDNA', temp_id) || grepl('nosample', temp_id) || grepl('Nosample', temp_id)) {
-        temp_id <- NA
       }
       
       if(grepl('received', temp_id)) {

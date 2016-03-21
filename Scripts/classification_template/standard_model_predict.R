@@ -183,7 +183,7 @@ standard_model_predict <- function(data, ground_truth, partition, selected_featu
   # This returns 100 prediction with 1-100 lambdas
   temp.predictions <- predict(elasticNet.model, data[partition[[run_ind]]$test_index, selected_features], type = "response")
   #print(dim(temp.predictions))
-  elasticNet.predictions <- temp.predictions[, , temp.min_lambda_index]  # this grabs the opitmal lambda 
+  elasticNet.predictions <- temp.predictions[,,  temp.min_lambda_index]  # this grabs the opitmal lambda 
   temp.l <- min(length(elastic_net.cv_model$lambda), length(elasticNet.model$lambda)) 
   stopifnot(elastic_net.cv_model$lambda[1:temp.l] == elasticNet.model$lambda[1:temp.l])  
   
