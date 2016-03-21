@@ -208,7 +208,7 @@ cleanAge <-
         temp.3_age <- temp.2_age[2]
         temp_age <- temp.3_age
       }
-      if (grepl('(', temp_age, fixed = TRUE) || grepl(')', temp_age, fixed = TRUE)){
+      if (grepl('(', temp_age, fixed = TRUE) {
         temp_age <- strsplit(temp_age, '(', fixed = TRUE)
         temp.2_age <- unlist(temp_age)
         temp.3_age <- temp.2_age[1]
@@ -220,13 +220,10 @@ cleanAge <-
         temp_age <- gsub('>', '', temp_age)
       }
       
-      if (grepl('k', temp_age)) {
+      if (grepl('k|NA', temp_age)) {
         temp_age <- NA
       }
       
-      if (grepl('NA', temp_age)) {
-        temp_age <- NA
-      }
       
       if (grepl('y', temp_age) && grepl('m', temp_age)) {
         temp_age <- gsubfn('([y,m])', list('y' = '.', 'm' = ''), as.character(temp_age))
