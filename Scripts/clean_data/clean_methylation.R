@@ -1,5 +1,5 @@
 ## Script for reading, cleaning, and combining methylation data.
-
+# this is the second step in the pipeline
 home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
 test <- paste0(project_folder, '/Scripts/classification_template')

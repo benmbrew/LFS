@@ -1,5 +1,6 @@
 ##### This script maps cgp probe sites to nearest genome using the fdb.infiniumMethylation.hg19 data
 # base, and primarily, the getNearestGene function.
+# This is the third step in the pipeline
 library(FDb.InfiniumMethylation.hg19)
 library(dplyr)
 
