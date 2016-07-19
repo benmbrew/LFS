@@ -1,3 +1,8 @@
+# initialize folders
+library(gsubfn)
+library(xlsx)
+library(gsheet)
+
 ### This Script will read in clinical data and clean it.
 # This is the first step in the pipeline
 # Initialize folders
@@ -11,19 +16,24 @@ results_folder <- paste0(test, '/Results')
 
 #######################################################################
 # clean clinical data sent from Ana on 1/29/2016 
-library(xlsx)
-library(gsubfn)
-clin1 <- read.csv(paste0(clin_data, '/malkin_may_6th_1.csv'), na.strings=c("","NA"), 
-                  stringsAsFactors = FALSE) # read the first sheet
-clin2 <- read.csv(paste0(clin_data, '/malkin_may_6th_2.csv'), na.strings=c("","NA"), 
-                  stringsAsFactors = FALSE) # read the second sheet
+# clin1 <- as.data.frame(gsheet2tbl('https://docs.google.com/spreadsheets/d/1zUOYEXFh9RAQFpNPFjpPNBSLbFgnqQItucuNzuznivk/edit#gid=0'))
+# write.csv(clin1, '/home/benbrew/Desktop/clin1.csv')
+# clin2 <- gsheet2tbl('https://docs.google.com/spreadsheets/d/1zUOYEXFh9RAQFpNPFjpPNBSLbFgnqQItucuNzuznivk/edit#gid=621772204')
+# write.csv(clin2, '/home/benbrew/Desktop/clin2.csv')
 
-# For the time being drop family from clin1 
+clin1 <- read.csv(paste0(clin_data, '/clin1.csv'), na.strings=c("","NA"), 
+                 stringsAsFactors = FALSE, sep = ',') # read the first sheet
+clin2 <- read.csv(paste0(clin_data, '/malkin_june_2.csv'), na.strings=c("","NA"),
+                stringsAsFactors = FALSE) # read the second sheet
+
+clin1$X <- NULL
+
+# For the time being drop family from clin1
 clin2$X <- NULL
-clin1$Family.Name <- NULL
+# clin1$Family.Name <- NULL
 clin2$Pin53 <- NULL
 
-# combine the two data sets 
+# combine the two data sets
 clin <- rbind(clin1, clin2)
 
 # remove all columns that are completely NA 
@@ -57,8 +67,20 @@ clin <- cleanColNames(clin)
 # clean NAs and N/As
 clin <- as.data.frame(apply(clin, 2, function(x) gsub('N/A', 'NA', x)))
 
-# clean white spaces 
-clin <- as.data.frame(apply(clin, 2, function(x) gsub('\\s+', '', x)))
+# clean white all leading and trailing white spaces 
+
+convertColumn <- function(data) {
+  
+  for( i in names(data)) {
+  
+  data[,i] <- gsub("^\\s+|\\s+$", "", data[, i])
+  
+  }
+  return(data)
+}
+
+
+clin <- convertColumn(clin)
 
 ##########################################################################
 # clean malkin ids 
@@ -118,7 +140,8 @@ splitRows <- function(data, duplicate_table){
   for (i in 1:nrow(data)) {
     sub_data <- data[i,]
     
-    if (grepl('/', sub_data$blood_dna_malkin_lab_)) {
+    if (grepl('/', sub_data$blood_dna_malkin_lab_) | 
+        grepl('/', sub_data$age_sample_collection)) {
       
       split_malkin <- strsplit(as.character(sub_data$blood_dna_malkin_lab_), '/')
       split_age <- strsplit(as.character(sub_data$age_sample_collection), '/')
@@ -131,6 +154,8 @@ splitRows <- function(data, duplicate_table){
   }
   
   data <- data[!grepl('/', data$blood_dna_malkin_lab_),]
+  data <- data[!grepl('/', data$age_sample_collection),]
+  
   duplicate_table$blood_dna_malkin_lab_ <- NULL
   duplicate_table$age_sample_collection <- NULL
   colnames(duplicate_table)[1:2] <- c('blood_dna_malkin_lab_', 'age_sample_collection')
@@ -158,6 +183,12 @@ cleanAge <-  function(data, column_name) {
   for (i in 1:length(age_vector)) {
       
     temp_age <- age_vector[i]
+    
+    if(!grepl('y|m|d', temp_age)){
+      temp_age <- NA
+    
+    } else {
+        
       
       if (grepl('~', temp_age, fixed = TRUE)) {
         
@@ -191,17 +222,12 @@ cleanAge <-  function(data, column_name) {
         
       }
       
-      if (grepl('k|NA', temp_age)) {
-        
-        temp_age <- NA
-        
-      }
+      # if (grepl('k|NA|noinfo|no info|Unaffected|unable to retest', temp_age)) {
+      #   
+      #   temp_age <- NA
+      #   
+      # }
     
-      if (grepl('noinfo', temp_age)) {
-      
-        temp_age <- NA
-      
-      }
       
       if (grepl('y', temp_age) && grepl('m', temp_age)) {
         
@@ -234,20 +260,28 @@ cleanAge <-  function(data, column_name) {
         } else if (grepl('w', temp_age) && !grepl('m', temp_age)) {
         
           temp_age <- gsub('w', '', temp_age)
-    } 
-     
+    
+        } else if (grepl('d', temp_age)) {
+    
+          temp_age <- gsub('2d', '0.005', temp_age)
+        } 
+    }
     age_vector[i] <- temp_age
-  
+    
   }
   
   data[, column_name] <- age_vector
+  data[, column_name] <- as.numeric(as.character(data[, column_name]))
   return(data)
 
 } 
 
 clin <- cleanAge(clin, column_name = 'age_diagnosis')
-clin <- cleanAge(clin, column_name = 'age_sample_collection')
+clin<- cleanAge(clin, column_name = 'age_sample_collection')
 
+# Convert age of diagnosis and sample collection to months 
+clin$age_diagnosis <- clin$age_diagnosis*12
+clin$age_sample_collection <- clin$age_sample_collection*12
 
 ############################################################
 # clean date column and create variable for patient age 
@@ -284,7 +318,8 @@ cleanp53 <-
         temp_p53 <- NA
         }
       
-      if (grepl('paraffinblocktestingfailed|Declinedtesting', temp_p53, fixed = TRUE)) {
+      if (grepl('paraffinblocktestingfailed|obligate|Declinedtesting|not tested|Not tested|paraffin|Declined testing', 
+                temp_p53)) {
         temp_p53 <- NA
       }
       
@@ -399,6 +434,11 @@ cleanCancer <-
 
 
 clin <- cleanCancer(clin, column_name = 'cancer_diagnosis_diagnoses')
+
+# reclean cancer
+
+
+# clean relationship column
 
 ############################################################
 # clean p53

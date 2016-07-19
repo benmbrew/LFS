@@ -1,0 +1,80 @@
+### 
+# this script will cluster the imputed data 
+# Step 5 in pipeline
+library(clValid)
+library(fpc)
+library(cluster) 
+
+# Initialize folders
+home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects/'
+project_folder <- paste0(home_folder, '/LFS')
+test <- paste0(project_folder, '/Scripts/regression_template')
+data_folder <- paste0(project_folder, '/Data')
+methyl_data <- paste0(data_folder, '/methyl_data')
+clin_data <- paste0(data_folder, '/clin_data')
+results_folder <- paste0(test, '/Results')
+
+
+# read in methyl impute raw
+methyl_impute <- read.csv(paste0(methyl_data, '/methyl_impute_raw.csv'), stringsAsFactors = F)
+
+# remove X
+methyl_impute$X <- NULL
+
+# put ids in rownames for imputation
+rownames(methyl_impute) <- methyl_impute[,1]
+methyl_impute <- methyl_impute[, -1]
+
+methyl_impute <- as.matrix(methyl_impute)
+# hierarchical clustering function
+# samples need to be in the columns
+
+data <- methyl_impute
+
+# kmeans
+kmeans_data <- t(data)
+
+#accumulator for cost results
+cost_df <- data.frame()
+
+#run kmeans for all clusters up to 100
+for(i in 2:8){
+  #Run kmeans for each level of i, allowing up to 100 iterations for convergence
+  kmeans<- kmeans(kmeans_data, centers=i, iter.max=100)
+  
+  #Combine cluster number and cost together, write to df
+  cost_df<- rbind(cost_df, cbind(i, kmeans$tot.withinss))
+  
+  print(i)
+}
+
+names(cost_df) <- c("cluster", "cost")
+plot(cost_df$cluster, cost_df$cost,
+     bty = 'n', xlab = 'Clusters', ylab = 'Cost')
+
+kmeans_labels <- kmeans$cluster
+# nclust <- 2:10
+# # Perform clustering
+# clustMethods <- clValid(as.matrix(distance), 4,  clMethods = c("hierarchical"), 
+#                         validation = "internal")
+
+# Calculate the correlation between genes
+# The cor function takes correlations between columns
+correlation <- cor(data)
+
+# Convert the correlation to a distance object
+distance <- as.dist(1 - correlation)
+
+# #use clValid or silhouetee to choose optimal clustering
+# The main function is clValid(), and the
+# available validation measures fall into the three general categories of “internal”, “stability”,
+hclustFit <- hclust(distance, method="average")
+labels <- cutree(hclustFit, k=12)
+
+hier_labels <- labels
+
+# save labels 
+write.csv(kmeans_labels, paste(data_folder,'kmeans_labels.csv', sep ='/'), row.names = FALSE)
+write.csv(hier_labels, paste(data_folder,'hier_labels.csv', sep ='/'), row.names = FALSE)
+
+

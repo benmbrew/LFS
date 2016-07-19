@@ -1,7 +1,7 @@
 ###############################################
 # This script will run a PCA on the LFS methylation data and plot age of diagnosis.
 # existing by gene methylation data we have. 
-# this is the 5th step in the pipeline
+# this is the 6th step in the pipeline
 library(dplyr)
 library(stringr)
 library(impute)

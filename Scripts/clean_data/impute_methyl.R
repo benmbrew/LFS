@@ -40,23 +40,26 @@ if('methyl_lsa.RData' %in% dir()){
   ################################################################
   
   # Read in methylation data
-  methyl <- data.matrix(read.csv(paste0(methyl_data, '/methyl.csv'), stringsAsFactors = FALSE))
-  methyl_tumor <- data.matrix(read.csv(paste0(methyl_data, '/methyl_tumor.csv'), stringsAsFactors = FALSE))
+  methyl <- read.csv(paste0(methyl_data, '/methyl.csv'), stringsAsFactors = FALSE)
+  # methyl_tumor <- data.matrix(read.csv(paste0(methyl_data, '/methyl_tumor.csv'), stringsAsFactors = FALSE))
   
   # put ids in rownames for imputation
   rownames(methyl) <- methyl[,1]
   methyl <- methyl[, -1]
   
   # put ids in rownames for imputation
-  rownames(methyl_tumor) <- methyl_tumor[,1]
-  methyl_tumor <- methyl_tumor[, -1]
+  # rownames(methyl_tumor) <- methyl_tumor[,1]
+  # methyl_tumor <- methyl_tumor[, -1]
   
   # remove duplicate rownames,so it can impute
+  row.names(methyl)
+  
+  methyl <- as.matrix(methyl)
   
   # run lsaImputaion of methylation data
   methyl_impute_raw <- lsaImputation(incomplete_data = methyl, sample_rows = TRUE)
-  methyl_impute_raw_tumor <- lsaImputation(incomplete_data = methyl_tumor, sample_rows = TRUE)
-  
+  #methyl_impute_raw_tumor <- lsaImputation(incomplete_data = methyl_tumor, sample_rows = TRUE)
+
   # join rownames and methyl_impute and then erase rownames
   methyl_impute_raw <- cbind(id = rownames(methyl_impute_raw), methyl_impute_raw)
   rownames(methyl_impute_raw) <- NULL
