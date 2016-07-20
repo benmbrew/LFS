@@ -18,11 +18,33 @@ full_data <- read.csv(paste0(data_folder, '/full_data.csv'), stringsAsFactors = 
 kmeans <- read.csv(paste0(data_folder, '/kmeans_labels.csv'), stringsAsFactors = F)
 hier <- read.csv(paste0(data_folder, '/hier_labels.csv'), stringsAsFactors = F)
 
+# take subset to do test run 
+full_data <- full_data[, c(6, 34:39)]
+full_data <- full_data[complete.cases(full_data),]
+
+y <- full_data$age_diagnosis
+
+test_dat <- cbind(1, as.matrix(full_data[,-1]))
 
 
-# remove X
-methyl_impute$X <- NULL
+## Use a multiplicative grid for the penalty parameter lambda, starting
+## at the maximal lambda value
+index <- c(NA,2,2,3,3,3,4)
+colnames(test_dat) <- c("Intercept", paste("X", 1:6, sep = ""))
+lambda <- lambdamax(test_dat, y, index = index, penscale = sqrt,
+                    model = LinReg()) * 0.5^(0:7)
 
-# put ids in rownames for imputation
-rownames(methyl_impute) <- methyl_impute[,1]
-methyl_impute <- methyl_impute[, -1]
+## Fit the solution path on the lambda grid
+fit <- grplasso(test_dat,  y, index = index, lambda = lambda, model = LinReg(),
+                penscale = sqrt,
+                control = grpl.control(update.hess = "lambda", trace = 0))
+## Plot coefficient paths
+plot(fit)
+
+
+
+pred <- predict(fit)
+pred.resp <- predict(fit, type = "response")
+## The following points should lie on the sigmoid curve
+plot(pred, pred.resp)
+
