@@ -70,8 +70,12 @@ predictAll <- function(model_name,
       #summaryFunction = summaryFunc
     )
     
-    
+    # mtry: Number of variables randomly sampled as candidates at each split.
+    # ntree: Number of trees to grow.
     if (model_name == 'rf') {
+      
+      mtry <- sqrt(ncol(clin))
+      tunegrid <- expand.grid(.mtry=mtry)
       
       rf_y = clin$age_diagnosis[train_index]
       
@@ -80,6 +84,7 @@ predictAll <- function(model_name,
                           , y = rf_y
                           , method = "rf"
                           , trControl = fitControl
+                          , tuneGrid = tunegrid
                           , importance = T
                           , verbose = FALSE)
       
@@ -177,8 +182,8 @@ predictAll <- function(model_name,
       predictions[[i]] <- temp_predictions[ , temp.min_lambda_index]  # this grabs the opitmal lambda 
       temp.l <- min(length(elastic_net.cv_model$lambda), length(model[[i]]$lambda)) 
       stopifnot(elastic_net.cv_model$lambda[1:temp.l] == model[[i]]$lambda[1:temp.l])  
-      ground_truth <- clin$age_diagnosis[-train_index]
-      mse[[i]] <- mse(unlist(predictions[[i]]), ground_truth)
+      test.ground_truth[[i]] <- clin$age_diagnosis[-train_index]
+      mse[[i]] <- mse(unlist(predictions[[i]]), unlist(test.ground_truth[[i]]))
       
     }
     
@@ -226,8 +231,8 @@ predictAll <- function(model_name,
       #print(dim(temp.predictions))
       predictions[[i]] <- temp_predictions[ , temp.min_lambda_index]  # this grabs the opitmal lambda 
      
-      ground_truth <- clin$age_diagnosis[-train_index]
-      mse[[i]] <- mse(unlist(predictions[[i]]), ground_truth)
+      test.ground_truth[[i]] <- clin$age_diagnosis[-train_index]
+      mse[[i]] <- mse(unlist(predictions[[i]]), unlist(test.ground_truth[[i]]))
 
     }
     
@@ -250,8 +255,8 @@ predictAll <- function(model_name,
       
       importance[[i]] <- varImp(model[[i]])
       
-      test.ground_truth <- clin$age_diagnosis[-train_index]
-      mse[[i]] <- mse(unlist(predictions[[i]]), test.ground_truth)
+      test.ground_truth[[i]] <- clin$age_diagnosis[-train_index]
+      mse[[i]] <- mse(unlist(predictions[[i]]), unlist(test.ground_truth[[i]]))
       
     }
     
@@ -270,31 +275,36 @@ predictAll <- function(model_name,
 # using all features, random forest
 rf_mut <- predictAll(model_name = 'rf', 
                subset <- c("age_diagnosis", "p53_germline","gdna","mdm2", "codon72", "gender", 'methyl_indicator'), 
-               selected_features = c("p53_germline","gdna", "mdm2", "codon72", "gender"), iterations = 20)
+               selected_features = c("p53_germline","gdna", "mdm2", "codon72", "gender"), iterations = 50)
 
 
+plot(unlist(rf_mut[[2]]), unlist(rf_mut[[5]]))
 # remove p53 germline
 rf_mut1 <- predictAll(model_name = 'rf', 
                      subset <- c("age_diagnosis","gdna", "protein", "codon72", "gender", 'methyl_indicator'), 
                      selected_features = c("gdna", "protein", "codon72", "gender"), iterations = 50)
 
-
+plot(unlist(rf_mut1[[2]]), unlist(rf_mut1[[5]]))
 # remove codon_72
 rf_mut2 <- predictAll(model_name = 'rf', 
                      subset <- c("age_diagnosis", "p53_germline","gdna", "protein","mdm2", "gender", 'methyl_indicator'), 
                      selected_features = c("p53_germline","gdna", "mdm2", "protein", "gender"), iterations = 50)
 
+plot(unlist(rf_mut2[[2]]), unlist(rf_mut2[[5]]))
 
 # remove codon_72 and p53 germline
 rf_mut3 <- predictAll(model_name = 'rf', 
                       subset <- c("age_diagnosis","gdna", "protein","mdm2", "gender", 'methyl_indicator'), 
                       selected_features = c("gdna", "mdm2", "protein", "gender"), iterations = 50)
+plot(unlist(rf_mut3[[2]]), unlist(rf_mut3[[5]]))
 
 # Includes WT
 # include WT by removing gdna and protein (maybe most importance)
 rf_all <- predictAll(model_name = 'rf', 
                      subset <- c("age_diagnosis", "p53_germline","mdm2", "codon72", "gender", 'methyl_indicator'), 
                      selected_features = c("p53_germline", "mdm2",  "codon72", "gender"), iterations = 50)
+
+plot(unlist(rf_all[[2]]), unlist(rf_all[[5]]))
 
 ran_forest <- rbind (
   append('all_variables', mean(unlist(rf_mut[[1]]))),

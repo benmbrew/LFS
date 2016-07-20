@@ -52,7 +52,8 @@ names(cost_df) <- c("cluster", "cost")
 plot(cost_df$cluster, cost_df$cost,
      bty = 'n', xlab = 'Clusters', ylab = 'Cost')
 
-kmeans_labels <- kmeans$cluster
+kmeans_labels <- cbind(kmeans$cluster)
+
 # nclust <- 2:10
 # # Perform clustering
 # clustMethods <- clValid(as.matrix(distance), 4,  clMethods = c("hierarchical"), 
@@ -71,10 +72,10 @@ distance <- as.dist(1 - correlation)
 hclustFit <- hclust(distance, method="average")
 labels <- cutree(hclustFit, k=12)
 
-hier_labels <- labels
+hier_labels <- cbind(labels)
 
 # save labels 
-write.csv(kmeans_labels, paste(data_folder,'kmeans_labels.csv', sep ='/'), row.names = FALSE)
-write.csv(hier_labels, paste(data_folder,'hier_labels.csv', sep ='/'), row.names = FALSE)
+write.csv(kmeans_labels, paste(data_folder,'kmeans_labels.csv', sep ='/'))
+write.csv(hier_labels, paste(data_folder,'hier_labels.csv', sep ='/'))
 
 

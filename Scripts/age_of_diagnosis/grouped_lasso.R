@@ -1,8 +1,7 @@
 ### 
 # this script will run grouped lasso
-library(clValid)
-library(fpc)
-library(cluster) 
+library(grplasso)
+
 
 # Initialize folders
 home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects/'
@@ -15,9 +14,10 @@ results_folder <- paste0(test, '/Results')
 
 
 # read in methyl impute raw
-methyl_impute <- read.csv(paste0(methyl_data, '/methyl_impute_raw.csv'), stringsAsFactors = F)
+full_data <- read.csv(paste0(data_folder, '/full_data.csv'), stringsAsFactors = F)
 kmeans <- read.csv(paste0(data_folder, '/kmeans_labels.csv'), stringsAsFactors = F)
 hier <- read.csv(paste0(data_folder, '/hier_labels.csv'), stringsAsFactors = F)
+
 
 
 # remove X
