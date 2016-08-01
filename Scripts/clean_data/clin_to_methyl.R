@@ -26,6 +26,10 @@ source(paste0(project_folder, '/Code/Functions/lsaImputation.R'))
 # Read in methyl and clinical data and join by ids
 ################################################################
 
+# remove 'A' and '_' in methylation names
+methyl_impute_raw$id <- gsub('_', '', methyl_impute_raw$id)
+methyl_impute_raw$id <- gsub('A', '', methyl_impute_raw$id)
+
 # Read in data (clinical or clinical_two)
 clin <- read.csv(paste0(clin_data, '/clinical_two.csv'), stringsAsFactors = TRUE)
 
@@ -33,7 +37,7 @@ clin <- read.csv(paste0(clin_data, '/clinical_two.csv'), stringsAsFactors = TRUE
 clin$id <- as.factor(clin$blood_dna_malkin_lab_)
 
 # inner_join clin
-full_data <- inner_join(clin, methyl_impute,
+full_data <- inner_join(clin, methyl_impute_raw,
                         by = 'id')
 
 # Save data to be used later

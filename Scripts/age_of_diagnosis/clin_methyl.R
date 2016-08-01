@@ -24,14 +24,15 @@ library("pROC")
 library(dplyr)
 
 # Load in clinical data
-clin <- read.csv(paste0(clin_data, '/clin_only.csv'), stringsAsFactors = F)
+clin <- read.csv(paste0(clin_data, '/clinical_two.csv'), stringsAsFactors = F)
 
 # subset to those variables 
 # subset <- c("family_name", "relationship", "age_diagnosis", "p53_germline","gdna", 
 #             "protein", "codon72", "mdm2", "gender", 'methyl_indicator')
 
-subset <- c("age_diagnosis", "p53_germline","gdna", 
-            "protein", "codon72", "mdm2", "gender", 'methyl_indicator')
+subset <- c("age_diagnosis", "gender", 'methyl_indicator', "gdna.exon.intron", "gdna.base.change",
+            "gdna.codon", "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro",
+            "mdm2.nG")
 
 clin <- clin[, subset]
 
@@ -39,14 +40,14 @@ clin <- clin[, subset]
 clin <- clin[complete.cases(clin),]
 
 # convert characters to factors 
+# convert characters to factors 
 for ( i in 1:ncol(clin)){
   
-  if (class(clin[,i]) %in% c('character')) {
+  if(!grepl('age', colnames(clin[i]))) {
     clin[,i] <- as.factor(clin[,i])
     
   } 
 }
-
 ##################################################################
 # Random Forest - this is training on no methylation and test on methylation
 
@@ -65,8 +66,9 @@ fitControl <- trainControl(
   #summaryFunction = summaryFunc
 )
 
-selected_features <- c("p53_germline","gdna", 
-                       "protein", "codon72", "mdm2", "gender")
+selected_features = c("gender", "gdna.exon.intron", "gdna.base.change",
+                      "gdna.codon", "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro",
+                      "mdm2.nG")
 
 rf.model <- train(x = clin[train_index, selected_features]
                   , y = rf_y
@@ -79,7 +81,9 @@ rf.predictions <- predict(rf.model
                           , newdata = clin[test_index, selected_features])
 
 test.ground_truth <- clin$age_diagnosis[test_index]
-test.rf_mse_no_methyl <- mean((rf.predictions - test.ground_truth)^2)
+test.rf_mse_no_methyl <- rmse(rf.predictions, test.ground_truth)
+
+# 34.8 months - lower than all other rmse 
 
 # ##################################################################
 # # Random Forest - this is training on no methylation - split into 70% and predict on the 30% 

@@ -40,7 +40,7 @@ cost_df <- data.frame()
 #run kmeans for all clusters up to 100
 for(i in 2:8){
   #Run kmeans for each level of i, allowing up to 100 iterations for convergence
-  kmeans<- kmeans(kmeans_data, centers=i, iter.max=100)
+  kmeans<- kmeans(kmeans_data, centers=6, iter.max=100)
   
   #Combine cluster number and cost together, write to df
   cost_df<- rbind(cost_df, cbind(i, kmeans$tot.withinss))
@@ -70,7 +70,7 @@ distance <- as.dist(1 - correlation)
 # The main function is clValid(), and the
 # available validation measures fall into the three general categories of “internal”, “stability”,
 hclustFit <- hclust(distance, method="average")
-labels <- cutree(hclustFit, k=12)
+labels <- cutree(hclustFit, k=6)
 
 hier_labels <- cbind(labels)
 

@@ -449,7 +449,200 @@ clin$gender <- ifelse(clin$gender == 1, 'M',
 
 
 ###################################################################
+# add lauren's changes 
+trim <- function (x) gsub("^\\s+|\\s+$", "", x)
+
+###
+#     GDNA VARS
+###
+clin$gdna.exon.intron <- NA
+clin[,'gdna.exon.intron'][is.na(clin$gdna) == FALSE] <- 'no clear intron or exon'
+clin[,'gdna.exon.intron'] <- sub(":.*$", "", clin$gdna )
+clin[,'gdna.exon.intron'][grep(pattern = "Deletion",x = clin[,'gdna.exon.intron'])] <- 'no clear intron or exon'
+clin[,'gdna.exon.intron'][grep(pattern = "insertion",x = clin[,'gdna.exon.intron'])] <- 'no clear intron or exon'
+clin[,'gdna.exon.intron'][grep(pattern = "c.",x = clin[,'gdna.exon.intron'])] <- 'no clear intron or exon'
+clin[,'gdna.exon.intron'] <- trim(clin[,'gdna.exon.intron'])
+
+head(clin$gdna.exon.intron)
+unique(clin$gdna.exon.intron)
+
+clin[,'gdna.base.change'] <- NA
+clin[,'gdna.base.change'][is.na(clin$gdna) == FALSE] <- 'no bp change'
+clin[,'gdna.base.change'][grep(pattern = '>',x = clin$gdna)] <- 
+  
+  unlist(lapply(X = strsplit(x = clin$gdna,split = '>'), FUN = function(x){if(length(x) == 2){
+        str1 <- substr(x[1],nchar(x[1]),nchar(x[1]))
+        str2 <- substr(x[2],1,1)
+        out.val <- paste0(str1,'>',str2)
+        return(out.val)
+  }
     
+}))
+
+clin[,'gdna.base.change'] <- trim(clin[,'gdna.base.change'])
+
+unique(clin$gdna.base.change)
+table(clin$gdna.base.change)
+
+clin[,'gdna.codon'] <- NA
+clin[,'gdna.codon'][is.na(clin$gdna) == FALSE] <- 'no clear location'
+clin[,'gdna.codon'][which(substr(clin$gdna,1,4) == 'Exon')] <- substr(x = sub(">.*","",gsub("^[^.]*.", "", clin$gdna[which(substr(clin$gdna,1,4) == 'Exon')])),start = 1,stop = nchar(sub(">.*","",gsub("^[^.]*.", "", clin$gdna[which(substr(clin$gdna,1,4) == 'Exon')])))-1)
+clin[,'gdna.codon'][which(substr(clin$gdna,1,6) == 'Intron')] <- substr(x = sub(">.*","",gsub("^[^.]*.", "", clin$gdna[which(substr(clin$gdna,1,6) == 'Intron')])),start = 1,stop = nchar(sub(">.*","",gsub("^[^.]*.", "", clin$gdna[which(substr(clin$gdna,1,6) == 'Intron')])))-1)
+clin[,'gdna.codon'][grep(pattern = "d",clin[,'gdna.codon'])] <- 'no clear location'
+clin[,'gdna.codon'][grep(pattern = "_",clin[,'gdna.codon'])] <- 'no clear location'
+clin[,'gdna.codon'][grep(pattern = "-",clin[,'gdna.codon'])] <- 'no clear location'
+clin[,'gdna.codon'][grep(pattern = "/+",clin[,'gdna.codon'])] <- 'no clear location'
+clin[,'gdna.codon'][clin[,'gdna.codon'] == ""] <- 'no clear location'
+clin[,'gdna.codon'] <- trim(clin[,'gdna.codon'])
+
+unique(clin$gdna.codon)
+
+###
+#     PROTEIN VARS
+###
+
+clin[,'protein.codon.change'] <- NA
+clin[,'protein.codon.change'][is.na(clin$protein) == FALSE] <- 
+  trim(unlist(lapply(strsplit(x = sub(pattern = " / splice$",replacement = "", 
+                                      x = sub(pattern = 'p.',replacement = '',
+                                              x = clin$protein[is.na(clin$protein) == FALSE])),split = '[0-9]+'),
+  function(x){if(length(x) == 1) { 
+        
+    return('no codon change')
+    
+  }
+        
+    if (length(x) == 2) {
+      
+          return(paste0(x[1],'>',x[2]))
+      
+    } else {
+          
+      return(NA)
+  }
+        
+})))
+
+# length(clin[,'protein.codon.change'][is.na(clin$protein) == FALSE])
+
+# length(unlist(lapply(strsplit(x = sub(pattern = " / splice$",replacement = "",
+#                                       x = sub(pattern = 'p.',replacement = '',
+#                                               x = clin$protein[is.na(clin$protein) == FALSE])),split = '[0-9]+'),
+#                      function(x){if(length(x) == 1){
+#                        return('no codon change')
+#                      }
+#                      if(length(x) == 2){
+#                        return(paste0(x[1],'>',x[2]))
+#                      }
+#                      else{
+#                        return(NA)
+#                      }
+#                      })))
+
+# length(sub(pattern = 'p.',replacement = '',
+#            x = clin$protein[is.na(clin$protein) == FALSE]))
+
+# length(sub(pattern = " / splice$",replacement = "",
+#            x = sub(pattern = 'p.',replacement = '',
+#                    x = clin$protein[is.na(clin$protein) == FALSE])))
+
+clin[,'protein.codon.num'] <- NA
+clin[,'protein.codon.num'][is.na(clin$protein) == FALSE] <- as.numeric(gsub("\\D", "", 
+                                                                                    clin$protein[is.na(clin$protein) == FALSE]))
+
+clin[,'splice.delins.snv'] <- NA
+clin[,'splice.delins.snv'][grep(pattern = '>',clin$gdna.base.change)] <- 'SNV'
+clin[,'splice.delins.snv'][grep(pattern = 'deletion',clin$protein,ignore.case = T)] <- 'Deletion'
+clin[,'splice.delins.snv'][grep(pattern = 'splice',clin$protein,ignore.case = T)] <- 'Splice'
+clin[,'splice.delins.snv'][grep(pattern = 'dup',clin$gdna,ignore.case = T)] <- 'Duplication'
+table(clin$splice.delins.snv)
+
+clin$codon72.npro <- NA
+clin$codon72.npro[clin$codon72 == 'arg/arg'] <- 0
+clin$codon72.npro[clin$codon72 == 'arg/pro'] <- 1
+clin$codon72.npro[clin$codon72 == 'pro/pro'] <- 2
+table(clin$codon72)
+table(clin$codon72.npro)
+
+clin$mdm2.nG <- NA
+clin$mdm2.nG[clin$mdm2 == 'T/T'] <- 0
+clin$mdm2.nG[clin$mdm2 == 'T/G'] <- 1
+clin$mdm2.nG[clin$mdm2 == 'G/G'] <- 2
+table(clin$mdm2)
+table(clin$mdm2.nG)
+
+# temp <- read.csv(paste0(clin_data, '/lfs-clin-data-with-new-vars-July21-2016.csv'), header=TRUE,as.is=TRUE)
+# 
+# write.csv(clin,file="lfs-clin-data-with-new-vars-July21-2016.csv",
+#           quote=FALSE,row.names=FALSE,col.names=TRUE)
+# save(list = c('clin'),file = "lfs-clin-data-with-new-vars-July21-2016.RData")
+
+############################################################################33
+# read in methylation column names to make clinical column with methyl indicator
+##########################################################################
+methylation_names <- colnames(read.csv(paste0(methyl_data, '/methylation.csv'), 
+                                       stringsAsFactors = F, check.names = FALSE, nrows = 1))
+
+# remove 'A' and '_' in methylation names
+methylation_names <- gsub('_', '', methylation_names)
+methylation_names <- gsub('A', '', methylation_names)
+
+##############################################################
+# Get clin in format to run a model
+
+# remove leading and trailing white space 
+clin$blood_dna_malkin_lab_ <- gsub("^\\s+|\\s+$", "", clin$blood_dna_malkin_lab_)
+
+# replace LFS with family
+clin$family_name <- gsub('LFS', 'Family', clin$family_name)
+
+
+# differences in family in regards to clinical variables 
+
+# clean family column 
+for (i in 1:nrow(clin)) {
+  
+  sub_clin <- clin$family_name[i]
+  
+  if(is.na(sub_clin)) {
+    temp <- NA
+    
+  } else {
+    
+    if(nchar(sub_clin) == 11) {
+      temp <- substr(sub_clin, 1, 8)
+    }
+    
+    if(nchar(sub_clin) == 12) {
+      temp <- substr(sub_clin, 1, 9)
+    }
+    
+    if(nchar(sub_clin) == 13) {
+      temp <- substr(sub_clin, 1, 10)
+    }
+    
+  }
+  clin$family_name[i] <- temp
+  
+}
+
+clin$family_name <- tolower(gsub(" ", "_", clin$family_name))
+
+############################################################################
+# add a column to clin to indicate if methylation data is available
+# add '1' and make data frame 
+methylation_names <- as.data.frame(cbind(methylation_names, rep.int(1, length(methylation_names))))
+methylation_names$methylation_names <- as.character(methylation_names$methylation_names)
+methylation_names$V2 <- as.character(methylation_names$V2)
+names(methylation_names) <- c("blood_dna_malkin_lab_", "methyl_indicator")
+methylation_names <- methylation_names[!duplicated(methylation_names),]
+
+# join methylation names to clin
+clin <- left_join(clin, methylation_names)
+
+# recode true and false 
+clin$methyl_indicator <- ifelse(is.na(clin$methyl_indicator), 'No', 'Yes')
+
 # write clin to data_folder so it can be loaded to database
 write.csv(clin, paste(clin_data,'clinical_two.csv', sep ='/'), row.names = FALSE)
 
