@@ -19,29 +19,32 @@ kmeans <- read.csv(paste0(data_folder, '/kmeans_labels.csv'), stringsAsFactors =
 hier <- read.csv(paste0(data_folder, '/hier_labels.csv'), stringsAsFactors = F)
 
 # add 1 to each label because grplasso cant deal with label 1. 
-kmeans <- kmeans$V1 + 1
-hier <- hier$labels + 1
+kmeans <- kmeans$V1 
+hier <- hier$labels 
 
 # remove unnecessary columns 
 full_data$X <- NULL
-
 
 ###############################################################################################
 # first run on just methylation 
 
 # take subset to do test run 
-full_data <- full_data[, c(6, 27:ncol(full_data))]
-full_data <- full_data[complete.cases(full_data),]
+test_data <- full_data[, c(6, 27:ncol(full_data))]
+test_data <- test_data[complete.cases(test_data),]
 
-y <- full_data$age_diagnosis
+y <- test_data$age_diagnosis
 
-test_dat <- cbind(1, as.matrix(full_data[,-1]))
+test_dat <- cbind(1, as.matrix(test_data[,-1]))
 
 
 ## Use a multiplicative grid for the penalty parameter lambda, starting
 ## at the maximal lambda value
-index <- as.numeric(c(NA, hier))
+index <- as.numeric(c(NA, kmeans))
 colnames(test_dat)[1] <- 'Intercept'
+
+dim(test_data)
+length(index)
+length(y)
 
 lambda <- lambdamax(test_dat, y, index = index, penscale = sqrt,
                     model = LinReg()) * 0.5^(0:7)
