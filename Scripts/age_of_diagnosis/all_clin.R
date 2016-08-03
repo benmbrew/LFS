@@ -45,7 +45,7 @@ predictAll <- function(model_name,
   # Try the model with all different selection of features based on number of missinginess. 
   clin <- clin[complete.cases(clin),]
   
-  
+  variables <- nrow(clin)
   # convert characters to factors 
   for ( i in 1:ncol(clin)){
     
@@ -264,7 +264,7 @@ predictAll <- function(model_name,
     
   }
   
-  return(list(mse, predictions, model, importance, test.ground_truth))
+  return(list(mse, predictions, model, importance, test.ground_truth, variables))
   
 }
 
@@ -272,350 +272,324 @@ predictAll <- function(model_name,
 ########################################################################################################gdna.exon.intron
 
 # variables missing
-# gdna.exon.intron 492
+# gender 0
 # gdna.base.change 164
 # gdna.codon 164
 # protein.codon.change 177
-# protein.codon.num 549
-# splice.delins.snv 519
+# gdna.exon.intron 492
 # codon72.npro 517
+# splice.delins.snv 519
+# protein.codon.num 549
 # mdm2.nG 652
 ##################################################################################################################3
 # Random forest
-# all variables
+# gender and gdna.base.change
 rf_mut <- predictAll(model_name = 'rf', 
-                     subset <- c("age_diagnosis", "gender", 'methyl_indicator', "gdna.exon.intron", "gdna.base.change",
-                                 "gdna.codon", "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-                                 "mdm2.nG"), 
-                     selected_features = c("gender", "gdna.exon.intron", "gdna.base.change",
-                                           "gdna.codon", "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-                                           "mdm2.nG"), iterations = 50)
+                     subset <- c("age_diagnosis", "gender", "gdna.base.change"), 
+                     selected_features = c("gender", "gdna.base.change"), iterations = 50)
 
 plot(unlist(rf_mut[[2]]), unlist(rf_mut[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
 
 
-# remove mdm2.nG
+# add gdna.codon
 rf_mut1 <- predictAll(model_name = 'rf', 
-                     subset <- c("age_diagnosis", "gender", 'methyl_indicator', "gdna.exon.intron", "gdna.base.change",
-                                 "gdna.codon", "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro"), 
-                     selected_features = c("gender", "gdna.exon.intron", "gdna.base.change",
-                                           "gdna.codon", "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro"), iterations = 50)
+                     subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon"), 
+                     selected_features = c("gender", "gdna.base.change", "gdna.codon"), iterations = 50)
 
 plot(unlist(rf_mut1[[2]]), unlist(rf_mut1[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
 abline(0,1)
 
-
-# remove gdna.exon.intron
+# add protein.codon.change
 rf_mut2 <- predictAll(model_name = 'rf', 
-                     subset <- c("age_diagnosis", "gender", 'methyl_indicator', "gdna.base.change",
-                                 "gdna.codon", "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-                                 "mdm2.nG"), 
-                     selected_features = c("gender", "gdna.base.change",
-                                           "gdna.codon", "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-                                           "mdm2.nG"), iterations = 50)
+                      subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change"), 
+                      selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change"), iterations = 50)
 
 plot(unlist(rf_mut2[[2]]), unlist(rf_mut2[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
 
 
-# remove protein.codon.num
+# add gdna.exon.intron
 rf_mut3 <- predictAll(model_name = 'rf', 
-                     subset <- c("age_diagnosis", "gender", 'methyl_indicator', "gdna.exon.intron", "gdna.base.change",
-                                 "gdna.codon", "protein.codon.change", "splice.delins.snv", "codon72.npro",
-                                 "mdm2.nG"), 
-                     selected_features = c("gender", "gdna.exon.intron", "gdna.base.change",
-                                           "gdna.codon", "protein.codon.change", "splice.delins.snv", "codon72.npro",
-                                           "mdm2.nG"), iterations = 50)
+                      subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                  "gdna.exon.intron"), 
+                      selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                            "gdna.exon.intron"), iterations = 50)
 
 plot(unlist(rf_mut3[[2]]), unlist(rf_mut3[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
 
-# remove splice.delins.snv
+# add codon72.npro
 rf_mut4 <- predictAll(model_name = 'rf', 
-                     subset <- c("age_diagnosis", "gender", 'methyl_indicator', "gdna.exon.intron", "gdna.base.change",
-                                 "gdna.codon", "protein.codon.change", "protein.codon.num", "codon72.npro",
-                                 "mdm2.nG"), 
-                     selected_features = c("gender", "gdna.exon.intron", "gdna.base.change",
-                                           "gdna.codon", "protein.codon.change", "protein.codon.num", "codon72.npro",
-                                           "mdm2.nG"), iterations = 50)
+                      subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                  "gdna.exon.intron", "codon72.npro"), 
+                      selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                            "gdna.exon.intron", "codon72.npro"), iterations = 50)
 
 plot(unlist(rf_mut4[[2]]), unlist(rf_mut4[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
 
 
-# remove gdna.base.change
+# add splice.delins.snv
 rf_mut5 <- predictAll(model_name = 'rf', 
-                     subset <- c("age_diagnosis", "gender", 'methyl_indicator', "gdna.exon.intron",
-                                 "gdna.codon", "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-                                 "mdm2.nG"), 
-                     selected_features = c("gender", "gdna.exon.intron",
-                                           "gdna.codon", "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-                                           "mdm2.nG"), iterations = 50)
+                      subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                  "gdna.exon.intron", "codon72.npro", "splice.delins.snv"), 
+                      selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                            "gdna.exon.intron", "codon72.npro", "splice.delins.snv"), iterations = 50)
 
 plot(unlist(rf_mut5[[2]]), unlist(rf_mut5[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
 
 
-# remove gdna.codon
+# add protein.codon.num
 rf_mut6 <- predictAll(model_name = 'rf', 
-                     subset <- c("age_diagnosis", "gender", 'methyl_indicator', "gdna.exon.intron", "gdna.base.change", 
-                                 "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-                                 "mdm2.nG"), 
-                     selected_features = c("gender", "gdna.exon.intron", "gdna.base.change", "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-                                           "mdm2.nG"), iterations = 50)
+                      subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                  "gdna.exon.intron", "codon72.npro", "splice.delins.snv", "protein.codon.num"), 
+                      selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                            "gdna.exon.intron", "codon72.npro", "splice.delins.snv", "protein.codon.num"), iterations = 50)
 
 plot(unlist(rf_mut6[[2]]), unlist(rf_mut6[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
 
-# remove protein.codon.change 
+
+# add mdm2.nG
 rf_mut7 <- predictAll(model_name = 'rf', 
-                     subset <- c("age_diagnosis", "gender", 'methyl_indicator', "gdna.exon.intron", "gdna.base.change",
-                                 "gdna.codon", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-                                 "mdm2.nG"), 
-                     selected_features = c("gender", "gdna.exon.intron", "gdna.base.change",
-                                           "gdna.codon", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-                                           "mdm2.nG"), iterations = 50)
+                      subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                  "gdna.exon.intron", "codon72.npro", "splice.delins.snv", "protein.codon.num", "mdm2.nG"), 
+                      selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                            "gdna.exon.intron", "codon72.npro", "splice.delins.snv", "protein.codon.num", "mdm2.nG"), iterations = 50)
 
 plot(unlist(rf_mut7[[2]]), unlist(rf_mut7[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
 
+
+# combine all tests 
 
 rf <- rbind (
-  append('all_variables', mean(unlist(rf_mut[[1]]))),
-  append('no_mdm2.nG', mean(unlist(rf_mut1[[1]]))),
-  append('no_gdna.exon.intron', mean(unlist(rf_mut2[[1]]))),
-  append('no_protein.codon.num',mean(unlist(rf_mut3[[1]]))),
-  append('no_splice.delins.snv', mean(unlist(rf_mut4[[1]]))),
-  append('no_gdna.base.change', mean(unlist(rf_mut5[[1]]))),
-  append('no_gdna.codon', mean(unlist(rf_mut6[[1]]))),
-  append('no_proteinp.codon.change', mean(unlist(rf_mut7[[1]])))
+  append('gender_and_gdna.base.change', c(mean(unlist(rf_mut[[1]])), rf_mut[[6]])),
+  append('gdna.codon', c(mean(unlist(rf_mut1[[1]])), rf_mut1[[6]])),
+  append('protein.codon.change', c(mean(unlist(rf_mut2[[1]])), rf_mut2[[6]])),
+  append('gdna.exon.intron', c(mean(unlist(rf_mut3[[1]])), rf_mut3[[6]])),
+  append('codon72.npro', c(mean(unlist(rf_mut4[[1]])), rf_mut4[[6]])),
+  append('splice.delins.snv', c(mean(unlist(rf_mut5[[1]])), rf_mut5[[6]])),
+  append('protein.codon.num', c(mean(unlist(rf_mut6[[1]])), rf_mut6[[6]])),
+  append('mdm2.nG', c(mean(unlist(rf_mut7[[1]])), rf_mut7[[6]]))
 )
-         
+
+
+
 ##################################################################################################################3
 # Elastic Net
-# all variables
+# gender and gdna.base.change
 enet_mut <- predictAll(model_name = 'enet', 
-                     subset <- c("age_diagnosis", "gender", 'methyl_indicator', "gdna.exon.intron", "gdna.base.change",
-                                 "gdna.codon", "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-                                 "mdm2.nG"), 
-                     selected_features = c("gender", "gdna.exon.intron", "gdna.base.change",
-                                           "gdna.codon", "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-                                           "mdm2.nG"), iterations = 50)
+                     subset <- c("age_diagnosis", "gender", "gdna.base.change"), 
+                     selected_features = c("gender", "gdna.base.change"), iterations = 50)
 
 plot(unlist(enet_mut[[2]]), unlist(enet_mut[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
 
 
-# remove mdm2.nG
+# add gdna.codon
 enet_mut1 <- predictAll(model_name = 'enet', 
-                      subset <- c("age_diagnosis", "gender", 'methyl_indicator', "gdna.exon.intron", "gdna.base.change",
-                                  "gdna.codon", "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro"), 
-                      selected_features = c("gender", "gdna.exon.intron", "gdna.base.change",
-                                            "gdna.codon", "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro"), iterations = 50)
+                      subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon"), 
+                      selected_features = c("gender", "gdna.base.change", "gdna.codon"), iterations = 50)
 
 plot(unlist(enet_mut1[[2]]), unlist(enet_mut1[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
 abline(0,1)
 
-
-# remove gdna.exon.intron
+# add protein.codon.change
 enet_mut2 <- predictAll(model_name = 'enet', 
-                      subset <- c("age_diagnosis", "gender", 'methyl_indicator', "gdna.base.change",
-                                  "gdna.codon", "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-                                  "mdm2.nG"), 
-                      selected_features = c("gender", "gdna.base.change",
-                                            "gdna.codon", "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-                                            "mdm2.nG"), iterations = 50)
+                      subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change"), 
+                      selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change"), iterations = 50)
 
 plot(unlist(enet_mut2[[2]]), unlist(enet_mut2[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
 
 
-# remove protein.codon.num
+# add gdna.exon.intron
 enet_mut3 <- predictAll(model_name = 'enet', 
-                      subset <- c("age_diagnosis", "gender", 'methyl_indicator', "gdna.exon.intron", "gdna.base.change",
-                                  "gdna.codon", "protein.codon.change", "splice.delins.snv", "codon72.npro",
-                                  "mdm2.nG"), 
-                      selected_features = c("gender", "gdna.exon.intron", "gdna.base.change",
-                                            "gdna.codon", "protein.codon.change", "splice.delins.snv", "codon72.npro",
-                                            "mdm2.nG"), iterations = 50)
+                      subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                  "gdna.exon.intron"), 
+                      selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                            "gdna.exon.intron"), iterations = 50)
 
 plot(unlist(enet_mut3[[2]]), unlist(enet_mut3[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
 
-# remove splice.delins.snv
+# add codon72.npro
 enet_mut4 <- predictAll(model_name = 'enet', 
-                      subset <- c("age_diagnosis", "gender", 'methyl_indicator', "gdna.exon.intron", "gdna.base.change",
-                                  "gdna.codon", "protein.codon.change", "protein.codon.num", "codon72.npro",
-                                  "mdm2.nG"), 
-                      selected_features = c("gender", "gdna.exon.intron", "gdna.base.change",
-                                            "gdna.codon", "protein.codon.change", "protein.codon.num", "codon72.npro",
-                                            "mdm2.nG"), iterations = 50)
+                      subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                  "gdna.exon.intron", "codon72.npro"), 
+                      selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                            "gdna.exon.intron", "codon72.npro"), iterations = 50)
 
 plot(unlist(enet_mut4[[2]]), unlist(enet_mut4[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
 
 
-# remove gdna.base.change
+# add splice.delins.snv
 enet_mut5 <- predictAll(model_name = 'enet', 
-                      subset <- c("age_diagnosis", "gender", 'methyl_indicator', "gdna.exon.intron",
-                                  "gdna.codon", "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-                                  "mdm2.nG"), 
-                      selected_features = c("gender", "gdna.exon.intron",
-                                            "gdna.codon", "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-                                            "mdm2.nG"), iterations = 50)
+                      subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                  "gdna.exon.intron", "codon72.npro", "splice.delins.snv"), 
+                      selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                            "gdna.exon.intron", "codon72.npro", "splice.delins.snv"), iterations = 50)
 
 plot(unlist(enet_mut5[[2]]), unlist(enet_mut5[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
 
 
-# remove gdna.codon
+# add protein.codon.num
 enet_mut6 <- predictAll(model_name = 'enet', 
-                      subset <- c("age_diagnosis", "gender", 'methyl_indicator', "gdna.exon.intron", "gdna.base.change", 
-                                  "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-                                  "mdm2.nG"), 
-                      selected_features = c("gender", "gdna.exon.intron", "gdna.base.change", "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-                                            "mdm2.nG"), iterations = 50)
+                      subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                  "gdna.exon.intron", "codon72.npro", "splice.delins.snv", "protein.codon.num"), 
+                      selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                            "gdna.exon.intron", "codon72.npro", "splice.delins.snv", "protein.codon.num"), iterations = 50)
 
 plot(unlist(enet_mut6[[2]]), unlist(enet_mut6[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
 
-# remove protein.codon.change 
+
+# add mdm2.nG
 enet_mut7 <- predictAll(model_name = 'enet', 
-                      subset <- c("age_diagnosis", "gender", 'methyl_indicator', "gdna.exon.intron", "gdna.base.change",
-                                  "gdna.codon", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-                                  "mdm2.nG"), 
-                      selected_features = c("gender", "gdna.exon.intron", "gdna.base.change",
-                                            "gdna.codon", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-                                            "mdm2.nG"), iterations = 50)
+                      subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                  "gdna.exon.intron", "codon72.npro", "splice.delins.snv", "protein.codon.num", "mdm2.nG"), 
+                      selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                            "gdna.exon.intron", "codon72.npro", "splice.delins.snv", "protein.codon.num", "mdm2.nG"), iterations = 50)
 
 plot(unlist(enet_mut7[[2]]), unlist(enet_mut7[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
 
+
+# combine all tests 
 
 enet <- rbind (
-  append('all_variables', mean(unlist(enet_mut[[1]]))),
-  append('no_mdm2.nG', mean(unlist(enet_mut1[[1]]))),
-  append('no_gdna.exon.intron', mean(unlist(enet_mut2[[1]]))),
-  append('no_protein.codon.num',mean(unlist(enet_mut3[[1]]))),
-  append('no_splice.delins.snv', mean(unlist(enet_mut4[[1]]))),
-  append('no_gdna.base.change', mean(unlist(enet_mut5[[1]]))),
-  append('no_gdna.codon', mean(unlist(enet_mut6[[1]]))),
-  append('no_proteinp.codon.change', mean(unlist(enet_mut7[[1]])))
+  append('gender_and_gdna.base.change', c(mean(unlist(enet_mut[[1]])), enet_mut[[6]])),
+  append('gdna.codon', c(mean(unlist(enet_mut1[[1]])), enet_mut1[[6]])),
+  append('protein.codon.change', c(mean(unlist(enet_mut2[[1]])), enet_mut2[[6]])),
+  append('gdna.exon.intron', c(mean(unlist(enet_mut3[[1]])), enet_mut3[[6]])),
+  append('codon72.npro', c(mean(unlist(enet_mut4[[1]])), enet_mut4[[6]])),
+  append('splice.delins.snv', c(mean(unlist(enet_mut5[[1]])), enet_mut5[[6]])),
+  append('protein.codon.num', c(mean(unlist(enet_mut6[[1]])), enet_mut6[[6]])),
+  append('mdm2.nG', c(mean(unlist(enet_mut7[[1]])), enet_mut7[[6]]))
 )
-
+         
 
 ##################################################################################################################3
 # Lasso
-# all variables
+# gender and gdna.base.change
 lasso_mut <- predictAll(model_name = 'lasso', 
-                     subset <- c("age_diagnosis", "gender", 'methyl_indicator', "gdna.exon.intron", "gdna.base.change",
-                                 "gdna.codon", "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-                                 "mdm2.nG"), 
-                     selected_features = c("gender", "gdna.exon.intron", "gdna.base.change",
-                                           "gdna.codon", "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-                                           "mdm2.nG"), iterations = 50)
+                     subset <- c("age_diagnosis", "gender", "gdna.base.change"), 
+                     selected_features = c("gender", "gdna.base.change"), iterations = 50)
 
 plot(unlist(lasso_mut[[2]]), unlist(lasso_mut[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
 
 
-# remove mdm2.nG
+# add gdna.codon
 lasso_mut1 <- predictAll(model_name = 'lasso', 
-                      subset <- c("age_diagnosis", "gender", 'methyl_indicator', "gdna.exon.intron", "gdna.base.change",
-                                  "gdna.codon", "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro"), 
-                      selected_features = c("gender", "gdna.exon.intron", "gdna.base.change",
-                                            "gdna.codon", "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro"), iterations = 50)
+                      subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon"), 
+                      selected_features = c("gender", "gdna.base.change", "gdna.codon"), iterations = 50)
 
 plot(unlist(lasso_mut1[[2]]), unlist(lasso_mut1[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
 abline(0,1)
 
-
-# remove gdna.exon.intron
+# add protein.codon.change
 lasso_mut2 <- predictAll(model_name = 'lasso', 
-                      subset <- c("age_diagnosis", "gender", 'methyl_indicator', "gdna.base.change",
-                                  "gdna.codon", "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-                                  "mdm2.nG"), 
-                      selected_features = c("gender", "gdna.base.change",
-                                            "gdna.codon", "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-                                            "mdm2.nG"), iterations = 50)
+                      subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change"), 
+                      selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change"), iterations = 50)
 
 plot(unlist(lasso_mut2[[2]]), unlist(lasso_mut2[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
 
 
-# remove protein.codon.num
+# add gdna.exon.intron
 lasso_mut3 <- predictAll(model_name = 'lasso', 
-                      subset <- c("age_diagnosis", "gender", 'methyl_indicator', "gdna.exon.intron", "gdna.base.change",
-                                  "gdna.codon", "protein.codon.change", "splice.delins.snv", "codon72.npro",
-                                  "mdm2.nG"), 
-                      selected_features = c("gender", "gdna.exon.intron", "gdna.base.change",
-                                            "gdna.codon", "protein.codon.change", "splice.delins.snv", "codon72.npro",
-                                            "mdm2.nG"), iterations = 50)
+                      subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                  "gdna.exon.intron"), 
+                      selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                            "gdna.exon.intron"), iterations = 50)
 
 plot(unlist(lasso_mut3[[2]]), unlist(lasso_mut3[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
 
-# remove splice.delins.snv
+# add codon72.npro
 lasso_mut4 <- predictAll(model_name = 'lasso', 
-                      subset <- c("age_diagnosis", "gender", 'methyl_indicator', "gdna.exon.intron", "gdna.base.change",
-                                  "gdna.codon", "protein.codon.change", "protein.codon.num", "codon72.npro",
-                                  "mdm2.nG"), 
-                      selected_features = c("gender", "gdna.exon.intron", "gdna.base.change",
-                                            "gdna.codon", "protein.codon.change", "protein.codon.num", "codon72.npro",
-                                            "mdm2.nG"), iterations = 50)
+                      subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                  "gdna.exon.intron", "codon72.npro"), 
+                      selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                            "gdna.exon.intron", "codon72.npro"), iterations = 50)
 
 plot(unlist(lasso_mut4[[2]]), unlist(lasso_mut4[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
 
 
-# remove gdna.base.change
+# add splice.delins.snv
 lasso_mut5 <- predictAll(model_name = 'lasso', 
-                      subset <- c("age_diagnosis", "gender", 'methyl_indicator', "gdna.exon.intron",
-                                  "gdna.codon", "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-                                  "mdm2.nG"), 
-                      selected_features = c("gender", "gdna.exon.intron",
-                                            "gdna.codon", "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-                                            "mdm2.nG"), iterations = 50)
+                      subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                  "gdna.exon.intron", "codon72.npro", "splice.delins.snv"), 
+                      selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                            "gdna.exon.intron", "codon72.npro", "splice.delins.snv"), iterations = 50)
 
 plot(unlist(lasso_mut5[[2]]), unlist(lasso_mut5[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
 
 
-# remove gdna.codon
+# add protein.codon.num
 lasso_mut6 <- predictAll(model_name = 'lasso', 
-                      subset <- c("age_diagnosis", "gender", 'methyl_indicator', "gdna.exon.intron", "gdna.base.change", 
-                                  "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-                                  "mdm2.nG"), 
-                      selected_features = c("gender", "gdna.exon.intron", "gdna.base.change", "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-                                            "mdm2.nG"), iterations = 50)
+                      subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                  "gdna.exon.intron", "codon72.npro", "splice.delins.snv", "protein.codon.num"), 
+                      selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                            "gdna.exon.intron", "codon72.npro", "splice.delins.snv", "protein.codon.num"), iterations = 50)
 
 plot(unlist(lasso_mut6[[2]]), unlist(lasso_mut6[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
 
-# remove protein.codon.change 
+
+# add mdm2.nG
 lasso_mut7 <- predictAll(model_name = 'lasso', 
-                      subset <- c("age_diagnosis", "gender", 'methyl_indicator', "gdna.exon.intron", "gdna.base.change",
-                                  "gdna.codon", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-                                  "mdm2.nG"), 
-                      selected_features = c("gender", "gdna.exon.intron", "gdna.base.change",
-                                            "gdna.codon", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-                                            "mdm2.nG"), iterations = 50)
+                      subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                  "gdna.exon.intron", "codon72.npro", "splice.delins.snv", "protein.codon.num", "mdm2.nG"), 
+                      selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                            "gdna.exon.intron", "codon72.npro", "splice.delins.snv", "protein.codon.num", "mdm2.nG"), iterations = 50)
 
 plot(unlist(lasso_mut7[[2]]), unlist(lasso_mut7[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
 
+
+# combine all tests 
 
 lasso <- rbind (
-  append('all_variables', mean(unlist(lasso_mut[[1]]))),
-  append('no_mdm2.nG', mean(unlist(lasso_mut1[[1]]))),
-  append('no_gdna.exon.intron', mean(unlist(lasso_mut2[[1]]))),
-  append('no_protein.codon.num',mean(unlist(lasso_mut3[[1]]))),
-  append('no_splice.delins.snv', mean(unlist(lasso_mut4[[1]]))),
-  append('no_gdna.base.change', mean(unlist(lasso_mut5[[1]]))),
-  append('no_gdna.codon', mean(unlist(lasso_mut6[[1]]))),
-  append('no_proteinp.codon.change', mean(unlist(lasso_mut7[[1]])))
+  append('gender_and_gdna.base.change', c(mean(unlist(lasso_mut[[1]])), lasso_mut[[6]])),
+  append('gdna.codon', c(mean(unlist(lasso_mut1[[1]])), lasso_mut1[[6]])),
+  append('protein.codon.change', c(mean(unlist(lasso_mut2[[1]])), lasso_mut2[[6]])),
+  append('gdna.exon.intron', c(mean(unlist(lasso_mut3[[1]])), lasso_mut3[[6]])),
+  append('codon72.npro', c(mean(unlist(lasso_mut4[[1]])), lasso_mut4[[6]])),
+  append('splice.delins.snv', c(mean(unlist(lasso_mut5[[1]])), lasso_mut5[[6]])),
+  append('protein.codon.num', c(mean(unlist(lasso_mut6[[1]])), lasso_mut6[[6]])),
+  append('mdm2.nG', c(mean(unlist(lasso_mut7[[1]])), lasso_mut7[[6]]))
 )
+
 
 ##########################################################################################
 # combine ran_forest, enet, lasso
 ran_forest <- as.data.frame(rf)
 ran_forest$model <- 'rand_forest'
-names(ran_forest) <- c('variables', 'mse', 'model')
+names(ran_forest) <- c('variables', 'rmse', 'observations', 'model')
 
 enet <- as.data.frame(enet)
 enet$model <- 'enet'
-names(enet) <- c('variables', 'mse', 'model')
+names(enet) <- c('variables', 'rmse', 'observations', 'model')
 
 lasso <- as.data.frame(lasso)
 lasso$model <- 'lasso'
-names(lasso) <- c('variables', 'mse', 'model')
+names(lasso) <- c('variables', 'rmse', 'observations', 'model')
 
 models <- rbind(ran_forest, enet, lasso)
-models$mse <- as.numeric(as.character(models$mse))
+models$rmse <- as.numeric(as.character(models$rmse))
 
 ggplot(models, aes(model, mse, group = variables, fill = variables)) + 
   geom_bar(stat = 'identity', 
            position = 'dodge')
+
+
+# write.csv(models, paste0(data_folder, '/clin_model_results.csv'))
 
 
 

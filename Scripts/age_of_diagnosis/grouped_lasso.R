@@ -64,9 +64,6 @@ pred.resp <- predict(fit, type = "response")
 plot(pred, pred.resp)
 
 
-
-
-
 ##########################################################################################3
 # Run grouped lasso with model formula, throws error because of stack overflow. 
 
