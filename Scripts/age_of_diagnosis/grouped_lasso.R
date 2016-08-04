@@ -2,7 +2,6 @@
 # this script will run grouped lasso
 library(grplasso)
 
-
 # Initialize folders
 home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects/'
 project_folder <- paste0(home_folder, '/LFS')
@@ -13,23 +12,39 @@ clin_data <- paste0(data_folder, '/clin_data')
 results_folder <- paste0(test, '/Results')
 
 
-# read in methyl impute raw
+# read in methyl impute raw and full_data_cor
 full_data <- read.csv(paste0(data_folder, '/full_data.csv'), stringsAsFactors = F)
-kmeans <- read.csv(paste0(data_folder, '/kmeans_labels.csv'), stringsAsFactors = F)
-hier <- read.csv(paste0(data_folder, '/hier_labels.csv'), stringsAsFactors = F)
+full_data_cor <- read.csv(paste0(data_folder, '/full_data_cor.csv'), stringsAsFactors = F)
+full_data_cor_small <- read.csv(paste0(data_folder, '/full_data_cor_small.csv'), stringsAsFactors = F)
+
+
+# read in cluster labels
+kmeans_full <- read.csv(paste0(data_folder, '/kmeans_full.csv'), stringsAsFactors = F)
+hier_full <- read.csv(paste0(data_folder, '/hier_full.csv'), stringsAsFactors = F)
+kmeans_cor <- read.csv(paste0(data_folder, '/kmeans_cor.csv'), stringsAsFactors = F)
+hier_cor <- read.csv(paste0(data_folder, '/hier_cor.csv'), stringsAsFactors = F)
+kmeans_cor_small <- read.csv(paste0(data_folder, '/kmeans_cor_small.csv'), stringsAsFactors = F)
+hier_cor_small <- read.csv(paste0(data_folder, '/hier_cor_small.csv'), stringsAsFactors = F)
+
 
 # add 1 to each label because grplasso cant deal with label 1. 
-kmeans <- kmeans$V1 
-hier <- hier$labels 
+kmeans_full <- kmeans_full$labels 
+hier_full <- hier_full$V1 
+kmeans_cor <- kmeans_cor$labels
+hier_cor <- hier_cor$V1 
+kmeans_cor_small <- kmeans_cor_small$labels
+hier_cor_small <- hier_cor_small$V1
 
 # remove unnecessary columns 
 full_data$X <- NULL
+full_data_cor$X <- NULL
+full_data_cor_small$X <- NULL
 
 ###############################################################################################
 # first run on just methylation 
 
 # take subset to do test run 
-test_data <- full_data[, c(6, 27:ncol(full_data))]
+test_data <- full_data_cor_small[, c(6, 27:ncol(full_data_cor_small))]
 test_data <- test_data[complete.cases(test_data),]
 
 y <- test_data$age_diagnosis
@@ -39,15 +54,17 @@ test_dat <- cbind(1, as.matrix(test_data[,-1]))
 
 ## Use a multiplicative grid for the penalty parameter lambda, starting
 ## at the maximal lambda value
-index <- as.numeric(c(NA, kmeans))
-colnames(test_dat)[1] <- 'Intercept'
+index <- as.numeric(c(NA, hier_cor_small))
+# index <- c(NA, rep.int(1:5, 1000000))[1:ncol(test_dat)]
+# colnames(test_dat)[1] <- 'Intercept'
 
 dim(test_data)
 length(index)
 length(y)
+ncol(test_dat)/330
 
 lambda <- lambdamax(test_dat, y, index = index, penscale = sqrt,
-                    model = LinReg()) * 0.5^(0:7)
+                    model = LinReg()) 
 
 ## Fit the solution path on the lambda grid
 fit <- grplasso(test_dat,  y, index = index, lambda = lambda, model = LinReg(),

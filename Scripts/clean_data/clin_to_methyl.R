@@ -51,18 +51,24 @@ full_data <- inner_join(clin, methyl,
 cor_mat <- cor(methyl[, -1])
 
 # find attributes that are highly correlated
-highly_cor <- findCorrelation(cor_mat, cutoff = 0.6, names = TRUE)
+# 0.6 for methyl_cor, 0.4, methyl_cor_small and full_data_cor_small
+highly_cor <- findCorrelation(cor_mat, cutoff = 0.4, names = TRUE)
 cor_index <- names(methyl) %in% highly_cor[2:length(highly_cor)]
 
 # remove highly correlated attributes
 methyl_cor <- methyl[, !cor_index]
 names(methyl_cor)[1] <- 'id'
 
+# write.csv(methyl_cor, paste0(data_folder, '/methyl_cor_small.csv'))
+# write.csv(methyl_cor, paste0(data_folder, '/methyl_cor.csv'))
+
+
 # inner_join clin
 full_data_cor <- inner_join(clin, methyl_cor,
                         by = 'id')
 
 # Save data to be used later
+# write.csv(full_data_cor, paste0(data_folder, '/full_data_cor_small.csv'))
 # write.csv(full_data_cor, paste0(data_folder, '/full_data_cor.csv'))
 
 ######################################################################################################
