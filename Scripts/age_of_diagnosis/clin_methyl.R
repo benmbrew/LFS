@@ -26,113 +26,529 @@ library(dplyr)
 # Load in clinical data
 clin <- read.csv(paste0(clin_data, '/clinical_two.csv'), stringsAsFactors = F)
 
-# subset to those variables 
-# subset <- c("family_name", "relationship", "age_diagnosis", "p53_germline","gdna", 
-#             "protein", "codon72", "mdm2", "gender", 'methyl_indicator')
-
-subset <- c("age_diagnosis", "gender", 'methyl_indicator', "gdna.exon.intron", "gdna.base.change",
-            "gdna.codon", "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-            "mdm2.nG")
-
-clin <- clin[, subset]
-
-# Try the model with all different selection of features based on number of missinginess. 
-clin <- clin[complete.cases(clin),]
-
-# convert characters to factors 
-# convert characters to factors 
-for ( i in 1:ncol(clin)){
+predictAll <- function(model_name, 
+                       subset, 
+                       selected_features,
+                       iterations) {
   
-  if(!grepl('age', colnames(clin[i]))) {
-    clin[,i] <- as.factor(clin[,i])
+  model <- list()
+  predictions <- list()
+  mse <- list()
+  importance <- list()
+  test.ground_truth <- list()
+  
+  clin <- clin[, subset]
+  
+  # Try the model with all different selection of features based on number of missinginess. 
+  clin <- clin[complete.cases(clin),]
+  
+  variables <- nrow(clin)
+  # convert characters to factors 
+  for ( i in 1:ncol(clin)){
     
-  } 
+    if(!grepl('age', colnames(clin[i]))) {
+      clin[,i] <- as.factor(clin[,i])
+      
+    } 
+  }
+  
+  for (i in 1:iterations){
+    
+    set.seed(i)
+    train_index <- clin$methyl_indicator == 'No'
+    test_index <- clin$methyl_indicator == 'Yes'
+    
+    rf_y = clin$age_diagnosis[train_index]
+  
+    # determines how you train the model.
+    NFOLDS <- 2
+    fitControl <- trainControl( 
+      method = "repeatedcv",  # could train on boostrap resample, here use repeated cross validation.
+      number = min(10, NFOLDS),      
+      repeats = 1,
+      allowParallel = TRUE
+      #summaryFunction = summaryFunc
+    )
+    
+    # mtry: Number of variables randomly sampled as candidates at each split.
+    # ntree: Number of trees to grow.
+    if (model_name == 'rf') {
+      
+      mtry <- sqrt(ncol(clin))
+      tunegrid <- expand.grid(.mtry=mtry)
+      
+      rf_y = clin$age_diagnosis[train_index]
+      
+      
+      model[[i]] <- train(x = clin[train_index, selected_features]
+                          , y = rf_y
+                          , method = "rf"
+                          , trControl = fitControl
+                          , tuneGrid = tunegrid
+                          , importance = T
+                          , verbose = FALSE)
+      
+      importance[[i]] <- varImp(model[[i]])
+      
+      
+      predictions[[i]] <- predict(model[[i]] 
+                                  , newdata = clin[test_index, selected_features])
+      
+      test.ground_truth[[i]] <- clin$age_diagnosis[test_index]
+      mse[[i]] <- rmse(unlist(predictions[[i]]), unlist(test.ground_truth[[i]]))
+      
+    }
+    
+    if (model_name == 'enet') {
+      
+      enet_y = clin$age_diagnosis[train_index]
+      N_CV_REPEATS <- 2
+      elastic_net.cv_error = vector()
+      elastic_net.cv_model = list()
+      elastic_net.ALPHA <- c(1:9) / 10 # c
+      
+      temp.cv_error_matrix <- foreach (temp = 1:N_CV_REPEATS, .combine=rbind, .errorhandling="stop") %do% {      
+        
+        for (alpha_index in 1:length(elastic_net.ALPHA)) # for i in 1:9 - the model will run 9 times
+        {      
+          elastic_net.cv_model[[alpha_index]] = cv.glmnet(data.matrix(clin[train_index, selected_features])
+                                                          , enet_y
+                                                          , alpha = elastic_net.ALPHA[alpha_index] # first time with 0.1 and so on
+                                                          , type.measure = 'deviance'
+                                                          , family = 'gaussian'
+                                                          , standardize = FALSE 
+                                                          , nfolds = 5# five folds
+                                                          , nlambda = 100
+                                                          , parallel = T
+          )
+          elastic_net.cv_error[alpha_index] = min(elastic_net.cv_model[[alpha_index]]$cvm)
+        }
+        elastic_net.cv_error # stores 9 errors  
+      }
+      
+      if (N_CV_REPEATS == 1) {
+        temp.cv_error_mean = temp.cv_error_matrix
+      } else {
+        temp.cv_error_mean = apply(temp.cv_error_matrix, 2, mean) # take the mean of all the iterations  
+      }
+      
+      stopifnot(length(temp.cv_error_mean) == length(elastic_net.ALPHA))
+      # get index of best alpha (lowest alpha)
+      temp.best_alpha_index = which(min(temp.cv_error_mean) == temp.cv_error_mean)[length(which(min(temp.cv_error_mean) == temp.cv_error_mean))] 
+      print(paste("Best ALPHA:", elastic_net.ALPHA[temp.best_alpha_index])) # print the value for alpha
+      
+      # get optimal lambda
+      temp.non_zero_coeff = 0
+      temp.loop_count = 0
+      while (temp.non_zero_coeff < 3) { # loop runs initially because temp.non_zero coefficient <3 and then stops 
+        # usually after one iteration because the nzero variable selected by lambda is greater that 3. if it keeps looping
+        # it they are never greater than 3, then the model does not converge. 
+        elastic_net.cv_model = cv.glmnet(
+          data.matrix(clin[train_index, selected_features])
+          , enet_y
+          , alpha = elastic_net.ALPHA[temp.best_alpha_index]
+          , type.measure = 'deviance'
+          , family = 'gaussian'
+          , standardize=FALSE
+          , nlambda = 100
+          , nfolds = 3
+          , parallel = TRUE
+        )
+        temp.min_lambda_index = which(elastic_net.cv_model$lambda == elastic_net.cv_model$lambda.min) # get the min lambda
+        # after 100 folds of cross validation
+        temp.non_zero_coeff = elastic_net.cv_model$nzero[temp.min_lambda_index] # number of non zero coefficients at that lambda    
+        temp.loop_count = temp.loop_count + 1
+        as.numeric(Sys.time())-> t 
+        set.seed((t - floor(t)) * 1e8 -> seed) # floor is opposite of ceiling. This just sets seed
+        #print(paste0("seed: ", seed))
+        if (temp.loop_count > 5) {
+          print("diverged")
+          temp.min_lambda_index = 50 # if it loops more than 5 times, then model did not converge
+          break
+        }
+      }# while loop ends 
+      print(temp.non_zero_coeff)  
+      # Now that optimal level of alpha is chosen and the model does not diverge, run the model.
+      model[[i]] = glmnet(data.matrix(clin[train_index, selected_features]), 
+                          enet_y, 
+                          alpha = elastic_net.ALPHA[temp.best_alpha_index],
+                          standardize=FALSE,
+                          nlambda = 100,
+                          family = 'gaussian')
+      
+      # This returns 100 prediction with 1-100 lambdas
+      temp_predictions <- predict(model[[i]], data.matrix(clin[test_index, selected_features]))
+      #print(dim(temp.predictions))
+      predictions[[i]] <- temp_predictions[ , temp.min_lambda_index]  # this grabs the opitmal lambda 
+      temp.l <- min(length(elastic_net.cv_model$lambda), length(model[[i]]$lambda)) 
+      stopifnot(elastic_net.cv_model$lambda[1:temp.l] == model[[i]]$lambda[1:temp.l])  
+      test.ground_truth[[i]] <- clin$age_diagnosis[test_index]
+      mse[[i]] <- rmse(unlist(predictions[[i]]), unlist(test.ground_truth[[i]]))
+      
+    }
+    
+    if(model_name == "lasso"){
+      
+      # 2) Lasso Logistic Regression 
+      lasso_y <- clin$age_diagnosis[train_index]
+      temp.non_zero_coeff = 0
+      temp.loop_count = 0
+      while (temp.non_zero_coeff < 3) {     
+        temp.cv_model = cv.glmnet(data.matrix(clin[train_index, selected_features])
+                                  , lasso_y
+                                  , alpha = 1 # first time with 0.1 and so on
+                                  , type.measure = 'deviance'
+                                  , family = 'gaussian'
+                                  , standardize = FALSE 
+                                  , nfolds = 5# five folds
+                                  , nlambda = 100
+                                  , parallel = T
+        )
+        temp.min_lambda_index = which(temp.cv_model$lambda == temp.cv_model$lambda.min)
+        temp.non_zero_coeff = temp.cv_model$nzero[temp.min_lambda_index]
+        temp.loop_count = temp.loop_count + 1
+        as.numeric(Sys.time())-> t 
+        set.seed((t - floor(t)) * 1e8 -> seed) 
+        #print(paste0("seed: ", seed))
+        if (temp.loop_count > 5) {
+          print("diverged")
+          temp.min_lambda_index = 50
+          break
+        }    
+      }  
+      print(temp.non_zero_coeff)  
+      
+      model[[i]] = glmnet(data.matrix(clin[train_index, selected_features]), 
+                          lasso_y, 
+                          alpha = 1,
+                          standardize=FALSE,
+                          nlambda = 100,
+                          family = 'gaussian')
+      
+      
+      # This returns 100 prediction with 1-100 lambdas
+      temp_predictions <- predict(model[[i]], data.matrix(clin[test_index, selected_features]))
+      #print(dim(temp.predictions))
+      predictions[[i]] <- temp_predictions[ , temp.min_lambda_index]  # this grabs the opitmal lambda 
+      
+      test.ground_truth[[i]] <- clin$age_diagnosis[test_index]
+      mse[[i]] <- rmse(unlist(predictions[[i]]), unlist(test.ground_truth[[i]]))
+      
+    }
+    
+    print(i)
+    
+  }
+  
+  return(list(mse, predictions, model, importance, test.ground_truth, variables))
+  
 }
-##################################################################
-# Random Forest - this is training on no methylation and test on methylation
 
-train_index <- clin$methyl_indicator == 'No'
-test_index <- clin$methyl_indicator == 'Yes'
 
-rf_y = clin$age_diagnosis[train_index]
+  
+# Random forest
+# gender and gdna.base.change
+rf_mut <- predictAll(model_name = 'rf', 
+                     subset <- c("age_diagnosis", "gender", "gdna.base.change"), 
+                     selected_features = c("gender", "gdna.base.change"), iterations = 50)
 
-# determines how you train the model.
-NFOLDS <- 5
-fitControl <- trainControl( 
-  method = "repeatedcv",  # could train on boostrap resample, here use repeated cross validation.
-  number = min(10, NFOLDS),      
-  repeats = 1,
-  allowParallel = TRUE
-  #summaryFunction = summaryFunc
+plot(unlist(rf_mut[[2]]), unlist(rf_mut[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+
+
+# add gdna.codon
+rf_mut1 <- predictAll(model_name = 'rf', 
+                      subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon"), 
+                      selected_features = c("gender", "gdna.base.change", "gdna.codon"), iterations = 50)
+
+plot(unlist(rf_mut1[[2]]), unlist(rf_mut1[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
+
+# add protein.codon.change
+rf_mut2 <- predictAll(model_name = 'rf', 
+                      subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change"), 
+                      selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change"), iterations = 50)
+
+plot(unlist(rf_mut2[[2]]), unlist(rf_mut2[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
+
+
+# add gdna.exon.intron
+rf_mut3 <- predictAll(model_name = 'rf', 
+                      subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                  "gdna.exon.intron"), 
+                      selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                            "gdna.exon.intron"), iterations = 50)
+
+plot(unlist(rf_mut3[[2]]), unlist(rf_mut3[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
+
+# add codon72.npro
+rf_mut4 <- predictAll(model_name = 'rf', 
+                      subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                  "gdna.exon.intron", "codon72.npro"), 
+                      selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                            "gdna.exon.intron", "codon72.npro"), iterations = 50)
+
+plot(unlist(rf_mut4[[2]]), unlist(rf_mut4[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
+
+
+# add splice.delins.snv
+rf_mut5 <- predictAll(model_name = 'rf', 
+                      subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                  "gdna.exon.intron", "codon72.npro", "splice.delins.snv"), 
+                      selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                            "gdna.exon.intron", "codon72.npro", "splice.delins.snv"), iterations = 50)
+
+plot(unlist(rf_mut5[[2]]), unlist(rf_mut5[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
+
+
+# add protein.codon.num
+rf_mut6 <- predictAll(model_name = 'rf', 
+                      subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                  "gdna.exon.intron", "codon72.npro", "splice.delins.snv", "protein.codon.num"), 
+                      selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                            "gdna.exon.intron", "codon72.npro", "splice.delins.snv", "protein.codon.num"), iterations = 50)
+
+plot(unlist(rf_mut6[[2]]), unlist(rf_mut6[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
+
+
+# add mdm2.nG
+rf_mut7 <- predictAll(model_name = 'rf', 
+                      subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                  "gdna.exon.intron", "codon72.npro", "splice.delins.snv", "protein.codon.num", "mdm2.nG"), 
+                      selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                            "gdna.exon.intron", "codon72.npro", "splice.delins.snv", "protein.codon.num", "mdm2.nG"), iterations = 50)
+
+plot(unlist(rf_mut7[[2]]), unlist(rf_mut7[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
+
+
+# combine all tests 
+
+rf <- rbind (
+  append('gender_and_gdna.base.change', c(mean(unlist(rf_mut[[1]])), rf_mut[[6]])),
+  append('gdna.codon', c(mean(unlist(rf_mut1[[1]])), rf_mut1[[6]])),
+  append('protein.codon.change', c(mean(unlist(rf_mut2[[1]])), rf_mut2[[6]])),
+  append('gdna.exon.intron', c(mean(unlist(rf_mut3[[1]])), rf_mut3[[6]])),
+  append('codon72.npro', c(mean(unlist(rf_mut4[[1]])), rf_mut4[[6]])),
+  append('splice.delins.snv', c(mean(unlist(rf_mut5[[1]])), rf_mut5[[6]])),
+  append('protein.codon.num', c(mean(unlist(rf_mut6[[1]])), rf_mut6[[6]])),
+  append('mdm2.nG', c(mean(unlist(rf_mut7[[1]])), rf_mut7[[6]]))
 )
 
-selected_features = c("gender", "gdna.exon.intron", "gdna.base.change",
-                      "gdna.codon", "protein.codon.change", "protein.codon.num", "splice.delins.snv", "codon72.npro",
-                      "mdm2.nG")
-
-rf.model <- train(x = clin[train_index, selected_features]
-                  , y = rf_y
-                  , method = "rf"
-                  , trControl = fitControl                   
-                  , verbose = FALSE)
 
 
-rf.predictions <- predict(rf.model 
-                          , newdata = clin[test_index, selected_features])
+##################################################################################################################3
+# Elastic Net
+# gender and gdna.base.change
+enet_mut <- predictAll(model_name = 'enet', 
+                       subset <- c("age_diagnosis", "gender", "gdna.base.change"), 
+                       selected_features = c("gender", "gdna.base.change"), iterations = 50)
 
-test.ground_truth <- clin$age_diagnosis[test_index]
-test.rf_mse_no_methyl <- rmse(rf.predictions, test.ground_truth)
+plot(unlist(enet_mut[[2]]), unlist(enet_mut[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
 
-# 34.8 months - lower than all other rmse 
 
-# ##################################################################
-# # Random Forest - this is training on no methylation - split into 70% and predict on the 30% 
-# # then it predicts on yes methylation
-# # Set training set to no methylation
-# train <- clin[clin$methyl_indicator == 'No',]
-# train_index <- sample(nrow(train), nrow(train) *.7, replace = F)
-# 
-# for (i in clin$methyl_indicator) {
-#   
-#   test <- clin[clin$methyl_indicator == i,]  
-#   
-#   rf_y = train$age_diagnosis[train_index]
-#   
-#   # determines how you train the model.
-#   NFOLDS <- 5
-#   fitControl <- trainControl( 
-#     method = "repeatedcv",  # could train on boostrap resample, here use repeated cross validation.
-#     number = min(10, NFOLDS),      
-#     repeats = 1,
-#     allowParallel = TRUE
-#     #summaryFunction = summaryFunc
-#   )
-#   
-#   selected_features <- c("p53_germline","gdna", 
-#                          "protein", "codon72", "mdm2", "gender")
-#   
-#   rf.model <- train(x = train[train_index, selected_features]
-#                     , y = rf_y
-#                     , method = "rf"
-#                     , trControl = fitControl                   
-#                     , verbose = FALSE)
-#   
-#   if (i == 'No') {
-#     
-#     rf.predictions <- predict(rf.model 
-#                               , newdata = train[-train_index, selected_features])
-#     
-#     test.ground_truth <- train$age_diagnosis[-train_index]
-#     test.rf_mse_no_methyl <- mean((rf.predictions - test.ground_truth))^2
-#     
-#   } else {
-#     
-#     rf.predictions <- predict(rf.model 
-#                               , newdata = test[1:nrow(test), selected_features])
-#     
-#     test.ground_truth <- test$age_diagnosis
-#     test.rf_mse_methyl <- mean((rf.predictions - test.ground_truth))^2
-#   }
-#   
-# }
-# 
+# add gdna.codon
+enet_mut1 <- predictAll(model_name = 'enet', 
+                        subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon"), 
+                        selected_features = c("gender", "gdna.base.change", "gdna.codon"), iterations = 50)
+
+plot(unlist(enet_mut1[[2]]), unlist(enet_mut1[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
+
+# add protein.codon.change
+enet_mut2 <- predictAll(model_name = 'enet', 
+                        subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change"), 
+                        selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change"), iterations = 50)
+
+plot(unlist(enet_mut2[[2]]), unlist(enet_mut2[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
+
+
+# add gdna.exon.intron
+enet_mut3 <- predictAll(model_name = 'enet', 
+                        subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                    "gdna.exon.intron"), 
+                        selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                              "gdna.exon.intron"), iterations = 50)
+
+plot(unlist(enet_mut3[[2]]), unlist(enet_mut3[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
+
+# add codon72.npro
+enet_mut4 <- predictAll(model_name = 'enet', 
+                        subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                    "gdna.exon.intron", "codon72.npro"), 
+                        selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                              "gdna.exon.intron", "codon72.npro"), iterations = 50)
+
+plot(unlist(enet_mut4[[2]]), unlist(enet_mut4[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
+
+
+# add splice.delins.snv
+enet_mut5 <- predictAll(model_name = 'enet', 
+                        subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                    "gdna.exon.intron", "codon72.npro", "splice.delins.snv"), 
+                        selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                              "gdna.exon.intron", "codon72.npro", "splice.delins.snv"), iterations = 50)
+
+plot(unlist(enet_mut5[[2]]), unlist(enet_mut5[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
+
+
+# add protein.codon.num
+enet_mut6 <- predictAll(model_name = 'enet', 
+                        subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                    "gdna.exon.intron", "codon72.npro", "splice.delins.snv", "protein.codon.num"), 
+                        selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                              "gdna.exon.intron", "codon72.npro", "splice.delins.snv", "protein.codon.num"), iterations = 50)
+
+plot(unlist(enet_mut6[[2]]), unlist(enet_mut6[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
+
+
+# add mdm2.nG
+enet_mut7 <- predictAll(model_name = 'enet', 
+                        subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                    "gdna.exon.intron", "codon72.npro", "splice.delins.snv", "protein.codon.num", "mdm2.nG"), 
+                        selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                              "gdna.exon.intron", "codon72.npro", "splice.delins.snv", "protein.codon.num", "mdm2.nG"), iterations = 50)
+
+plot(unlist(enet_mut7[[2]]), unlist(enet_mut7[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
+
+
+# combine all tests 
+
+enet <- rbind (
+  append('gender_and_gdna.base.change', c(mean(unlist(enet_mut[[1]])), enet_mut[[6]])),
+  append('gdna.codon', c(mean(unlist(enet_mut1[[1]])), enet_mut1[[6]])),
+  append('protein.codon.change', c(mean(unlist(enet_mut2[[1]])), enet_mut2[[6]])),
+  append('gdna.exon.intron', c(mean(unlist(enet_mut3[[1]])), enet_mut3[[6]])),
+  append('codon72.npro', c(mean(unlist(enet_mut4[[1]])), enet_mut4[[6]])),
+  append('splice.delins.snv', c(mean(unlist(enet_mut5[[1]])), enet_mut5[[6]])),
+  append('protein.codon.num', c(mean(unlist(enet_mut6[[1]])), enet_mut6[[6]])),
+  append('mdm2.nG', c(mean(unlist(enet_mut7[[1]])), enet_mut7[[6]]))
+)
+
+
+##################################################################################################################3
+# Lasso
+# gender and gdna.base.change
+lasso_mut <- predictAll(model_name = 'lasso', 
+                        subset <- c("age_diagnosis", "gender", "gdna.base.change"), 
+                        selected_features = c("gender", "gdna.base.change"), iterations = 50)
+
+plot(unlist(lasso_mut[[2]]), unlist(lasso_mut[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+
+
+# add gdna.codon
+lasso_mut1 <- predictAll(model_name = 'lasso', 
+                         subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon"), 
+                         selected_features = c("gender", "gdna.base.change", "gdna.codon"), iterations = 50)
+
+plot(unlist(lasso_mut1[[2]]), unlist(lasso_mut1[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
+
+# add protein.codon.change
+lasso_mut2 <- predictAll(model_name = 'lasso', 
+                         subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change"), 
+                         selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change"), iterations = 50)
+
+plot(unlist(lasso_mut2[[2]]), unlist(lasso_mut2[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
+
+
+# add gdna.exon.intron
+lasso_mut3 <- predictAll(model_name = 'lasso', 
+                         subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                     "gdna.exon.intron"), 
+                         selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                               "gdna.exon.intron"), iterations = 50)
+
+plot(unlist(lasso_mut3[[2]]), unlist(lasso_mut3[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
+
+# add codon72.npro
+lasso_mut4 <- predictAll(model_name = 'lasso', 
+                         subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                     "gdna.exon.intron", "codon72.npro"), 
+                         selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                               "gdna.exon.intron", "codon72.npro"), iterations = 50)
+
+plot(unlist(lasso_mut4[[2]]), unlist(lasso_mut4[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
+
+
+# add splice.delins.snv
+lasso_mut5 <- predictAll(model_name = 'lasso', 
+                         subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                     "gdna.exon.intron", "codon72.npro", "splice.delins.snv"), 
+                         selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                               "gdna.exon.intron", "codon72.npro", "splice.delins.snv"), iterations = 50)
+
+plot(unlist(lasso_mut5[[2]]), unlist(lasso_mut5[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
+
+
+# add protein.codon.num
+lasso_mut6 <- predictAll(model_name = 'lasso', 
+                         subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                     "gdna.exon.intron", "codon72.npro", "splice.delins.snv", "protein.codon.num"), 
+                         selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                               "gdna.exon.intron", "codon72.npro", "splice.delins.snv", "protein.codon.num"), iterations = 50)
+
+plot(unlist(lasso_mut6[[2]]), unlist(lasso_mut6[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
+
+
+# add mdm2.nG
+lasso_mut7 <- predictAll(model_name = 'lasso', 
+                         subset <- c("age_diagnosis", "gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                     "gdna.exon.intron", "codon72.npro", "splice.delins.snv", "protein.codon.num", "mdm2.nG"), 
+                         selected_features = c("gender", "gdna.base.change", "gdna.codon", "protein.codon.change",
+                                               "gdna.exon.intron", "codon72.npro", "splice.delins.snv", "protein.codon.num", "mdm2.nG"), iterations = 50)
+
+plot(unlist(lasso_mut7[[2]]), unlist(lasso_mut7[[5]]), xlab = 'Predictions', ylab = 'Actual Age')
+abline(0,1)
+
+
+# combine all tests 
+
+lasso <- rbind (
+  append('gender_and_gdna.base.change', c(mean(unlist(lasso_mut[[1]])), lasso_mut[[6]])),
+  append('gdna.codon', c(mean(unlist(lasso_mut1[[1]])), lasso_mut1[[6]])),
+  append('protein.codon.change', c(mean(unlist(lasso_mut2[[1]])), lasso_mut2[[6]])),
+  append('gdna.exon.intron', c(mean(unlist(lasso_mut3[[1]])), lasso_mut3[[6]])),
+  append('codon72.npro', c(mean(unlist(lasso_mut4[[1]])), lasso_mut4[[6]])),
+  append('splice.delins.snv', c(mean(unlist(lasso_mut5[[1]])), lasso_mut5[[6]])),
+  append('protein.codon.num', c(mean(unlist(lasso_mut6[[1]])), lasso_mut6[[6]])),
+  append('mdm2.nG', c(mean(unlist(lasso_mut7[[1]])), lasso_mut7[[6]]))
+)
+
+
+##########################################################################################
+# combine ran_forest, enet, lasso
+ran_forest <- as.data.frame(rf)
+ran_forest$model <- 'rand_forest'
+names(ran_forest) <- c('variables', 'rmse', 'observations', 'model')
+
+enet <- as.data.frame(enet)
+enet$model <- 'enet'
+names(enet) <- c('variables', 'rmse', 'observations', 'model')
+
+lasso <- as.data.frame(lasso)
+lasso$model <- 'lasso'
+names(lasso) <- c('variables', 'rmse', 'observations', 'model')
+
+models <- rbind(ran_forest, enet, lasso)
+models$rmse <- as.numeric(as.character(models$rmse))
+
+ggplot(models, aes(model, mse, group = variables, fill = variables)) + 
+  geom_bar(stat = 'identity', 
+           position = 'dodge')
+

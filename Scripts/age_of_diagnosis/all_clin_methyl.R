@@ -1287,5 +1287,32 @@ lasso_all <- rbind (
   append('mdm2.nG', c(mean(unlist(lasso_mut7_reg[[1]])), lasso_mut7_reg[[6]], 'recursive'))
 )
 
+# write.csv(rf_all, paste0(data_folder, '/rf_all.csv'))
+# write.csv(enet_all, paste0(data_folder, '/enet_all.csv'))
+# write.csv(lasso_all, paste0(data_folder, '/lasso_all.csv'))
+
+##########################################################################################
+# combine ran_forest, enet, lasso
+ran_forest <- as.data.frame(rf_all)
+ran_forest$model <- 'rand_forest'
+names(ran_forest) <- c('variables', 'rmse', 'observations', 'data', 'model')
+
+enet <- as.data.frame(enet_all)
+enet$model <- 'enet'
+names(enet) <- c('variables', 'rmse', 'observations', 'data', 'model')
+
+lasso <- as.data.frame(lasso_all)
+lasso$model <- 'lasso'
+names(lasso) <- c('variables', 'rmse', 'observations', 'data', 'model')
+
+models <- rbind(ran_forest, enet, lasso)
+models$rmse <- as.numeric(as.character(models$rmse))
+
+
+# write.csv(models, paste0(data_folder, '/clin_methyl_model_results.csv'))
+
+
+
+
 
 
