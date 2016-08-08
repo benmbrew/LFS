@@ -54,11 +54,6 @@ methyl_cor_small <- as.matrix(methyl_cor_small)
 clusterMethyl <- function(data, cluster_size) {
   
   
-  # ...done in one step by function plotcluster.
-  # fpc method 
-  ancoord(data, clvecd, clnum=1, nn=50, method="mcd", countmode=1000)
-  
-  # kmeans
   kmeans_data <- t(data)
   
   #accumulator for cost results
@@ -97,39 +92,35 @@ clusterMethyl <- function(data, cluster_size) {
   # The main function is clValid(), and the
   # available validation measures fall into the three general categories of “internal”, “stability”,
   hclustFit <- hclust(distance, method="average")
-  dynamicCut <- cutreeDynamic(hclustFit, minClusterSize=40, method="hybrid", 
-                          distM = as.matrix(distance))
-  labels <- cutree(hclustFit, k=415)
+  labels <- cutree(hclustFit, k=cluster_size)
   hier_labels <- cbind(labels)
   
   return(list(hier_labels, kmeans_labels))
 }
 
 
-
-
-full <- clusterMethyl(methyl_impute, 415)
+full <- clusterMethyl(methyl_impute, 12)
 kmeans_full <- full[[1]]
 hier_full <- full[[2]]
 
-cor <- clusterMethyl(methyl_cor, 155)
+cor <- clusterMethyl(methyl_cor, 12)
 kmeans_cor <- cor[[1]]
 hier_cor <- cor[[2]]
 
-cor_small <- clusterMethyl(methyl_cor_small, 30)
+cor_small <- clusterMethyl(methyl_cor_small, 12)
 kmeans_cor_small <- cor_small[[1]]
 hier_cor_small <- cor_small[[2]]
 
 
-# # save labels 
+# # save labels
 # write.csv(kmeans_full, paste(data_folder,'kmeans_full.csv', sep ='/'))
 # write.csv(hier_full, paste(data_folder,'hier_full.csv', sep ='/'))
 # 
-# # save labels 
+# # save labels
 # write.csv(kmeans_cor, paste(data_folder,'kmeans_cor.csv', sep ='/'))
 # write.csv(hier_cor, paste(data_folder,'hier_cor.csv', sep ='/'))
 # 
-# save labels
+# #save labels
 # write.csv(kmeans_cor_small, paste(data_folder,'kmeans_cor_small.csv', sep ='/'))
 # write.csv(hier_cor_small, paste(data_folder,'hier_cor_small.csv', sep ='/'))
 
