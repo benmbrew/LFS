@@ -34,21 +34,30 @@ full_data_cor$X <- NULL
 full_data_rf$X <- NULL
 
 
+
 # Random Forest - this is training and testing on clinical data using k fold cross validation
 predictAll <- function(model_name, 
                        data,
                        subset, 
                        selected_features,
+                       log,
                        iterations) {
   
   model <- list()
   predictions <- list()
+  train_predictions <- list()
   mse <- list()
   importance <- list()
   test.ground_truth <- list()
   real_y <- list()
   
-  genes <- colnames(data)[28:ncol(data)]
+  # set log transformation
+  if(log) {
+    
+    data[, c(6, 8, 27:ncol(data))] <- log10(data[,27:ncol(data)])
+  }
+  
+  genes <- colnames(data)[27:ncol(data)]
 
   data <- data[, c(subset, genes)]
   
@@ -106,9 +115,15 @@ predictAll <- function(model_name,
       predictions[[i]] <- predict(model[[i]] 
                                   , newdata = data[-train_index, c(selected_features, genes)])
       
+      train_predictions[[i]] <- predict(model[[i]] 
+                                  , newdata = data[train_index, c(selected_features, genes)])
+      
+      train.ground_truth[[i]] <- data$age_diagnosis[train_indexx]
       test.ground_truth[[i]] <- data$age_diagnosis[-train_index]
-      real_y[[i]] = data$age_sample_collection[-train_index]
-      mse[[i]] <- rmse(unlist(predictions[[i]]), unlist(test.ground_truth[[i]]))
+      test.sample_collection[[i]] = data$age_sample_collection[-train_index]
+      train.sample_collection[[i]] = data$age_sample_collection[-train_index]
+      test.mse[[i]] <- rmse(unlist(train_predictions[[i]]), unlist(train.ground_truth[[i]]))
+      test.mse[[i]] <- rmse(unlist(predictions[[i]]), unlist(test.ground_truth[[i]]))
       
     }
     
@@ -277,25 +292,26 @@ predictAll <- function(model_name,
     
   }
   
-  return(list(mse, predictions, model, importance, test.ground_truth, obs, real_y))
+  return(list(train.mse, test.mse,  train_predictions, predictions, train.ground_truth, test.ground_truth, train.sample_collection,
+              test.sample_collection, model, importance, obs))
   
 }
 
 
 ########################################################################################################gdna.exon.intron
 # save.image(paste0(data_folder, '/clin_methyl_models.RData'))
-load(paste0(data_folder, '/clin_methyl_models.RData'))
+# load(paste0(data_folder, '/clin_methyl_models.RData'))
 
-# histogram of age of diagnosis
-hist(unlist(rf_mut[[5]]), xlab = 'Age of Diagnosis', main = 'Distribution of Age of Diagnosis')
-
-# plot of age of onset vs age of diagnosis with r squared 
-plot(full_data$age_diagnosis, full_data$age_sample_collection, xlab = 'Age of Diagnosis', 
-     ylab = 'Age of Sample Collection')
-abline(0,1)
-r_squared <- round(summary(lm(full_data$age_diagnosis ~ full_data$age_sample_collection))$adj.r.squared, 2)
-legend("topleft", legend = paste0('r_squared = ', r_squared))
-
+# # histogram of age of diagnosis
+# hist(unlist(rf_mut[[5]]), xlab = 'Age of Diagnosis', main = 'Distribution of Age of Diagnosis')
+# 
+# # plot of age of onset vs age of diagnosis with r squared 
+# plot(full_data$age_diagnosis, full_data$age_sample_collection, xlab = 'Age of Diagnosis', 
+#      ylab = 'Age of Sample Collection')
+# abline(0,1)
+# r_squared <- round(summary(lm(full_data$age_diagnosis ~ full_data$age_sample_collection))$adj.r.squared, 2)
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+# 
 
 # variables missing
 # gender 0
@@ -315,9 +331,9 @@ pdf('/home/benbrew/Desktop/rf_methylation.pdf')
 # Full Data
 # 
 # # just methylation
-# rf_methyl <- predictAll(model_name = 'rf', 
+# rf_methyl <- predictAll(model_name = 'rf',
 #                      data = full_data,
-#                      subset <- c("age_diagnosis", "age_sample_collection"), 
+#                      subset <- c("age_diagnosis", "age_sample_collection"),
 #                      selected_features = NULL, iterations = 10)
 # 
 # 
@@ -327,7 +343,7 @@ pdf('/home/benbrew/Desktop/rf_methylation.pdf')
 # r_squared <- round(summary(lm(unlist(rf_methyl[[2]]) ~ unlist(rf_methyl[[5]])))$adj.r.squared, 2)
 # legend("bottomright", legend = paste0('# obs = ', rf_methyl[[6]]))
 # legend("topleft", legend = paste0('r_squared = ', r_squared))
-# 
+
 # 
 # 
 # plot(unlist(rf_methyl[[2]]), unlist(rf_methyl[[7]]), xlab = 'Predictions', ylab = 'Age of Sample Collection',
@@ -511,6 +527,40 @@ pdf('/home/benbrew/Desktop/rf_methylation.pdf')
 # protein.codon.num 549
 # mdm2.nG 652
 # Run with #gdna.codon, protein.codon.num, mdm2.nG, protein.codon.change
+# return(list(mse, predictions, model, importance, test.ground_truth, obs, real_y))
+
+# just methylation
+rf_methyl <- predictAll(model_name = 'rf',
+                        data = full_data,
+                        subset <- c("age_diagnosis", "age_sample_collection"),
+                        selected_features = NULL, 
+                        log = FALSE,
+                        iterations = 10)
+
+
+plot(unlist(rf_methyl[[2]]), unlist(rf_methyl[[5]]), xlab = 'Predictions', ylab = 'Age of Diagnosis',
+     main = 'Just methylation')
+abline(0,1)
+r_squared <- round(summary(lm(unlist(rf_methyl[[2]]) ~ unlist(rf_methyl[[5]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_methyl[[6]]))
+legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+
+# just methylation with log
+rf_methyl_log <- predictAll(model_name = 'rf',
+                        data = full_data_rf,
+                        subset <- c("age_diagnosis", "age_sample_collection"),
+                        selected_features = NULL, 
+                        log = TRUE,
+                        iterations = 10)
+
+plot(unlist(rf_methyl_log[[2]]), unlist(rf_methyl_log[[5]]), xlab = 'Predictions', ylab = 'Age of Diagnosis',
+     main = 'Just methylation')
+abline(0,1)
+r_squared <- round(summary(lm(unlist(rf_methyl_log[[2]]) ~ unlist(rf_methyl_log[[5]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_methyl_log[[6]]))
+legend("topleft", legend = paste0('r_squared = ', r_squared))
+
 
 # add mdm2.nG
 rf_mdm2.nG <- predictAll(model_name = 'rf', 

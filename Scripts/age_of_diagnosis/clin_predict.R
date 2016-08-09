@@ -31,41 +31,52 @@ results_folder <- paste0(test, '/Results')
 full_data <- read.csv(paste0(data_folder, '/full_data.csv'), stringsAsFactors = F)
 full_data_cor <- read.csv(paste0(data_folder, '/full_data_cor.csv'), stringsAsFactors = F)
 full_data_rf <- read.csv(paste0(data_folder, '/full_data_rf.csv'), stringsAsFactors = F)
+# Load in clinical data
+clin <- read.csv(paste0(clin_data, '/clinical_two.csv'), stringsAsFactors = F)
+
 
 full_data$X <- NULL
 full_data_cor$X <- NULL
 full_data_rf$X <- NULL
 
-# class.ind function
-class.ind <- function(cl)
-{
-  n <- length(cl)
-  cl <- as.factor(cl)
-  x <- matrix(0, n, length(levels(cl)) )
-  x[(1:n) + n*(unclass(cl)-1)] <- 1
-  dimnames(x) <- list(names(cl), levels(cl))
-  x
-}
-
 
 # Random Forest - this is training and testing on clinical data using k fold cross validation
 predictAll <- function(data,
-                       variable, 
+                       subset, 
                        selected_features,
+                       use_genes,
                        iterations) {
   
   model <- list()
   predictions <- list()
-  mse <- list()
-  importance <- list()
+  rf.test_stats <- list()
+  rf.test_acc <- list()
+  predict_test <- list()
   test.ground_truth <- list()
+  rf_rest_results <- list()
 
-  genes <- colnames(data)[28:ncol(data)]
-  
-  data <- data[, c(variable, genes)]
-  data[, variable] <- as.factor(data[, variable])
+
+  if (use_genes) {
+    genes <- colnames(data)[27:ncol(data)]
+    data <- data[, c(subset, genes)]
+    data[, subset] <- as.factor(data[,subset])
+  }else{
+    genes <- NULL
+    data <- data[, subset]
+    # convert characters to factors 
+    for ( i in 1:ncol(data)){
+      
+      if(typeof(data[,i]) == 'character' || typeof(data[,i]) == 'integer') {
+        data[,i] <- as.factor(data[,i])
+        print(i)
+      } 
+    }
+  }
   
   # Try the model with all different selection of features based on number of missinginess. 
+  test_index <- is.na(data$codon72.npro)
+  test_data <- data
+  
   data <- data[complete.cases(data),]
   
   obs <- nrow(data)
@@ -76,6 +87,7 @@ predictAll <- function(data,
     train_index <- sample(nrow(data), nrow(data) *.7, replace = F)
     
     # 4) Random Forest 
+    variable <- setdiff(subset, selected_features)
     rf_y = make.names(as.factor(data[, variable])[train_index])
 
     if (length(levels(rf_y)) == 2) {
@@ -87,38 +99,43 @@ predictAll <- function(data,
     # determines how you train the model.
     fitControl <- trainControl( 
       method = "repeatedcv",  # could train on boostrap resample, here use repeated cross validation.
-      number = 5, 
+      number = 2, 
       classProbs = TRUE,     
       repeats = 1,
       allowParallel = TRUE,
       summaryFunction = summaryFunc)
     
-    rf.model <- train(x = data[train_index, c(selected_features, genes)]
+    model[[i]] <- train(x = data[train_index, c(selected_features, genes)]
                       , y = rf_y
                       , method = "rf"
                       , trControl = fitControl                   
                       , verbose = FALSE
-                      , metric = "ROC")
+                      , metric = "logLoss")
     
-    rf.predictions <- predict(rf.model 
+    predictions[[i]] <- predict(model[[i]] 
                               , newdata = data[-train_index, c(selected_features, genes)]
                               , type = "prob")
     
-    test.ground_truth <- data[, variable][-train_index]
+    predict_test[[i]] <- predict(model[[i]] 
+                                , newdata = test_data[test_index, c(selected_features, genes)]
+                                , type = "prob")
+    
+    test.ground_truth[[i]] <- data[, variable][-train_index]
     test.ground_truth_1inN <- class.ind(data[, variable][-train_index])
     #print(table(levels(test.ground_truth)[apply(rf.predictions, 1, which.is.max)], test.ground_truth))
     # AUC
     #create ROCR prediction object
-    temp.predict <- prediction(rf.predictions, test.ground_truth_1inN)  
-    rf.test_auc <- unlist(slot(performance(temp.predict, "auc"), "y.values"))  
-    print(paste("RF test AUC:", rf.test_auc))  
+    temp.predict <- prediction(predictions[[i]], test.ground_truth_1inN)  
+    # rf.test_auc <- unlist(slot(performance(temp.predict, "auc"), "y.values"))  
+    # print(paste("RF test AUC:", rf.test_auc))  
     # Accuracy
-    rf.test_acc[[i]] <- sum(levels(test.ground_truth)[apply(rf.predictions, 1, which.is.max)] == test.ground_truth) / dim(rf.predictions)[1]
-    print(paste("RF test acc:", rf.test_acc))  
+    rf.test_acc[[i]] <- sum(levels(test.ground_truth[[i]])[apply(predictions[[i]], 1, which.is.max)] == test.ground_truth[[i]]) / dim(predictions[[i]])[1]
+    rf_rest_results[[i]] <- levels(test.ground_truth[[i]])[apply(predict_test[[i]], 1, which.is.max)]
+    # print(paste("RF test acc:", rf.test_acc))  
     # Compute Confusion Matrix and Statistics
     #confusionMatrix(pred, truth)
-    rf.test_stats[[i]] <- confusionMatrix(levels(test.ground_truth)[apply(rf.predictions, 1, which.is.max)], test.ground_truth)
-    print(rf.test_stats)
+    # rf.test_stats[[i]] <- confusionMatrix(levels(test.ground_truth[[i]])[apply(predictions[[i]], 1, which.is.max)], test.ground_truth[[i]])
+    # print(rf.test_stats)
     
     print(i)
     
@@ -128,33 +145,153 @@ predictAll <- function(data,
   
 }
 
-# predict mdm2.nG
-rf_mdm2.nG <- predictAll(data = full_data_rf,
-                        variable = "mdm2.nG",
-                        selected_features = NULL, iterations = 50)
+
+##################################################################################################
+# MDM2.NG
+##########################
+# Use Methylation
+# predict mdm2.nG with subset 
+rf_mdm2.nG_reg <- predictAll(data = full_data_rf,
+                             use_genes = TRUE,
+                             subset = "mdm2.nG",
+                             selected_features = NULL, iterations = 5)
+
+# get avg accuracy 
+mean(unlist(rf_mdm2.nG_reg[[4]]))
+
+
+##########################
+# predict mdm2.nG with correlation data 
+rf_mdm2.nG_cor <- predictAll(data = full_data_cor,
+                            use_genes = TRUE,
+                            subset = "mdm2.nG",
+                            selected_features = NULL, iterations = 5)
+
+# get avg accuracy 
+mean(unlist(rf_mdm2.nG_cor[[4]]))
+
+
+##########################
+# predict mdm2.nG with full data 
+rf_mdm2.nG_full <- predictAll(data = full_data_cor,
+                              use_genes = TRUE,
+                              subset = "mdm2.nG",
+                              selected_features = NULL, iterations = 5)
+
+# get avg accuracy 
+mean(unlist(rf_mdm2.nG_full[[4]]))
+
+######################################################################################################
+# codon72.npro
+##########################
+# Use Methylation
+# predict codon72.npro with subset 
+rf_codon72.npro_reg <- predictAll(data = full_data_rf,
+                             use_genes = TRUE,
+                             subset = "codon72.npro",
+                             selected_features = NULL, iterations = 5)
+
+# get avg accuracy 
+mean(unlist(rf_codon72.npro_reg[[4]]))
+
+
+##########################
+# predict codon72.npro with correlation data 
+rf_codon72.npro_cor <- predictAll(data = full_data_cor,
+                             use_genes = TRUE,
+                             subset = "codon72.npro",
+                             selected_features = NULL, iterations = 5)
+
+# get avg accuracy 
+mean(unlist(rf_codon72.npro_cor[[4]]))
+
+
+##########################
+# predict codon72.npro with full data 
+rf_codon72.npro_full <- predictAll(data = full_data_cor,
+                              use_genes = TRUE,
+                              subset = "codon72.npro",
+                              selected_features = NULL, iterations = 5)
+
+# get avg accuracy 
+mean(unlist(rf_codon72.npro_full[[4]]))
+
+
+#######################################################################################
+# Use Clinical
+###########################
+# predict codon72.npro with clinical data
+rf_codon72.npro_clin_full <- predictAll(data = clin,
+                                   subset = c('codon72.npro', 'gdna.exon.intron', 'gdna.base.change', 'gdna.codon',
+                                              'protein.codon.change', 'protein.codon.num', 'splice.delins.snv',
+                                              'mdm2.nG'),
+                                   selected_features = c('gdna.exon.intron', 'gdna.base.change', 'gdna.codon',
+                                                    'protein.codon.change', 'protein.codon.num', 'splice.delins.snv',
+                                                    'mdm2.nG'),
+                                   use_genes = FALSE,
+                                   iterations = 5)
+
+# get avg accuracy 
+mean(unlist(rf_codon72.npro_clin_full[[4]]))
 
 
 
+######################################################################################################
+# splice.delins.snv
+##########################
+# Use Methylation
+# predict splice.delins.snv with subset 
+rf_splice.delins.snv_reg <- predictAll(data = full_data_rf,
+                                  use_genes = TRUE,
+                                  subset = "splice.delins.snv",
+                                  selected_features = NULL, iterations = 5)
+
+# get avg accuracy 
+mean(unlist(rf_splice.delins.snv_reg[[4]]))
+
+
+##########################
+# predict splice.delins.snv with correlation data 
+rf_splice.delins.snv_cor <- predictAll(data = full_data_cor,
+                                  use_genes = TRUE,
+                                  subset = "splice.delins.snv",
+                                  selected_features = NULL, iterations = 5)
+
+# get avg accuracy 
+mean(unlist(rf_splice.delins.snv_cor[[4]]))
+
+
+##########################
+# predict splice.delins.snv with full data 
+rf_splice.delins.snv_full <- predictAll(data = full_data_cor,
+                                   use_genes = TRUE,
+                                   subset = "splice.delins.snv",
+                                   selected_features = NULL, iterations = 20)
+
+# get avg accuracy 
+mean(unlist(rf_splice.delins.snv_full[[4]]))
+
+
+#######################################################################################
+# Use Clinical
+###########################
+# predict splice.delins.snv with clinical data
+rf_splice.delins.snv_clin_full <- predictAll(data = clin,
+                                        subset = c('splice.delins.snv', 'gdna.exon.intron', 'gdna.base.change', 'gdna.codon',
+                                                   'protein.codon.change', 'protein.codon.num', 'splice.delins.snv',
+                                                   'mdm2.nG'),
+                                        selected_features = c('gdna.exon.intron', 'gdna.base.change', 'gdna.codon',
+                                                              'protein.codon.change', 'protein.codon.num', 'splice.delins.snv',
+                                                              'splice.delins.snv'),
+                                        use_genes = FALSE,
+                                        iterations = 20)
+
+# get avg accuracy 
+mean(unlist(rf_splice.delins.snv_clin_full[[4]]))
 
 
 
-
-
-
-#
-#
-# plot(unlist(rf_methyl[[2]]), unlist(rf_methyl[[5]]), xlab = 'Predictions', ylab = 'Age of Diagnosis',
-#      main = 'Just methylation')
-# abline(0,1)
-# r_squared <- round(summary(lm(unlist(rf_methyl[[2]]) ~ unlist(rf_methyl[[5]])))$adj.r.squared, 2)
-# legend("bottomright", legend = paste0('# obs = ', rf_methyl[[6]]))
-# legend("topleft", legend = paste0('r_squared = ', r_squared))
-#
-#
-#
-# plot(unlist(rf_methyl[[2]]), unlist(rf_methyl[[7]]), xlab = 'Predictions', ylab = 'Age of Sample Collection',
-#      main = 'Just methylation')
-# abline(0,1)
-# legend("bottomright", legend = paste0('# obs = ', rf_methyl[[6]]))
+######################################################################################################3
+# predict onto 
 
 
