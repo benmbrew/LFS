@@ -44,35 +44,45 @@ predictAll <- function(model_name,
                        iterations) {
   
   model <- list()
-  predictions <- list()
-  train_predictions <- list()
-  mse <- list()
   importance <- list()
+  train.mse <- list()
+  test.mse <- list()
+  train.predictions <- list()
+  test.predictions <- list()
+  train.ground_truth <- list()
   test.ground_truth <- list()
-  real_y <- list()
+  train.sample_collection <- list()
+  test.sample_collection <- list()
+
   
   # set log transformation
   if(log) {
     
-    data[, c(6, 8, 27:ncol(data))] <- log10(data[,27:ncol(data)])
+    data[,c(6,8, 27:ncol(data))]  <- log(data[,c(6,8,27:ncol(data))])
   }
-  
   genes <- colnames(data)[27:ncol(data)]
-
+  
   data <- data[, c(subset, genes)]
   
-  # Try the model with all different selection of features based on number of missinginess. 
-  data <- data[complete.cases(data),]
+  # remove rows where age of diagnosis meissin
+  data <- data[!(is.na(data$age_diagnos)),]
+  
+  for (i in 3:ncol(data)) {
+    if(any(is.na(data[, i]))) {
+      data <- data[!is.na(data[,i]),]
+    }
+  }
+  
   
   obs <- nrow(data)
   
-  # convert characters to factors 
-  for ( i in 1:ncol(data)){
-    
-    if(typeof(data[,i]) == 'character' || grepl('num', names(data[i]))) {
+  # convert characters to factors
+  for ( i in 3:ncol(data)){
+
+    if(typeof(data[,i]) == 'character' || grepl('int', names(data[i]))) {
       data[,i] <- as.factor(data[,i])
       print(i)
-    } 
+    }
   }
   
   for (i in 1:iterations){
@@ -112,18 +122,18 @@ predictAll <- function(model_name,
       importance[[i]] <- cbind(rownames(temp), temp$Overall)
       
       
-      predictions[[i]] <- predict(model[[i]] 
+      test.predictions[[i]] <- predict(model[[i]] 
                                   , newdata = data[-train_index, c(selected_features, genes)])
       
-      train_predictions[[i]] <- predict(model[[i]] 
+      train.predictions[[i]] <- predict(model[[i]] 
                                   , newdata = data[train_index, c(selected_features, genes)])
       
-      train.ground_truth[[i]] <- data$age_diagnosis[train_indexx]
+      train.ground_truth[[i]] <- data$age_diagnosis[train_index]
       test.ground_truth[[i]] <- data$age_diagnosis[-train_index]
+      train.sample_collection[[i]] = data$age_sample_collection[train_index]
       test.sample_collection[[i]] = data$age_sample_collection[-train_index]
-      train.sample_collection[[i]] = data$age_sample_collection[-train_index]
-      test.mse[[i]] <- rmse(unlist(train_predictions[[i]]), unlist(train.ground_truth[[i]]))
-      test.mse[[i]] <- rmse(unlist(predictions[[i]]), unlist(test.ground_truth[[i]]))
+      train.mse[[i]] <- rmse(unlist(train.predictions[[i]]), unlist(train.ground_truth[[i]]))
+      test.mse[[i]] <- rmse(unlist(test.predictions[[i]]), unlist(test.ground_truth[[i]]))
       
     }
     
@@ -292,7 +302,7 @@ predictAll <- function(model_name,
     
   }
   
-  return(list(train.mse, test.mse,  train_predictions, predictions, train.ground_truth, test.ground_truth, train.sample_collection,
+  return(list(train.mse, test.mse,  train.predictions, test.predictions, train.ground_truth, test.ground_truth, train.sample_collection,
               test.sample_collection, model, importance, obs))
   
 }
@@ -527,23 +537,54 @@ pdf('/home/benbrew/Desktop/rf_methylation.pdf')
 # protein.codon.num 549
 # mdm2.nG 652
 # Run with #gdna.codon, protein.codon.num, mdm2.nG, protein.codon.change
-# return(list(mse, predictions, model, importance, test.ground_truth, obs, real_y))
-
+# return(list(train.mse, test.mse,  train.predictions, test.predictions, train.ground_truth, 
+#             test.ground_truth, train.sample_collection,
+#             test.sample_collection, model, importance, obs))
+##################################################################################################
 # just methylation
 rf_methyl <- predictAll(model_name = 'rf',
-                        data = full_data,
+                        data = full_data_rf,
                         subset <- c("age_diagnosis", "age_sample_collection"),
                         selected_features = NULL, 
                         log = FALSE,
-                        iterations = 10)
+                        iterations = 20)
 
 
-plot(unlist(rf_methyl[[2]]), unlist(rf_methyl[[5]]), xlab = 'Predictions', ylab = 'Age of Diagnosis',
+###############################
+# # plot train age diagnosis
+# plot(unlist(rf_methyl[[3]]), unlist(rf_methyl[[5]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just methylation no log')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_methyl[[3]]) ~ unlist(rf_methyl[[5]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_methyl[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+# plot test age diagnosis
+plot(unlist(rf_methyl[[4]]), unlist(rf_methyl[[6]]), xlab = 'Test Predictions', ylab = 'Test Age of Diagnosis',
      main = 'Just methylation')
 abline(0,1)
-r_squared <- round(summary(lm(unlist(rf_methyl[[2]]) ~ unlist(rf_methyl[[5]])))$adj.r.squared, 2)
-legend("bottomright", legend = paste0('# obs = ', rf_methyl[[6]]))
+r_squared <- round(summary(lm(unlist(rf_methyl[[4]]) ~ unlist(rf_methyl[[6]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_methyl[[11]]))
 legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+
+###############################
+# # plot train age sample collection
+# plot(unlist(rf_methyl[[3]]), unlist(rf_methyl[[7]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just methylation')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_methyl[[3]]) ~ unlist(rf_methyl[[7]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_methyl[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+# plot test age sample collection
+plot(unlist(rf_methyl[[4]]), unlist(rf_methyl[[8]]), xlab = 'Test Predictions', ylab = 'Test Age Sample Collection',
+     main = 'Just methylation')
+abline(0,1)
+r_squared <- round(summary(lm(unlist(rf_methyl[[4]]) ~ unlist(rf_methyl[[8]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_methyl[[11]]))
+legend("topleft", legend = paste0('r_squared = ', r_squared))
+
 
 
 # just methylation with log
@@ -552,188 +593,791 @@ rf_methyl_log <- predictAll(model_name = 'rf',
                         subset <- c("age_diagnosis", "age_sample_collection"),
                         selected_features = NULL, 
                         log = TRUE,
-                        iterations = 10)
+                        iterations = 20)
 
-plot(unlist(rf_methyl_log[[2]]), unlist(rf_methyl_log[[5]]), xlab = 'Predictions', ylab = 'Age of Diagnosis',
-     main = 'Just methylation')
+
+###############################
+# # plot train age diagnosis
+# plot(unlist(rf_methyl_log[[3]]), unlist(rf_methyl_log[[5]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just methylation with log')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_methyl_log[[3]]) ~ unlist(rf_methyl_log[[5]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_methyl_log[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+# plot test age diagnosis
+plot(unlist(rf_methyl_log[[4]]), unlist(rf_methyl_log[[6]]), xlab = 'Test Predictions', ylab = 'Test Age of Diagnosis',
+     main = 'Just methylation with log')
 abline(0,1)
-r_squared <- round(summary(lm(unlist(rf_methyl_log[[2]]) ~ unlist(rf_methyl_log[[5]])))$adj.r.squared, 2)
-legend("bottomright", legend = paste0('# obs = ', rf_methyl_log[[6]]))
+r_squared <- round(summary(lm(unlist(rf_methyl_log[[4]]) ~ unlist(rf_methyl_log[[6]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_methyl_log[[11]]))
 legend("topleft", legend = paste0('r_squared = ', r_squared))
 
 
-# add mdm2.nG
-rf_mdm2.nG <- predictAll(model_name = 'rf', 
-                      data = full_data,
-                      subset <- c("age_diagnosis", "age_sample_collection", "gender", "mdm2.nG"), 
-                      selected_features = c("gender", "mdm2.nG"), iterations = 10)
+###############################
+# # plot train age sample collection
+# plot(unlist(rf_methyl_log[[3]]), unlist(rf_methyl_log[[7]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just methylation with log')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_methyl_log[[3]]) ~ unlist(rf_methyl_log[[7]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_methyl_log[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
 
-plot(unlist(rf_mdm2.nG[[2]]), unlist(rf_mdm2.nG[[5]]), xlab = 'Predictions', ylab = 'Age of Diagnosis',
-     main = '+gender+mdm2.nG')
+# plot test age sample collection
+plot(unlist(rf_methyl_log[[4]]), unlist(rf_methyl_log[[8]]), xlab = 'Test Predictions', ylab = 'Test Age Sample Collection',
+     main = 'Just methylation with log')
 abline(0,1)
-r_squared <- round(summary(lm(unlist(rf_mdm2.nG[[2]]) ~ unlist(rf_mdm2.nG[[5]])))$adj.r.squared, 2)
-legend("topleft", legend = paste0('r_squared = ', r_squared))
-legend("bottomright", legend = paste0('# obs = ', rf_mdm2.nG[[6]]))
-
-
-
-plot(unlist(rf_mdm2.nG[[2]]), unlist(rf_mdm2.nG[[7]]), xlab = 'Predictions', ylab = 'Age of Sample Collection',
-     main = '+gender+mdm2.nG')
-abline(0,1)
-r_squared <- round(summary(lm(unlist(rf_mdm2.nG[[2]]) ~ unlist(rf_mdm2.nG[[7]])))$adj.r.squared, 2)
-legend("bottomright", legend = paste0('# obs = ', rf_mdm2.nG[[6]]))
+r_squared <- round(summary(lm(unlist(rf_methyl_log[[4]]) ~ unlist(rf_methyl_log[[8]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_methyl_log[[11]]))
 legend("topleft", legend = paste0('r_squared = ', r_squared))
 
 
-# add gdna.codon
-rf_gdna.codon <- predictAll(model_name = 'rf', 
-                         data = full_data,
-                         subset <- c("age_diagnosis", "age_sample_collection", "gender", "gdna.codon"), 
-                         selected_features = c("gender", "gdna.codon"), iterations = 10)
+##################################################################################################
+# just gdna.base.change
+rf_gdna.base.change <- predictAll(model_name = 'rf',
+                        data = full_data_rf,
+                        subset <- c("age_diagnosis", "age_sample_collection", "gender", "gdna.base.change"),
+                        selected_features = c("gender", "gdna.base.change"),
+                        log = FALSE,
+                        iterations = 20)
 
-plot(unlist(rf_gdna.codon[[2]]), unlist(rf_gdna.codon[[5]]), xlab = 'Predictions', ylab = 'Age of Diagnosis',
-     main = '+gender+gdna.codon')
+
+###############################
+# # plot train age diagnosis
+# plot(unlist(rf_gdna.base.change[[3]]), unlist(rf_gdna.base.change[[5]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just gdna.base.change no log')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_gdna.base.change[[3]]) ~ unlist(rf_gdna.base.change[[5]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_gdna.base.change[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+plot(unlist(rf_gdna.base.change[[4]]), unlist(rf_gdna.base.change[[6]]), xlab = 'Test Predictions', ylab = 'Test Age of Diagnosis',
+     main = 'gender+gdna.base.change')
 abline(0,1)
-legend("bottomright", legend = paste0('# obs = ', rf_gdna.codon[[6]]))
-r_squared <- round(summary(lm(unlist(rf_gdna.codon[[2]]) ~ unlist(rf_gdna.codon[[5]])))$adj.r.squared, 2)
-legend("topleft", legend = paste0('r_squared = ', r_squared))
-
-plot(unlist(rf_gdna.codon[[2]]), unlist(rf_gdna.codon[[7]]), xlab = 'Predictions', ylab = 'Age of Sample Collection',
-     main = '+gender+gdna.codon')
-abline(0,1)
-legend("bottomright", legend = paste0('# obs = ', rf_gdna.codon[[6]]))
-r_squared <- round(summary(lm(unlist(rf_gdna.codon[[2]]) ~ unlist(rf_gdna.codon[[7]])))$adj.r.squared, 2)
-legend("topleft", legend = paste0('r_squared = ', r_squared))
-
-# add protein.codon.num
-rf_protein.codon.num <- predictAll(model_name = 'rf', 
-                            data = full_data,
-                            subset <- c("age_diagnosis", "age_sample_collection", "gender", "protein.codon.num"), 
-                            selected_features = c("gender", "protein.codon.num"), iterations = 10)
-
-plot(unlist(rf_protein.codon.num[[2]]), unlist(rf_protein.codon.num[[5]]), xlab = 'Predictions', ylab = 'Age of Diagnosis',
-     main = '+gender+protein.codon.num')
-abline(0,1)
-legend("bottomright", legend = paste0('# obs = ', rf_protein.codon.num[[6]]))
-r_squared <- round(summary(lm(unlist(rf_protein.codon.num[[2]]) ~ unlist(rf_protein.codon.num[[5]])))$adj.r.squared, 2)
-legend("topleft", legend = paste0('r_squared = ', r_squared))
-
-plot(unlist(rf_protein.codon.num[[2]]), unlist(rf_protein.codon.num[[7]]), xlab = 'Predictions', ylab = 'Age of Sample Collection',
-     main = '+gender+protein.codon.num')
-abline(0,1)
-legend("bottomright", legend = paste0('# obs = ', rf_protein.codon.num[[6]]))
-r_squared <- round(summary(lm(unlist(rf_protein.codon.num[[2]]) ~ unlist(rf_protein.codon.num[[7]])))$adj.r.squared, 2)
+r_squared <- round(summary(lm(unlist(rf_gdna.base.change[[4]]) ~ unlist(rf_gdna.base.change[[6]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_gdna.base.change[[11]]))
 legend("topleft", legend = paste0('r_squared = ', r_squared))
 
 
-# add protein.codon.change
-rf_protein.codon.change <- predictAll(model_name = 'rf', 
-                                   data = full_data,
-                                   subset <- c("age_diagnosis","age_sample_collection",  "gender", "protein.codon.change"), 
-                                   selected_features = c("gender", "protein.codon.change"), 
-                                   iterations = 10)
+###############################
+# # plot train age sample collection
+# plot(unlist(rf_gdna.base.change[[3]]), unlist(rf_gdna.base.change[[7]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just gdna.base.change')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_gdna.base.change[[3]]) ~ unlist(rf_gdna.base.change[[7]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_gdna.base.change[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
 
-plot(unlist(rf_protein.codon.change[[2]]), unlist(rf_protein.codon.change[[5]]), xlab = 'Predictions', ylab = 'Age of Diagnosis',
-     main = '+gender+protein.codon.change')
+# plot test age sample collection
+plot(unlist(rf_gdna.base.change[[4]]), unlist(rf_gdna.base.change[[8]]), xlab = 'Test Predictions', ylab = 'Test Age Sample Collection',
+     main = 'gender+gdna.base.change ')
 abline(0,1)
-legend("bottomright", legend = paste0('# obs = ', rf_protein.codon.change[[6]]))
-r_squared <- round(summary(lm(unlist(rf_protein.codon.change[[2]]) ~ unlist(rf_protein.codon.change[[5]])))$adj.r.squared, 2)
-legend("topleft", legend = paste0('r_squared = ', r_squared))
-
-plot(unlist(rf_protein.codon.change[[2]]), unlist(rf_protein.codon.change[[7]]), xlab = 'Predictions', ylab = 'Age of Sample Collection',
-     main = '+gender+protein.codon.change')
-abline(0,1)
-legend("bottomright", legend = paste0('# obs = ', rf_protein.codon.change[[6]]))
-r_squared <- round(summary(lm(unlist(rf_protein.codon.change[[2]]) ~ unlist(rf_protein.codon.change[[7]])))$adj.r.squared, 2)
+r_squared <- round(summary(lm(unlist(rf_gdna.base.change[[4]]) ~ unlist(rf_gdna.base.change[[8]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_gdna.base.change[[11]]))
 legend("topleft", legend = paste0('r_squared = ', r_squared))
 
 
-# add gdna.base.change
-rf_gdna.base.change <- predictAll(model_name = 'rf', 
-                                      data = full_data,
-                                      subset <- c("age_diagnosis","age_sample_collection",  "gender", "gdna.base.change"), 
-                                      selected_features = c("gender", "gdna.base.change"), 
-                                      iterations = 10)
 
-plot(unlist(rf_gdna.base.change[[2]]), unlist(rf_gdna.base.change[[5]]), xlab = 'Predictions', ylab = 'Age of Diagnosis',
-     main = '+gender+gdna.base.change')
+# just methylation with log
+rf_gdna.base.change_log <- predictAll(model_name = 'rf',
+                            data = full_data_rf,
+                            subset <- c("age_diagnosis", "age_sample_collection", "gender", "gdna.base.change"),
+                            selected_features = c("gender", "gdna.base.change"), 
+                            log = TRUE,
+                            iterations = 20)
+
+
+###############################
+# # plot train age diagnosis
+# plot(unlist(rf_gdna.base.change_log[[3]]), unlist(rf_gdna.base.change_log[[5]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just gdna.base.change with log')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_gdna.base.change_log[[3]]) ~ unlist(rf_gdna.base.change_log[[5]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_gdna.base.change_log[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+# plot test age diagnosis
+plot(unlist(rf_gdna.base.change_log[[4]]), unlist(rf_gdna.base.change_log[[6]]), xlab = 'Test Predictions', ylab = 'Test Age of Diagnosis',
+     main = 'gender+gdna.base.change with log')
 abline(0,1)
-legend("bottomright", legend = paste0('# obs = ', rf_gdna.base.change[[6]]))
-r_squared <- round(summary(lm(unlist(rf_gdna.base.change[[2]]) ~ unlist(rf_gdna.base.change[[5]])))$adj.r.squared, 2)
-legend("topleft", legend = paste0('r_squared = ', r_squared))
-
-plot(unlist(rf_gdna.base.change[[2]]), unlist(rf_gdna.base.change[[7]]), xlab = 'Predictions', ylab = 'Age of Sample Collection',
-     main = '+gender+gdna.base.change')
-abline(0,1)
-legend("bottomright", legend = paste0('# obs = ', rf_gdna.base.change[[6]]))
-r_squared <- round(summary(lm(unlist(rf_gdna.base.change[[2]]) ~ unlist(rf_gdna.base.change[[7]])))$adj.r.squared, 2)
-legend("topleft", legend = paste0('r_squared = ', r_squared))
-
-
-#splice.delins.snv
-rf_splice.delins.snv <- predictAll(model_name = 'rf', 
-                                  data = full_data,
-                                  subset <- c("age_diagnosis","age_sample_collection",  "gender", "splice.delins.snv"), 
-                                  selected_features = c("gender", "splice.delins.snv"), 
-                                  iterations = 10)
-
-plot(unlist(rf_splice.delins.snv[[2]]), unlist(rf_splice.delins.snv[[5]]), xlab = 'Predictions', ylab = 'Age of Diagnosis',
-     main = '+gender+splice.delins.snv')
-abline(0,1)
-legend("bottomright", legend = paste0('# obs = ', rf_splice.delins.snv[[6]]))
-r_squared <- round(summary(lm(unlist(rf_splice.delins.snv[[2]]) ~ unlist(rf_splice.delins.snv[[5]])))$adj.r.squared, 2)
-legend("topleft", legend = paste0('r_squared = ', r_squared))
-
-plot(unlist(rf_splice.delins.snv[[2]]), unlist(rf_splice.delins.snv[[7]]), xlab = 'Predictions', ylab = 'Age of Sample Collection',
-     main = '+gender+splice.delins.snv')
-abline(0,1)
-legend("bottomright", legend = paste0('# obs = ', rf_splice.delins.snv[[6]]))
-r_squared <- round(summary(lm(unlist(rf_splice.delins.snv[[2]]) ~ unlist(rf_splice.delins.snv[[7]])))$adj.r.squared, 2)
+r_squared <- round(summary(lm(unlist(rf_gdna.base.change_log[[4]]) ~ unlist(rf_gdna.base.change_log[[6]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_gdna.base.change_log[[11]]))
 legend("topleft", legend = paste0('r_squared = ', r_squared))
 
 
-#codon72.npro
-rf_codon72.npro <- predictAll(model_name = 'rf', 
-                                   data = full_data,
-                                   subset <- c("age_diagnosis","age_sample_collection",  "gender", "codon72.npro"), 
-                                   selected_features = c("gender", "codon72.npro"), 
-                                   iterations = 10)
+# ###############################
+# # plot train age sample collection
+# plot(unlist(rf_gdna.base.change_log[[3]]), unlist(rf_gdna.base.change_log[[7]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just gdna.base.change with log')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_gdna.base.change_log[[3]]) ~ unlist(rf_gdna.base.change_log[[7]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_gdna.base.change_log[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
 
-plot(unlist(rf_codon72.npro[[2]]), unlist(rf_codon72.npro[[5]]), xlab = 'Predictions', ylab = 'Age of Diagnosis',
-     main = '+gender+codon72.npro')
+# plot test age sample collection
+plot(unlist(rf_gdna.base.change_log[[4]]), unlist(rf_gdna.base.change_log[[8]]), xlab = 'Test Predictions', ylab = 'Test Age Sample Collection',
+     main = 'gender+gdna.base.change with log')
 abline(0,1)
-legend("bottomright", legend = paste0('# obs = ', rf_codon72.npro[[6]]))
-r_squared <- round(summary(lm(unlist(rf_codon72.npro[[2]]) ~ unlist(rf_codon72.npro[[5]])))$adj.r.squared, 2)
+r_squared <- round(summary(lm(unlist(rf_gdna.base.change_log[[4]]) ~ unlist(rf_gdna.base.change_log[[8]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_gdna.base.change_log[[11]]))
 legend("topleft", legend = paste0('r_squared = ', r_squared))
 
-plot(unlist(rf_codon72.npro[[2]]), unlist(rf_codon72.npro[[7]]), xlab = 'Predictions', ylab = 'Age of Sample Collection',
-     main = '+gender+codon72.npro')
+
+##################################################################################################
+# just gdna.codon
+rf_gdna.codon <- predictAll(model_name = 'rf',
+                                  data = full_data_rf,
+                                  subset <- c("age_diagnosis", "age_sample_collection", "gender", "gdna.codon"),
+                                  selected_features = c("gender", "gdna.codon"),
+                                  log = FALSE,
+                                  iterations = 20)
+
+
+###############################
+# # plot train age diagnosis
+# plot(unlist(rf_gdna.codon[[3]]), unlist(rf_gdna.codon[[5]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just gdna.codon no log')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_gdna.codon[[3]]) ~ unlist(rf_gdna.codon[[5]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_gdna.codon[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+plot(unlist(rf_gdna.codon[[4]]), unlist(rf_gdna.codon[[6]]), xlab = 'Test Predictions', ylab = 'Test Age of Diagnosis',
+     main = 'gender+gdna.codon')
 abline(0,1)
-legend("bottomright", legend = paste0('# obs = ', rf_codon72.npro[[6]]))
-r_squared <- round(summary(lm(unlist(rf_codon72.npro[[2]]) ~ unlist(rf_codon72.npro[[7]])))$adj.r.squared, 2)
+r_squared <- round(summary(lm(unlist(rf_gdna.codon[[4]]) ~ unlist(rf_gdna.codon[[6]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_gdna.codon[[11]]))
 legend("topleft", legend = paste0('r_squared = ', r_squared))
 
-# gdna.exon.intron
 
-rf_gdna.exon.intron <- predictAll(model_name = 'rf', 
-                              data = full_data,
-                              subset <- c("age_diagnosis","age_sample_collection",  "gender", "gdna.exon.intron"), 
-                              selected_features = c("gender", "gdna.exon.intron"), 
-                              iterations = 10)
+###############################
+# # plot train age sample collection
+# plot(unlist(rf_gdna.codon[[3]]), unlist(rf_gdna.codon[[7]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just gdna.codon')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_gdna.codon[[3]]) ~ unlist(rf_gdna.codon[[7]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_gdna.codon[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
 
-plot(unlist(rf_gdna.exon.intron[[2]]), unlist(rf_gdna.exon.intron[[5]]), xlab = 'Predictions', ylab = 'Age of Diagnosis',
-     main = '+gender+gdna.exon.intron')
+# plot test age sample collection
+plot(unlist(rf_gdna.codon[[4]]), unlist(rf_gdna.codon[[8]]), xlab = 'Test Predictions', ylab = 'Test Age Sample Collection',
+     main = 'Just gdna.codon')
 abline(0,1)
-legend("bottomright", legend = paste0('# obs = ', rf_gdna.exon.intron[[6]]))
-r_squared <- round(summary(lm(unlist(rf_gdna.exon.intron[[2]]) ~ unlist(rf_gdna.exon.intron[[5]])))$adj.r.squared, 2)
+r_squared <- round(summary(lm(unlist(rf_gdna.codon[[4]]) ~ unlist(rf_gdna.codon[[8]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_gdna.codon[[11]]))
 legend("topleft", legend = paste0('r_squared = ', r_squared))
 
-plot(unlist(rf_gdna.exon.intron[[2]]), unlist(rf_gdna.exon.intron[[7]]), xlab = 'Predictions', ylab = 'Age of Sample Collection',
-     main = '+gender+gdna.exon.intron')
+
+
+# just methylation with log
+rf_gdna.codon_log <- predictAll(model_name = 'rf',
+                                      data = full_data_rf,
+                                      subset <- c("age_diagnosis", "age_sample_collection", "gender", "gdna.codon"),
+                                      selected_features = c("gender", "gdna.codon"),
+                                      log = TRUE,
+                                      iterations = 20)
+
+
+###############################
+# # plot train age diagnosis
+# plot(unlist(rf_gdna.codon_log[[3]]), unlist(rf_gdna.codon_log[[5]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just gdna.codon with log')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_gdna.codon_log[[3]]) ~ unlist(rf_gdna.codon_log[[5]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_gdna.codon_log[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+# plot test age diagnosis
+plot(unlist(rf_gdna.codon_log[[4]]), unlist(rf_gdna.codon_log[[6]]), xlab = 'Test Predictions', ylab = 'Test Age of Diagnosis',
+     main = 'gender+gdna.codon with log')
 abline(0,1)
-legend("bottomright", legend = paste0('# obs = ', rf_gdna.exon.intron[[6]]))
-r_squared <- round(summary(lm(unlist(rf_gdna.exon.intron[[2]]) ~ unlist(rf_gdna.exon.intron[[7]])))$adj.r.squared, 2)
+r_squared <- round(summary(lm(unlist(rf_gdna.codon_log[[4]]) ~ unlist(rf_gdna.codon_log[[6]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_gdna.codon_log[[11]]))
 legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+
+###############################
+# # plot train age sample collection
+# plot(unlist(rf_gdna.codon_log[[3]]), unlist(rf_gdna.codon_log[[7]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just gdna.codon with log')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_gdna.codon_log[[3]]) ~ unlist(rf_gdna.codon_log[[7]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_gdna.codon_log[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+# plot test age diagnosis
+plot(unlist(rf_gdna.codon_log[[4]]), unlist(rf_gdna.codon_log[[8]]), xlab = 'Test Predictions', ylab = 'Test Age Sample Collection',
+     main = 'gender+gdna.codon with log')
+abline(0,1)
+r_squared <- round(summary(lm(unlist(rf_gdna.codon_log[[4]]) ~ unlist(rf_gdna.codon_log[[8]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_gdna.codon_log[[11]]))
+legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+
+
+##################################################################################################
+# just protein.codon.change
+rf_protein.codon.change <- predictAll(model_name = 'rf',
+                            data = full_data_rf,
+                            subset <- c("age_diagnosis", "age_sample_collection", "gender", "protein.codon.change"),
+                            selected_features = c("gender", "protein.codon.change"),
+                            log = FALSE,
+                            iterations = 20)
+
+
+###############################
+# # plot train age diagnosis
+# plot(unlist(rf_protein.codon.change[[3]]), unlist(rf_protein.codon.change[[5]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'gender+protein.codon.change no log')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_protein.codon.change[[3]]) ~ unlist(rf_protein.codon.change[[5]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_protein.codon.change[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+plot(unlist(rf_protein.codon.change[[4]]), unlist(rf_protein.codon.change[[6]]), xlab = 'Test Predictions', ylab = 'Test Age of Diagnosis',
+     main = 'gender+protein.codon.change')
+abline(0,1)
+r_squared <- round(summary(lm(unlist(rf_protein.codon.change[[4]]) ~ unlist(rf_protein.codon.change[[6]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_protein.codon.change[[11]]))
+legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+
+###############################
+# # plot train age sample collection
+# plot(unlist(rf_protein.codon.change[[3]]), unlist(rf_protein.codon.change[[7]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'gender+protein.codon.change')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_protein.codon.change[[3]]) ~ unlist(rf_protein.codon.change[[7]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_protein.codon.change[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+# plot test age sample collection
+plot(unlist(rf_protein.codon.change[[4]]), unlist(rf_protein.codon.change[[8]]), xlab = 'Test Predictions', ylab = 'Test Age Sample Collection',
+     main = 'gender+protein.codon.change')
+abline(0,1)
+r_squared <- round(summary(lm(unlist(rf_protein.codon.change[[4]]) ~ unlist(rf_protein.codon.change[[8]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_protein.codon.change[[11]]))
+legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+
+
+# just methylation with log
+rf_protein.codon.change_log <- predictAll(model_name = 'rf',
+                                data = full_data_rf,
+                                subset <- c("age_diagnosis", "age_sample_collection", "gender", "protein.codon.change"),
+                                selected_features = c("gender", "protein.codon.change"),
+                                log = TRUE,
+                                iterations = 20)
+
+
+###############################
+# # plot train age diagnosis
+# plot(unlist(rf_protein.codon.change_log[[3]]), unlist(rf_protein.codon.change_log[[5]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just protein.codon.change with log')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_protein.codon.change_log[[3]]) ~ unlist(rf_protein.codon.change_log[[5]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_protein.codon.change_log[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+# plot test age diagnosis
+plot(unlist(rf_protein.codon.change_log[[4]]), unlist(rf_protein.codon.change_log[[6]]), xlab = 'Test Predictions', ylab = 'Test Age of Diagnosis',
+     main = 'gender+protein.codon.change with log')
+abline(0,1)
+r_squared <- round(summary(lm(unlist(rf_protein.codon.change_log[[4]]) ~ unlist(rf_protein.codon.change_log[[6]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_protein.codon.change_log[[11]]))
+legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+
+###############################
+# # plot train age sample collection
+# plot(unlist(rf_protein.codon.change_log[[3]]), unlist(rf_protein.codon.change_log[[7]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just protein.codon.change with log')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_protein.codon.change_log[[3]]) ~ unlist(rf_protein.codon.change_log[[7]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_protein.codon.change_log[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+# plot test age sample collection
+plot(unlist(rf_protein.codon.change_log[[4]]), unlist(rf_protein.codon.change_log[[8]]), xlab = 'Test Predictions', ylab = 'Test Age Sample Collection',
+     main = 'gender+protein.codon.change with log')
+abline(0,1)
+r_squared <- round(summary(lm(unlist(rf_protein.codon.change_log[[4]]) ~ unlist(rf_protein.codon.change_log[[8]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_protein.codon.change_log[[11]]))
+legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+
+##################################################################################################
+# just gdna.exon.intron
+rf_gdna.exon.intron <- predictAll(model_name = 'rf',
+                                      data = full_data_rf,
+                                      subset <- c("age_diagnosis", "age_sample_collection", "gender", "gdna.exon.intron"),
+                                      selected_features = c("gender", "gdna.exon.intron"),
+                                      log = FALSE,
+                                      iterations = 20)
+
+
+###############################
+# # plot train age diagnosis
+# plot(unlist(rf_gdna.exon.intron[[3]]), unlist(rf_gdna.exon.intron[[5]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just gdna.exon.intron no log')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_gdna.exon.intron[[3]]) ~ unlist(rf_gdna.exon.intron[[5]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_gdna.exon.intron[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+#test 
+plot(unlist(rf_gdna.exon.intron[[4]]), unlist(rf_gdna.exon.intron[[6]]), xlab = 'Test Predictions', ylab = 'Test Age of Diagnosis',
+     main = 'gender+gdna.exon.intron')
+abline(0,1)
+r_squared <- round(summary(lm(unlist(rf_gdna.exon.intron[[4]]) ~ unlist(rf_gdna.exon.intron[[6]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_gdna.exon.intron[[11]]))
+legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+
+###############################
+# # plot train age sample collection
+# plot(unlist(rf_gdna.exon.intron[[3]]), unlist(rf_gdna.exon.intron[[7]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just gdna.exon.intron')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_gdna.exon.intron[[3]]) ~ unlist(rf_gdna.exon.intron[[7]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_gdna.exon.intron[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+# plot test age sample collection
+plot(unlist(rf_gdna.exon.intron[[4]]), unlist(rf_gdna.exon.intron[[8]]), xlab = 'Test Predictions', ylab = 'Test Age Sample Collection',
+     main = 'gender+gdna.exon.intron')
+abline(0,1)
+r_squared <- round(summary(lm(unlist(rf_gdna.exon.intron[[4]]) ~ unlist(rf_gdna.exon.intron[[8]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_gdna.exon.intron[[11]]))
+legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+
+
+# just methylation with log
+rf_gdna.exon.intron_log <- predictAll(model_name = 'rf',
+                                          data = full_data_rf,
+                                          subset <- c("age_diagnosis", "age_sample_collection", "gender", "gdna.exon.intron"),
+                                          selected_features = c("gender", "gdna.exon.intron"),
+                                          log = TRUE,
+                                          iterations = 20)
+
+
+###############################
+# # plot train age diagnosis
+# plot(unlist(rf_gdna.exon.intron_log[[3]]), unlist(rf_gdna.exon.intron_log[[5]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just gdna.exon.intron with log')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_gdna.exon.intron_log[[3]]) ~ unlist(rf_gdna.exon.intron_log[[5]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_gdna.exon.intron_log[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+# plot test age diagnosis
+plot(unlist(rf_gdna.exon.intron_log[[4]]), unlist(rf_gdna.exon.intron_log[[6]]), xlab = 'Test Predictions', ylab = 'Test Age of Diagnosis',
+     main = 'gender+gdna.exon.intron with log')
+abline(0,1)
+r_squared <- round(summary(lm(unlist(rf_gdna.exon.intron_log[[4]]) ~ unlist(rf_gdna.exon.intron_log[[6]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_gdna.exon.intron_log[[11]]))
+legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+
+###############################
+# # plot train age sample collection
+# plot(unlist(rf_gdna.exon.intron_log[[3]]), unlist(rf_gdna.exon.intron_log[[7]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just gdna.exon.intron with log')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_gdna.exon.intron_log[[3]]) ~ unlist(rf_gdna.exon.intron_log[[7]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_gdna.exon.intron_log[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+# plot test age diagnosis
+plot(unlist(rf_gdna.exon.intron_log[[4]]), unlist(rf_gdna.exon.intron_log[[8]]), xlab = 'Test Predictions', ylab = 'Test Age Sample Collection',
+     main = 'gender+gdna.exon.intron with log')
+abline(0,1)
+r_squared <- round(summary(lm(unlist(rf_gdna.exon.intron_log[[4]]) ~ unlist(rf_gdna.exon.intron_log[[8]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_gdna.exon.intron_log[[11]]))
+legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+
+##################################################################################################
+# just codon72.npro
+rf_codon72.npro <- predictAll(model_name = 'rf',
+                                  data = full_data_rf,
+                                  subset <- c("age_diagnosis", "age_sample_collection", "gender", "codon72.npro"),
+                                  selected_features = c("gender", "codon72.npro"),
+                                  log = FALSE,
+                                  iterations = 20)
+
+
+###############################
+# plot train age diagnosis
+# plot(unlist(rf_codon72.npro[[3]]), unlist(rf_codon72.npro[[5]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just codon72.npro no log')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_codon72.npro[[3]]) ~ unlist(rf_codon72.npro[[5]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_codon72.npro[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+plot(unlist(rf_codon72.npro[[4]]), unlist(rf_codon72.npro[[6]]), xlab = 'Test Predictions', ylab = 'Test Age of Diagnosis',
+     main = 'gender+codon72.npro')
+abline(0,1)
+r_squared <- round(summary(lm(unlist(rf_codon72.npro[[4]]) ~ unlist(rf_codon72.npro[[6]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_codon72.npro[[11]]))
+legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+
+###############################
+# # plot train age sample collection
+# plot(unlist(rf_codon72.npro[[3]]), unlist(rf_codon72.npro[[7]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just codon72.npro')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_codon72.npro[[3]]) ~ unlist(rf_codon72.npro[[7]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_codon72.npro[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+# plot test age sample collection
+plot(unlist(rf_codon72.npro[[4]]), unlist(rf_codon72.npro[[8]]), xlab = 'Test Predictions', ylab = 'Test Age Sample Collection',
+     main = 'gender+codon72.npro')
+abline(0,1)
+r_squared <- round(summary(lm(unlist(rf_codon72.npro[[4]]) ~ unlist(rf_codon72.npro[[8]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_codon72.npro[[11]]))
+legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+
+
+# just methylation with log
+rf_codon72.npro_log <- predictAll(model_name = 'rf',
+                                      data = full_data_rf,
+                                      subset <- c("age_diagnosis", "age_sample_collection", "gender", "codon72.npro"),
+                                      selected_features = c("gender", "codon72.npro"),
+                                      log = TRUE,
+                                      iterations = 20)
+
+
+###############################
+# # plot train age diagnosis
+# plot(unlist(rf_codon72.npro_log[[3]]), unlist(rf_codon72.npro_log[[5]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just codon72.npro with log')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_codon72.npro_log[[3]]) ~ unlist(rf_codon72.npro_log[[5]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_codon72.npro_log[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+# plot test age diagnosis
+plot(unlist(rf_codon72.npro_log[[4]]), unlist(rf_codon72.npro_log[[6]]), xlab = 'Test Predictions', ylab = 'Test Age of Diagnosis',
+     main = 'gender+codon72.npro with log')
+abline(0,1)
+r_squared <- round(summary(lm(unlist(rf_codon72.npro_log[[4]]) ~ unlist(rf_codon72.npro_log[[6]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_codon72.npro_log[[11]]))
+legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+
+###############################
+# # plot train age sample collection
+# plot(unlist(rf_codon72.npro_log[[3]]), unlist(rf_codon72.npro_log[[7]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just codon72.npro with log')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_codon72.npro_log[[3]]) ~ unlist(rf_codon72.npro_log[[7]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_codon72.npro_log[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+# plot test age sample collection
+plot(unlist(rf_codon72.npro_log[[4]]), unlist(rf_codon72.npro_log[[8]]), xlab = 'Test Predictions', ylab = 'Test Age Sample Collection',
+     main = 'gender+codon72.npro with log')
+abline(0,1)
+r_squared <- round(summary(lm(unlist(rf_codon72.npro_log[[4]]) ~ unlist(rf_codon72.npro_log[[8]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_codon72.npro_log[[11]]))
+legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+
+##################################################################################################
+# just splice.delins.snv
+rf_splice.delins.snv <- predictAll(model_name = 'rf',
+                              data = full_data_rf,
+                              subset <- c("age_diagnosis", "age_sample_collection", "gender", "splice.delins.snv"),
+                              selected_features = c("gender", "splice.delins.snv"),
+                              log = FALSE,
+                              iterations = 20)
+
+
+###############################
+# # plot train age diagnosis
+# plot(unlist(rf_splice.delins.snv[[3]]), unlist(rf_splice.delins.snv[[5]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just splice.delins.snv no log')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_splice.delins.snv[[3]]) ~ unlist(rf_splice.delins.snv[[5]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_splice.delins.snv[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+plot(unlist(rf_splice.delins.snv[[4]]), unlist(rf_splice.delins.snv[[6]]), xlab = 'Test Predictions', ylab = 'Test Age of Diagnosis',
+     main = 'gender+splice.delins.snv')
+abline(0,1)
+r_squared <- round(summary(lm(unlist(rf_splice.delins.snv[[4]]) ~ unlist(rf_splice.delins.snv[[6]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_splice.delins.snv[[11]]))
+legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+
+###############################
+# # plot train age sample collection
+# plot(unlist(rf_splice.delins.snv[[3]]), unlist(rf_splice.delins.snv[[7]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just splice.delins.snv')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_splice.delins.snv[[3]]) ~ unlist(rf_splice.delins.snv[[7]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_splice.delins.snv[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+# plot test age sample collection
+plot(unlist(rf_splice.delins.snv[[4]]), unlist(rf_splice.delins.snv[[8]]), xlab = 'Test Predictions', ylab = 'Test Age of Sample Collection',
+     main = 'gender+splice.delins.snv')
+abline(0,1)
+r_squared <- round(summary(lm(unlist(rf_splice.delins.snv[[4]]) ~ unlist(rf_splice.delins.snv[[8]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_splice.delins.snv[[11]]))
+legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+
+
+# just methylation with log
+rf_splice.delins.snv_log <- predictAll(model_name = 'rf',
+                                  data = full_data_rf,
+                                  subset <- c("age_diagnosis", "age_sample_collection", "gender", "splice.delins.snv"),
+                                  selected_features = c("gender", "splice.delins.snv"),
+                                  log = TRUE,
+                                  iterations = 20)
+
+
+###############################
+# # plot train age diagnosis
+# plot(unlist(rf_splice.delins.snv_log[[3]]), unlist(rf_splice.delins.snv_log[[5]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just splice.delins.snv with log')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_splice.delins.snv_log[[3]]) ~ unlist(rf_splice.delins.snv_log[[5]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_splice.delins.snv_log[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+# plot test age diagnosis
+plot(unlist(rf_splice.delins.snv_log[[4]]), unlist(rf_splice.delins.snv_log[[6]]), xlab = 'Test Predictions', ylab = 'Test Age of Diagnosis',
+     main = 'gender+splice.delins.snv with log')
+abline(0,1)
+r_squared <- round(summary(lm(unlist(rf_splice.delins.snv_log[[4]]) ~ unlist(rf_splice.delins.snv_log[[6]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_splice.delins.snv_log[[11]]))
+legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+
+###############################
+# # plot train age sample collection
+# plot(unlist(rf_splice.delins.snv_log[[3]]), unlist(rf_splice.delins.snv_log[[7]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just splice.delins.snv with log')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_splice.delins.snv_log[[3]]) ~ unlist(rf_splice.delins.snv_log[[7]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_splice.delins.snv_log[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+# plot test age diagnosis
+plot(unlist(rf_splice.delins.snv_log[[4]]), unlist(rf_splice.delins.snv_log[[8]]), xlab = 'Test Predictions', ylab = 'Test Age of Sample Collection',
+     main = 'Just splice.delins.snv with log')
+abline(0,1)
+r_squared <- round(summary(lm(unlist(rf_splice.delins.snv_log[[4]]) ~ unlist(rf_splice.delins.snv_log[[8]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_splice.delins.snv_log[[11]]))
+legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+
+##################################################################################################
+# just protein.codon.num
+rf_protein.codon.num <- predictAll(model_name = 'rf',
+                                   data = full_data_rf,
+                                   subset <- c("age_diagnosis", "age_sample_collection", "gender", "protein.codon.num"),
+                                   selected_features = c("gender", "protein.codon.num"),
+                                   log = FALSE,
+                                   iterations = 20)
+
+
+###############################
+# # plot train age diagnosis
+# plot(unlist(rf_protein.codon.num[[3]]), unlist(rf_protein.codon.num[[5]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just protein.codon.num no log')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_protein.codon.num[[3]]) ~ unlist(rf_protein.codon.num[[5]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_protein.codon.num[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+plot(unlist(rf_protein.codon.num[[4]]), unlist(rf_protein.codon.num[[6]]), xlab = 'Test Predictions', ylab = 'Test Age of Diagnosis',
+     main = 'gender+protein.codon.num')
+abline(0,1)
+r_squared <- round(summary(lm(unlist(rf_protein.codon.num[[4]]) ~ unlist(rf_protein.codon.num[[6]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_protein.codon.num[[11]]))
+legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+
+###############################
+# # plot train age sample collection
+# plot(unlist(rf_protein.codon.num[[3]]), unlist(rf_protein.codon.num[[7]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just protein.codon.num')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_protein.codon.num[[3]]) ~ unlist(rf_protein.codon.num[[7]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_protein.codon.num[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+# plot test age sample collection
+plot(unlist(rf_protein.codon.num[[4]]), unlist(rf_protein.codon.num[[8]]), xlab = 'Test Predictions', ylab = 'Test Age of Sample Collection',
+     main = 'gender+protein.codon.num')
+abline(0,1)
+r_squared <- round(summary(lm(unlist(rf_protein.codon.num[[4]]) ~ unlist(rf_protein.codon.num[[8]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_protein.codon.num[[11]]))
+legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+
+
+# just methylation with log
+rf_protein.codon.num_log <- predictAll(model_name = 'rf',
+                                       data = full_data_rf,
+                                       subset <- c("age_diagnosis", "age_sample_collection", "gender", "protein.codon.num"),
+                                       selected_features = c("gender", "protein.codon.num"),
+                                       log = TRUE,
+                                       iterations = 20)
+
+
+###############################
+# # plot train age diagnosis
+# plot(unlist(rf_protein.codon.num_log[[3]]), unlist(rf_protein.codon.num_log[[5]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just protein.codon.num with log')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_protein.codon.num_log[[3]]) ~ unlist(rf_protein.codon.num_log[[5]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_protein.codon.num_log[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+# plot test age diagnosis
+plot(unlist(rf_protein.codon.num_log[[4]]), unlist(rf_protein.codon.num_log[[6]]), xlab = 'Test Predictions', ylab = 'Test Age of Diagnosis',
+     main = 'gender+protein.codon.num with log')
+abline(0,1)
+r_squared <- round(summary(lm(unlist(rf_protein.codon.num_log[[4]]) ~ unlist(rf_protein.codon.num_log[[6]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_protein.codon.num_log[[11]]))
+legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+
+###############################
+# # plot train age sample collection
+# plot(unlist(rf_protein.codon.num_log[[3]]), unlist(rf_protein.codon.num_log[[7]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just protein.codon.num with log')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_protein.codon.num_log[[3]]) ~ unlist(rf_protein.codon.num_log[[7]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_protein.codon.num_log[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+# plot test age diagnosis
+plot(unlist(rf_protein.codon.num_log[[4]]), unlist(rf_protein.codon.num_log[[8]]), xlab = 'Test Predictions', ylab = 'Test Age of Sample Collection',
+     main = 'Just protein.codon.num with log')
+abline(0,1)
+r_squared <- round(summary(lm(unlist(rf_protein.codon.num_log[[4]]) ~ unlist(rf_protein.codon.num_log[[8]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_protein.codon.num_log[[11]]))
+legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+
+##################################################################################################
+# just mdm2.nG
+rf_mdm2.nG <- predictAll(model_name = 'rf',
+                                   data = full_data_rf,
+                                   subset <- c("age_diagnosis", "age_sample_collection", "gender", "mdm2.nG"),
+                                   selected_features = c("gender", "mdm2.nG"),
+                                   log = FALSE,
+                                   iterations = 20)
+
+
+###############################
+# # plot train age diagnosis
+# plot(unlist(rf_mdm2.nG[[3]]), unlist(rf_mdm2.nG[[5]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just mdm2.nG no log')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_mdm2.nG[[3]]) ~ unlist(rf_mdm2.nG[[5]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_mdm2.nG[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+plot(unlist(rf_mdm2.nG[[4]]), unlist(rf_mdm2.nG[[6]]), xlab = 'Test Predictions', ylab = 'Test Age of Diagnosis',
+     main = 'gender+mdm2.nG')
+abline(0,1)
+r_squared <- round(summary(lm(unlist(rf_mdm2.nG[[4]]) ~ unlist(rf_mdm2.nG[[6]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_mdm2.nG[[11]]))
+legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+
+###############################
+# plot train age sample collection
+# plot(unlist(rf_mdm2.nG[[3]]), unlist(rf_mdm2.nG[[7]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just mdm2.nG')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_mdm2.nG[[3]]) ~ unlist(rf_mdm2.nG[[7]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_mdm2.nG[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+# plot test age sample collection
+plot(unlist(rf_mdm2.nG[[4]]), unlist(rf_mdm2.nG[[8]]), xlab = 'Test Predictions', ylab = 'Test Age of Sample Collection',
+     main = 'gender+mdm2.nG')
+abline(0,1)
+r_squared <- round(summary(lm(unlist(rf_mdm2.nG[[4]]) ~ unlist(rf_mdm2.nG[[8]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_mdm2.nG[[11]]))
+legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+
+
+# just methylation with log
+rf_mdm2.nG_log <- predictAll(model_name = 'rf',
+                                       data = full_data_rf,
+                                       subset <- c("age_diagnosis", "age_sample_collection", "gender", "mdm2.nG"),
+                                       selected_features = c("gender", "mdm2.nG"),
+                                       log = TRUE,
+                                       iterations = 20)
+
+
+###############################
+# # plot train age diagnosis
+# plot(unlist(rf_mdm2.nG_log[[3]]), unlist(rf_mdm2.nG_log[[5]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just mdm2.nG with log')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_mdm2.nG_log[[3]]) ~ unlist(rf_mdm2.nG_log[[5]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_mdm2.nG_log[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+# plot test age diagnosis
+plot(unlist(rf_mdm2.nG_log[[4]]), unlist(rf_mdm2.nG_log[[6]]), xlab = 'Test Predictions', ylab = 'Test Age of Diagnosis',
+     main = 'gender+mdm2.nG with log')
+abline(0,1)
+r_squared <- round(summary(lm(unlist(rf_mdm2.nG_log[[4]]) ~ unlist(rf_mdm2.nG_log[[6]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_mdm2.nG_log[[11]]))
+legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+
+###############################
+# # plot train age sample collection
+# plot(unlist(rf_mdm2.nG_log[[3]]), unlist(rf_mdm2.nG_log[[7]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
+#      main = 'Just mdm2.nG with log')
+# abline(0,1)
+# r_squared <- round(summary(lm(unlist(rf_mdm2.nG_log[[3]]) ~ unlist(rf_mdm2.nG_log[[7]])))$adj.r.squared, 2)
+# legend("bottomright", legend = paste0('# obs = ', rf_mdm2.nG_log[[11]]))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+# plot test age sample collection
+plot(unlist(rf_mdm2.nG_log[[4]]), unlist(rf_mdm2.nG_log[[8]]), xlab = 'Test Predictions', ylab = 'Test Age of Sample Collection',
+     main = 'Just mdm2.nG with log')
+abline(0,1)
+r_squared <- round(summary(lm(unlist(rf_mdm2.nG_log[[4]]) ~ unlist(rf_mdm2.nG_log[[8]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_mdm2.nG_log[[11]]))
+legend("topleft", legend = paste0('r_squared = ', r_squared))
+
+
+
+####################################################################
+# variables missing
+# gender 0
+# gdna.base.change 164
+# gdna.codon 164
+# protein.codon.change 177
+# gdna.exon.intron 492
+# codon72.npro 517
+# splice.delins.snv 519
+# protein.codon.num 549
+# mdm2.nG 652
+# Run with #gdna.codon, protein.codon.num, mdm2.nG, protein.codon.change
+# return(list(train.mse, test.mse,  train.predictions, test.predictions, train.ground_truth, 
+#             test.ground_truth, train.sample_collection,
+#             test.sample_collection, model, importance, obs))
 
 # #########################
 # # combinations
