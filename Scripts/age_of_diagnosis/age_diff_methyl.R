@@ -143,21 +143,29 @@ rf_methyl <- predictAll(data = full_data_rf,
 
 ###############################
 # plot test age diagnosis
-plot(unlist(rf_methyl[[4]]), unlist(rf_methyl[[6]]), xlab = 'Test Predictions', ylab = 'Test Age of Diagnosis',
+plot(unlist(rf_methyl[[4]]), unlist(rf_methyl[[6]]), 
+     xlab = 'Test Predictions', 
+     ylab = 'Test Age of Diagnosis',
+     xlim = c(0,800),
+     ylim = c(0,800),
      main = 'Methylation')
 abline(0,1)
 r_squared <- round(summary(lm(unlist(rf_methyl[[4]]) ~ unlist(rf_methyl[[6]])))$adj.r.squared, 2)
 legend("bottomright", legend = paste0('# obs = ', rf_methyl[[11]]))
-legend("topleft", legend = paste0('r_squared = ', r_squared))
+# legend("topleft", legend = paste0('r_squared = ', r_squared))
 
 
 # plot test age sample collection
-plot(unlist(rf_methyl[[4]]), unlist(rf_methyl[[8]]), xlab = 'Test Predictions', ylab = 'Test Age Sample Collection',
+plot(unlist(rf_methyl[[4]]), unlist(rf_methyl[[8]]), 
+     xlab = 'Test Predictions', 
+     ylab = 'Test Age Sample Collection',
+     xlim = c(0,800),
+     ylim = c(0,800),
      main = 'Methylation')
 abline(0,1)
 r_squared <- round(summary(lm(unlist(rf_methyl[[4]]) ~ unlist(rf_methyl[[8]])))$adj.r.squared, 2)
 legend("bottomright", legend = paste0('# obs = ', rf_methyl[[11]]))
-legend("topleft", legend = paste0('r_squared = ', r_squared))
+# legend("topright", legend = paste0('r_squared = ', r_squared))
 
 ###############################################################################################
 # just methylation log
@@ -165,13 +173,17 @@ rf_methyl_log <- predictAll(data = full_data_rf,
                         subset <- c("age_diagnosis", "age_sample_collection"),
                         selected_features = NULL, 
                         log = T,
-                        cutoff = 0.5)
+                        cutoff = 0.15)
 
 
 ###############################
 # plot test age diagnosis
-plot(unlist(rf_methyl_log[[4]]), unlist(rf_methyl_log[[6]]), xlab = 'Test Predictions', ylab = 'Test Age of Diagnosis',
-     main = 'Methylation')
+plot(unlist(rf_methyl_log[[4]]), unlist(rf_methyl_log[[6]]), 
+     xlab = 'Test Predictions', 
+     ylab = 'Test Age of Diagnosis',
+     xlim = c(0,8),
+     ylim = c(0,8),
+     main = 'Methylation Log')
 abline(0,1)
 r_squared <- round(summary(lm(unlist(rf_methyl_log[[4]]) ~ unlist(rf_methyl_log[[6]])))$adj.r.squared, 2)
 legend("bottomright", legend = paste0('# obs = ', rf_methyl_log[[11]]))
@@ -179,12 +191,14 @@ legend("topleft", legend = paste0('r_squared = ', r_squared))
 
 
 # plot test age sample collection
-plot(unlist(rf_methyl_log[[4]]), unlist(rf_methyl_log[[8]]), xlab = 'Test Predictions', ylab = 'Test Age Sample Collection',
-     main = 'Methylation')
+plot(unlist(rf_methyl_log[[4]]), unlist(rf_methyl_log[[8]]), 
+     xlab = 'Test Predictions', 
+     ylab = 'Test Age Sample Collection',
+     xlim = c(0,8),
+     ylim = c(0,8),
+     main = 'Methylation Log')
 abline(0,1)
 r_squared <- round(summary(lm(unlist(rf_methyl_log[[4]]) ~ unlist(rf_methyl_log[[8]])))$adj.r.squared, 2)
 legend("bottomright", legend = paste0('# obs = ', rf_methyl_log[[11]]))
 legend("topleft", legend = paste0('r_squared = ', r_squared))
-
-
 

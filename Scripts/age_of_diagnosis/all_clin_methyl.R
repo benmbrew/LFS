@@ -88,7 +88,7 @@ predictAll <- function(model_name,
   for (i in 1:iterations){
     
     set.seed(i)
-    train_index <- sample(nrow(data), nrow(data) *.7, replace = F)
+    train_index <- sample(nrow(data), nrow(data) *cutoff, replace = F)
     
     # determines how you train the model.
     NFOLDS <- 2
@@ -312,16 +312,18 @@ predictAll <- function(model_name,
 # save.image(paste0(data_folder, '/clin_methyl_models.RData'))
 # load(paste0(data_folder, '/clin_methyl_models.RData'))
 
-# # histogram of age of diagnosis
-# hist(unlist(rf_mut[[5]]), xlab = 'Age of Diagnosis', main = 'Distribution of Age of Diagnosis')
-# 
-# # plot of age of onset vs age of diagnosis with r squared 
-# plot(full_data$age_diagnosis, full_data$age_sample_collection, xlab = 'Age of Diagnosis', 
-#      ylab = 'Age of Sample Collection')
-# abline(0,1)
-# r_squared <- round(summary(lm(full_data$age_diagnosis ~ full_data$age_sample_collection))$adj.r.squared, 2)
-# legend("topleft", legend = paste0('r_squared = ', r_squared))
-# 
+# histogram of age of diagnosis
+hist(full_data_rf$age_diagnosis, xlab = 'Age of Diagnosis', main = 'Distribution of Age of Diagnosis', col = 'lightblue')
+hist(full_data_rf$age_sample_collection, xlab = 'Age of Sample Collection', col = 'lightblue', main = 'Distribution of Sample Collection')
+
+
+# plot of age of onset vs age of diagnosis with r squared
+plot(full_data$age_diagnosis, full_data$age_sample_collection, xlab = 'Age of Diagnosis',
+     ylab = 'Age of Sample Collection')
+abline(0,1)
+r_squared <- round(summary(lm(full_data$age_diagnosis ~ full_data$age_sample_collection))$adj.r.squared, 2)
+legend("topleft", legend = paste0('r_squared = ', r_squared))
+
 
 # variables missing
 # gender 0
@@ -547,9 +549,18 @@ rf_methyl <- predictAll(model_name = 'rf',
                         subset <- c("age_diagnosis", "age_sample_collection"),
                         selected_features = NULL, 
                         log = FALSE,
-                        iterations = 20)
+                        iterations = 10)
 
+rf_methyl[[10]]
+top <- as.data.frame(do.call('rbind', rf_methyl[[10]]))
+top$V2 <- as.numeric(as.character(top$V2))
 
+mean_top <- top %>%
+  group_by(V1) %>%
+  summarise(mean_score = mean(V2, na.rm = T))
+
+# rank them 
+mean_top <- mean_top[order(mean_top$mean_score, decreasing = T), ]
 ###############################
 # # plot train age diagnosis
 # plot(unlist(rf_methyl[[3]]), unlist(rf_methyl[[5]]), xlab = 'Train Predictions', ylab = 'Train Age of Diagnosis',
@@ -560,9 +571,13 @@ rf_methyl <- predictAll(model_name = 'rf',
 # legend("topleft", legend = paste0('r_squared = ', r_squared))
 
 # plot test age diagnosis
-plot(unlist(rf_methyl[[4]]), unlist(rf_methyl[[6]]), xlab = 'Test Predictions', ylab = 'Test Age of Diagnosis',
+plot(unlist(rf_methyl[[4]]), unlist(rf_methyl[[6]]), 
+     xlab = 'Test Predictions', 
+     ylab = 'Test Age of Diagnosis',
+     xlim= c(0, 900),
+     ylim= c(0, 900),
      main = 'Just methylation')
-abline(0,1)
+abline(lm(unlist(rf_methyl[[4]]) ~ unlist(rf_methyl[[6]])))
 r_squared <- round(summary(lm(unlist(rf_methyl[[4]]) ~ unlist(rf_methyl[[6]])))$adj.r.squared, 2)
 legend("bottomright", legend = paste0('# obs = ', rf_methyl[[11]]))
 legend("topleft", legend = paste0('r_squared = ', r_squared))
@@ -578,9 +593,13 @@ legend("topleft", legend = paste0('r_squared = ', r_squared))
 # legend("topleft", legend = paste0('r_squared = ', r_squared))
 
 # plot test age sample collection
-plot(unlist(rf_methyl[[4]]), unlist(rf_methyl[[8]]), xlab = 'Test Predictions', ylab = 'Test Age Sample Collection',
+plot(unlist(rf_methyl[[4]]), unlist(rf_methyl[[8]]), 
+     xlab = 'Test Predictions', 
+     ylab = 'Test Age Sample Collection',
+     xlim= c(0, 900),
+     ylim= c(0, 900),
      main = 'Just methylation')
-abline(0,1)
+abline(lm(unlist(rf_methyl[[4]]) ~ unlist(rf_methyl[[8]])))
 r_squared <- round(summary(lm(unlist(rf_methyl[[4]]) ~ unlist(rf_methyl[[8]])))$adj.r.squared, 2)
 legend("bottomright", legend = paste0('# obs = ', rf_methyl[[11]]))
 legend("topleft", legend = paste0('r_squared = ', r_squared))
@@ -593,7 +612,7 @@ rf_methyl_log <- predictAll(model_name = 'rf',
                         subset <- c("age_diagnosis", "age_sample_collection"),
                         selected_features = NULL, 
                         log = TRUE,
-                        iterations = 20)
+                        iterations = 10)
 
 
 ###############################
@@ -606,9 +625,13 @@ rf_methyl_log <- predictAll(model_name = 'rf',
 # legend("topleft", legend = paste0('r_squared = ', r_squared))
 
 # plot test age diagnosis
-plot(unlist(rf_methyl_log[[4]]), unlist(rf_methyl_log[[6]]), xlab = 'Test Predictions', ylab = 'Test Age of Diagnosis',
+plot(unlist(rf_methyl_log[[4]]), unlist(rf_methyl_log[[6]]), 
+     xlab = 'Test Predictions', 
+     ylab = 'Test Age of Diagnosis',
+     xlim = c(0, 8),
+     ylim = c(0, 8),
      main = 'Just methylation with log')
-abline(0,1)
+abline(lm(unlist(rf_methyl_log[[4]]) ~ unlist(rf_methyl_log[[6]])))
 r_squared <- round(summary(lm(unlist(rf_methyl_log[[4]]) ~ unlist(rf_methyl_log[[6]])))$adj.r.squared, 2)
 legend("bottomright", legend = paste0('# obs = ', rf_methyl_log[[11]]))
 legend("topleft", legend = paste0('r_squared = ', r_squared))
@@ -624,9 +647,14 @@ legend("topleft", legend = paste0('r_squared = ', r_squared))
 # legend("topleft", legend = paste0('r_squared = ', r_squared))
 
 # plot test age sample collection
-plot(unlist(rf_methyl_log[[4]]), unlist(rf_methyl_log[[8]]), xlab = 'Test Predictions', ylab = 'Test Age Sample Collection',
+plot(unlist(rf_methyl_log[[4]]), unlist(rf_methyl_log[[8]]), 
+     xlab = 'Test Predictions', 
+     ylab = 'Test Age Sample Collection',
+     xlim = c(0, 8),
+     ylim = c(0, 8),
+     
      main = 'Just methylation with log')
-abline(0,1)
+abline(lm(unlist(rf_methyl_log[[4]]) ~ unlist(rf_methyl_log[[8]])))
 r_squared <- round(summary(lm(unlist(rf_methyl_log[[4]]) ~ unlist(rf_methyl_log[[8]])))$adj.r.squared, 2)
 legend("bottomright", legend = paste0('# obs = ', rf_methyl_log[[11]]))
 legend("topleft", legend = paste0('r_squared = ', r_squared))

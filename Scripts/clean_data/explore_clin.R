@@ -16,6 +16,15 @@ results_folder <- paste0(test, '/Results')
 # read in data 
 clin <- read.csv(paste0(clin_data, '/clinical_two.csv'), stringsAsFactors = F)
 
+# Read in 3 different data sets 
+full_data <- read.csv(paste0(data_folder, '/full_data.csv'), stringsAsFactors = F)
+full_data_cor <- read.csv(paste0(data_folder, '/full_data_cor.csv'), stringsAsFactors = F)
+full_data_rf <- read.csv(paste0(data_folder, '/full_data_rf.csv'), stringsAsFactors = F)
+
+full_data$X <- NULL
+full_data_cor$X <- NULL
+full_data_rf$X <- NULL
+
 # potential questions
 # subsetting by p53 status Mut ?
 # all Mut, unaffected WT are relatives
@@ -23,8 +32,23 @@ clin <- read.csv(paste0(clin_data, '/clinical_two.csv'), stringsAsFactors = F)
 # tm_donor, p53_germline, cancer, age_diagnosis, malkin id, 
 # age of sample collection, gdna, protein, codon_72, dob, gender
 
+# how many mut and WT
+mut <- clin[clin$p53_germline == 'Mut',]
+mut <- clin[clin$p53_germline == 'WT',]
+mut <- clin[clin$p53_gender == 'WT',]
+
+total <- as.data.frame(clin[, c('p53_germline', 'age_diagnosis', 'gender', 'gdna.exon.intron', 'gdna.base.change',
+                                'gdna.codon', 'protein.codon.change', 'protein.codon.num', 'splice.delins.snv', 'codon72.npro',
+                                'mdm2.nG')])
+count <- which(complete.cases(total))
+
+summary(as.factor(clin$gender))
+summary(as.factor(clin$gdna.base.change))
+
+
 ###########################################################
 # group by p53 and cancer to see if any WT dont have cancer
+
 temp <- clin %>%
   group_by(p53_germline, cancer_diagnosis_diagnoses) %>%
   summarise(counts = n())

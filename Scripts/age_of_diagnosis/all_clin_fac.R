@@ -195,6 +195,9 @@ rf_mdm2 <- predictAll(data = clin,
 
 
 mean(unlist(rf_mdm2[[3]]), na.rm = T)
+rf_mdm2[[6]]
+
+
 
 
 #multiomial
@@ -226,6 +229,8 @@ rf_protein_codon_num <- predictAll(data = clin,
                                    iterations = 10)
 
 mean(unlist(rf_protein_codon_num[[3]]))
+rf_protein_codon_num[[6]]
+
 #multinomial
 rf_protein_codon_num_multi <- predictAll(data = clin, 
                                    subset <- c("age_diagnosis_multi","gender", "protein.codon.num"),
@@ -253,6 +258,8 @@ rf_splice_delins_snv <- predictAll(data = clin,
 
 
 mean(unlist(rf_splice_delins_snv[[3]]))
+rf_splice_delins_snv[[6]]
+
 #multinomial
 rf_splice_delins_snv_multi <- predictAll(data = clin, 
                                    subset <- c("age_diagnosis_multi","gender", "splice.delins.snv"), 
@@ -281,6 +288,8 @@ rf_codon72.npro <- predictAll(data = clin,
                               iterations = 10)
 
 mean(unlist(rf_codon72.npro[[3]]))
+rf_codon72.npro[[6]]
+
 #multinomial
 rf_codon72.npro_multi <- predictAll(data = clin, 
                               subset <- c("age_diagnosis_multi", "gender", "codon72.npro"), 
@@ -308,6 +317,8 @@ rf_gdna_exon_intron <- predictAll(data = clin,
                                   iterations = 10)
 
 mean(unlist(rf_gdna_exon_intron[[3]]))
+rf_gdna_exon_intron[[6]]
+
 #best at 62
 # look at confustion matrices
 temp <- list()
@@ -356,6 +367,7 @@ rf_protein_codon_change <- predictAll(data = clin,
                                       selected_features = c("gender", "protein.codon.change"), 
                                       binary = T,
                                       iterations = 10)
+rf_protein_codon_change[[6]]
 
 
 mean(unlist(rf_protein_codon_change[[3]]))
@@ -388,6 +400,8 @@ rf_gdna_codon <- predictAll(data = clin,
                             iterations = 10)
 
 mean(unlist(rf_gdna_codon[[3]]))
+rf_gdna_codon[[6]]
+
 #multi
 rf_gdna_codon_multi <- predictAll(data = clin, 
                             subset <- c("age_diagnosis_multi","gender", "gdna.codon"), 
@@ -417,6 +431,8 @@ rf_gdna_base_change <- predictAll(data = clin,
                                   iterations = 10)
 
 mean(unlist(rf_gdna_base_change[[3]]))
+rf_gdna_base_change[[6]]
+
 # maybe 2nd best at 56
 
 #multi
@@ -450,6 +466,7 @@ rf_gdna_exon_intron_gdna_base_change <- predictAll(data = clin,
 
 
 mean(unlist(rf_gdna_exon_intron_gdna_base_change[[3]]))
+rf_gdna_exon_intron_gdna_base_change[[6]]
 
 #########################33
 rf_gdna_exon_intron_gdna_base_change_multi <- predictAll(data = clin, 

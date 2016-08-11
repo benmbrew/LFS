@@ -27,9 +27,9 @@ full_data_cor$X <- NULL
 full_data_rf$X <- NULL
 
 # Create binary variables for age of diagnosis and age of sample collection on both data sets
-full_data$age_diagnosis_fac <- ifelse(full_data$age_diagnosis <= 48, 1, 2)
+full_data_cor$age_diagnosis_fac <- ifelse(full_data_cor$age_diagnosis <= 48, 1, 2)
 
-full_data$age_sample_fac<- ifelse(full_data$age_sample_collection <= 48, 1, 2)
+full_data_cor$age_sample_fac<- ifelse(full_data_cor$age_sample_collection <= 48, 1, 2)
 
 full_data_rf$age_diagnosis_fac <- ifelse(full_data_rf$age_diagnosis <= 48, 1, 2)
 
@@ -79,12 +79,20 @@ full_data_rf$age_sample_year <- ifelse(full_data_rf$age_diagnosis <= 24, 1,
 summary(as.factor(full_data_rf$age_diagnosis_year))
 summary(as.factor(full_data_rf$age_sample_year))
 
+# load in residual methyl
+methyl_resid_cor <- read.csv(paste0(data_folder, '/methyl_resid_cor.csv'), stringsAsFactors = F)
+methyl_resid_rf <- read.csv(paste0(data_folder, '/methyl_resid_rf.csv'), stringsAsFactors = F)
+
+methyl_resid_cor$X <- NULL
+methyl_resid_rf$X <- NULL
+
 # Random Forest - this is training and testing on clinical data using k fold cross validation
 predictAll <- function(data,
                        subset, 
                        selected_features,
                        binary,
                        multi,
+                       resid,
                        iterations) {
   
   model <- list()
@@ -93,31 +101,42 @@ predictAll <- function(data,
   rf.test_acc <- list()
   rf.test_stats <- list()
 
-  genes <- colnames(data)[27:ncol(data)]
-  
-  data <- data[, c(subset, genes)]
-  
-  # Try the model with all different selection of features based on number of missinginess. 
-  data <- data[complete.cases(data),]
-  
-  obs <- nrow(data)
-  
-  # convert characters to factors 
-  for ( i in 1:ncol(data)){
+  if(resid){
     
-    if(typeof(data[,i]) == 'character' || grepl('num', names(data[i]))) {
-      data[,i] <- as.factor(data[,i])
-      print(i)
-    } 
+    
+    data <- data[, subset]
+    
+    # remove rows where age of diagnosis missinf
+    data <- data[complete.cases(data),]
+    data <- cbind(data, methyl_resid_cor)
+    
+  } else{
+    
+    genes <- colnames(data)[27:ncol(data)]
+    
+    data <- data[, c(subset, genes)]
+    
+    # remove rows where age of diagnosis missinf
+    data <- data[!(is.na(data$age_diagnos)),]
   }
   
+  obs <- nrow(data)
+  # # convert characters to factors 
+  # for ( i in 1:ncol(data)){
+  #   
+  #   if(typeof(data[,i]) == 'character' || grepl('num', names(data[i]))) {
+  #     data[,i] <- as.factor(data[,i])
+  #     print(i)
+  #   } 
+  # }
+  # 
   for (i in 1:iterations){
     
     set.seed(i)
     temp_levels <- 1
     loop_count <- i
     
-    variable <- setdiff(subset, selected_features)
+    variable <- 'age_diagnosis_fac'
     
     if (binary){
       level_count <- 2
@@ -126,7 +145,7 @@ predictAll <- function(data,
     } else {
       level_count <- 5
     }
-    
+    # 
     while (length(temp_levels) < level_count) {
       set.seed(loop_count)
       train_index <- sample(nrow(data), nrow(data) *.7, replace = F)
@@ -159,7 +178,7 @@ predictAll <- function(data,
     mtry <- sqrt(ncol(data))
     tunegrid <- expand.grid(.mtry=mtry)
     
-    model[[i]] <- train(x = data[train_index, c(selected_features, genes)]
+    model[[i]] <- train(x = data[train_index, 3:ncol(data)]
                         , y = rf_y
                         , method = "rf"
                         , trControl = fitControl                   
@@ -167,7 +186,7 @@ predictAll <- function(data,
                         , metric = "logLoss")
     
     predictions[[i]] <- predict(model[[i]] 
-                                , newdata = data[-train_index, c(selected_features, genes)]
+                                , newdata = data[-train_index, 3:ncol(data)]
                                 , type = "prob")
     
     test.ground_truth[[i]] <- as.factor(data[, variable][-train_index])
@@ -203,10 +222,11 @@ predictAll <- function(data,
 # Just methylation
 ##########################
 # Use Methylation
-rf_methyl_fac <- predictAll(data = full_data_rf,
-                        subset = c('age_diagnosis_fac'),
+rf_methyl_fac <- predictAll(data = full_data_cor,
+                        subset = c('age_diagnosis_fac', 'age_sample_fac'),
                         selected_features = NULL,
                         binary = TRUE,
+                        resid = T,
                         iterations = 10)
 
 mean(unlist(rf_methyl_fac[[3]]))

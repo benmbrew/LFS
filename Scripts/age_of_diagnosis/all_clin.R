@@ -515,14 +515,33 @@ predictAll <- function(model_name,
 # 
 # 
 # 
-# # add gdna.base.change
-# rf_mut7_back <- predictAll(model_name = 'rf', 
-#                       subset <- c("age_diagnosis", "gender", "mdm2.nG", "protein.codon.num", "splice.delins.snv",
-#                                   "codon72.npro", "gdna.exon.intron", "protein.codon.change", "gdna.codon", "gdna.base.change"), 
-#                       selected_features = c("gender", "mdm2.nG", "protein.codon.num", "splice.delins.snv",
-#                                             "codon72.npro", "gdna.exon.intron", "protein.codon.change", "gdna.codon", "gdna.base.change"), iterations = 50)
-# 
-# # combine all tests 
+# add gdna.base.change
+rf_mut7_back <- predictAll(model_name = 'rf',
+                      subset <- c("age_diagnosis", "gender", "mdm2.nG", "protein.codon.num", "splice.delins.snv",
+                                  "codon72.npro", "gdna.exon.intron", "protein.codon.change", "gdna.codon", "gdna.base.change"),
+                      selected_features = c("gender", "mdm2.nG", "protein.codon.num", "splice.delins.snv",
+                                            "codon72.npro", "gdna.exon.intron", "protein.codon.change", "gdna.codon", "gdna.base.change"), iterations = 10)
+
+
+plot(unlist(rf_mut7_back[[2]]), unlist(rf_mut7_back[[5]]), 
+     xlab = 'Predictions', 
+     ylab = 'Age of Diagnosis',
+     main = 'All clinical Variables')
+abline(0,1)
+corr <- round(cor(unlist(rf_mut7_back[[2]]), unlist(rf_mut7_back[[5]])), 2)
+r_squared <- round(summary(lm(unlist(rf_methyl[[4]]) ~ unlist(rf_methyl[[6]])))$adj.r.squared, 2)
+legend("bottomright", legend = paste0('# obs = ', rf_mut7_back[[6]]))
+legend("topleft", legend = paste0('correlation = ', corr))
+
+abline(0,1)
+legend("bottomright", legend = paste0('# obs = ', rf_mut7_back[[6]]))
+
+plot(unlist(rf_mut_7_back[[2]]), unlist(rf_mut_7_back[[7]]), xlab = 'Predictions', ylab = 'Age of Sample Collection',
+     main = '+gender+mut_7_back.nG')
+abline(0,1)
+legend("bottomright", legend = paste0('# obs = ', rf_mut_7_back[[6]]))
+
+# combine all tests
 
 # rf_back <- rbind (
 #   append('gender_and_mdm2.nG', c(mean(unlist(rf_mut_back[[1]])), rf_mut_back[[6]])),
@@ -622,9 +641,13 @@ rf_protein_codon_change <- predictAll(model_name = 'rf',
                                           selected_features = c("gender", "protein.codon.change"), iterations = 10)
 
 plot(unlist(rf_protein_codon_change[[2]]), unlist(rf_protein_codon_change[[5]]), xlab = 'Predictions', ylab = 'Age of Diagnosis',
-     main = '+gender+protein.codon.change')
+     main = 'Gender and Protein.1')
 abline(0,1)
 legend("bottomright", legend = paste0('# obs = ', rf_protein_codon_change[[6]]))
+corr <- round(cor(unlist(rf_protein_codon_change[[2]]), unlist(rf_protein_codon_change[[5]])), 2)
+legend("bottomright", legend = paste0('# obs = ', rf_protein_codon_change[[6]]))
+legend("topleft", legend = paste0('correlation = ', corr))
+
 
 plot(unlist(rf_protein_codon_change[[2]]), unlist(rf_protein_codon_change[[7]]), xlab = 'Predictions', ylab = 'Age of Sample Collection',
      main = '+gender+protein.codon.change')
