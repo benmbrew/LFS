@@ -37,9 +37,7 @@ mut <- clin[clin$p53_germline == 'Mut',]
 mut <- clin[clin$p53_germline == 'WT',]
 mut <- clin[clin$p53_gender == 'WT',]
 
-total <- as.data.frame(clin[, c('p53_germline', 'age_diagnosis', 'gender', 'gdna.exon.intron', 'gdna.base.change',
-                                'gdna.codon', 'protein.codon.change', 'protein.codon.num', 'splice.delins.snv', 'codon72.npro',
-                                'mdm2.nG')])
+total <- as.data.frame(clin[, c('p53_germline', 'age_diagnosis', 'gender', 'protein.codon.change')])
 count <- which(complete.cases(total))
 
 summary(as.factor(clin$gender))
