@@ -53,6 +53,7 @@ getResidual <- function(data) {
   for (i in 3:ncol(data)){
     
     resid[[i]] <- lm(data[, i] ~ data$age_sample_collection, data = data)$residuals
+
     print(i)
     
   }

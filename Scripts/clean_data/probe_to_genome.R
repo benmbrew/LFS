@@ -59,18 +59,18 @@ methyl_gene$queryHits <- NULL
 methyl_gene$subjectHits <- NULL
 methyl_gene$distance<- NULL
 
-# # Get rid of extra variables.
+# Get rid of extra variables.
 # methyl_gene_tumor$probe <- NULL
 # methyl_gene_tumor$queryHits <- NULL
 # methyl_gene_tumor$subjectHits <- NULL
 # methyl_gene_tumor$distance<- NULL
 
-# add _dup for duplicate ids. This is done so dplyr summarise_each will work 
-for(i in ncol(methyl_gene):1){
-  if(names(methyl_gene)[i] %in% names(methyl_gene)[duplicated(names(methyl_gene), fromLast = FALSE)]){
-     names(methyl_gene)[i] <- paste0(names(methyl_gene)[i], '_dup')
-    }
-}
+# # add _dup for duplicate ids. This is done so dplyr summarise_each will work 
+# for(i in ncol(methyl_gene):1){
+#   if(names(methyl_gene)[i] %in% names(methyl_gene)[duplicated(names(methyl_gene), fromLast = FALSE)]){
+#      names(methyl_gene)[i] <- paste0(names(methyl_gene)[i], '_dup')
+#     }
+# }
 
 # # add _dup for duplicate ids. This is done so dplyr summarise_each will work 
 # for(i in ncol(methyl_gene_tumor):1){
@@ -92,13 +92,13 @@ methyl_summarised <- methyl_gene %>%
 #   group_by(nearestGeneSymbol) %>%
 #   summarise_each(funs(mean))
 
-# change _dup back to normal so there are duplicate IDs
-for(i in 1:ncol(methyl_summarised)){
-  if(grepl( '_dup',names(methyl_summarised)[i])){
-    split <- strsplit(names(methyl_summarised)[i], '_dup')
-    names(methyl_summarised)[i] <- split
-  }
-}
+# # change _dup back to normal so there are duplicate IDs
+# for(i in 1:ncol(methyl_summarised)){
+#   if(grepl( '_dup',names(methyl_summarised)[i])){
+#     split <- strsplit(names(methyl_summarised)[i], '_dup')
+#     names(methyl_summarised)[i] <- split
+#   }
+# }
 
 # # change _dup back to normal so there are duplicate IDs
 # for(i in 1:ncol(methyl_summarised_tumor)){
@@ -132,26 +132,26 @@ methyl <- methyl[, -1]
 write.csv(methyl, paste0(methyl_data, '/methyl.csv'), row.names = TRUE)
 
 
-###################################################################
-# Transpose data and put in formate for analysis
-###################################################################
-col_names <- methyl_summarised_tumor$nearestGeneSymbol
-methyl_tumor <- as.data.frame(t(methyl_summarised_tumor))
-names(methyl_tumor)<- col_names
-methyl_tumor <- cbind(x = rownames(methyl_tumor), methyl_tumor) 
-methyl_tumor <- methyl_tumor[2:nrow(methyl_tumor),]
-names(methyl_tumor)[1] <- 'id'
-rownames(methyl_tumor) <- NULL
-methyl_tumor[, 2:ncol(methyl_tumor)] <-
-  apply(methyl_tumor[,2:ncol(methyl_tumor)], 2, function(x){as.numeric(as.character(x))})
-methyl_tumor <- as.data.frame(methyl_tumor)
-
-# drop duplicates from methyl_tumoration so LSA work
-methyl_tumor <- methyl_tumor[!duplicated(methyl_tumor$id),]
-methyl_tumor <- methyl_tumor[!is.na(methyl_tumor$id),]
-rownames(methyl_tumor) <- methyl_tumor[,1]
-methyl_tumor <- methyl_tumor[, -1]
-
+# ###################################################################
+# # Transpose data and put in formate for analysis
+# ###################################################################
+# col_names <- methyl_summarised_tumor$nearestGeneSymbol
+# methyl_tumor <- as.data.frame(t(methyl_summarised_tumor))
+# names(methyl_tumor)<- col_names
+# methyl_tumor <- cbind(x = rownames(methyl_tumor), methyl_tumor) 
+# methyl_tumor <- methyl_tumor[2:nrow(methyl_tumor),]
+# names(methyl_tumor)[1] <- 'id'
+# rownames(methyl_tumor) <- NULL
+# methyl_tumor[, 2:ncol(methyl_tumor)] <-
+#   apply(methyl_tumor[,2:ncol(methyl_tumor)], 2, function(x){as.numeric(as.character(x))})
+# methyl_tumor <- as.data.frame(methyl_tumor)
+# 
+# # drop duplicates from methyl_tumoration so LSA work
+# methyl_tumor <- methyl_tumor[!duplicated(methyl_tumor$id),]
+# methyl_tumor <- methyl_tumor[!is.na(methyl_tumor$id),]
+# rownames(methyl_tumor) <- methyl_tumor[,1]
+# methyl_tumor <- methyl_tumor[, -1]
+# 
 
 # write.csv(methyl_tumor, paste0(methyl_data, '/methyl_tumor.csv'), row.names = TRUE)
 

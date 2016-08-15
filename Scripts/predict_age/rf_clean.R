@@ -462,9 +462,9 @@ new_mat_sample[1,2] <- sum(mat[mat_index + 2])/iterations
 new_mat_sample[2,2] <- sum(mat[mat_index + 3])/iterations
 
 
-###################
+#####################################################################
 # Regression resid
-###################
+#####################################################################
 
 # age of diagnosis, regression, not log
 methyl_reg_resid <- predictAll(data = resid_rf,
