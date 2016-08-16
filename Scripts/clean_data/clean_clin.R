@@ -452,10 +452,11 @@ clin$gender <- ifelse(clin$gender == 1, 'M',
 # add lauren's changes 
 trim <- function (x) gsub("^\\s+|\\s+$", "", x)
 
+
 ###
 #     GDNA VARS
 ###
-clin$gdna.exon.intron <- NA
+clin[,'gdna.exon.intron'] <- NA
 clin[,'gdna.exon.intron'][is.na(clin$gdna) == FALSE] <- 'no clear intron or exon'
 clin[,'gdna.exon.intron'] <- sub(":.*$", "", clin$gdna )
 clin[,'gdna.exon.intron'][grep(pattern = "Deletion",x = clin[,'gdna.exon.intron'])] <- 'no clear intron or exon'
@@ -465,24 +466,26 @@ clin[,'gdna.exon.intron'] <- trim(clin[,'gdna.exon.intron'])
 
 head(clin$gdna.exon.intron)
 unique(clin$gdna.exon.intron)
+clin$gdna.exon.intron.fac <- factor(clin$gdna.exon.intron,levels=c("no clear intron or exon","Exon 2","Intron 3","Exon 4","Intron 4",
+                                                                           "Exon 5","Intron 5","Exon 6","Exon 7","Exon 8","Intron 8","Exon 10"))
+unique(clin$gdna.exon.intron.fac)
 
 clin[,'gdna.base.change'] <- NA
 clin[,'gdna.base.change'][is.na(clin$gdna) == FALSE] <- 'no bp change'
-clin[,'gdna.base.change'][grep(pattern = '>',x = clin$gdna)] <- 
-  
-  unlist(lapply(X = strsplit(x = clin$gdna,split = '>'), FUN = function(x){if(length(x) == 2){
-        str1 <- substr(x[1],nchar(x[1]),nchar(x[1]))
-        str2 <- substr(x[2],1,1)
-        out.val <- paste0(str1,'>',str2)
-        return(out.val)
-  }
-    
-}))
-
+clin[,'gdna.base.change'][grep(pattern = '>',x = clin$gdna)] <- unlist(lapply(X = strsplit(x = clin$gdna,split = '>'),
+                                                                                      FUN = function(x){if(length(x) == 2){
+                                                                                        str1 <- substr(x[1],nchar(x[1]),nchar(x[1]))
+                                                                                        str2 <- substr(x[2],1,1)
+                                                                                        out.val <- paste0(str1,'>',str2)
+                                                                                        return(out.val)
+                                                                                      }
+                                                                                      }))
 clin[,'gdna.base.change'] <- trim(clin[,'gdna.base.change'])
 
-unique(clin$gdna.base.change)
-table(clin$gdna.base.change)
+clin$gdna.base.change.fac <- factor(clin$gdna.base.change,levels=c("no bp change","T>A","A>G","A>C","G>A","C>A","C>G",
+                                                                           "G>C","C>T","T>C","G>T","T>G"))
+unique(clin$gdna.base.change.fac)
+table(clin$gdna.base.change.fac)
 
 clin[,'gdna.codon'] <- NA
 clin[,'gdna.codon'][is.na(clin$gdna) == FALSE] <- 'no clear location'
@@ -502,53 +505,36 @@ unique(clin$gdna.codon)
 ###
 
 clin[,'protein.codon.change'] <- NA
-clin[,'protein.codon.change'][is.na(clin$protein) == FALSE] <- 
-  trim(unlist(lapply(strsplit(x = sub(pattern = " / splice$",replacement = "", 
-                                      x = sub(pattern = 'p.',replacement = '',
-                                              x = clin$protein[is.na(clin$protein) == FALSE])),split = '[0-9]+'),
-  function(x){if(length(x) == 1) { 
-        
-    return('no codon change')
-    
-  }
-        
-    if (length(x) == 2) {
-      
-          return(paste0(x[1],'>',x[2]))
-      
-    } else {
-          
-      return(NA)
-  }
-        
-})))
+clin[,'protein.codon.change'][is.na(clin$protein) == FALSE] <- trim(unlist(lapply(strsplit(x = sub(pattern = " / splice$",replacement = "",
+                                                                                                           x = sub(pattern = 'p.',replacement = '',
+                                                                                                                   x = clin$protein[is.na(clin$protein) == FALSE])),split = '[0-9]+'),
+                                                                                          function(x){if(length(x) == 1){
+                                                                                            return('no_codon_change')
+                                                                                          }
+                                                                                            if(length(x) == 2){
+                                                                                              return(paste0(x[1],'>',x[2]))
+                                                                                            }                     
+                                                                                            else{
+                                                                                              return(NA)
+                                                                                            }
+                                                                                            
+                                                                                          })))
 
-# length(clin[,'protein.codon.change'][is.na(clin$protein) == FALSE])
 
-# length(unlist(lapply(strsplit(x = sub(pattern = " / splice$",replacement = "",
-#                                       x = sub(pattern = 'p.',replacement = '',
-#                                               x = clin$protein[is.na(clin$protein) == FALSE])),split = '[0-9]+'),
-#                      function(x){if(length(x) == 1){
-#                        return('no codon change')
-#                      }
-#                      if(length(x) == 2){
-#                        return(paste0(x[1],'>',x[2]))
-#                      }
-#                      else{
-#                        return(NA)
-#                      }
-#                      })))
+unique(clin$protein.codon.change)
+clin$protein.codon.change <- unlist(lapply(strsplit(clin$protein.codon.change,split = " "),FUN = function(x){x[1]}))
+unique(unlist(lapply(strsplit(clin$protein.codon.change,split = " "),FUN = function(x){x[1]})))
+clin$protein.codon.change.fac <- factor(clin$protein.codon.change,levels=c("no_codon_change","Cys>Ter","Phe>Tyr","Tyr>Cys","His>Pro","Thr>Thr","Arg>His",
+                                                                                   "Gly>Ser","Arg>Ser","Pro>fs","Glu>fs","Gln>Pro","Ser>Tyr","Arg>Gln","Trp>Ter",
+                                                                                   "Arg>Cys","Thr>fs","Trp>X","Pro>Leu","Pro>Ser","Gly>Arg","Gln>fs","Cys>Arg",        
+                                                                                   "Arg>Leu","Ile>Thr","Arg>Pro","Gly>Cys","Glu>Lys","Arg>X","Tyr>Stop","Tyr>X",          
+                                                                                   "Val>Met","Thr>Hisfs*","Arg>Trp","Leu>Pro","Ile>Ser","Val>Ile","His>Tyr","Tyr>*",          
+                                                                                   "Ser>Gly","Leu>Gln","Pro>Ala","Thr>Pro","Cys>Tyr","Phe>Ser","Ser>fs"))
 
-# length(sub(pattern = 'p.',replacement = '',
-#            x = clin$protein[is.na(clin$protein) == FALSE]))
-
-# length(sub(pattern = " / splice$",replacement = "",
-#            x = sub(pattern = 'p.',replacement = '',
-#                    x = clin$protein[is.na(clin$protein) == FALSE])))
 
 clin[,'protein.codon.num'] <- NA
-clin[,'protein.codon.num'][is.na(clin$protein) == FALSE] <- as.numeric(gsub("\\D", "", 
-                                                                                    clin$protein[is.na(clin$protein) == FALSE]))
+clin[,'protein.codon.num'][is.na(clin$protein) == FALSE] <- as.numeric(gsub("\\D", "", clin$protein[is.na(clin$protein) == FALSE]))
+unique(clin$protein.codon.num)
 
 clin[,'splice.delins.snv'] <- NA
 clin[,'splice.delins.snv'][grep(pattern = '>',clin$gdna.base.change)] <- 'SNV'
@@ -571,11 +557,6 @@ clin$mdm2.nG[clin$mdm2 == 'G/G'] <- 2
 table(clin$mdm2)
 table(clin$mdm2.nG)
 
-# temp <- read.csv(paste0(clin_data, '/lfs-clin-data-with-new-vars-July21-2016.csv'), header=TRUE,as.is=TRUE)
-# 
-# write.csv(clin,file="lfs-clin-data-with-new-vars-July21-2016.csv",
-#           quote=FALSE,row.names=FALSE,col.names=TRUE)
-# save(list = c('clin'),file = "lfs-clin-data-with-new-vars-July21-2016.RData")
 
 ############################################################################33
 # read in methylation column names to make clinical column with methyl indicator

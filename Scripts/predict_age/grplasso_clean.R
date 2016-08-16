@@ -1,5 +1,5 @@
 #############################################################################################################
-# This script will be a clean version of the random forest function predicting age of diagnosis (log and not log) from 
+# This script will be a clean version of the grouped lasso function predicting age of diagnosis (log and not log) from 
 # methylation. The script will also be able to add in clinical variables, and just do clinical if needed. It will also have
 # an option for using residuals as predictors
 # 1) clin and methylation
@@ -156,8 +156,8 @@ predictAll <- function(data,
   }
   
   
-
-    
+  
+  
   for ( i in 3:ncol(data)){
     
     if(typeof(data[,i]) == 'character' || typeof(data[,i]) == 'integer') {
@@ -180,7 +180,7 @@ predictAll <- function(data,
     }else {
       rf_y = data$age_diagnosis[train_index]
     }
-
+    
     if(fac) {
       
       if (length(levels(rf_y)) == 2) {
@@ -199,91 +199,91 @@ predictAll <- function(data,
         summaryFunction = summaryFunc
       )
     } else {
-        NFOLDS <- 2
-        fitControl <- trainControl( 
-          method = "repeatedcv",  # could train on boostrap resample, here use repeated cross validation.
-          number = min(10, NFOLDS),      
-          repeats = 1,
-          allowParallel = TRUE
-          )
-      }
+      NFOLDS <- 2
+      fitControl <- trainControl( 
+        method = "repeatedcv",  # could train on boostrap resample, here use repeated cross validation.
+        number = min(10, NFOLDS),      
+        repeats = 1,
+        allowParallel = TRUE
+      )
+    }
     
     # mtry: Number of variables randomly sampled as candidates at each split.
     # ntree: Number of trees to grow.
-  
-      mtry <- sqrt(ncol(data))
-      tunegrid <- expand.grid(.mtry=mtry)
+    
+    mtry <- sqrt(ncol(data))
+    tunegrid <- expand.grid(.mtry=mtry)
+    
+    model[[i]] <- train(x = data[train_index, c(selected_features, genes)]
+                        , y = rf_y
+                        , method = "rf"
+                        , trControl = fitControl
+                        , tuneGrid = tunegrid
+                        , importance = T
+                        , verbose = FALSE)
+    
+    temp <- varImp(model[[i]])[[1]]
+    importance[[i]] <- cbind(rownames(temp), temp$Overall)
+    
+    if(fac){
+      test.predictions[[i]] <- predict(model[[i]] 
+                                       , newdata = data[-train_index, c(selected_features, genes)]
+                                       , type = "prob")
       
-      model[[i]] <- train(x = data[train_index, c(selected_features, genes)]
-                          , y = rf_y
-                          , method = "rf"
-                          , trControl = fitControl
-                          , tuneGrid = tunegrid
-                          , importance = T
-                          , verbose = FALSE)
+      train.predictions[[i]] <- predict(model[[i]] 
+                                        , newdata = data[train_index, c(selected_features, genes)]
+                                        ,type = "prob")
       
-      temp <- varImp(model[[i]])[[1]]
-      importance[[i]] <- cbind(rownames(temp), temp$Overall)
+    } else {
+      test.predictions[[i]] <- predict(model[[i]] 
+                                       , newdata = data[-train_index, c(selected_features, genes)])
       
-      if(fac){
-        test.predictions[[i]] <- predict(model[[i]] 
-                                         , newdata = data[-train_index, c(selected_features, genes)]
-                                         , type = "prob")
-        
-        train.predictions[[i]] <- predict(model[[i]] 
-                                          , newdata = data[train_index, c(selected_features, genes)]
-                                          ,type = "prob")
-        
-      } else {
-        test.predictions[[i]] <- predict(model[[i]] 
-                                         , newdata = data[-train_index, c(selected_features, genes)])
-        
-        train.predictions[[i]] <- predict(model[[i]] 
-                                          , newdata = data[train_index, c(selected_features, genes)])
-        
-      }
+      train.predictions[[i]] <- predict(model[[i]] 
+                                        , newdata = data[train_index, c(selected_features, genes)])
+      
+    }
+    
+    
+    if (fac) {
+      
+      train.ground_truth[[i]] <- as.factor(make.names(data$age_diagnosis_fac[train_index]))
+      test.ground_truth[[i]] <- as.factor(make.names(data$age_diagnosis_fac[-train_index]))
+      train.sample_collection[[i]] = as.factor(make.names(data$age_sample_fac[train_index]))
+      train.sample_collection[[i]] <- factor(train.sample_collection[[i]], levels = c("X1", "X2"))
+      # temp <- as.factor(make.names(data$age_sample_fac[-train_index]))
+      test.sample_collection[[i]] = as.factor(make.names(data$age_sample_fac[-train_index]))
+      test.sample_collection[[i]] <- factor(test.sample_collection[[i]], levels = c("X1", "X2"))
       
       
-      if (fac) {
-        
-        train.ground_truth[[i]] <- as.factor(make.names(data$age_diagnosis_fac[train_index]))
-        test.ground_truth[[i]] <- as.factor(make.names(data$age_diagnosis_fac[-train_index]))
-        train.sample_collection[[i]] = as.factor(make.names(data$age_sample_fac[train_index]))
-        train.sample_collection[[i]] <- factor(train.sample_collection[[i]], levels = c("X1", "X2"))
-        # temp <- as.factor(make.names(data$age_sample_fac[-train_index]))
-        test.sample_collection[[i]] = as.factor(make.names(data$age_sample_fac[-train_index]))
-        test.sample_collection[[i]] <- factor(test.sample_collection[[i]], levels = c("X1", "X2"))
-        
+      # For age of diagnosis
+      # Accuracy
+      test_acc[[i]] <- sum(levels(test.ground_truth[[i]])[apply(test.predictions[[i]], 1, which.is.max)] == test.ground_truth[[i]]) / dim(test.predictions[[i]])[1]
+      # Confustion Matrix
+      test_stats[[i]] <- confusionMatrix(levels(test.ground_truth[[i]])[apply(test.predictions[[i]], 1, which.is.max)], test.ground_truth[[i]])
+      # print(rf.test_stats)
+      missing_ind <- !is.na(unlist(test.sample_collection[[i]]))
+      test.sample_collection[[i]] <- unlist(test.sample_collection[[i]])[missing_ind]
+      test.predictions[[i]] <- test.predictions[[i]][missing_ind,]
+      # for age of collection
+      # subset test.predictions by missing index in age.sample_collection, and remove the NAs in age.sample collection
       
-        # For age of diagnosis
-        # Accuracy
-        test_acc[[i]] <- sum(levels(test.ground_truth[[i]])[apply(test.predictions[[i]], 1, which.is.max)] == test.ground_truth[[i]]) / dim(test.predictions[[i]])[1]
-        # Confustion Matrix
-        test_stats[[i]] <- confusionMatrix(levels(test.ground_truth[[i]])[apply(test.predictions[[i]], 1, which.is.max)], test.ground_truth[[i]])
-        # print(rf.test_stats)
-        missing_ind <- !is.na(unlist(test.sample_collection[[i]]))
-        test.sample_collection[[i]] <- unlist(test.sample_collection[[i]])[missing_ind]
-        test.predictions[[i]] <- test.predictions[[i]][missing_ind,]
-        # for age of collection
-        # subset test.predictions by missing index in age.sample_collection, and remove the NAs in age.sample collection
-        
-        # Accuracy
-        test_acc_samp[[i]] <- sum(levels(test.sample_collection[[i]])[apply(test.predictions[[i]], 1, which.is.max)] == test.sample_collection[[i]], na.rm = T) / dim(test.predictions[[i]])[1]
-        # Confustion Matrix
-        # subset to remove NAs
-        test_stats_samp[[i]] <- confusionMatrix(levels(test.sample_collection[[i]])[apply(test.predictions[[i]], 1, which.is.max)], test.sample_collection[[i]])
-        # print(rf.test_stats)
-      } else {
-        
-        train.ground_truth[[i]] <- data$age_diagnosis[train_index]
-        test.ground_truth[[i]] <- data$age_diagnosis[-train_index]
-        train.sample_collection[[i]] = data$age_sample_collection[train_index]
-        test.sample_collection[[i]] = data$age_sample_collection[-train_index]
-        train.mse[[i]] <- rmse(unlist(train.predictions[[i]]), unlist(train.ground_truth[[i]]))
-        test.mse[[i]] <- rmse(unlist(test.predictions[[i]]), unlist(test.ground_truth[[i]]))
-        
-      }
+      # Accuracy
+      test_acc_samp[[i]] <- sum(levels(test.sample_collection[[i]])[apply(test.predictions[[i]], 1, which.is.max)] == test.sample_collection[[i]], na.rm = T) / dim(test.predictions[[i]])[1]
+      # Confustion Matrix
+      # subset to remove NAs
+      test_stats_samp[[i]] <- confusionMatrix(levels(test.sample_collection[[i]])[apply(test.predictions[[i]], 1, which.is.max)], test.sample_collection[[i]])
+      # print(rf.test_stats)
+    } else {
       
+      train.ground_truth[[i]] <- data$age_diagnosis[train_index]
+      test.ground_truth[[i]] <- data$age_diagnosis[-train_index]
+      train.sample_collection[[i]] = data$age_sample_collection[train_index]
+      test.sample_collection[[i]] = data$age_sample_collection[-train_index]
+      train.mse[[i]] <- rmse(unlist(train.predictions[[i]]), unlist(train.ground_truth[[i]]))
+      test.mse[[i]] <- rmse(unlist(test.predictions[[i]]), unlist(test.ground_truth[[i]]))
+      
+    }
+    
     
     print(i)
     
@@ -359,15 +359,15 @@ legend("bottomright", legend = paste0('# obs = ', methyl_reg[[15]]), cex = 0.7)
 
 # age of diagnosis, regression with log transform
 methyl_reg_log <- predictAll(data = full_data_rf,
-                         fac = F,
-                         clin_only =  F,
-                         clin_methyl = F,
-                         log = T,
-                         subset = c('age_diagnosis', 'age_sample_collection'),
-                         selected_features = NULL,
-                         cutoff = .7,
-                         resid = F,
-                         iterations = 10)
+                             fac = F,
+                             clin_only =  F,
+                             clin_methyl = F,
+                             log = T,
+                             subset = c('age_diagnosis', 'age_sample_collection'),
+                             selected_features = NULL,
+                             cutoff = .7,
+                             resid = F,
+                             iterations = 10)
 
 # plot predictions against ground truth
 plot(unlist(methyl_reg_log[[4]]), unlist(methyl_reg_log[[6]]), 
@@ -448,15 +448,15 @@ new_mat_sample[2,2] <- sum(mat[mat_index + 3])/iterations
 
 # age of diagnosis, classification, log
 methyl_fac_log <- predictAll(data = full_data_rf,
-                         fac = T,
-                         clin_only =  F,
-                         clin_methyl = F,
-                         log = T,
-                         subset = c('age_diagnosis_fac', 'age_sample_fac'),
-                         selected_features = NULL,
-                         cutoff = .7,
-                         resid = F,
-                         iterations = 10)
+                             fac = T,
+                             clin_only =  F,
+                             clin_methyl = F,
+                             log = T,
+                             subset = c('age_diagnosis_fac', 'age_sample_fac'),
+                             selected_features = NULL,
+                             cutoff = .7,
+                             resid = F,
+                             iterations = 10)
 
 # test acc for age of diagnosis
 mean(unlist(methyl_fac_log[[9]]))
@@ -502,15 +502,15 @@ new_mat_sample[2,2] <- sum(mat[mat_index + 3])/iterations
 
 # age of diagnosis, regression, not log
 methyl_reg_resid <- predictAll(data = resid_rf,
-                         fac = F,
-                         clin_only =  F,
-                         clin_methyl = F,
-                         log = F,
-                         subset = c('age_diagnosis', 'age_sample_collection'),
-                         selected_features = NULL,
-                         cutoff = .7,
-                         resid = T,
-                         iterations = 10)
+                               fac = F,
+                               clin_only =  F,
+                               clin_methyl = F,
+                               log = F,
+                               subset = c('age_diagnosis', 'age_sample_collection'),
+                               selected_features = NULL,
+                               cutoff = .7,
+                               resid = T,
+                               iterations = 10)
 
 # plot predictions against ground truth
 plot(unlist(methyl_reg_resid[[4]]), unlist(methyl_reg_resid[[6]]), 
@@ -544,15 +544,15 @@ legend("bottomright", legend = paste0('# obs = ', methyl_reg_resid[[15]]), cex =
 
 # age of diagnosis, classification, not log
 methyl_fac_resid <- predictAll(data = resid_rf,
-                         fac = T,
-                         clin_only =  F,
-                         clin_methyl = F,
-                         log = F,
-                         subset = c('age_diagnosis_fac', 'age_sample_fac'),
-                         selected_features = NULL,
-                         cutoff = .7,
-                         resid = T,
-                         iterations = 10)
+                               fac = T,
+                               clin_only =  F,
+                               clin_methyl = F,
+                               log = F,
+                               subset = c('age_diagnosis_fac', 'age_sample_fac'),
+                               selected_features = NULL,
+                               cutoff = .7,
+                               resid = T,
+                               iterations = 10)
 
 # test acc for age of diagnosis
 mean(unlist(methyl_fac_resid[[9]]))
@@ -603,15 +603,15 @@ new_mat_sample[2,2] <- sum(mat[mat_index + 3])/iterations
 
 # age of diagnosis, regression, not log gdna.exon.intron
 methyl_gdna.exon.intron <- predictAll(data = full_data_rf,
-                         fac = F,
-                         clin_only =  F,
-                         clin_methyl = T,
-                         log = F,
-                         subset = c('age_diagnosis', 'age_sample_collection', 'gdna.exon.intron.'),
-                         selected_features = c('gdna.exon.intron'),
-                         cutoff = .7,
-                         resid = F,
-                         iterations = 10)
+                                      fac = F,
+                                      clin_only =  F,
+                                      clin_methyl = T,
+                                      log = F,
+                                      subset = c('age_diagnosis', 'age_sample_collection', 'gdna.exon.intron.'),
+                                      selected_features = c('gdna.exon.intron'),
+                                      cutoff = .7,
+                                      resid = F,
+                                      iterations = 10)
 
 # plot predictions against ground truth
 plot(unlist(methyl_gdna.exon.intron[[4]]), unlist(methyl_gdna.exon.intron[[6]]), 
@@ -641,15 +641,15 @@ legend("bottomright", legend = paste0('# obs = ', methyl_gdna.exon.intron[[15]])
 
 # age of diagnosis, regression, not log
 methyl_gdna.exon.intron_log <- predictAll(data = full_data_rf,
-                                      fac = F,
-                                      clin_only =  F,
-                                      clin_methyl = T,
-                                      log = T,
-                                      subset = c('age_diagnosis', 'age_sample_collection', 'gdna.exon.intron'),
-                                      selected_features = c('gdna.exon.intron'),
-                                      cutoff = .7,
-                                      resid = F,
-                                      iterations = 10)
+                                          fac = F,
+                                          clin_only =  F,
+                                          clin_methyl = T,
+                                          log = T,
+                                          subset = c('age_diagnosis', 'age_sample_collection', 'gdna.exon.intron'),
+                                          selected_features = c('gdna.exon.intron'),
+                                          cutoff = .7,
+                                          resid = F,
+                                          iterations = 10)
 
 # plot predictions against ground truth
 plot(unlist(methyl_gdna.exon.intron_log[[4]]), unlist(methyl_gdna.exon.intron_log[[6]]), 
@@ -790,15 +790,15 @@ new_mat_sample[2,2] <- sum(mat[mat_index + 3])/iterations
 ##########################
 # age of diagnosis, classification, not log - using gender and p53_germline
 mod_p53 <- predictAll(data = clin,
-                               fac = F,
-                               clin_only =  T,
-                               clin_methyl = F,
-                               log = F,
-                               subset = c('age_diagnosis', 'age_sample_collection', 'gender', 'p53_germline'),
-                               selected_features = c('p53_germline', 'gender'),
-                               cutoff = .7,
-                               resid = F,
-                               iterations = 10)
+                      fac = F,
+                      clin_only =  T,
+                      clin_methyl = F,
+                      log = F,
+                      subset = c('age_diagnosis', 'age_sample_collection', 'gender', 'p53_germline'),
+                      selected_features = c('p53_germline', 'gender'),
+                      cutoff = .7,
+                      resid = F,
+                      iterations = 10)
 
 # plot predictions against ground truth
 plot(unlist(mod_p53[[4]]), unlist(mod_p53[[6]]), 
@@ -828,15 +828,15 @@ legend("bottomright", legend = paste0('# obs = ', mod_p53[[15]]), cex = 0.7)
 
 # age of diagnosis, classification, not log - using gender and gdna.exon.intron
 mod_gdna.exon.intron <- predictAll(data = clin,
-                       fac = F,
-                       clin_only =  T,
-                       clin_methyl = F,
-                       log = F,
-                       subset = c('age_diagnosis', 'age_sample_collection', 'gender', 'gdna.exon.intron'),
-                       selected_features = c('gdna.exon.intron', 'gender'),
-                       cutoff = .7,
-                       resid = F,
-                       iterations = 10)
+                                   fac = F,
+                                   clin_only =  T,
+                                   clin_methyl = F,
+                                   log = F,
+                                   subset = c('age_diagnosis', 'age_sample_collection', 'gender', 'gdna.exon.intron'),
+                                   selected_features = c('gdna.exon.intron', 'gender'),
+                                   cutoff = .7,
+                                   resid = F,
+                                   iterations = 10)
 
 # plot predictions against ground truth
 plot(unlist(mod_gdna.exon.intron[[4]]), unlist(mod_gdna.exon.intron[[6]]), 
@@ -866,15 +866,15 @@ legend("bottomright", legend = paste0('# obs = ', mod_gdna.exon.intron[[15]]), c
 
 # age of diagnosis, classification, not log - using gender and gdna.exon.intron.fac
 mod_gdna.exon.intron.fac <- predictAll(data = clin,
-                                   fac = F,
-                                   clin_only =  T,
-                                   clin_methyl = F,
-                                   log = F,
-                                   subset = c('age_diagnosis', 'age_sample_collection', 'gender', 'gdna.exon.intron.fac'),
-                                   selected_features = c('gdna.exon.intron.fac', 'gender'),
-                                   cutoff = .7,
-                                   resid = F,
-                                   iterations = 10)
+                                       fac = F,
+                                       clin_only =  T,
+                                       clin_methyl = F,
+                                       log = F,
+                                       subset = c('age_diagnosis', 'age_sample_collection', 'gender', 'gdna.exon.intron.fac'),
+                                       selected_features = c('gdna.exon.intron.fac', 'gender'),
+                                       cutoff = .7,
+                                       resid = F,
+                                       iterations = 10)
 
 # plot predictions against ground truth
 plot(unlist(mod_gdna.exon.intron.fac[[4]]), unlist(mod_gdna.exon.intron.fac[[6]]), 
@@ -906,15 +906,15 @@ legend("bottomright", legend = paste0('# obs = ', mod_gdna.exon.intron.fac[[15]]
 
 # age of diagnosis, classification, not log - using gender and gdna.base.change
 mod_gdna.base.change <- predictAll(data = clin,
-                                       fac = F,
-                                       clin_only =  T,
-                                       clin_methyl = F,
-                                       log = F,
-                                       subset = c('age_diagnosis', 'age_sample_collection', 'gender', 'gdna.base.change'),
-                                       selected_features = c('gdna.base.change', 'gender'),
-                                       cutoff = .7,
-                                       resid = F,
-                                       iterations = 10)
+                                   fac = F,
+                                   clin_only =  T,
+                                   clin_methyl = F,
+                                   log = F,
+                                   subset = c('age_diagnosis', 'age_sample_collection', 'gender', 'gdna.base.change'),
+                                   selected_features = c('gdna.base.change', 'gender'),
+                                   cutoff = .7,
+                                   resid = F,
+                                   iterations = 10)
 
 # plot predictions against ground truth
 plot(unlist(mod_gdna.base.change[[4]]), unlist(mod_gdna.base.change[[6]]), 
@@ -945,15 +945,15 @@ legend("bottomright", legend = paste0('# obs = ', mod_gdna.base.change[[15]]), c
 
 # age of diagnosis, classification, not log - using gender and gdna.base.change.fac
 mod_gdna.base.change.fac <- predictAll(data = clin,
-                                   fac = F,
-                                   clin_only =  T,
-                                   clin_methyl = F,
-                                   log = F,
-                                   subset = c('age_diagnosis', 'age_sample_collection', 'gender', 'gdna.base.change.fac'),
-                                   selected_features = c('gdna.base.change.fac', 'gender'),
-                                   cutoff = .7,
-                                   resid = F,
-                                   iterations = 10)
+                                       fac = F,
+                                       clin_only =  T,
+                                       clin_methyl = F,
+                                       log = F,
+                                       subset = c('age_diagnosis', 'age_sample_collection', 'gender', 'gdna.base.change.fac'),
+                                       selected_features = c('gdna.base.change.fac', 'gender'),
+                                       cutoff = .7,
+                                       resid = F,
+                                       iterations = 10)
 
 # plot predictions against ground truth
 plot(unlist(mod_gdna.base.change.fac[[4]]), unlist(mod_gdna.base.change.fac[[6]]), 
@@ -984,15 +984,15 @@ legend("bottomright", legend = paste0('# obs = ', mod_gdna.base.change.fac[[15]]
 #HERE
 # age of diagnosis, classification, not log - using gender and gdna.base.change.fac
 mod_gdna.codon<- predictAll(data = clin,
-                                       fac = F,
-                                       clin_only =  T,
-                                       clin_methyl = F,
-                                       log = F,
-                                       subset = c('age_diagnosis', 'age_sample_collection', 'gender', 'gdna.codon'),
-                                       selected_features = c('gdna.codon', 'gender'),
-                                       cutoff = .7,
-                                       resid = F,
-                                       iterations = 10)
+                            fac = F,
+                            clin_only =  T,
+                            clin_methyl = F,
+                            log = F,
+                            subset = c('age_diagnosis', 'age_sample_collection', 'gender', 'gdna.codon'),
+                            selected_features = c('gdna.codon', 'gender'),
+                            cutoff = .7,
+                            resid = F,
+                            iterations = 10)
 
 # plot predictions against ground truth
 plot(unlist(mod_gdna.codon[[4]]), unlist(mod_gdna.codon[[6]]), 
@@ -1063,15 +1063,15 @@ legend("bottomright", legend = paste0('# obs = ', mod_protein.codon.change[[15]]
 
 # age of diagnosis, classification, not log - using gender and protein.codon.change.fac
 mod_protein.codon.change.fac <- predictAll(data = clin,
-                                       fac = F,
-                                       clin_only =  T,
-                                       clin_methyl = F,
-                                       log = F,
-                                       subset = c('age_diagnosis', 'age_sample_collection', 'gender', 'protein.codon.change.fac'),
-                                       selected_features = c('protein.codon.change.fac', 'gender'),
-                                       cutoff = .7,
-                                       resid = F,
-                                       iterations = 10)
+                                           fac = F,
+                                           clin_only =  T,
+                                           clin_methyl = F,
+                                           log = F,
+                                           subset = c('age_diagnosis', 'age_sample_collection', 'gender', 'protein.codon.change.fac'),
+                                           selected_features = c('protein.codon.change.fac', 'gender'),
+                                           cutoff = .7,
+                                           resid = F,
+                                           iterations = 10)
 
 # plot predictions against ground truth
 plot(unlist(mod_protein.codon.change.fac[[4]]), unlist(mod_protein.codon.change.fac[[6]]), 
@@ -1104,15 +1104,15 @@ legend("bottomright", legend = paste0('# obs = ', mod_protein.codon.change.fac[[
 
 # age of diagnosis, classification, not log - using gender and protein.codon.change
 mod_protein.codon.num <- predictAll(data = clin,
-                                       fac = F,
-                                       clin_only =  T,
-                                       clin_methyl = F,
-                                       log = F,
-                                       subset = c('age_diagnosis', 'age_sample_collection', 'gender', 'protein.codon.num'),
-                                       selected_features = c('protein.codon.num', 'gender'),
-                                       cutoff = .7,
-                                       resid = F,
-                                       iterations = 10)
+                                    fac = F,
+                                    clin_only =  T,
+                                    clin_methyl = F,
+                                    log = F,
+                                    subset = c('age_diagnosis', 'age_sample_collection', 'gender', 'protein.codon.num'),
+                                    selected_features = c('protein.codon.num', 'gender'),
+                                    cutoff = .7,
+                                    resid = F,
+                                    iterations = 10)
 
 # plot predictions against ground truth
 plot(unlist(mod_protein.codon.num[[4]]), unlist(mod_protein.codon.num[[6]]), 
@@ -1184,15 +1184,15 @@ legend("bottomright", legend = paste0('# obs = ', mod_splice.delins.snv[[15]]), 
 
 # age of diagnosis, classification, not log - using gender and protein.codon.change
 mod_codon72.npro <- predictAll(data = clin,
-                                    fac = F,
-                                    clin_only =  T,
-                                    clin_methyl = F,
-                                    log = F,
-                                    subset = c('age_diagnosis', 'age_sample_collection', 'gender', 'codon72.npro'),
-                                    selected_features = c('codon72.npro', 'gender'),
-                                    cutoff = .7,
-                                    resid = F,
-                                    iterations = 10)
+                               fac = F,
+                               clin_only =  T,
+                               clin_methyl = F,
+                               log = F,
+                               subset = c('age_diagnosis', 'age_sample_collection', 'gender', 'codon72.npro'),
+                               selected_features = c('codon72.npro', 'gender'),
+                               cutoff = .7,
+                               resid = F,
+                               iterations = 10)
 
 # plot predictions against ground truth
 plot(unlist(mod_codon72.npro[[4]]), unlist(mod_codon72.npro[[6]]), 
@@ -1223,15 +1223,15 @@ legend("bottomright", legend = paste0('# obs = ', mod_codon72.npro[[15]]), cex =
 
 # age of diagnosis, classification, not log - using gender and protein.codon.change
 mod_mdm2.nG <- predictAll(data = clin,
-                               fac = F,
-                               clin_only =  T,
-                               clin_methyl = F,
-                               log = F,
-                               subset = c('age_diagnosis', 'age_sample_collection', 'gender', 'mdm2.nG'),
-                               selected_features = c('mdm2.nG', 'gender'),
-                               cutoff = .7,
-                               resid = F,
-                               iterations = 10)
+                          fac = F,
+                          clin_only =  T,
+                          clin_methyl = F,
+                          log = F,
+                          subset = c('age_diagnosis', 'age_sample_collection', 'gender', 'mdm2.nG'),
+                          selected_features = c('mdm2.nG', 'gender'),
+                          cutoff = .7,
+                          resid = F,
+                          iterations = 10)
 
 # plot predictions against ground truth
 plot(unlist(mod_mdm2.nG[[4]]), unlist(mod_mdm2.nG[[6]]), 

@@ -52,7 +52,7 @@ cor_mat <- cor(methyl[, -1])
 
 # find attributes that are highly correlated
 # 0.6 for methyl_cor, 0.4, methyl_cor_small and full_data_cor_small
-highly_cor <- findCorrelation(cor_mat, cutoff = 0.4, names = TRUE)
+highly_cor <- findCorrelation(cor_mat, cutoff = 0.6, names = TRUE)
 cor_index <- names(methyl) %in% highly_cor[2:length(highly_cor)]
 
 # remove highly correlated attributes
@@ -74,10 +74,10 @@ full_data_cor <- inner_join(clin, methyl_cor,
 ######################################################################################################
 # Random forest recursive feature elimination
 # prepare training scheme
-control <- trainControl(method="repeatedcv", number=10, repeats=3)
+control <- trainControl(method="repeatedcv", number=5, repeats=3)
 
 # subset full data for the model 
-x_mat <- full_data[, c(6, 27:ncol(full_data))]
+x_mat <- full_data[, c(6, 30:ncol(full_data))]
 x_mat <- x_mat[complete.cases(x_mat),]
 y <- as.numeric(x_mat$age_diagnosis)
 
@@ -107,10 +107,10 @@ importance <- importance[order(importance$Overall, decreasing = T),]
 hist(importance$Overall)
 
 # subset data by top features 
-subset <- importance[importance$Overall > 20,]
-full_data_rf <- full_data[, c(names(full_data)[1:26], subset$gene)]
+subset <- importance[importance$Overall > 26,]
+full_data_rf <- full_data[, c(names(full_data)[1:30], subset$gene)]
 
-# write.csv(full_data_rf, paste0(data_folder, '/full_data_rf.csv'))
+write.csv(full_data_rf, paste0(data_folder, '/full_data_rf.csv'))
 
 # #########################################################################################
 # # Using low variance selection
