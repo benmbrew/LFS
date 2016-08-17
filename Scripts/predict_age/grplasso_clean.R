@@ -11,6 +11,7 @@
 ##################################################################################################
 # this script will read in different versions of subsetted full data and run random forest. 
 library(caret)
+library(gglasso)
 library(glmnet)
 library(randomForest)
 library(kernlab)
@@ -36,11 +37,9 @@ clin <- read.csv(paste0(clin_data, '/clinical_two.csv'), stringsAsFactors = F)
 # Read in 3 different data sets 
 full_data <- read.csv(paste0(data_folder, '/full_data.csv'), stringsAsFactors = F)
 full_data_cor <- read.csv(paste0(data_folder, '/full_data_cor.csv'), stringsAsFactors = F)
-full_data_rf <- read.csv(paste0(data_folder, '/full_data_rf.csv'), stringsAsFactors = F)
-# Read in 2 smaller cor and rf
 full_data_cor_small <- read.csv(paste0(data_folder, '/full_data_cor_small.csv'), stringsAsFactors = F)
+full_data_rf <- read.csv(paste0(data_folder, '/full_data_rf.csv'), stringsAsFactors = F)
 full_data_rf_small <- read.csv(paste0(data_folder, '/full_data_rf_small.csv'), stringsAsFactors = F)
-
 
 full_data$X <- NULL
 full_data_cor$X <- NULL
@@ -48,10 +47,36 @@ full_data_rf$X <- NULL
 full_data_cor$X <- NULL
 full_data_rf_small$X <- NULL
 
-# Read in residuals from regressing gene on age of sample collection
-resid_rf <- read.csv(paste0(data_folder, '/resid_rf.csv'), stringsAsFactors = F)
-resid_cor <- read.csv(paste0(data_folder, '/resid_cor.csv'), stringsAsFactors = F)
-resid_full <- read.csv(paste0(data_folder, '/resid_full.csv'), stringsAsFactors = F)
+# read in clusters 
+kmeans_full <- read.csv(paste0(data_folder, '/kmeans_full.csv'), stringsAsFactors = F)
+hier_full <- read.csv(paste0(data_folder, '/hier_full.csv'), stringsAsFactors = F)
+
+kmeans_rf <- read.csv(paste0(data_folder, '/kmeans_rf.csv'), stringsAsFactors = F)
+hier_rf <- read.csv(paste0(data_folder, '/hier_rf.csv'), stringsAsFactors = F)
+
+kmeans_rf_small <- read.csv(paste0(data_folder, '/kmeans_rf_small.csv'), stringsAsFactors = F)
+hier_rf_small <- read.csv(paste0(data_folder, '/hier_rf_small.csv'), stringsAsFactors = F)
+
+kmeans_cor <- read.csv(paste0(data_folder, '/kmeans_cor.csv'), stringsAsFactors = F)
+hier_cor <- read.csv(paste0(data_folder, '/hier_cor.csv'), stringsAsFactors = F)
+
+kmeans_cor_small <- read.csv(paste0(data_folder, '/kmeans_cor_small.csv'), stringsAsFactors = F)
+hier_cor_small <- read.csv(paste0(data_folder, '/hier_cor_small.csv'), stringsAsFactors = F)
+
+
+
+# add 1 to each label because grplasso cant deal with label 1. 
+kmeans_full <- kmeans_full$V1
+hier_full <- hier_full$V1 
+kmeans_rf <- kmeans_rf$V1
+hier_rf <- hier_rf$V1
+kmeans_rf_small <- kmeans_rf_small$V1
+hier_rf_small <- hier_rf_small$V1
+kmeans_cor <- kmeans_cor$V1
+hier_cor <- hier_cor$V1
+kmeans_cor_small <- kmeans_cor_small$V1
+hier_cor_small <- hier_cor_small$V1
+
 
 # make categorifcal variable for clinical data
 clin$age_diagnosis_fac <- as.integer(ifelse(clin$age_diagnosis <= 48, 1, 2))
@@ -79,30 +104,10 @@ full_data_cor_small$age_diagnosis_fac <- as.integer(ifelse(full_data_rf$age_diag
 
 full_data_cor_small$age_sample_fac <- as.integer(ifelse(full_data_rf$age_sample_collection <= 48, 1, 2))
 
-# make categroical variable from age of methylaion and age of sample collection in residual data
-resid_rf$age_diagnosis_fac <- as.integer(ifelse(resid_rf$age_diagnosis <= 48, 1, 2))
-
-resid_rf$age_sample_fac <- as.integer(ifelse(resid_rf$age_sample_collection <= 48, 1, 2))
-
-resid_cor$age_diagnosis_fac <- as.integer(ifelse(resid_cor$age_diagnosis <= 48, 1, 2))
-
-resid_cor$age_sample_fac <- as.integer(ifelse(resid_cor$age_sample_collection <= 48, 1, 2))
-
-resid_full$age_diagnosis_fac <- as.integer(ifelse(resid_full$age_diagnosis <= 48, 1, 2))
-
-resid_full$age_sample_fac <- as.integer(ifelse(resid_full$age_sample_collection <= 48, 1, 2))
-
-
-
-# remove variable 
-resid_rf$X <- NULL
-resid_cor$X <- NULL
-resid_full$X <- NULL
-
-
 
 # Random Forest - this is training and testing on clinical data using k fold cross validation
 predictAll <- function(data,
+                       group,
                        clin_only,
                        clin_methyl,
                        fac,
@@ -110,7 +115,7 @@ predictAll <- function(data,
                        selected_features,
                        cutoff,
                        log,
-                       resid,
+                       max,
                        iterations) {
   
   model <- list()
@@ -130,14 +135,9 @@ predictAll <- function(data,
   
   
   # set log transformation
-  if(log & !resid) {
+  if(log) {
     
     data[,c(6,8, 30:(ncol(data) - 2))]  <- log(data[,c(6,8,30:(ncol(data) -2))])
-  }
-  
-  if(log & resid) {
-    
-    data[,c(1:(ncol(data) - 2))]  <- log(data[,c(1:(ncol(data) -2))])
   }
   
   
@@ -169,6 +169,16 @@ predictAll <- function(data,
   
   obs <- nrow(data)
   
+  vars <- ncol(data[c(1,2, 3:ncol(data))])
+  
+  num_fixed <- abs(vars - ncol(data))
+  
+  num_extra <- length(levels(as.factor(group))) + 1
+  group <- append(rep(6, num_fixed), group)
+  
+  # set group 
+  group <- as.numeric(group)
+  
   
   for (i in 1:iterations){
     
@@ -176,90 +186,65 @@ predictAll <- function(data,
     train_index <- sample(nrow(data), nrow(data) *cutoff, replace = F)
     
     if(fac){
-      rf_y = make.names(as.factor(data$age_diagnosis_fac[train_index]))
+      grplasso_y = ifelse(data$age_diagnosis_fac[train_index] == 1, 1, -1)
+      loss_mod <- 'logit'
+      loss_pred <- 'misclass'
     }else {
-      rf_y = data$age_diagnosis[train_index]
+      grplasso_y = data$age_diagnosis[train_index]
+      loss_mod <- 'ls'
+      loss_pred <- 'L2'
     }
     
-    if(fac) {
-      
-      if (length(levels(rf_y)) == 2) {
-        summaryFunc <- twoClassSummary
-      } else {
-        summaryFunc <- multiClassSummary
-      }
-      # determines how you train the model.
-      NFOLDS <- 2
-      fitControl <- trainControl( 
-        method = "repeatedcv",  # could train on boostrap resample, here use repeated cross validation.
-        number = min(10, NFOLDS),
-        classProbs = TRUE,
-        repeats = 1,
-        allowParallel = TRUE,
-        summaryFunction = summaryFunc
-      )
-    } else {
-      NFOLDS <- 2
-      fitControl <- trainControl( 
-        method = "repeatedcv",  # could train on boostrap resample, here use repeated cross validation.
-        number = min(10, NFOLDS),      
-        repeats = 1,
-        allowParallel = TRUE
-      )
-    }
     
-    # mtry: Number of variables randomly sampled as candidates at each split.
-    # ntree: Number of trees to grow.
+    model[[i]] = cv.gglasso(x = as.matrix(data[train_index, c(selected_features, genes)]), 
+                            y = grplasso_y, 
+                            group=group, 
+                            loss= loss_mod,
+                            pred.loss= loss_pred, 
+                            lambda.factor=0.05, 
+                            nfolds=5, 
+                            maxit = max)
     
-    mtry <- sqrt(ncol(data))
-    tunegrid <- expand.grid(.mtry=mtry)
-    
-    model[[i]] <- train(x = data[train_index, c(selected_features, genes)]
-                        , y = rf_y
-                        , method = "rf"
-                        , trControl = fitControl
-                        , tuneGrid = tunegrid
-                        , importance = T
-                        , verbose = FALSE)
-    
-    temp <- varImp(model[[i]])[[1]]
-    importance[[i]] <- cbind(rownames(temp), temp$Overall)
-    
+
     if(fac){
       test.predictions[[i]] <- predict(model[[i]] 
-                                       , newdata = data[-train_index, c(selected_features, genes)]
-                                       , type = "prob")
+                                       , newx = data[-train_index, c(selected_features, genes)]
+                                       , s = model[[i]]$lambda.min
+                                       , type = 'class')
       
       train.predictions[[i]] <- predict(model[[i]] 
-                                        , newdata = data[train_index, c(selected_features, genes)]
-                                        ,type = "prob")
+                                        , newx = data[train_index, c(selected_features, genes)]
+                                        , s = model[[i]]$lambda.min
+                                        , type = 'link')
       
     } else {
+      
       test.predictions[[i]] <- predict(model[[i]] 
-                                       , newdata = data[-train_index, c(selected_features, genes)])
+                                       , newx = data[-train_index, c(selected_features, genes)]
+                                       , s = model[[i]]$lambda.min
+                                       , type = 'link')
       
       train.predictions[[i]] <- predict(model[[i]] 
-                                        , newdata = data[train_index, c(selected_features, genes)])
+                                        , newx = data[train_index, c(selected_features, genes)]
+                                        , s = model[[i]]$lambda.min
+                                        , type = 'link')
       
     }
     
     
     if (fac) {
       
-      train.ground_truth[[i]] <- as.factor(make.names(data$age_diagnosis_fac[train_index]))
-      test.ground_truth[[i]] <- as.factor(make.names(data$age_diagnosis_fac[-train_index]))
-      train.sample_collection[[i]] = as.factor(make.names(data$age_sample_fac[train_index]))
-      train.sample_collection[[i]] <- factor(train.sample_collection[[i]], levels = c("X1", "X2"))
-      # temp <- as.factor(make.names(data$age_sample_fac[-train_index]))
-      test.sample_collection[[i]] = as.factor(make.names(data$age_sample_fac[-train_index]))
-      test.sample_collection[[i]] <- factor(test.sample_collection[[i]], levels = c("X1", "X2"))
-      
+      train.ground_truth[[i]] <- ifelse(data$age_diagnosis_fac[train_index] == 1, 1, -1)
+      test.ground_truth[[i]] <- ifelse(data$age_diagnosis_fac[-train_index] == 1, 1, -1)
+      train.sample_collection[[i]] <- ifelse(data$age_sample_fac[train_index] == 1, 1, -1)
+      test.sample_collection[[i]] <- ifelse(data$age_sample_fac[-train_index] == 1, 1, -1)
+
       
       # For age of diagnosis
       # Accuracy
-      test_acc[[i]] <- sum(levels(test.ground_truth[[i]])[apply(test.predictions[[i]], 1, which.is.max)] == test.ground_truth[[i]]) / dim(test.predictions[[i]])[1]
+      test_acc[[i]] <- sum(test.predictions[[i]] == test.ground_truth[[i]]) / length(test.predictions[[i]])
       # Confustion Matrix
-      test_stats[[i]] <- confusionMatrix(levels(test.ground_truth[[i]])[apply(test.predictions[[i]], 1, which.is.max)], test.ground_truth[[i]])
+      test_stats[[i]] <- confusionMatrix(test.predictions[[i]], test.ground_truth[[i]])
       # print(rf.test_stats)
       missing_ind <- !is.na(unlist(test.sample_collection[[i]]))
       test.sample_collection[[i]] <- unlist(test.sample_collection[[i]])[missing_ind]
@@ -268,10 +253,10 @@ predictAll <- function(data,
       # subset test.predictions by missing index in age.sample_collection, and remove the NAs in age.sample collection
       
       # Accuracy
-      test_acc_samp[[i]] <- sum(levels(test.sample_collection[[i]])[apply(test.predictions[[i]], 1, which.is.max)] == test.sample_collection[[i]], na.rm = T) / dim(test.predictions[[i]])[1]
+      test_acc_samp[[i]] <-  sum(test.predictions[[i]] == test.sample_collection[[i]]) / length(test.predictions[[i]])
       # Confustion Matrix
       # subset to remove NAs
-      test_stats_samp[[i]] <- confusionMatrix(levels(test.sample_collection[[i]])[apply(test.predictions[[i]], 1, which.is.max)], test.sample_collection[[i]])
+      test_stats_samp[[i]] <- confusionMatrix(test.predictions[[i]], test.sample_collection[[i]])
       # print(rf.test_stats)
     } else {
       
@@ -320,6 +305,7 @@ predictAll <- function(data,
 
 # age of diagnosis, regression, not log
 methyl_reg <- predictAll(data = full_data_rf,
+                         group = kmeans_rf,
                          fac = F,
                          clin_only =  F,
                          clin_methyl = F,
@@ -327,8 +313,8 @@ methyl_reg <- predictAll(data = full_data_rf,
                          subset = c('age_diagnosis', 'age_sample_collection'),
                          selected_features = NULL,
                          cutoff = .7,
-                         resid = F,
-                         iterations = 10)
+                         max = 100000,
+                         iterations = 5)
 
 # plot predictions against ground truth
 plot(unlist(methyl_reg[[4]]), unlist(methyl_reg[[6]]), 
@@ -359,6 +345,7 @@ legend("bottomright", legend = paste0('# obs = ', methyl_reg[[15]]), cex = 0.7)
 
 # age of diagnosis, regression with log transform
 methyl_reg_log <- predictAll(data = full_data_rf,
+                             group = kmeans_rf,
                              fac = F,
                              clin_only =  F,
                              clin_methyl = F,
@@ -366,7 +353,7 @@ methyl_reg_log <- predictAll(data = full_data_rf,
                              subset = c('age_diagnosis', 'age_sample_collection'),
                              selected_features = NULL,
                              cutoff = .7,
-                             resid = F,
+                             max = 100000,
                              iterations = 10)
 
 # plot predictions against ground truth
@@ -400,6 +387,7 @@ legend("bottomright", legend = paste0('# obs = ', methyl_reg_log[[15]]), cex = 0
 
 # age of diagnosis, classification, not log
 methyl_fac <- predictAll(data = full_data_rf,
+                         group = kmeans_rf,
                          fac = T,
                          clin_only =  F,
                          clin_methyl = F,
@@ -407,7 +395,7 @@ methyl_fac <- predictAll(data = full_data_rf,
                          subset = c('age_diagnosis_fac', 'age_sample_fac'),
                          selected_features = NULL,
                          cutoff = .7,
-                         resid = F,
+                         max = 100000,
                          iterations = 10)
 
 # test acc for age of diagnosis
@@ -448,6 +436,7 @@ new_mat_sample[2,2] <- sum(mat[mat_index + 3])/iterations
 
 # age of diagnosis, classification, log
 methyl_fac_log <- predictAll(data = full_data_rf,
+                             group = kmeans_rf,
                              fac = T,
                              clin_only =  F,
                              clin_methyl = F,
@@ -455,7 +444,7 @@ methyl_fac_log <- predictAll(data = full_data_rf,
                              subset = c('age_diagnosis_fac', 'age_sample_fac'),
                              selected_features = NULL,
                              cutoff = .7,
-                             resid = F,
+                             max = 100000,
                              iterations = 10)
 
 # test acc for age of diagnosis

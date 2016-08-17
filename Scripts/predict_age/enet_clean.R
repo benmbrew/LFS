@@ -176,71 +176,115 @@ predictAll <- function(data,
     train_index <- sample(nrow(data), nrow(data) *cutoff, replace = F)
     
     if(fac){
-      rf_y = make.names(as.factor(data$age_diagnosis_fac[train_index]))
+      enet_y = make.names(as.factor(data$age_diagnosis_fac[train_index]))
+      type_family <- 'multinomial'
     }else {
-      rf_y = data$age_diagnosis[train_index]
+      enet_y = data$age_diagnosis[train_index]
+      type_family <- 'gaussian'
     }
     
-    if(fac) {
-      
-      if (length(levels(rf_y)) == 2) {
-        summaryFunc <- twoClassSummary
-      } else {
-        summaryFunc <- multiClassSummary
+    # 1) Elastic Net Logistic Regression
+    elastic_net.cv_error = vector()
+    elastic_net.cv_model = list()
+    elastic_net.ALPHA <- c(1:9) / 10 # creates decimals
+    # alpha controls the relative weighting of the ridge and lasso constraints. 
+    
+    N_CV_REPEATS <- 2
+    # create error matrix for default twice and combine with rows
+    # for opitmal alpha
+    temp.cv_error_matrix <- foreach (temp = 1:N_CV_REPEATS, .combine=rbind, .errorhandling="stop") %do% {      
+      for (alpha in 1:length(elastic_net.ALPHA)) # for i in 1:9 - the model will run 9 times
+      {      
+        elastic_net.cv_model[[alpha]] = cv.glmnet(x = as.matrix(data[train_index, c(selected_features, genes)])
+                                                        , y =  enet_y
+                                                        , alpha = elastic_net.ALPHA[alpha] # first time with 0.1 and so on
+                                                        , type.measure = 'deviance'
+                                                        , family = type_family
+                                                        , standardize = FALSE 
+                                                        , nfolds = 5 # five folds
+                                                        , nlambda = 100
+                                                        , parallel = TRUE
+        )
+        elastic_net.cv_error[alpha] = min(elastic_net.cv_model[[alpha]]$cvm)
       }
-      # determines how you train the model.
-      NFOLDS <- 2
-      fitControl <- trainControl( 
-        method = "repeatedcv",  # could train on boostrap resample, here use repeated cross validation.
-        number = min(10, NFOLDS),
-        classProbs = TRUE,
-        repeats = 1,
-        allowParallel = TRUE,
-        summaryFunction = summaryFunc
-      )
-    } else {
-      NFOLDS <- 2
-      fitControl <- trainControl( 
-        method = "repeatedcv",  # could train on boostrap resample, here use repeated cross validation.
-        number = min(10, NFOLDS),      
-        repeats = 1,
-        allowParallel = TRUE
-      )
+      elastic_net.cv_error # stores 9 errors    
     }
     
-    # mtry: Number of variables randomly sampled as candidates at each split.
-    # ntree: Number of trees to grow.
+    if (N_CV_REPEATS == 1) {
+      temp.cv_error_mean = temp.cv_error_matrix
+    } else {
+      temp.cv_error_mean = apply(temp.cv_error_matrix, 2, mean) # take the mean of all the iterations  
+    }
     
-    mtry <- sqrt(ncol(data))
-    tunegrid <- expand.grid(.mtry=mtry)
+    stopifnot(length(temp.cv_error_mean) == length(elastic_net.ALPHA))
+    # get index of best alpha (lowest alpha)
+    temp.best_alpha_index = which(min(temp.cv_error_mean) == temp.cv_error_mean)[length(which(min(temp.cv_error_mean) == temp.cv_error_mean))] 
+    print(paste("Best ALPHA:", elastic_net.ALPHA[temp.best_alpha_index])) # print the value for alpha
+
+    temp.non_zero_coeff = 0
+    temp.loop_count = 0
+    while (temp.non_zero_coeff < 3) { # loop runs initially because temp.non_zero coefficient <3 and then stops 
+      # usually after one iteration because the nzero variable selected by lambda is greater that 3. if it keeps looping
+      # it they are never greater than 3, then the model does not converge. 
+      elastic_net.cv_model = cv.glmnet(
+         as.matrix(data[train_index, c(selected_features, genes)])
+        , enet_y
+        , alpha = elastic_net.ALPHA[temp.best_alpha_index]
+        , type.measure = 'deviance'
+        , family = type_family
+        , standardize=FALSE
+        , nlambda = 100
+        , nfolds = 5
+        , parallel = TRUE
+      )
+      temp.min_lambda_index = which(elastic_net.cv_model$lambda == elastic_net.cv_model$lambda.min) # get the min lambda
+      # after 100 folds of cross validation
+      temp.non_zero_coeff = elastic_net.cv_model$nzero[temp.min_lambda_index] # number of non zero coefficients at that lambda    
+      temp.loop_count = temp.loop_count + 1
+      as.numeric(Sys.time())-> t 
+      set.seed((t - floor(t)) * 1e8 -> seed) # floor is opposite of ceiling. This just sets seed
+      #print(paste0("seed: ", seed))
+      if (temp.loop_count > 5) {
+        print("diverged")
+        temp.min_lambda_index = 50 # if it loops more than 5 times, then model did not converge
+        break
+      }
+    }# while loop ends 
+    print(temp.non_zero_coeff)  
     
-    model[[i]] <- train(x = data[train_index, c(selected_features, genes)]
-                        , y = rf_y
-                        , method = "rf"
-                        , trControl = fitControl
-                        , tuneGrid = tunegrid
-                        , importance = T
-                        , verbose = FALSE)
+    model[[i]] = glmnet(x = as.matrix(data[train_index, c(selected_features, genes)])
+                              ,y =  enet_y
+                              ,alpha = elastic_net.ALPHA[temp.best_alpha_index]
+                              ,standardize=FALSE
+                              ,nlambda = 100
+                              ,family = type_family)
     
-    temp <- varImp(model[[i]])[[1]]
-    importance[[i]] <- cbind(rownames(temp), temp$Overall)
     
     if(fac){
-      test.predictions[[i]] <- predict(model[[i]] 
-                                       , newdata = data[-train_index, c(selected_features, genes)]
-                                       , type = "prob")
       
-      train.predictions[[i]] <- predict(model[[i]] 
-                                        , newdata = data[train_index, c(selected_features, genes)]
-                                        ,type = "prob")
+      # This returns 100 prediction with 1-100 lambdas
+      temp_test.predictions <- predict(model[[i]], as.matrix(data[-train_index, c(selected_features,genes)]),
+                                       type = 'response')
+      
+      test.predictions[[i]] <- temp_test.predictions[, , temp.min_lambda_index]
+      
+      temp_train.predictions <- predict(model[[i]], as.matrix(data[train_index, c(selected_features,genes)]),
+                                             type = 'response')
+      
+      train.predictions[[i]] <- temp_train.predictions[,, temp.min_lambda_index]
       
     } else {
-      test.predictions[[i]] <- predict(model[[i]] 
-                                       , newdata = data[-train_index, c(selected_features, genes)])
       
-      train.predictions[[i]] <- predict(model[[i]] 
-                                        , newdata = data[train_index, c(selected_features, genes)])
+      # This returns 100 prediction with 1-100 lambdas
+      temp_test.predictions <- predict(model[[i]], as.matrix(data[-train_index, c(selected_features,genes)]),
+                                            type = 'response')
       
+      test.predictions[[i]] <- temp_test.predictions[, temp.min_lambda_index]
+      
+      temp_train.predictions <- predict(model[[i]], as.matrix(data[train_index, c(selected_features,genes)]),
+                                             type = 'response')
+      
+      train.predictions[[i]] <- temp_train.predictions[, temp.min_lambda_index]
     }
     
     
@@ -288,6 +332,7 @@ predictAll <- function(data,
     print(i)
     
   }
+  
   
   return(list(train.mse, test.mse,  train.predictions, test.predictions, train.ground_truth, test.ground_truth, train.sample_collection,
               test.sample_collection, test_acc, test_stats, test_acc_samp, test_stats_samp, model, importance, obs))

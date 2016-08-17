@@ -1,5 +1,5 @@
 #############################################################################################################
-# This script will be a clean version of the ridge regression function predicting age of diagnosis (log and not log) from 
+# This script will be a clean version of the ridge function predicting age of diagnosis (log and not log) from 
 # methylation. The script will also be able to add in clinical variables, and just do clinical if needed. It will also have
 # an option for using residuals as predictors
 # 1) clin and methylation
@@ -176,71 +176,78 @@ predictAll <- function(data,
     train_index <- sample(nrow(data), nrow(data) *cutoff, replace = F)
     
     if(fac){
-      rf_y = make.names(as.factor(data$age_diagnosis_fac[train_index]))
+      ridge_y = make.names(as.factor(data$age_diagnosis_fac[train_index]))
+      type_family <- 'multinomial'
     }else {
-      rf_y = data$age_diagnosis[train_index]
+      ridge_y = data$age_diagnosis[train_index]
+      type_family <- 'gaussian'
     }
     
-    if(fac) {
-      
-      if (length(levels(rf_y)) == 2) {
-        summaryFunc <- twoClassSummary
-      } else {
-        summaryFunc <- multiClassSummary
+    
+    temp.non_zero_coeff = 0
+    temp.loop_count = 0
+    while (temp.non_zero_coeff < 3) { # loop runs initially because temp.non_zero coefficient <3 and then stops 
+      # usually after one iteration because the nzero variable selected by lambda is greater that 3. if it keeps looping
+      # it they are never greater than 3, then the model does not converge. 
+      elastic_net.cv_model = cv.glmnet(
+        as.matrix(data[train_index, c(selected_features, genes)])
+        , ridge_y
+        , alpha = 0
+        , type.measure = 'deviance'
+        , family = type_family
+        , standardize=FALSE
+        , nlambda = 100
+        , nfolds = 5
+        , parallel = TRUE
+      )
+      temp.min_lambda_index = which(elastic_net.cv_model$lambda == elastic_net.cv_model$lambda.min) # get the min lambda
+      # after 100 folds of cross validation
+      temp.non_zero_coeff = elastic_net.cv_model$nzero[temp.min_lambda_index] # number of non zero coefficients at that lambda    
+      temp.loop_count = temp.loop_count + 1
+      as.numeric(Sys.time())-> t 
+      set.seed((t - floor(t)) * 1e8 -> seed) # floor is opposite of ceiling. This just sets seed
+      #print(paste0("seed: ", seed))
+      if (temp.loop_count > 5) {
+        print("diverged")
+        temp.min_lambda_index = 50 # if it loops more than 5 times, then model did not converge
+        break
       }
-      # determines how you train the model.
-      NFOLDS <- 2
-      fitControl <- trainControl( 
-        method = "repeatedcv",  # could train on boostrap resample, here use repeated cross validation.
-        number = min(10, NFOLDS),
-        classProbs = TRUE,
-        repeats = 1,
-        allowParallel = TRUE,
-        summaryFunction = summaryFunc
-      )
-    } else {
-      NFOLDS <- 2
-      fitControl <- trainControl( 
-        method = "repeatedcv",  # could train on boostrap resample, here use repeated cross validation.
-        number = min(10, NFOLDS),      
-        repeats = 1,
-        allowParallel = TRUE
-      )
-    }
+    }# while loop ends 
+    print(temp.non_zero_coeff)  
     
-    # mtry: Number of variables randomly sampled as candidates at each split.
-    # ntree: Number of trees to grow.
+    model[[i]] = glmnet(x = as.matrix(data[train_index, c(selected_features, genes)])
+                        ,y =  ridge_y
+                        ,alpha = 0
+                        ,standardize=FALSE
+                        ,nlambda = 100
+                        ,family = type_family)
     
-    mtry <- sqrt(ncol(data))
-    tunegrid <- expand.grid(.mtry=mtry)
-    
-    model[[i]] <- train(x = data[train_index, c(selected_features, genes)]
-                        , y = rf_y
-                        , method = "rf"
-                        , trControl = fitControl
-                        , tuneGrid = tunegrid
-                        , importance = T
-                        , verbose = FALSE)
-    
-    temp <- varImp(model[[i]])[[1]]
-    importance[[i]] <- cbind(rownames(temp), temp$Overall)
     
     if(fac){
-      test.predictions[[i]] <- predict(model[[i]] 
-                                       , newdata = data[-train_index, c(selected_features, genes)]
-                                       , type = "prob")
       
-      train.predictions[[i]] <- predict(model[[i]] 
-                                        , newdata = data[train_index, c(selected_features, genes)]
-                                        ,type = "prob")
+      # This returns 100 prediction with 1-100 lambdas
+      temp_test.predictions <- predict(model[[i]], as.matrix(data[-train_index, c(selected_features,genes)]),
+                                       type = 'response')
+      
+      test.predictions[[i]] <- temp_test.predictions[, , temp.min_lambda_index]
+      
+      temp_train.predictions <- predict(model[[i]], as.matrix(data[train_index, c(selected_features,genes)]),
+                                        type = 'response')
+      
+      train.predictions[[i]] <- temp_train.predictions[,, temp.min_lambda_index]
       
     } else {
-      test.predictions[[i]] <- predict(model[[i]] 
-                                       , newdata = data[-train_index, c(selected_features, genes)])
       
-      train.predictions[[i]] <- predict(model[[i]] 
-                                        , newdata = data[train_index, c(selected_features, genes)])
+      # This returns 100 prediction with 1-100 lambdas
+      temp_test.predictions <- predict(model[[i]], as.matrix(data[-train_index, c(selected_features,genes)]),
+                                       type = 'response')
       
+      test.predictions[[i]] <- temp_test.predictions[, temp.min_lambda_index]
+      
+      temp_train.predictions <- predict(model[[i]], as.matrix(data[train_index, c(selected_features,genes)]),
+                                        type = 'response')
+      
+      train.predictions[[i]] <- temp_train.predictions[, temp.min_lambda_index]
     }
     
     
@@ -288,6 +295,7 @@ predictAll <- function(data,
     print(i)
     
   }
+  
   
   return(list(train.mse, test.mse,  train.predictions, test.predictions, train.ground_truth, test.ground_truth, train.sample_collection,
               test.sample_collection, test_acc, test_stats, test_acc_samp, test_stats_samp, model, importance, obs))
