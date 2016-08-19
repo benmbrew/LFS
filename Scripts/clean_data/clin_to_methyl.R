@@ -52,7 +52,7 @@ cor_mat <- cor(methyl[, -1])
 
 # find attributes that are highly correlated
 # 0.6 for methyl_cor, 0.4, methyl_cor_small and full_data_cor_small
-highly_cor <- findCorrelation(cor_mat, cutoff = 0.6, names = TRUE)
+highly_cor <- findCorrelation(cor_mat, cutoff = 0.4, names = TRUE)
 cor_index <- names(methyl) %in% highly_cor[2:length(highly_cor)]
 
 # remove highly correlated attributes
@@ -114,23 +114,28 @@ write.csv(full_data_rf, paste0(data_folder, '/full_data_rf.csv'))
 
 # #########################################################################################
 # # Using low variance selection
+# subset full data for the model 
+x_mat <- full_data[, c(6, 30:ncol(full_data))]
+x_mat <- x_mat[complete.cases(x_mat),]
+y <- as.numeric(x_mat$age_diagnosis)
+
 # #  First find the desired quantile breaks for the entire matrix
-# qt <- quantile(data.matrix(x_mat[, -1]) , 0.1 )
-# # 20%  80% 
-# #5.17 6.62 
+qt <- quantile(data.matrix(x_mat[, -1]) , 0.1 )
+# # 20%  80%
+# #5.17 6.62
 # #  Next get a logical vector of the rows that have any values outside these breaks
-# columns <- apply(x_mat[, -1] , 2, function(x) any( x < qt[1]))
+columns <- apply(x_mat[, -1] , 2, function(x) any( x < qt[1]))
 # #  Subset on this vector
-# temp <- x_mat[ ,columns]
-# 
+temp <- x_mat[ ,columns]
+#
 # # Use genefilter
-# temp <- varFilter(t(temp[, -1]))
+temp <- varFilter(t(temp[, -1]))
 
 ########################################################################################################
 # # Using PCA
 # pca <- PCA(x_mat[,-1])
-# 
-# #This line of code will sort the variables the most linked to each PC. 
+#
+# #This line of code will sort the variables the most linked to each PC.
 # # It is very useful when you have many variables.
 # temp <- dimdesc(pca)
 # temp_new <- temp$Dim.1
@@ -139,7 +144,7 @@ write.csv(full_data_rf, paste0(data_folder, '/full_data_rf.csv'))
 #########################################################################################################
 # # nearZeroVar function
 # temp <- nearZeroVar(x_mat[, -1], freqCut = 50/5, saveMetrics = TRUE)
-# 
+#
 # temp <- apply(methyl[, -1], 2, function(i) var(i))
 
 

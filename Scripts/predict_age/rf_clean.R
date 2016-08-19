@@ -45,7 +45,7 @@ full_data_rf_small <- read.csv(paste0(data_folder, '/full_data_rf_small.csv'), s
 full_data$X <- NULL
 full_data_cor$X <- NULL
 full_data_rf$X <- NULL
-full_data_cor$X <- NULL
+full_data_cor_small$X <- NULL
 full_data_rf_small$X <- NULL
 
 # Read in residuals from regressing gene on age of sample collection
@@ -58,6 +58,11 @@ clin$age_diagnosis_fac <- as.integer(ifelse(clin$age_diagnosis <= 48, 1, 2))
 
 clin$age_sample_fac <- as.integer(ifelse(clin$age_sample_collection <= 48, 1, 2))
 
+
+# make categroical variable from age of methylaion and age of sample collection
+full_data$age_diagnosis_fac <- as.integer(ifelse(full_data$age_diagnosis <= 48, 1, 2))
+
+full_data$age_sample_fac <- as.integer(ifelse(full_data$age_sample_collection <= 48, 1, 2))
 
 # make categroical variable from age of methylaion and age of sample collection
 full_data_rf$age_diagnosis_fac <- as.integer(ifelse(full_data_rf$age_diagnosis <= 48, 1, 2))
@@ -358,7 +363,7 @@ legend("bottomright", legend = paste0('# obs = ', methyl_reg[[15]]), cex = 0.7)
 
 
 # age of diagnosis, regression with log transform
-methyl_reg_log <- predictAll(data = full_data_rf,
+methyl_reg_log <- predictAll(data = full_data,
                          fac = F,
                          clin_only =  F,
                          clin_methyl = F,
@@ -399,7 +404,7 @@ legend("bottomright", legend = paste0('# obs = ', methyl_reg_log[[15]]), cex = 0
 ###################
 
 # age of diagnosis, classification, not log
-methyl_fac <- predictAll(data = full_data_rf,
+methyl_fac <- predictAll(data = full_data,
                          fac = T,
                          clin_only =  F,
                          clin_methyl = F,
