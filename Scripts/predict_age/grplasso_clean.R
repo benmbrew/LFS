@@ -119,6 +119,7 @@ predictAll <- function(data,
                        iterations) {
   
   model <- list()
+  best_features <- list()
   importance <- list()
   train.mse <- list()
   test.mse <- list()
@@ -165,19 +166,7 @@ predictAll <- function(data,
     }
   }
   
-  
-  
-  obs <- nrow(data)
-  
-  vars <- ncol(data[c(1,2, 3:ncol(data))])
-  
-  num_fixed <- abs(vars - ncol(data))
-  
-  num_extra <- length(levels(as.factor(group))) + 1
-  group <- append(rep(6, num_fixed), group)
-  
-  # set group 
-  group <- as.numeric(group)
+
   
   
   for (i in 1:iterations){
@@ -185,14 +174,98 @@ predictAll <- function(data,
     set.seed(i)
     train_index <- sample(nrow(data), nrow(data) *cutoff, replace = F)
     
-    if(fac){
+    if (fac) {
       grplasso_y = ifelse(data$age_diagnosis_fac[train_index] == 1, 1, -1)
       loss_mod <- 'logit'
       loss_pred <- 'misclass'
+      y = make.names(as.factor(data$age_diagnosis_fac[train_index]))
+      
+      control <- trainControl(method="repeatedcv", number=2, repeats=1)
+      
+      # train the model
+      best_model <- train(x = data[train_index, c(selected_features, genes)],
+                          y = y,
+                          importance = TRUE,
+                          trControl = control)
+      
+      # estimate variable best
+      best_features[[i]] <- varImp(best_model)
+      
+      # get vector of best 
+      best <- best_features[[i]]$importance
+      
+      # make rownames a column
+      best$gene <- rownames(best)
+      rownames(best) <- NULL
+      
+      # sort best vector
+      best <- best[order(best$Overall, decreasing = T),]
+      
+      # subset data by top features 
+      final <- best[best$Overall > 35,]
+      final_genes <- final$gene
+      
+      
+      
+      obs <- nrow(data)
+      
+      vars <- ncol(data[c(1,2, 3:ncol(data))])
+      
+      num_fixed <- abs(vars - ncol(data))
+      
+      num_extra <- length(levels(as.factor(group))) + 1
+      group <- append(rep(6, num_fixed), group)
+      
+      # set group 
+      group <- as.numeric(group)
+      
     }else {
+      
       grplasso_y = data$age_diagnosis[train_index]
       loss_mod <- 'ls'
       loss_pred <- 'L2'
+      
+      y = data$age_diagnosis[train_index]
+      type_family <- 'gaussian'
+      control <- trainControl(method="repeatedcv", number=2, repeats=1)
+      
+      # train the model
+      best_model <- train(x = data[train_index, c(selected_features, genes)],
+                          y = y,
+                          importance = TRUE,
+                          trControl = control)
+      
+      # estimate variable best
+      best_features[[i]] <- varImp(best_model)
+      
+      # get vector of best 
+      best <- best_features[[i]]$importance
+      
+      # make rownames a column
+      best$gene <- rownames(best)
+      rownames(best) <- NULL
+      
+      # sort best vector
+      best <- best[order(best$Overall, decreasing = T),]
+      
+      # subset data by top features 
+      final <- best[best$Overall > 35,]
+      final_genes <- final$gene
+      ######
+      ######
+      # Need to do clustering here for each feature selected.
+      
+      obs <- nrow(data)
+      
+      vars <- ncol(data[c(1,2, 3:ncol(data))])
+      
+      num_fixed <- abs(vars - ncol(data))
+      
+      num_extra <- length(levels(as.factor(group))) + 1
+      group <- append(rep(6, num_fixed), group)
+      
+      # set group 
+      group <- as.numeric(group)
     }
     
     

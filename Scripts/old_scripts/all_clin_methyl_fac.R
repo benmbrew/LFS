@@ -222,11 +222,11 @@ predictAll <- function(data,
 # Just methylation
 ##########################
 # Use Methylation
-rf_methyl_fac <- predictAll(data = full_data_cor,
+rf_methyl_fac <- predictAll(data = full_data_rf,
                         subset = c('age_diagnosis_fac', 'age_sample_fac'),
                         selected_features = NULL,
                         binary = TRUE,
-                        resid = T,
+                        resid = F,
                         iterations = 10)
 
 mean(unlist(rf_methyl_fac[[3]]))

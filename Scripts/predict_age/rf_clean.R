@@ -34,24 +34,24 @@ results_folder <- paste0(test, '/Results')
 clin <- read.csv(paste0(clin_data, '/clinical_two.csv'), stringsAsFactors = F)
 
 # Read in 3 different data sets 
-full_data <- read.csv(paste0(data_folder, '/full_data.csv'), stringsAsFactors = F)
-full_data_cor <- read.csv(paste0(data_folder, '/full_data_cor.csv'), stringsAsFactors = F)
-full_data_rf <- read.csv(paste0(data_folder, '/full_data_rf.csv'), stringsAsFactors = F)
-# Read in 2 smaller cor and rf
-full_data_cor_small <- read.csv(paste0(data_folder, '/full_data_cor_small.csv'), stringsAsFactors = F)
-full_data_rf_small <- read.csv(paste0(data_folder, '/full_data_rf_small.csv'), stringsAsFactors = F)
+full_data <- read.csv(paste0(data_folder, '/full_data_rf.csv'), stringsAsFactors = F)
+
+# make categroical variable from age of methylaion and age of sample collection
+full_data$age_diagnosis_fac <- as.integer(ifelse(full_data$age_diagnosis <= 48, 1, 2))
+
+full_data$age_sample_fac <- as.integer(ifelse(full_data$age_sample_collection <= 48, 1, 2))
 
 
 full_data$X <- NULL
-full_data_cor$X <- NULL
-full_data_rf$X <- NULL
-full_data_cor_small$X <- NULL
-full_data_rf_small$X <- NULL
 
-# Read in residuals from regressing gene on age of sample collection
-resid_rf <- read.csv(paste0(data_folder, '/resid_rf.csv'), stringsAsFactors = F)
-resid_cor <- read.csv(paste0(data_folder, '/resid_cor.csv'), stringsAsFactors = F)
-resid_full <- read.csv(paste0(data_folder, '/resid_full.csv'), stringsAsFactors = F)
+# load in residual data
+resid_full <- read.csv(paste0(data_folder, '/resid_rf.csv'), stringsAsFactors = F)
+
+# make categroical variable from age of methylaion and age of sample collection
+resid_full$age_diagnosis_fac <- as.integer(ifelse(resid_full$age_diagnosis <= 48, 1, 2))
+
+resid_full$age_sample_fac <- as.integer(ifelse(resid_full$age_sample_collection <= 48, 1, 2))
+
 
 # make categorifcal variable for clinical data
 clin$age_diagnosis_fac <- as.integer(ifelse(clin$age_diagnosis <= 48, 1, 2))
@@ -59,51 +59,8 @@ clin$age_diagnosis_fac <- as.integer(ifelse(clin$age_diagnosis <= 48, 1, 2))
 clin$age_sample_fac <- as.integer(ifelse(clin$age_sample_collection <= 48, 1, 2))
 
 
-# make categroical variable from age of methylaion and age of sample collection
-full_data$age_diagnosis_fac <- as.integer(ifelse(full_data$age_diagnosis <= 48, 1, 2))
-
-full_data$age_sample_fac <- as.integer(ifelse(full_data$age_sample_collection <= 48, 1, 2))
-
-# make categroical variable from age of methylaion and age of sample collection
-full_data_rf$age_diagnosis_fac <- as.integer(ifelse(full_data_rf$age_diagnosis <= 48, 1, 2))
-
-full_data_rf$age_sample_fac <- as.integer(ifelse(full_data_rf$age_sample_collection <= 48, 1, 2))
-
-# make categroical variable from age of methylaion and age of sample collection
-full_data_cor$age_diagnosis_fac <- as.integer(ifelse(full_data_cor$age_diagnosis <= 48, 1, 2))
-
-full_data_cor$age_sample_fac <- as.integer(ifelse(full_data_cor$age_sample_collection <= 48, 1, 2))
-
-# make categroical variable from age of methylaion and age of sample collection
-full_data_rf_small$age_diagnosis_fac <- as.integer(ifelse(full_data_rf_small$age_diagnosis <= 48, 1, 2))
-
-full_data_rf_small$age_sample_fac <- as.integer(ifelse(full_data_rf_small$age_sample_collection <= 48, 1, 2))
-
-# make categroical variable from age of methylaion and age of sample collection
-full_data_cor_small$age_diagnosis_fac <- as.integer(ifelse(full_data_rf$age_diagnosis <= 48, 1, 2))
-
-full_data_cor_small$age_sample_fac <- as.integer(ifelse(full_data_rf$age_sample_collection <= 48, 1, 2))
-
-# make categroical variable from age of methylaion and age of sample collection in residual data
-resid_rf$age_diagnosis_fac <- as.integer(ifelse(resid_rf$age_diagnosis <= 48, 1, 2))
-
-resid_rf$age_sample_fac <- as.integer(ifelse(resid_rf$age_sample_collection <= 48, 1, 2))
-
-resid_cor$age_diagnosis_fac <- as.integer(ifelse(resid_cor$age_diagnosis <= 48, 1, 2))
-
-resid_cor$age_sample_fac <- as.integer(ifelse(resid_cor$age_sample_collection <= 48, 1, 2))
-
-resid_full$age_diagnosis_fac <- as.integer(ifelse(resid_full$age_diagnosis <= 48, 1, 2))
-
-resid_full$age_sample_fac <- as.integer(ifelse(resid_full$age_sample_collection <= 48, 1, 2))
-
-
-
 # remove variable 
-resid_rf$X <- NULL
-resid_cor$X <- NULL
 resid_full$X <- NULL
-
 
 
 # Random Forest - this is training and testing on clinical data using k fold cross validation
@@ -119,6 +76,7 @@ predictAll <- function(data,
                        iterations) {
   
   model <- list()
+  best_features <- list()
   importance <- list()
   train.mse <- list()
   test.mse <- list()
@@ -181,18 +139,70 @@ predictAll <- function(data,
     train_index <- sample(nrow(data), nrow(data) *cutoff, replace = F)
     
     if(fac){
-      rf_y = make.names(as.factor(data$age_diagnosis_fac[train_index]))
+      
+      type_family <- 'multinomial'
+      y = make.names(as.factor(data$age_diagnosis_fac[train_index]))
+      
+      control <- trainControl(method="repeatedcv", number=2, repeats=1)
+      
+      # train the model
+      best_model <- train(x = data[train_index, c(selected_features, genes)],
+                          y = y,
+                          importance = TRUE,
+                          trControl = control)
+      
+      # estimate variable best
+      best_features[[i]] <- varImp(best_model)
+      
+      # get vector of best 
+      best <- best_features[[i]]$importance
+      
+      # make rownames a column
+      best$gene <- rownames(best)
+      rownames(best) <- NULL
+      
+      # sort best vector
+      best <- best[order(best$X1, decreasing = T),]
+      
+      # subset data by top features 
+      final <- best[best$X1 > 35,]
+      final_genes <- final$gene
+      
+      
     }else {
-      rf_y = data$age_diagnosis[train_index]
+      
+      type_family <- 'gaussian'
+      y = data$age_diagnosis[train_index]
+      type_family <- 'gaussian'
+      control <- trainControl(method="repeatedcv", number=2, repeats=1)
+      
+      # train the model
+      best_model <- train(x = data[train_index, c(selected_features, genes)],
+                          y = y,
+                          importance = TRUE,
+                          trControl = control)
+      
+      # estimate variable best
+      best_features[[i]] <- varImp(best_model)
+      
+      # get vector of best 
+      best <- best_features[[i]]$importance
+      
+      # make rownames a column
+      best$gene <- rownames(best)
+      rownames(best) <- NULL
+      
+      # sort best vector
+      best <- best[order(best$Overall, decreasing = T),]
+      
+      # subset data by top features 
+      final <- best[best$Overall > 35,]
+      final_genes <- final$gene
+      
     }
 
     if(fac) {
       
-      if (length(levels(rf_y)) == 2) {
-        summaryFunc <- twoClassSummary
-      } else {
-        summaryFunc <- multiClassSummary
-      }
       # determines how you train the model.
       NFOLDS <- 2
       fitControl <- trainControl( 
@@ -201,7 +211,8 @@ predictAll <- function(data,
         classProbs = TRUE,
         repeats = 1,
         allowParallel = TRUE,
-        summaryFunction = summaryFunc
+        summaryFunction = twoClassSummary
+
       )
     } else {
         NFOLDS <- 2
@@ -216,11 +227,11 @@ predictAll <- function(data,
     # mtry: Number of variables randomly sampled as candidates at each split.
     # ntree: Number of trees to grow.
   
-      mtry <- sqrt(ncol(data))
+      mtry <- sqrt(ncol(data[train_index, c(selected_features, final_genes)]))
       tunegrid <- expand.grid(.mtry=mtry)
       
-      model[[i]] <- train(x = data[train_index, c(selected_features, genes)]
-                          , y = rf_y
+      model[[i]] <- train(x = data[train_index, c(selected_features, final_genes)]
+                          , y = y
                           , method = "rf"
                           , trControl = fitControl
                           , tuneGrid = tunegrid
@@ -232,19 +243,19 @@ predictAll <- function(data,
       
       if(fac){
         test.predictions[[i]] <- predict(model[[i]] 
-                                         , newdata = data[-train_index, c(selected_features, genes)]
+                                         , newdata = data[-train_index, c(selected_features, final_genes)]
                                          , type = "prob")
         
         train.predictions[[i]] <- predict(model[[i]] 
-                                          , newdata = data[train_index, c(selected_features, genes)]
+                                          , newdata = data[train_index, c(selected_features, final_genes)]
                                           ,type = "prob")
         
       } else {
         test.predictions[[i]] <- predict(model[[i]] 
-                                         , newdata = data[-train_index, c(selected_features, genes)])
+                                         , newdata = data[-train_index, c(selected_features, final_genes)])
         
         train.predictions[[i]] <- predict(model[[i]] 
-                                          , newdata = data[train_index, c(selected_features, genes)])
+                                          , newdata = data[train_index, c(selected_features, final_genes)])
         
       }
       
@@ -324,7 +335,7 @@ predictAll <- function(data,
 ###################
 
 # age of diagnosis, regression, not log
-methyl_reg <- predictAll(data = full_data_rf,
+methyl_reg <- predictAll(data = full_data,
                          fac = F,
                          clin_only =  F,
                          clin_methyl = F,
@@ -506,7 +517,7 @@ new_mat_sample[2,2] <- sum(mat[mat_index + 3])/iterations
 #####################################################################
 
 # age of diagnosis, regression, not log
-methyl_reg_resid <- predictAll(data = resid_rf,
+methyl_reg_resid <- predictAll(data = resid_full,
                          fac = F,
                          clin_only =  F,
                          clin_methyl = F,
@@ -515,7 +526,7 @@ methyl_reg_resid <- predictAll(data = resid_rf,
                          selected_features = NULL,
                          cutoff = .7,
                          resid = T,
-                         iterations = 10)
+                         iterations = 3)
 
 # plot predictions against ground truth
 plot(unlist(methyl_reg_resid[[4]]), unlist(methyl_reg_resid[[6]]), 

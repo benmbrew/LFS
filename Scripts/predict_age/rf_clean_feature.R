@@ -31,7 +31,7 @@ clin_data <- paste0(data_folder, '/clin_data')
 results_folder <- paste0(test, '/Results')
 
 # Read in 3 different data sets 
-full_data <- read.csv(paste0(data_folder, '/full_data.csv'), stringsAsFactors = F)
+full_data <- read.csv(paste0(data_folder, '/full_data_rf.csv'), stringsAsFactors = F)
 
 
 full_data$X <- NULL
@@ -134,7 +134,6 @@ predictAll <- function(data,
                           y = y,
                           method = "svmRadial",
                           tuneLength = 9, # 9 values of the cost function
-                          preProc = c("center","scale"),
                           trControl=ctrl) 
     } else {
       
@@ -219,7 +218,7 @@ predictAll <- function(data,
 
 # age of diagnosis, regression, not log
 methyl_reg <- predictAll(data = full_data,
-                         svm = F,
+                         svm = T,
                          log = F,
                          subset = c('age_diagnosis', 'age_sample_collection'),
                          selected_features = NULL,
