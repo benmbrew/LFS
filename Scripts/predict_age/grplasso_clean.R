@@ -3,7 +3,7 @@
 # methylation. The script will also be able to add in clinical variables, and just do clinical if needed. It will also have
 # an option for using residuals as predictors
 # 1) clin and methylation
-# 2) class and regresson
+# 2) class and regressoion
 # 3) log and not log
 # 4) residual and not residual
 # 5) add in WT for clin
@@ -59,25 +59,22 @@ full_data$age_diagnosis_fac <- as.integer(ifelse(full_data$age_diagnosis <= 48, 
 full_data$age_sample_fac <- as.integer(ifelse(full_data$age_sample_collection <= 48, 1, 2))
 
 
-data = full_data
-fac = F
-clin_only =  F
-clin_methyl = F
-log = F
-subset = c('age_diagnosis_fac', 'age_sample_fac')
-selected_features = NULL
-cutoff = .7
-max = 100000
-cluster_size_hier <- 3
-
-iterations = 5
+# data = full_data
+# fac = F
+# clin_only =  F
+# clin_methyl = F
+# log = F
+# subset = c('age_diagnosis', 'age_sample_collection')
+# selected_features = NULL
+# cutoff = .7
+# max = 100000
+# cluster_size_hier <- 3
+# 
+# iterations = 5
 
 
 # Random Forest - this is training and testing on clinical data using k fold cross validation
 predictAll <- function(data,
-                       k_means,
-                       clin_only,
-                       clin_methyl,
                        fac,
                        subset, 
                        selected_features,
@@ -88,22 +85,12 @@ predictAll <- function(data,
                        cluster_size_hier,
                        iterations) {
   
-  model <- list()
-  best_features <- list()
-  importance <- list()
-  train.mse <- list()
-  test.mse <- list()
-  train.predictions <- list()
-  test.predictions <- list()
-  train.ground_truth <- list()
-  test.ground_truth <- list()
-  train.sample_collection <- list()
-  test.sample_collection <- list()
-  test_acc <- list()
-  test_stats  <- list()
-  test_acc_samp <- list()
-  test_stats_samp <- list()
-  
+  model_kmeans <- model_hier <- best_features <- importance <- train.mse_kmeans <- train.mse_hier <- 
+    test.mse_kmeans <- test.mse_hier <- train.predictions_kmeans <- train.predictions_hier <- 
+    test.predictions_kmeans <- test.predictions_hier <- train.ground_truth <- test.ground_truth <- 
+    train.sample_collection <- test.sample_collection <- test_acc_kmeans <- test_acc_hier <- test_stats_kmeans <- 
+    test_stats_hier <- test_acc_samp_kmeans <- test_acc_samp_hier <- test_stats_samp_kmeans <- test_stats_samp_hier <- 
+    list()
   
   # set log transformation
   if(log) {
@@ -111,21 +98,11 @@ predictAll <- function(data,
     data[,c(6,8, 30:(ncol(data) - 2))]  <- log(data[,c(6,8,30:(ncol(data) -2))])
   }
   
-  
-  if(clin_only) {
-    genes <- NULL
-    data <- data[, c(subset, genes)]
-    data <- data[complete.cases(data),]
-  } else if (clin_methyl) {
-    genes <- colnames(data)[30:(ncol(data) - 2)]
-    data <- data[, c(subset, genes)]
-    data <- data[complete.cases(data),]
-  } else {
-    genes <- colnames(data)[30:(ncol(data) - 2)]
-    data <- data[, c(subset, genes)]
-    data <- data[!(is.na(data$age_diagnosis)),]
-  }
-  
+ 
+  genes <- colnames(data)[30:(ncol(data) - 2)]
+  data <- data[, c(subset, genes)]
+  data <- data[!(is.na(data$age_diagnosis)),]
+
   
   for ( i in 3:ncol(data)){
     
@@ -173,65 +150,73 @@ predictAll <- function(data,
       final_genes <- final$gene
       
       # Need to do clustering here for each feature selected.
-      if(k_means) {
+
+      data_genes <- data[, final_genes]
+      
+      data_genes <- as.matrix(data_genes)
+      
+      
+      kmeans_data <- t(data_genes)
+      
+      #accumulator for cost results
+      cost_df <- data.frame()
+      
+      #run kmeans for all clusters up to 100
+      for(i in 1:cluster_size_kmeans){
         
-        data_genes <- data[, final_genes]
+        #Run kmeans for each level of i, allowing up to 100 iterations for convergence
+        kmeans<- kmeans(kmeans_data, centers=cluster_size_kmeans, iter.max=100)
         
-        data_genes <- as.matrix(data_genes)
+        #Combine cluster number and cost together, write to df
+        cost_df<- rbind(cost_df, cbind(i, kmeans$tot.withinss))
         
-        
-        kmeans_data <- t(data_genes)
-        
-        #accumulator for cost results
-        cost_df <- data.frame()
-        
-        #run kmeans for all clusters up to 100
-        for(i in 1:cluster_size_kmeans){
-          
-          #Run kmeans for each level of i, allowing up to 100 iterations for convergence
-          kmeans<- kmeans(kmeans_data, centers=cluster_size_kmeans, iter.max=100)
-          
-          #Combine cluster number and cost together, write to df
-          cost_df<- rbind(cost_df, cbind(i, kmeans$tot.withinss))
-          
-          print(i)
-        }
-        
-        names(cost_df) <- c("cluster", "cost")
-        plot(cost_df$cluster, cost_df$cost,
-             bty = 'n', xlab = 'Clusters', ylab = 'Cost')
-        
-        kmeans_labels <- cbind(kmeans$cluster)
-        summary(as.factor(kmeans_labels))
-        group <- kmeans_labels
-        
-        model[[i]] = cv.gglasso(x = as.matrix(data[train_index, c(selected_features, final_genes)]), 
-                                y = y, 
-                                group=group, 
-                                loss= loss_mod,
-                                pred.loss= loss_pred, 
-                                lambda.factor=0.05, 
-                                nfolds=5, 
-                                maxit = max)
-        
-      } else {
-        
-        # Calculate the correlation between genes
-        # The cor function takes correlations between columns
-        correlation <- cor(data_genes)
-        
-        # Convert the correlation to a distance object
-        distance <- as.dist(1 - correlation)
-        
-        # #use clValid or silhouetee to choose optimal clustering
-        # The main function is clValid(), and the
-        # available validation measures fall into the three general categories of “internal”, “stability”,
-        hclustFit <- hclust(distance, method="average")
-        labels <- cutree(hclustFit, k=cluster_size_hier)
-        hier_labels <- cbind(labels)
-        group <- hier_labels
+        print(i)
       }
       
+      names(cost_df) <- c("cluster", "cost")
+      plot(cost_df$cluster, cost_df$cost,
+           bty = 'n', xlab = 'Clusters', ylab = 'Cost')
+      
+      kmeans_labels <- cbind(kmeans$cluster)
+      summary(as.factor(kmeans_labels))
+      group <- kmeans_labels
+      
+      model_kmeans[[i]] = cv.gglasso(x = as.matrix(data[train_index, c(selected_features, final_genes)]), 
+                              y = y, 
+                              group=group, 
+                              loss= loss_mod,
+                              pred.loss= loss_pred, 
+                              lambda.factor=0.05, 
+                              nfolds=5, 
+                              maxit = max)
+      
+
+      # Calculate the correlation between genes
+      # The cor function takes correlations between columns
+      correlation <- cor(data_genes)
+      
+      # Convert the correlation to a distance object
+      distance <- as.dist(1 - correlation)
+      
+      # #use clValid or silhouetee to choose optimal clustering
+      # The main function is clValid(), and the
+      # available validation measures fall into the three general categories of “internal”, “stability”,
+      hclustFit <- hclust(distance, method="average")
+      labels <- cutree(hclustFit, k=cluster_size_hier)
+      hier_labels <- cbind(labels)
+      group <- hier_labels
+      
+      model_hier[[i]] = cv.gglasso(x = as.matrix(data[train_index, c(selected_features, final_genes)]), 
+                              y = y, 
+                              group=group, 
+                              loss= loss_mod,
+                              pred.loss= loss_pred, 
+                              lambda.factor=0.05, 
+                              nfolds=5, 
+                              maxit = max)
+      
+      
+        
       
       } else {
       
@@ -266,92 +251,120 @@ predictAll <- function(data,
       final_genes <- final$gene
       ######
       # Need to do clustering here for each feature selected.
-      if(k_means) {
-        
-        data_genes <- data[, final_genes]
-        
-        data_genes <- as.matrix(data_genes)
-        
-        
-        kmeans_data <- t(data_genes)
-        
-        #accumulator for cost results
-        cost_df <- data.frame()
-        
-        #run kmeans for all clusters up to 100
-        for(i in 1:cluster_size_kmeans){
-          
-          #Run kmeans for each level of i, allowing up to 100 iterations for convergence
-          kmeans<- kmeans(kmeans_data, centers=cluster_size_kmeans, iter.max=100)
-          
-          #Combine cluster number and cost together, write to df
-          cost_df<- rbind(cost_df, cbind(i, kmeans$tot.withinss))
-          
-          print(i)
-        }
-        
-        names(cost_df) <- c("cluster", "cost")
-        plot(cost_df$cluster, cost_df$cost,
-             bty = 'n', xlab = 'Clusters', ylab = 'Cost')
-        
-        kmeans_labels <- cbind(kmeans$cluster)
-        summary(as.factor(kmeans_labels))
-        group <- kmeans_labels
-        
-        model[[i]] = cv.gglasso(x = as.matrix(data[train_index, c(selected_features, final_genes)]), 
-                                y = y, 
-                                group=group, 
-                                loss= loss_mod,
-                                pred.loss= loss_pred, 
-                                lambda.factor=0.05, 
-                                nfolds=5, 
-                                maxit = max)
+
+      data_genes <- data[, final_genes]
       
-        } else {
+      data_genes <- as.matrix(data_genes)
+      
+      
+      kmeans_data <- t(data_genes)
+      
+      #accumulator for cost results
+      cost_df <- data.frame()
+      
+      #run kmeans for all clusters up to 100
+      for(i in 1:cluster_size_kmeans){
         
-        # Calculate the correlation between genes
-        # The cor function takes correlations between columns
-        correlation <- cor(data_genes)
+        #Run kmeans for each level of i, allowing up to 100 iterations for convergence
+        kmeans<- kmeans(kmeans_data, centers=cluster_size_kmeans, iter.max=100)
         
-        # Convert the correlation to a distance object
-        distance <- as.dist(1 - correlation)
+        #Combine cluster number and cost together, write to df
+        cost_df<- rbind(cost_df, cbind(i, kmeans$tot.withinss))
         
-        # #use clValid or silhouetee to choose optimal clustering
-        # The main function is clValid(), and the
-        # available validation measures fall into the three general categories of “internal”, “stability”,
-        hclustFit <- hclust(distance, method="average")
-        labels <- cutree(hclustFit, k=cluster_size_hier)
-        hier_labels <- cbind(labels)
-        
+        print(i)
       }
       
+      names(cost_df) <- c("cluster", "cost")
+      plot(cost_df$cluster, cost_df$cost,
+           bty = 'n', xlab = 'Clusters', ylab = 'Cost')
+      
+      kmeans_labels <- cbind(kmeans$cluster)
+      summary(as.factor(kmeans_labels))
+      group <- kmeans_labels
+      
+      model_kmeans[[i]] = cv.gglasso(x = as.matrix(data[train_index, c(selected_features, final_genes)]), 
+                              y = y, 
+                              group=group, 
+                              loss= loss_mod,
+                              pred.loss= loss_pred, 
+                              lambda.factor=0.05, 
+                              nfolds=5, 
+                              maxit = max)
+    
+
+      # Calculate the correlation between genes
+      # The cor function takes correlations between columns
+      correlation <- cor(data_genes)
+      
+      # Convert the correlation to a distance object
+      distance <- as.dist(1 - correlation)
+      
+      # #use clValid or silhouetee to choose optimal clustering
+      # The main function is clValid(), and the
+      # available validation measures fall into the three general categories of “internal”, “stability”,
+      hclustFit <- hclust(distance, method="average")
+      labels <- cutree(hclustFit, k=cluster_size_hier)
+      hier_labels <- cbind(labels)
+      group <- hier_labels
+      
+      model_hier[[i]] = cv.gglasso(x = as.matrix(data[train_index, c(selected_features, final_genes)]), 
+                              y = y, 
+                              group=group, 
+                              loss= loss_mod,
+                              pred.loss= loss_pred, 
+                              lambda.factor=0.05, 
+                              nfolds=5, 
+                              maxit = max)
+      
     }
+      
     
     
 
-    Wif(fac){
+    if(fac){
       
-      test.predictions[[i]] <- predict(model[[i]] 
+      test.predictions_kmeans[[i]] <- predict(model_kmeans[[i]] 
                                        , newx = data[-train_index, c(selected_features, final_genes)]
-                                       , s = model[[i]]$lambda.min
+                                       , s = model_kmeans[[i]]$lambda.min
                                        , type = 'class')
       
-      train.predictions[[i]] <- predict(model[[i]] 
+      test.predictions_hier[[i]] <- predict(model_hier[[i]] 
+                                       , newx = data[-train_index, c(selected_features, final_genes)]
+                                       , s = model_hier[[i]]$lambda.min
+                                       , type = 'class')
+      
+      train.predictions_kmeans[[i]] <- predict(model_kmeans[[i]] 
                                         , newx = data[train_index, c(selected_features, final_genes)]
-                                        , s = model[[i]]$lambda.min
+                                        , s = model_kmeans[[i]]$lambda.min
                                         , type = 'link')
+      
+      train.predictions_hier[[i]] <- predict(model_hier[[i]] 
+                                               , newx = data[train_index, c(selected_features, final_genes)]
+                                               , s = model_hier[[i]]$lambda.min
+                                               , type = 'link')
       
     } else {
       
-      test.predictions[[i]] <- predict(model[[i]] 
+      test.predictions_kmeans[[i]] <- predict(model_kmeans[[i]] 
                                        , newx = data[-train_index, c(selected_features, final_genes)]
-                                       , s = model[[i]]$lambda.min
+                                       , s = model_kmeans[[i]]$lambda.min
                                        , type = 'link')
       
-      train.predictions[[i]] <- predict(model[[i]] 
+      test.predictions_hier[[i]] <- predict(model_hier[[i]] 
+                                              , newx = data[-train_index, c(selected_features, final_genes)]
+                                              , s = model_hier[[i]]$lambda.min
+                                              , type = 'link')
+      
+      
+      train.predictions_kmeans[[i]] <- predict(model_kmeans[[i]] 
                                         , newx = data[train_index, c(selected_features, final_genes)]
-                                        , s = model[[i]]$lambda.min
+                                        , s = model_kmeans[[i]]$lambda.min
                                         , type = 'link')
+      
+      train.predictions_hier[[i]] <- predict(model_hier[[i]] 
+                                               , newx = data[train_index, c(selected_features, final_genes)]
+                                               , s = model_hier[[i]]$lambda.min
+                                               , type = 'link')
       
     }
     
@@ -366,21 +379,31 @@ predictAll <- function(data,
       
       # For age of diagnosis
       # Accuracy
-      test_acc[[i]] <- sum(test.predictions[[i]] == test.ground_truth[[i]]) / length(test.predictions[[i]])
+      test_acc_kmeans[[i]] <- sum(test.predictions_kmeans[[i]] == test.ground_truth[[i]]) / length(test.predictions_kmeans[[i]])
+      test_acc_hier[[i]] <- sum(test.predictions_hier[[i]] == test.ground_truth[[i]]) / length(test.predictions_hier[[i]])
+      
       # Confustion Matrix
-      test_stats[[i]] <- confusionMatrix(test.predictions[[i]], test.ground_truth[[i]])
+      test_stats_kmeans[[i]] <- confusionMatrix(test.predictions_kmeans[[i]], test.ground_truth[[i]])
+      test_stats_hier[[i]] <- confusionMatrix(test.predictions_hier[[i]], test.ground_truth[[i]])
+      
       # print(rf.test_stats)
       missing_ind <- !is.na(unlist(test.sample_collection[[i]]))
       test.sample_collection[[i]] <- unlist(test.sample_collection[[i]])[missing_ind]
-      test.predictions[[i]] <- test.predictions[[i]][missing_ind,]
+      test.predictions_kmeans[[i]] <- test.predictions_kmeans[[i]][missing_ind,]
+      test.predictions_hier[[i]] <- test.predictions_hier[[i]][missing_ind,]
+      
       # for age of collection
       # subset test.predictions by missing index in age.sample_collection, and remove the NAs in age.sample collection
       
       # Accuracy
-      test_acc_samp[[i]] <-  sum(test.predictions[[i]] == test.sample_collection[[i]]) / length(test.predictions[[i]])
+      test_acc_samp_kmeans[[i]] <-  sum(test.predictions_kmeans[[i]] == test.sample_collection[[i]]) / length(test.predictions_kmeans[[i]])
+      test_acc_samp_hier[[i]] <-  sum(test.predictions_hier[[i]] == test.sample_collection[[i]]) / length(test.predictions_hier[[i]])
+      
       # Confustion Matrix
       # subset to remove NAs
-      test_stats_samp[[i]] <- confusionMatrix(test.predictions[[i]], test.sample_collection[[i]])
+      test_stats_samp_kmeans[[i]] <- confusionMatrix(test.predictions_kmeans[[i]], test.sample_collection[[i]])
+      test_stats_samp_hier[[i]] <- confusionMatrix(test.predictions_hier[[i]], test.sample_collection[[i]])
+      
       # print(rf.test_stats)
     } else {
       
@@ -388,8 +411,10 @@ predictAll <- function(data,
       test.ground_truth[[i]] <- data$age_diagnosis[-train_index]
       train.sample_collection[[i]] = data$age_sample_collection[train_index]
       test.sample_collection[[i]] = data$age_sample_collection[-train_index]
-      train.mse[[i]] <- rmse(unlist(train.predictions[[i]]), unlist(train.ground_truth[[i]]))
-      test.mse[[i]] <- rmse(unlist(test.predictions[[i]]), unlist(test.ground_truth[[i]]))
+      train.mse_kmeans[[i]] <- rmse(unlist(train.predictions_kmeans[[i]]), unlist(train.ground_truth[[i]]))
+      test.mse_kmeans[[i]] <- rmse(unlist(test.predictions_kmeans[[i]]), unlist(test.ground_truth[[i]]))
+      train.mse_hier[[i]] <- rmse(unlist(train.predictions_hier[[i]]), unlist(train.ground_truth[[i]]))
+      test.mse_hier[[i]] <- rmse(unlist(test.predictions_hier[[i]]), unlist(test.ground_truth[[i]]))
       
     }
     
@@ -398,26 +423,38 @@ predictAll <- function(data,
     
   }
   
-  return(list(train.mse, test.mse,  train.predictions, test.predictions, train.ground_truth, test.ground_truth, train.sample_collection,
-              test.sample_collection, test_acc, test_stats, test_acc_samp, test_stats_samp, model, importance, obs))
+  return(list(train.mse_kmeans, train.mse_hier, test.mse_kmeans, test.mse_hier, train.predictions_kmeans, 
+              train.predictions_hier, test.predictions_kmeans, test.predictions_hier, train.ground_truth, 
+              test.ground_truth, train.sample_collection, test.sample_collection, test_acc_kmeans, test_acc_hier, 
+              test_stats_kmeans, test_stats_hier, test_acc_samp_kmeans, test_acc_samp_hier,  test_stats_samp_kmeans, 
+              test_stats_samp_hier, model_kmeans, model_hier, importance, obs))
   
 }
 
-# 1 - train.mse
-# 2 - test.mse
-# 3 - train.predictions
-# 4 - test.predictions
-# 5 - train.ground_truth
-# 6 - test.ground_truth
-# 7 - train.sample_collection
-# 8 - test.sample_collection
-# 9 - test_acc
-# 10 - test_stats
-# 11 - test_acc_samp
-# 12 - test_stats_samp
-# 13 - model
-# 14 - importance
-# 15 - obs
+# 1 - train.mse_kmeans
+# 2 - train.mse_hier
+# 3 - test.mse_kmeans
+# 4 - test.mse_hier
+# 5 - train.predictions_kmeans
+# 6 - train.predictions_hier
+# 7 - test.predictions_kmeans
+# 8 - test.predictions_hier
+# 9 - train.ground_truth
+# 10 - test.ground_truth
+# 11 - train.sample_collection
+# 12 - test.sample_collection
+# 13 - test_acc_kmeans
+# 14 - test_acc_hier
+# 15 - test_stats_kmeans
+# 16 - test_stats_hier
+# 17 - test_acc_samp_kmeans
+# 18 - test_acc_samp_hier
+# 19 - test_stats_samp_kmeans
+# 20 - test_stats_samp_hier
+# 21 - model_kmeans
+# 22 - model_hier
+# 23 - importance
+# 24 - obs
 
 #######################################################################################
 # Methylation
@@ -427,12 +464,9 @@ predictAll <- function(data,
 # Regression
 ###################
 
-# age of diagnosis, regression, not log
-methyl_reg <- predictAll(data = full_data,
-                         k_means = F,
+# age of diagnosis, regression, not log, kmeans
+methyl_reg_kmeans <- predictAll(data = full_data,
                          fac = F,
-                         clin_only =  F,
-                         clin_methyl = F,
                          log = F,
                          subset = c('age_diagnosis', 'age_sample_collection'),
                          selected_features = NULL,
@@ -443,20 +477,21 @@ methyl_reg <- predictAll(data = full_data,
                          iterations = 5)
 
 # plot predictions against ground truth
-plot(unlist(methyl_reg[[4]]), unlist(methyl_reg[[6]]), 
+plot(unlist(methyl_reg_kmeans[[4]]), unlist(methyl_reg_kmeans[[6]]), 
      xlim = c(0, 1000),
      ylim = c(0, 1000),
      xlab = 'Predictions',
      ylab = 'Real Age of Diagnosis',
      main = 'Age of Diagnosis (Months)')
 abline(0,1)
-r_squared <- round(summary(lm(unlist(methyl_reg[[4]]) ~ unlist(methyl_reg[[6]])))$adj.r.squared, 2)
-legend("topleft", legend = paste0('r_squared = ', r_squared), cex = 0.7)
-legend("bottomright", legend = paste0('# obs = ', methyl_reg[[15]]), cex = 0.7)
+corr <- cor(unlist(methyl_reg_kmeans[[4]]), unlist(methyl_reg_kmeans[[6]]))
+r_squared <- round(summary(lm(unlist(methyl_reg_kmeans[[4]]) ~ unlist(methyl_reg_kmeans[[6]])))$adj.r.squared, 2)
+legend("topleft", legend = paste0('r_squared = ', corr), cex = 0.7)
+legend("bottomright", legend = paste0('# obs = ', methyl_reg_kmeans[[15]]), cex = 0.7)
 
 
 # plot predictions against ground truth
-plot(unlist(methyl_reg[[4]]), unlist(methyl_reg[[8]]), 
+plot(unlist(methyl_reg_kmeans[[4]]), unlist(methyl_reg_kmeas[[8]]), 
      xlim = c(0, 1000),
      ylim = c(0, 1000),
      xlab = 'Predictions',
