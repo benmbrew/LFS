@@ -3,6 +3,7 @@
 library(bumphunter)
 library(dplyr)
 library(FDb.InfiniumMethylation.hg19)
+library(impute)
 
 
 # Initialize folders
@@ -16,17 +17,19 @@ results_folder <- paste0(test, '/Results')
 
 data_name <- '/Chr'
 
-results_file <- "file.txt"
-constructPath <- function(intermediate_folders, parent=results_folder,
-                          file=results_file) {
-  paste(parent, intermediate_folders, file, sep="/")
-}
-
-incomplete_file <- constructPath("Incomplete")
-imputed_file <- constructPath("Imputed")
-jvmGBLimit <- 8
+# results_file <- "file.txt"
+# constructPath <- function(intermediate_folders, parent=results_folder,
+#                           file=results_file) {
+#   paste(parent, intermediate_folders, file, sep="/")
+# }
+# 
+# incomplete_file <- constructPath("Incomplete")
+# imputed_file <- constructPath("Imputed")
+# jvmGBLimit <- 8
 
 source(paste0(project_folder, '/Code/Functions/lsaImputation.R'))
+source(paste0(project_folder, '/Code/Functions/knnImputation.R'))
+
 
 
 # read in raw methylation
@@ -82,25 +85,28 @@ cleanProbe <- function(data){
 }
 
 methylation_new <- cleanProbe(methylation)[[1]]
+index <- cleanProbe(methylation)[[2]]
+chr <- chr[index]
+chr <- chr[-1]
+
 
 methylation_new <- methylation_new[!duplicated(methylation_new$id),]
 rownames(methylation_new) <- methylation_new$id
+methylation_new$id <- NULL
 
-#impute on methyl
-methylation_new <- lsaImputation(incomplete_data = methylation_new, sample_rows = TRUE)
+#impute on methyl lsa
+# methylation_new <- lsaImputation(incomplete_data = methylation_new, sample_rows = TRUE)
+
+# impute on methyl with knn 
+methylation_new <- knnImputation(methylation_new, sample_rows = TRUE)
+
 
 # join rownames and methyl_impute and then erase rownames
 methylation_new <- cbind(id = rownames(methylation_new), methylation_new)
-rownames(methyl_impute_raw) <- NULL
+rownames(methylation_new) <- NULL
 
-temp <- as.data.frame(t(methylation_new), stringsAsFactors = FALSE)
-col_names <- temp[1,]
-colnames(temp) <- temp[1,]
-temp <- temp[,-1]
-index <- cleanProbe(methylation)[[2]]
-
-chr <- chr[index]
-chr <- chr[-1]
+# make methylation a data frame 
+methylation_new <- as.data.frame(methylation_new)
 
 #######################################################
 # Transpose methylation and merge with clinical ID 
@@ -118,30 +124,32 @@ clin$id <- as.factor(clin$blood_dna_malkin_lab_)
 # merge clin and methylation
 full_data <- inner_join(methylation_new, clin, by = 'id')
 
-
 # get mut/wt vector
 full_data <- full_data[!is.na(full_data$p53_germline),]
 full_data$p53_germline <- factor(full_data$p53_germline, levels = c('WT', 'Mut'))
+
+
 data <- as.data.frame(t(full_data), stringsAsFactors = F)
 colnames(data) <- data[1,]
 data <- data[-1,]
 x <- cbind(rep(1, nrow(full_data)), full_data[212355])
+x$p53_germline <- as.numeric(x$p53_germline)
+x <- as.matrix(x)
 pos <- seq(1, length(chr)*100, by = 10)[1:length(chr)]
+pos <- as.matrix(pos)
+
+betas <- data[1:length(chr),]
+
+betas <- apply(betas, 2, as.numeric)
 
 # save data 
 DELTA_BETA_THRESH = 0.10 # DNAm difference threshold
 NUM_BOOTSTRAPS = 3     # number of randomizations
 
-# make data numeric
-for(i in 1:ncol(data)) {
-  data[, i] <- as.numeric(data[, i])
-  print(i)
-}
-
 # save.image(file = '/home/benbrew/Desktop/bumpdata.RData')
 # load(file = '/home/benbrew/Desktop/bumpdata.RData')
 # y = probes, x = cases and controls, chr = chromosome, pos = genomic locations , cl = cluster
-tab <- bumphunter(as.matrix(data[1:length(chr),]), 
+tab <- bumphunter(as.matrix(betas), 
                   x, 
                   chr = chr, 
                   pos = pos,
