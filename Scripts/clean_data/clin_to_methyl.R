@@ -148,5 +148,33 @@ temp <- varFilter(t(temp[, -1]))
 # temp <- apply(methyl[, -1], 2, function(i) var(i))
 
 
+#########################################################################
+# subset to just three columns- id, methlation_indicator, age_sample_collection, p53_germline, cancer_diagnosis
+dat <- clin[, c('p53_germline', 'cancer_diagnosis_diagnoses', 'age_sample_collection', 'blood_dna_malkin_lab_',
+                'methyl_indicator')]
 
+range <- 12
+samples <- list()
+for ( i in 1:nrow(dat)) {
+  
+  if(dat$methyl_indicator[i] == 'Yes'){
+    
+    temp <- dat$age_sample_collection[i]
+    
+
+    samples[[i]] <- dat[(dat$age_sample_collection > temp & dat$age_sample_collection < (temp + range)) |
+                  (dat$age_sample_collection < temp & dat$age_sample_collection > (temp - range)),] 
+  }
+
+}
+
+
+samples <- do.call('rbind', samples)
+samples <- samples[!duplicated(samples$blood_dna_malkin_lab_),]
+
+# subset to mutant, unaffected, no methyl 
+ids <- samples[samples$cancer_diagnosis_diagnoses == 'Unaffected' & samples$p53_germline == 'Mut' & 
+                 samples$methyl_indicator == 'No',]
+
+ids <- ids[complete.cases(ids),]
 

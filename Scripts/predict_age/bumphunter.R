@@ -1,8 +1,10 @@
 #######################################################################################
 # This script will run bumphunter on methylation probes 
+library(minfi)
 library(bumphunter)
 library(dplyr)
 library(FDb.InfiniumMethylation.hg19)
+library(IlluminaHumanMethylation450kanno.ilmn12.hg19)
 library(impute)
 
 
@@ -31,12 +33,13 @@ source(paste0(project_folder, '/Code/Functions/lsaImputation.R'))
 source(paste0(project_folder, '/Code/Functions/knnImputation.R'))
 
 
+################################################################
+# read in and clean raw methylation. 
+################################################################
 
-# read in raw methylation
-# Read in raw mehtylation data
+# set empy vectors to fill with methylation
 num_sets <- 23 
 methylation_raw <-  vector('list', num_sets)
-chrome_vector <- vector('list', num_sets)
 
 # read in raw methylation files. 
 for(i in (1:num_sets)){
@@ -50,56 +53,45 @@ for(i in (1:num_sets)){
   if(i > 1){
     methylation_raw[[i]] <- methylation_raw[[i]][, -1]
   }
-  chrome_vector[[i]] <- rep(paste0(data_name, i), ncol(methylation_raw[[i]]))
   print(i)
 }
 
+# concatenate methylation_raw
 methylation <- do.call('cbind', methylation_raw)
-# methylation <- as.data.frame(t(methylation), stringsAsFactors = FALSE)
-# methylation <- cbind(x = rownames(methylation), methylation)
-# colnames(methylation) <- methylation[1,]
-# methylation <- methylation[-1,]
-# names(methylation)[1] <- 'Probe'
-# rownames(methylation) <- NULL  
 
+# make id column for join later
 names(methylation)[1] <- 'id'
 
-temp <- unlist(chrome_vector)
-temp.1 <- strsplit(temp, '/')
-temp.2 <- lapply(temp.1, function(x) x[length(x)])
-chr <- do.call('rbind', temp.2)
-chr <- chr[-1]
 
-
+# clean probe names 
 cleanProbe <- function(data){
   
   col_names <- colnames(data)
-  clean_index <- !grepl('ch|_|X', col_names)
   data <- data[,!grepl('ch|_|X', colnames(data))]
   data$id <- gsub('-', '_', data$id)
   rownames(data) <- NULL
   
   
-  return(list(data, clean_index))
+  return(data)
   
 }
 
-methylation_new <- cleanProbe(methylation)[[1]]
-index <- cleanProbe(methylation)[[2]]
-chr <- chr[index]
-chr <- chr[-1]
+# apply function and get new methylation. also return index for removed methylation
+methylation_new <- cleanProbe(methylation)
 
+###################################################################
+# impute on methylation_new
+###################################################################
 
+# remove duplicated ids to put in rownames of methylation
 methylation_new <- methylation_new[!duplicated(methylation_new$id),]
 rownames(methylation_new) <- methylation_new$id
 methylation_new$id <- NULL
 
 #impute on methyl lsa
 # methylation_new <- lsaImputation(incomplete_data = methylation_new, sample_rows = TRUE)
-
 # impute on methyl with knn 
 methylation_new <- knnImputation(methylation_new, sample_rows = TRUE)
-
 
 # join rownames and methyl_impute and then erase rownames
 methylation_new <- cbind(id = rownames(methylation_new), methylation_new)
@@ -108,49 +100,91 @@ rownames(methylation_new) <- NULL
 # make methylation a data frame 
 methylation_new <- as.data.frame(methylation_new)
 
-#######################################################
-# Transpose methylation and merge with clinical ID 
-# Read in data (clinical or clinical_two)
+###################################################################
+# read in clinical data and merge with methylation_new
+###################################################################
+
+# read in clinical
 clin <- read.csv(paste0(clin_data, '/clinical_two.csv'), stringsAsFactors = TRUE)
 
+# standardize ids
 methylation_new <- methylation_new[!grepl('A|B|_', methylation_new$id),]
+clin$id <- clin$blood_dna_malkin_lab_
+clin <- clin[!grepl('A|B|_', clin$blood_dna_malkin_lab_),]
 
-methylation_new$id <- as.factor(methylation_new$id)
-
-
-
-clin$id <- as.factor(clin$blood_dna_malkin_lab_)
-
-# merge clin and methylation
+# inner join methylation and clinical
 full_data <- inner_join(methylation_new, clin, by = 'id')
 
 # get mut/wt vector
 full_data <- full_data[!is.na(full_data$p53_germline),]
 full_data$p53_germline <- factor(full_data$p53_germline, levels = c('WT', 'Mut'))
 
+# save.image('/home/benbrew/Desktop/full_data.RData')
+# load('/home/benbrew/Desktop/full_data.RData')
 
-data <- as.data.frame(t(full_data), stringsAsFactors = F)
-colnames(data) <- data[1,]
-data <- data[-1,]
-x <- cbind(rep(1, nrow(full_data)), full_data[212355])
-x$p53_germline <- as.numeric(x$p53_germline)
-x <- as.matrix(x)
-pos <- seq(1, length(chr)*100, by = 10)[1:length(chr)]
-pos <- as.matrix(pos)
+# get p53 and put into design matrix with intercept 1
+p53_vecotr <- full_data$p53_germline
+designMatrix <- cbind(rep(1, nrow(full_data)), p53_vecotr)
+designMatrix <- as.matrix(designMatrix)
 
-betas <- data[1:length(chr),]
+##########################################################
+# Get genetic locations
+##########################################################
 
-betas <- apply(betas, 2, as.numeric)
+# transpose methylation to join with cg_locations to get genetic location vector.
+full_data <- as.data.frame(t(full_data), stringsAsFactors = F)
 
-# save data 
+# make ids column names and remove first row
+colnames(full_data) <- full_data[1,]
+full_data <- full_data[-1,]
+
+# make probe a column in methyl
+full_data$probe <- rownames(full_data)
+rownames(full_data) <- NULL
+
+# remove clinical rows at bottom of data set
+full_data <- full_data[1:212350,]
+
+# read in cg_locations
+cg_locations <- read.csv(paste0(data_folder, '/cg_locations.csv'))
+
+# rename X column as probe for merge
+names(cg_locations)[1] <- 'probe'
+# inner join methyl and cg_locations by probe
+methyl_cg <- inner_join(cg_locations, full_data, by = 'probe')
+
+# get chr and pos vector 
+chr <- methyl_cg$seqnames
+pos <- methyl_cg$start
+
+# create beta matrix
+rownames(methyl_cg) <- methyl_cg$probe
+beta <- methyl_cg[, 7:ncol(methyl_cg)]
+
+# make beta numeric 
+for (i in 1:ncol(beta)) {
+  beta[,i] <- as.numeric(beta[, i])
+  print(i)
+} 
+
+beta <- as.matrix(beta)
+
+
+#########################################################################
+# Run bumphunter
+#########################################################################
+
+# check dimensions 
+stopifnot(dim(beta)[2] == dim(designMatrix)[1])
+stopifnot(dim(beta)[1] == length(chr))
+stopifnot(dim(beta)[1] == length(pos))
+
+# set paramenters 
 DELTA_BETA_THRESH = 0.10 # DNAm difference threshold
 NUM_BOOTSTRAPS = 3     # number of randomizations
 
-# save.image(file = '/home/benbrew/Desktop/bumpdata.RData')
-# load(file = '/home/benbrew/Desktop/bumpdata.RData')
-# y = probes, x = cases and controls, chr = chromosome, pos = genomic locations , cl = cluster
-tab <- bumphunter(as.matrix(betas), 
-                  x, 
+tab <- bumphunter(beta, 
+                  designMatrix, 
                   chr = chr, 
                   pos = pos,
                   nullMethod = "bootstrap",
@@ -158,65 +192,5 @@ tab <- bumphunter(as.matrix(betas),
                   B = NUM_BOOTSTRAPS,
                   type = "Beta")
 
+tab$table
 
-# Yes, I’m using the R bumphunter package for DMRs and minfi package for general data processing. 
-# Once you load the IDAT data into an object of the minfi's GenomicRatioSet class (called e.g. grSet) , 
-# the main lines that do the bump analysis would look something like this: 
-
-# ANDREI's example
-DELTA_BETA_THRESH = 0.10 # DNAm difference threshold
-NUM_BOOTSTRAPS = 100     # number of randomizations
-
-betaMatrix <- getBeta(grSet)
-annotation <- getAnnotation(grSet)
-designMatrix <-  model.matrix(~ Sample_Group + Age + Gender, data=pData(grSet))
-
-dmrs <- bumphunter(
-  betaMatrix,
-  design = designMatrix, 
-  chr = annotation$chr, 
-  pos = annotation$pos,
-  nullMethod = "bootstrap",
-  cutoff = DELTA_BETA_THRESH,
-  B = NUM_BOOTSTRAPS,
-  type = "Beta"
-)
-
-
-head(dmrs$table)
-
-# Then just examine the results in the dmrs$table, post-process and filter them as you wish, etc.
-# Let me know if this look clear.
-
-# Example: We first generate an example of typical genomic locations
-
-pos <- list(pos1=seq(1,1000,35),
-            pos2=seq(2001,3000,35),
-            pos3=seq(1,1000,50))
-chr <- rep(paste0("chr",c(1,1,2)), times = sapply(pos,length))
-pos <- unlist(pos, use.names=FALSE)
-
-cl <- clusterMaker(chr, pos, maxGap = 300)
-table(cl)
-
-Indexes <- split(seq_along(cl), cl)
-beta1 <- rep(0, length(pos))
-for(i in seq(along=Indexes)){
-  ind <- Indexes[[i]]
-  x <- pos[ind]
-  z <- scale(x, median(x), max(x)/12)
-  beta1[ind] <- i*(-1)^(i+1)*pmax(1-abs(z)^3,0)^3 ##multiply by i to vary size
-}
-
-# Bumphunter is a more complicated function. In addition to regionFinder and clusterMaker
-# it also implements a statistical model as well as permutation testing to assess uncertainty.
-# We start by creating a simulated data set of 10 cases and 10 controls (recall that beta1 was defined above).
-
-
-beta0 <- 3*sin(2*pi*pos/720)
-X <- cbind(rep(1,20), rep(c(0,1), each=10))
-error <- matrix(rnorm(20*length(beta1), 0, 1), ncol=20)
-y <- t(X[,1])%x%beta0 + t(X[,2])%x%beta1 + error
-# Now we can run bumphunter
-# y = probes, x = cases and controls, chr = chromosome, pos = genomic locations , cl = cluster
-tab <- bumphunter(y, X, chr, pos, cl, cutoff=.5)
