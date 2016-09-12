@@ -32,7 +32,7 @@ temp1 <- temp[complete.cases(temp),]
 # dat <- dat[!is.na(dat$cancer_diagnosis_diagnoses),]
 # & dat$cancer_diagnosis_diagnoses[i] != 'Unaffected'
 # 131 yes in methylation indicator
-range <- 100
+range <- 50
 samples <- list()
 
 for ( i in 1:nrow(dat) ) {
@@ -56,10 +56,10 @@ samples <- do.call('rbind', samples)
 samples <- samples[!duplicated(samples$blood_dna_malkin_lab_),]
 
 # subset to mutant, unaffected, no methyl 
-ids <- samples[samples$cancer_diagnosis_diagnoses == 'Unaffected' & samples$p53_germline == 'Mut' & 
+ids_new <- samples[samples$cancer_diagnosis_diagnoses == 'Unaffected' & samples$p53_germline == 'Mut' & 
                  samples$methyl_indicator == 'No',]
 
-ids <- ids[complete.cases(ids),]
+ids_new <- ids_new[complete.cases(ids_new),]
 
-write.csv(ids, file = '/home/benbrew/Desktop/ids.csv')
+write.csv(ids_new, file = '/home/benbrew/Desktop/ids.csv')
 

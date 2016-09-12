@@ -53,7 +53,6 @@ grSet <- preprocessQuantile(rgSet)
 grSet
 
 # This is like a SummarizedExperiment; we can get the location of the CpGs by
-
 temp <- granges(grSet)
 
 

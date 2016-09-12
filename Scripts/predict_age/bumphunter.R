@@ -6,7 +6,8 @@ library(dplyr)
 library(FDb.InfiniumMethylation.hg19)
 library(IlluminaHumanMethylation450kanno.ilmn12.hg19)
 library(impute)
-
+library(GenomicRanges)
+library(biovizBase)
 
 # Initialize folders
 home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
@@ -119,9 +120,6 @@ full_data <- inner_join(methylation_new, clin, by = 'id')
 full_data <- full_data[!is.na(full_data$p53_germline),]
 full_data$p53_germline <- factor(full_data$p53_germline, levels = c('WT', 'Mut'))
 
-# save.image('/home/benbrew/Desktop/full_data.RData')
-# load('/home/benbrew/Desktop/full_data.RData')
-
 # get p53 and put into design matrix with intercept 1
 p53_vecotr <- full_data$p53_germline
 designMatrix <- cbind(rep(1, nrow(full_data)), p53_vecotr)
@@ -163,7 +161,7 @@ beta <- methyl_cg[, 7:ncol(methyl_cg)]
 
 # make beta numeric 
 for (i in 1:ncol(beta)) {
-  beta[,i] <- as.numeric(beta[, i])
+  beta[,i] <- as.numeric(beta[,i])
   print(i)
 } 
 
@@ -192,5 +190,24 @@ tab <- bumphunter(beta,
                   B = NUM_BOOTSTRAPS,
                   type = "Beta")
 
-tab$table
+bump_hunter_results <- tab$table
 
+# write.csv(bump_hunter_results, paste0(data_folder, '/bump_hunter_results.csv'))
+
+# read in bumphunter results 
+tab <- read.csv(paste0(data_folder, '/bump_hunter_results.csv'))
+
+# get nearest gene to differentiated methylated regions and use that in model 
+
+
+# ## Build GRanges with sequence lengths
+# regions <- GRanges(seqnames = tab$chr, 
+#                    IRanges(start = tab$start, end = tab$end),
+#                    strand = '*', value = tab$value, area = tab$area, 
+#                    cluster = tab$cluster, L = tab$L, clusterL = tab$clusterL)
+# 
+# ## Assign chr lengths
+# data(hg19Ideogram, package = 'biovizBase')
+# seqlengths(regions) <- seqlengths(hg19Ideogram)[names(seqlengths(regions))]
+# ## Explore the regions
+# regions
