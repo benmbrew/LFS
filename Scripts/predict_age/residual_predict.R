@@ -28,18 +28,25 @@ results_folder <- paste0(test, '/Results')
 full_data <- read.csv(paste0(data_folder, '/full_data.csv'), stringsAsFactors = F)
 full_data_cor <- read.csv(paste0(data_folder, '/full_data_cor.csv'), stringsAsFactors = F)
 full_data_rf <- read.csv(paste0(data_folder, '/full_data_rf.csv'), stringsAsFactors = F)
+# load dmr methylatio data
+methyl_gene_dmr <- read.csv(paste0(data_folder, '/methyl_gene_dmr.csv'))
+methyl_dmr <- read.csv(paste0(data_folder, '/methyl_dmr.csv'))
 
 full_data$X <- NULL
 full_data_cor$X <- NULL
 full_data_rf$X <- NULL
+methyl_gene_dmr$X <- NULL
+methyl_dmr$X <- NULL
+
+
 
 getResidual <- function(data) {
   
   # get genes 
-  genes <- colnames(data)[27:ncol(data)]
+  genes <- colnames(data)[30:ncol(data)]
 
   # get matrix of sample collection and methylation
-  data <- data[, c(6, 8, 27:ncol(data))]
+  data <- data[, c(6, 8, 30:ncol(data))]
   data <- data[complete.cases(data),]
   
   # predict each gene's methylation as a function of age of sample collection and save residuals - this will get the 
@@ -69,9 +76,15 @@ getResidual <- function(data) {
 resid_rf <- getResidual(full_data_rf)
 resid_cor <- getResidual(full_data_cor)
 resid_full <- getResidual(full_data)
+resid_dmr <- getResidual(methyl_dmr)
+resid_gene_dmr <- getRed(methyl_gene_dmr)
 
 write.csv(resid_rf, paste0(data_folder, '/resid_rf.csv'))
 write.csv(resid_cor, paste0(data_folder, '/resid_cor.csv'))
 write.csv(resid_full, paste0(data_folder, '/resid_full.csv'))
+write.csv(resid_dmr, paste0(data_folder, '/resid_dmr.csv'))
+write.csv(resid_gene_dmr, paste0(data_folder, '/resid_gene_dmr.csv'))
+
+
 
 

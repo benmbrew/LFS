@@ -52,7 +52,11 @@ resid_full$age_diagnosis_fac <- as.integer(ifelse(resid_full$age_diagnosis <= 48
 
 resid_full$age_sample_fac <- as.integer(ifelse(resid_full$age_sample_collection <= 48, 1, 2))
 
-
+# load dmr methylatio data
+methyl_gene_dmr <- read.csv(paste0(data_folder, '/methyl_gene_dmr.csv'))
+methyl_gene_dmr$X <- NULL
+methyl_dmr <- read.csv(paste0(data_folder, '/methyl_dmr.csv'))
+methyl_dmr$X <- NULL
 # make categorifcal variable for clinical data
 clin$age_diagnosis_fac <- as.integer(ifelse(clin$age_diagnosis <= 48, 1, 2))
 

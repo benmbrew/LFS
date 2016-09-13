@@ -89,8 +89,6 @@ methylation_new <- methylation_new[!duplicated(methylation_new$id),]
 rownames(methylation_new) <- methylation_new$id
 methylation_new$id <- NULL
 
-#impute on methyl lsa
-# methylation_new <- lsaImputation(incomplete_data = methylation_new, sample_rows = TRUE)
 # impute on methyl with knn 
 methylation_new <- knnImputation(methylation_new, sample_rows = TRUE)
 
@@ -100,6 +98,8 @@ rownames(methylation_new) <- NULL
 
 # make methylation a data frame 
 methylation_new <- as.data.frame(methylation_new)
+
+# write.csv(methylation_new, paste0(data_folder, '/methyl_knn.csv'))
 
 ###################################################################
 # read in clinical data and merge with methylation_new
