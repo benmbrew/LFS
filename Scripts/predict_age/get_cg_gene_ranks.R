@@ -21,7 +21,7 @@ data_folder <- paste0(project_folder, '/Data')
 
 
 # read in tab - results from bumphunter
-tab <- read.csv(paste0(data_folder, '/bump_hunter_results.csv'))
+tab <- read.csv(paste0(data_folder, '/bh_results_global_WT.csv'))
 
 # read in methylation data with probes
 methylation <- read.csv(paste0(data_folder, '/methyl_knn.csv'))

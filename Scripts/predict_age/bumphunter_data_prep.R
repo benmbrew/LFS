@@ -12,11 +12,8 @@ library(biovizBase)
 # Initialize folders
 home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
-test <- paste0(project_folder, '/Scripts/analyze')
 data_folder <- paste0(project_folder, '/Data')
-methyl_data <- paste0(data_folder, '/methyl_data')
 clin_data <- paste0(data_folder, '/clin_data')
-results_folder <- paste0(test, '/Results')
 
 data_name <- '/Chr'
 
@@ -101,9 +98,9 @@ methylation_new <- as.data.frame(methylation_new)
 
 # write.csv(methylation_new, paste0(data_folder, '/methyl_knn.csv'))
 
-###################################################################
+#########################################################
 # read in clinical data and merge with methylation_new
-###################################################################
+#########################################################
 
 # read in clinical
 clin <- read.csv(paste0(clin_data, '/clinical_two.csv'), stringsAsFactors = TRUE)
@@ -117,97 +114,11 @@ clin <- clin[!grepl('A|B|_', clin$blood_dna_malkin_lab_),]
 full_data <- inner_join(methylation_new, clin, by = 'id')
 
 # get mut/wt vector
-full_data <- full_data[!is.na(full_data$p53_germline),]
 full_data$p53_germline <- factor(full_data$p53_germline, levels = c('WT', 'Mut'))
 
-# get p53 and put into design matrix with intercept 1
-p53_vecotr <- full_data$p53_germline
-designMatrix <- cbind(rep(1, nrow(full_data)), p53_vecotr)
-designMatrix <- as.matrix(designMatrix)
+# remove unnecesaary objects 
+rm(clin, methylation, methylation_raw, sub_dat, column_split, last_digits, num_sets)
 
-##########################################################
-# Get genetic locations
-##########################################################
+# save full_data to be used in different bumphunter scripts 
+save.image(paste0(data_folder, '/full_data_bh.RData'))
 
-# transpose methylation to join with cg_locations to get genetic location vector.
-full_data <- as.data.frame(t(full_data), stringsAsFactors = F)
-
-# make ids column names and remove first row
-colnames(full_data) <- full_data[1,]
-full_data <- full_data[-1,]
-
-# make probe a column in methyl
-full_data$probe <- rownames(full_data)
-rownames(full_data) <- NULL
-
-# remove clinical rows at bottom of data set
-full_data <- full_data[1:212350,]
-
-# read in cg_locations
-cg_locations <- read.csv(paste0(data_folder, '/cg_locations.csv'))
-
-# rename X column as probe for merge
-names(cg_locations)[1] <- 'probe'
-# inner join methyl and cg_locations by probe
-methyl_cg <- inner_join(cg_locations, full_data, by = 'probe')
-
-# get chr and pos vector 
-chr <- methyl_cg$seqnames
-pos <- methyl_cg$start
-
-# create beta matrix
-rownames(methyl_cg) <- methyl_cg$probe
-beta <- methyl_cg[, 7:ncol(methyl_cg)]
-
-# make beta numeric 
-for (i in 1:ncol(beta)) {
-  beta[,i] <- as.numeric(beta[,i])
-  print(i)
-} 
-
-beta <- as.matrix(beta)
-
-
-#########################################################################
-# Run bumphunter
-#########################################################################
-
-# check dimensions 
-stopifnot(dim(beta)[2] == dim(designMatrix)[1])
-stopifnot(dim(beta)[1] == length(chr))
-stopifnot(dim(beta)[1] == length(pos))
-
-# set paramenters 
-DELTA_BETA_THRESH = 0.10 # DNAm difference threshold
-NUM_BOOTSTRAPS = 3     # number of randomizations
-
-tab <- bumphunter(beta, 
-                  designMatrix, 
-                  chr = chr, 
-                  pos = pos,
-                  nullMethod = "bootstrap",
-                  cutoff = DELTA_BETA_THRESH,
-                  B = NUM_BOOTSTRAPS,
-                  type = "Beta")
-
-bump_hunter_results <- tab$table
-
-# write.csv(bump_hunter_results, paste0(data_folder, '/bump_hunter_results.csv'))
-
-# read in bumphunter results 
-tab <- read.csv(paste0(data_folder, '/bump_hunter_results.csv'))
-
-# get nearest gene to differentiated methylated regions and use that in model 
-
-
-# ## Build GRanges with sequence lengths
-# regions <- GRanges(seqnames = tab$chr, 
-#                    IRanges(start = tab$start, end = tab$end),
-#                    strand = '*', value = tab$value, area = tab$area, 
-#                    cluster = tab$cluster, L = tab$L, clusterL = tab$clusterL)
-# 
-# ## Assign chr lengths
-# data(hg19Ideogram, package = 'biovizBase')
-# seqlengths(regions) <- seqlengths(hg19Ideogram)[names(seqlengths(regions))]
-# ## Explore the regions
-# regions
