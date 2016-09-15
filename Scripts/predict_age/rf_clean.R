@@ -34,7 +34,7 @@ results_folder <- paste0(test, '/Results')
 clin <- read.csv(paste0(clin_data, '/clinical_two.csv'), stringsAsFactors = F)
 
 # Read in 3 different data sets 
-full_data <- read.csv(paste0(data_folder, '/full_data_rf.csv'), stringsAsFactors = F)
+full_data <- read.csv(paste0(data_folder, '/full_data.csv'), stringsAsFactors = F)
 
 # make categroical variable from age of methylaion and age of sample collection
 full_data$age_diagnosis_fac <- as.integer(ifelse(full_data$age_diagnosis <= 48, 1, 2))
@@ -46,6 +46,11 @@ full_data$X <- NULL
 
 # load in residual data
 resid_full <- read.csv(paste0(data_folder, '/resid_rf.csv'), stringsAsFactors = F)
+
+resid_dmr <- as.data.frame(read.csv(paste0(data_folder, '/resid_dmr.csv'), stringsAsFactors = F))
+resid_gene_dmr <- as.data.frame(read.csv(paste0(data_folder, '/resid_gene_dmr.csv'), stringsAsFactors = F))
+resid_dmr$X <- NULL
+resid_gene_dmr$X <- NULL
 
 # make categroical variable from age of methylaion and age of sample collection
 resid_full$age_diagnosis_fac <- as.integer(ifelse(resid_full$age_diagnosis <= 48, 1, 2))
@@ -104,8 +109,9 @@ predictAll <- function(data,
   
   if(log & resid) {
     
-    data[,c(1:(ncol(data) - 2))]  <- log(data[,c(1:(ncol(data) -2))])
+    data[, 1:ncol(data)]  <- log((data[, 1:ncol(data)])^2)
   }
+
   
   
   if(clin_only) {
@@ -116,6 +122,10 @@ predictAll <- function(data,
     genes <- colnames(data)[30:(ncol(data) - 2)]
     data <- data[, c(subset, genes)]
     data <- data[complete.cases(data),]
+  } else if (resid) {
+    genes <- colnames(data)[3:(ncol(data))]
+    data <- data[, c(subset, genes)]
+    data <- data[!(is.na(data$age_diagnosis)),]
   } else {
     genes <- colnames(data)[30:(ncol(data) - 2)]
     data <- data[, c(subset, genes)]
@@ -125,11 +135,13 @@ predictAll <- function(data,
   
 
     
-  for ( i in 3:ncol(data)){
+  for ( i in 3:ncol(data)) {
     
-    if(typeof(data[,i]) == 'character' || typeof(data[,i]) == 'integer') {
+    if (typeof(data[,i]) == 'character' || typeof(data[,i]) == 'integer') {
       data[,i] <- as.factor(data[,i])
+      
     }
+    
   }
   
   
@@ -137,12 +149,12 @@ predictAll <- function(data,
   obs <- nrow(data)
   
   
-  for (i in 1:iterations){
+  for (i in 1:iterations) {
     
     set.seed(i)
     train_index <- sample(nrow(data), nrow(data) *cutoff, replace = F)
     
-    if(fac){
+    if (fac) {
       
       type_family <- 'multinomial'
       y = make.names(as.factor(data$age_diagnosis_fac[train_index]))
@@ -173,7 +185,7 @@ predictAll <- function(data,
       final_genes <- final$gene
       
       
-    }else {
+    } else {
       
       type_family <- 'gaussian'
       y = data$age_diagnosis[train_index]
@@ -199,9 +211,15 @@ predictAll <- function(data,
       # sort best vector
       best <- best[order(best$Overall, decreasing = T),]
       
-      # subset data by top features 
-      final <- best[best$Overall > 35,]
-      final_genes <- final$gene
+      if (resid) {
+        final <- best
+        final_genes <- final$gene
+      } else {
+        # subset data by top features 
+        final <- best[best$Overall > 35,]
+        final_genes <- final$gene
+      }
+     
       
     }
 
@@ -218,19 +236,22 @@ predictAll <- function(data,
         summaryFunction = twoClassSummary
 
       )
+      
     } else {
-        NFOLDS <- 2
+        
+      NFOLDS <- 2
         fitControl <- trainControl( 
           method = "repeatedcv",  # could train on boostrap resample, here use repeated cross validation.
           number = min(10, NFOLDS),      
           repeats = 1,
           allowParallel = TRUE
           )
-      }
+    }
     
     # mtry: Number of variables randomly sampled as candidates at each split.
     # ntree: Number of trees to grow.
   
+    
       mtry <- sqrt(ncol(data[train_index, c(selected_features, final_genes)]))
       tunegrid <- expand.grid(.mtry=mtry)
       
@@ -391,8 +412,8 @@ methyl_reg_log <- predictAll(data = full_data,
 
 # plot predictions against ground truth
 plot(unlist(methyl_reg_log[[4]]), unlist(methyl_reg_log[[6]]), 
-     xlim = c(0, 8),
-     ylim = c(0, 8),
+     xlim = c(0, 10),
+     ylim = c(0, 10),
      xlab = 'Log Predictions',
      ylab = 'Log Real Age of Diagnosis',
      main = 'Log Age of Diagnosis (Months)')
@@ -404,8 +425,8 @@ legend("bottomright", legend = paste0('# obs = ', methyl_reg_log[[15]]), cex = 0
 
 # plot predictions against age of sample collection
 plot(unlist(methyl_reg_log[[4]]), unlist(methyl_reg_log[[8]]), 
-     xlim = c(0, 8),
-     ylim = c(0, 8),
+     xlim = c(0, 10),
+     ylim = c(0, 10),
      xlab = 'Log Predictions',
      ylab = 'Log Real Age of Sample Collection',
      main = 'Log Age of Sample Collection (Months)')

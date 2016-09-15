@@ -77,7 +77,7 @@ resid_rf <- getResidual(full_data_rf)
 resid_cor <- getResidual(full_data_cor)
 resid_full <- getResidual(full_data)
 resid_dmr <- getResidual(methyl_dmr)
-resid_gene_dmr <- getRed(methyl_gene_dmr)
+resid_gene_dmr <- getResidual(methyl_gene_dmr)
 
 write.csv(resid_rf, paste0(data_folder, '/resid_rf.csv'))
 write.csv(resid_cor, paste0(data_folder, '/resid_cor.csv'))
