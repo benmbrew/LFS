@@ -367,6 +367,7 @@ mean(diagnosis$ACC)
 ####################################
 # function that matches mut and wt counts as well as creates relatively similar samples for each category
 ####################################
+# load(paste0(data_folder, '/full_data_bh.RData'))
 
 # make function that selects the appropriate WT population and runs bumphunter
 bumpHunterBalanced <- function(selection) {
@@ -376,20 +377,18 @@ bumpHunterBalanced <- function(selection) {
     full_data <- full_data[full_data$cancer_diagnosis_diagnoses != 'Unaffected',]
     # first subset by ACC and Other (the biggest difference is between "Other" cancers - so subset by just ACC and Unaffected)
     full_data <- full_data[grepl('ACC', full_data$cancer_diagnosis_diagnoses),]
+    full_data <- full_data[full_data$age_diagnosis <= 180,]
   }
   if (selection == 'global') {
     full_data <- full_data[!is.na(full_data$p53_germline),]
     # first subset by ACC and Other (the biggest difference is between "Other" cancers - so subset by just ACC and Unaffected)
     full_data <- full_data[grepl('ACC|Unaffected', full_data$cancer_diagnosis_diagnoses),]
+    full_data <- full_data[full_data$age_diagnosis <= 180 | is.na(full_data$age_diagnosis),]
+    # full_data[full_data$cancer_diagnosis_diagnoses != 'Unaffected',] <- full_data$cancer_diagnosis_diagnoses != 'Unaffected'[full_data$age_diagnosis <= 180,]
   }
   
-  #########################################
   # Make a mut and WT population have "similar" age
   #########################################
-  ##### PROBLEM HERE - ON THE GLOBAL SELECTION SUBSETTING BY AGE REMOVES UNAFFECTED SAMPLES - WE WANT TO KEEP THOSE AND JUST
-  #################### SET THE AGE CRITERIA ON SAMPLES WITH CANCER
-  # second keep only the observations that have age of diagnosis less than 180
-  full_data <- full_data[full_data$age_diagnosis <= 180,]
   
   # remove rows that are all NA 
   all_na_ind <- apply(full_data, 1, function(x) all(is.na(x)))
@@ -525,3 +524,11 @@ global[[5]]
 global[[6]]
 #summary for cancer mut
 global[[7]]
+
+# 
+# bh_cancer_sub
+# bh_global_sub
+# bh_cancer_balanced
+# bh_global_balanced
+# bh_cancer
+# bh_global

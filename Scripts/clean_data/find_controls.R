@@ -13,6 +13,7 @@ clin_data <- paste0(data_folder, '/clin_data')
 results_folder <- paste0(test, '/Results')
 
 library(sqldf)
+library(dplyr)
 
 #################################################################################################
 # Read in clinical data and join by ids

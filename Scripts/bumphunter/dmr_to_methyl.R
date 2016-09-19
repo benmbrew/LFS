@@ -17,11 +17,8 @@ library(IlluminaHumanMethylation450kmanifest)
 # Initialize folders
 home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
-test <- paste0(project_folder, '/Scripts/analyze')
 data_folder <- paste0(project_folder, '/Data')
-methyl_data <- paste0(data_folder, '/methyl_data')
 clin_data <- paste0(data_folder, '/clin_data')
-results_folder <- paste0(test, '/Results')
 
 
 # read in tab - results from bumphunter
