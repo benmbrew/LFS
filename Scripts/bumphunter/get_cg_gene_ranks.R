@@ -159,10 +159,19 @@ bh_union <- rbind(bh_cancer_full,
                   bh_cancer_sub_full, 
                   bh_global_sub_full, 
                   bh_cancer_bal_full, 
-                  bh_cancer_sub_full)
+                  bh_global_bal_full)
 
 # remove duplicates to get union 
-bh_union <- bh_union[!duplicated(bh_union[,1:2]),]
+bh_union <- bh_union[!duplicated(bh_union[,2]),]
+write.csv(bh_union, paste0(data_folder, '/bh_union.csv'))
+
 
 # get intersection of all of them 
-bh_intersection <- intersect()
+intersection <- paste(Reduce(intersect, list(bh_cancer_full$probe, bh_global_full$probe, bh_cancer_sub_full$probe, bh_global_sub_full$probe,
+                       bh_cancer_bal_full$probe, bh_global_bal_full$probe)),collapse = '|' )
+
+# subset bh_union by these probes to get intersection
+bh_intersection <- bh_union[grepl(intersection, bh_union$probe),]
+write.csv(bh_intersection, paste0(data_folder, '/bh_intersection.csv'))
+
+

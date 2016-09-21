@@ -24,9 +24,9 @@ clin_data <- paste0(data_folder, '/clin_data')
 # read in tab - results from bumphunter
 tab <- read.csv(paste0(data_folder, '/bump_hunter_results.csv'))
 
-# read in methylation data with probes
-methylation <- read.csv(paste0(data_folder, '/methyl_knn.csv'))
-methylation$X <- NULL
+# load methylation knn data
+load(paste0(data_folder, '/methyl_knn.RData'))
+
 
 # read in clinical data 
 clin <- read.csv(paste0(clin_data, '/clinical_two.csv'), stringsAsFactors = F)
