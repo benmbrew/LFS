@@ -28,12 +28,11 @@ clin <- read.csv(paste0(clin_data, '/clinical_two.csv'), stringsAsFactors = TRUE
 methyl <- read.csv(paste0(data_folder, '/methyl_impute_raw.csv'))
 methyl$X <- NULL
 
-# remove 'A' and '_' in methylation names
-methyl$id <- gsub('_', '', methyl$id)
-methyl$id <- gsub('A', '', methyl$id)
+# remove 'A, B and _ in methylation names and then drop the 5th character 
+methyl$id <- gsub('A|B|_', '', methyl$id)
+methyl$id <- substr(methyl$id, 1,4) 
 
-# make clin id a factor so it joins with methylation data
-clin$id <- as.factor(clin$blood_dna_malkin_lab_)
+clin$id <- gsub('A|B_', '', clin$blood_dna_malkin_lab_)
 
 # inner_join clin
 full_data <- inner_join(clin, methyl,

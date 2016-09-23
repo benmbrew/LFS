@@ -10,32 +10,32 @@ results_folder <- paste0(test, '/Results')
 
 data_name <- '/Chr'
 
-#################################################################################
-# Take Nardine's methyalation data and clean the column names
-#################################################################################
-
-# Read in methylation data 
-methylation24 <- read.table(paste(data_folder,'/methyl.txt', sep = ''), header = TRUE)
-methylation17 <- read.csv(paste(data_folder, '/methyl_17.csv', sep = ''), header = TRUE)
-
-# This function takes the mehtylation data and removes the 'X' from the colnames 
-
-cleanColNames <- function(data){
-  for(i in 1:ncol(data)){
-    sub_dat <- colnames(data)[i]
-    if(grepl('X', sub_dat)){
-      split <- strsplit(sub_dat, 'X')
-      last_split <- lapply(split, function(x) x[length(x)])
-      colnames(data)[i] <- unlist(last_split)
-    }else{
-      colnames(data)[i] <- sub_dat
-    }
-  }
-  return(data)
-}
-
-methylation24 <- cleanColNames(methylation24)
-methylation17 <- cleanColNames(methylation17)
+# #################################################################################
+# # Take Nardine's methyalation data and clean the column names
+# #################################################################################
+# 
+# # Read in methylation data 
+# methylation24 <- read.table(paste(data_folder,'/methyl.txt', sep = ''), header = TRUE)
+# methylation17 <- read.csv(paste(data_folder, '/methyl_17.csv', sep = ''), header = TRUE)
+# 
+# # This function takes the mehtylation data and removes the 'X' from the colnames 
+# 
+# cleanColNames <- function(data){
+#   for(i in 1:ncol(data)){
+#     sub_dat <- colnames(data)[i]
+#     if(grepl('X', sub_dat)){
+#       split <- strsplit(sub_dat, 'X')
+#       last_split <- lapply(split, function(x) x[length(x)])
+#       colnames(data)[i] <- unlist(last_split)
+#     }else{
+#       colnames(data)[i] <- sub_dat
+#     }
+#   }
+#   return(data)
+# }
+# 
+# methylation24 <- cleanColNames(methylation24)
+# methylation17 <- cleanColNames(methylation17)
 
 ##############################################################################
 # Read in raw methylation data from Nardine and 
@@ -94,24 +94,24 @@ methylation <- cleanProbe(methylation)
 # write methylation_raw to methyl_data folder as csv
 write.csv(methylation, paste(methyl_data, '/methylation.csv', sep = ''), row.names= FALSE)
 
-###########################################################
-# Read in methylation data from tanya and clean it
-###########################################################
-
-methyl_tumor <- read.delim(paste0(methyl_data, '/methylation_tumor.txt'), check.names = FALSE)
-
-# subset columns that just contain beta values 
-methyl_beta <- methyl_tumor[, grepl('TargetID|Beta',  names(methyl_tumor))]
-col_names <- names(methyl_beta)
-column_split <- strsplit(col_names, '.', fixed = TRUE)
-first_digits <- lapply(column_split, function(x) x[1])
-col_names <- unlist(first_digits)
-
-# add new column names
-colnames(methyl_beta) <- col_names
-colnames(methyl_beta)[1] <- 'Probe'
-
-write.csv(methyl_beta, paste(methyl_data, '/methylation_tumor.csv', sep = ''), row.names= FALSE)
-
-
-
+# ###########################################################
+# # Read in methylation data from tanya and clean it
+# ###########################################################
+# 
+# methyl_tumor <- read.delim(paste0(methyl_data, '/methylation_tumor.txt'), check.names = FALSE)
+# 
+# # subset columns that just contain beta values 
+# methyl_beta <- methyl_tumor[, grepl('TargetID|Beta',  names(methyl_tumor))]
+# col_names <- names(methyl_beta)
+# column_split <- strsplit(col_names, '.', fixed = TRUE)
+# first_digits <- lapply(column_split, function(x) x[1])
+# col_names <- unlist(first_digits)
+# 
+# # add new column names
+# colnames(methyl_beta) <- col_names
+# colnames(methyl_beta)[1] <- 'Probe'
+# 
+# write.csv(methyl_beta, paste(methyl_data, '/methylation_tumor.csv', sep = ''), row.names= FALSE)
+# 
+# 
+# 

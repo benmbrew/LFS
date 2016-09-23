@@ -25,13 +25,19 @@ clin_data <- paste0(data_folder, '/clin_data')
 
 ###### load methylation knn imputation
 load(paste0(data_folder, '/methyl_knn.RData'))
-methyl_probe <- methylation
+methyl_knn_probe <- methylation
 rm(tab, methylation)
 
-###### load methylation lsa imutation
+###### load methylation lsa imutation (genes)
 methyl <- read.csv(paste0(data_folder, '/methyl_impute_raw.csv'))
 methyl$X <- NULL
-methyl_gene <- methyl
+methyl_lsa_gene <- methyl
+rm(methyl)
+
+###### load methylation knn imutation (genes)
+methyl <- read.csv(paste0(data_folder, '/methyl_impute_knn.csv'))
+methyl$X <- NULL
+methyl_knn_gene <- methyl
 rm(methyl)
 
 ###### Load in clinical data
@@ -55,9 +61,12 @@ bh_global_bal <- read.csv(paste0(data_folder, '/bh_global_bal_full.csv'))
 bh_union <- read.csv(paste0(data_folder, '/bh_union.csv'))
 bh_intersection <- read.csv(paste0(data_folder, '/bh_intersection.csv'))
 
+# read in bumphunter results from cancer indicator
+bh_cancer_ind <-  read.csv(paste0(data_folder, '/bh_cancer_ind_full.csv'))
+
 # remove X column from data frames 
 bh_cancer$X <- bh_global$X <- bh_cancer_sub$X <- bh_global_sub$X <- bh_cancer_bal$X <- bh_global_bal$X <- bh_union$X <-
-  bh_intersection$X <- NULL
+  bh_intersection$X <- bh_cancer_ind$X <- NULL
 
 
 ######################################
@@ -98,15 +107,15 @@ predictAll <- function(data,
     # get vector of gene names from bumphunter with cutoff 
     genes <- data$nearestGeneSymbol[1:threshold]
     # get intersection of genes and colnames of methly_gene
-    gene_intersection <- intersect(genes, colnames(methyl_gene))
+    gene_intersection <- intersect(genes, colnames(methyl_lsa_gene))
     # subset methyl gene by bumphunter data 
-    methyl_gene <- cbind(id = methyl_gene$id, methyl_gene[, gene_intersection])
+    methyl_lsa_gene <- cbind(id = methyl_lsa_gene$id, methyl_lsa_gene[, gene_intersection])
     
     # remove extra characters 
-    methyl_gene$id <- gsub('_|A|B', '', methyl_gene$id)
+    methyl_lsa_gene$id <- gsub('_|A|B', '', methyl_lsa_gene$id)
     
     #join methyl_gene and clin
-    model_data <- inner_join(methyl_gene, clin, by = 'id')
+    model_data <- inner_join(methyl_lsa_gene, clin, by = 'id')
     
     # keep only biological data and age data
     model_data <- model_data[c('age_diagnosis', 'age_sample_collection', gene_intersection)]
@@ -116,14 +125,14 @@ predictAll <- function(data,
     # get vector of gene names from bumphunter with cutoff 
     probes <- data$probe[1:threshold]
     # get intersection of genes and colnames of methly_gene
-    probe_intersection <- intersect(probes, colnames(methyl_probe))
+    probe_intersection <- intersect(probes, colnames(methyl_knn_probe))
     # subset methyl gene by bumphunter data 
-    methyl_probe <- cbind(id = methyl_probe$id, methyl_probe[, probe_intersection])
+    methyl_knn_probe <- cbind(id = methyl_knn_probe$id, methyl_knn_probe[, probe_intersection])
     # remove extra characters 
-    methyl_probe$id <- gsub('_|A|B', '', methyl_probe$id)
+    methyl_knn_probe$id <- gsub('_|A|B', '', methyl_knn_probe$id)
     
     #join methyl_gene and clin
-    model_data <- inner_join(methyl_probe, clin, by = 'id')
+    model_data <- inner_join(methyl_knn_probe, clin, by = 'id')
     
     # keep only biological data and age data
     model_data <- model_data[c('age_diagnosis', 'age_sample_collection', probe_intersection)]
@@ -402,4 +411,5 @@ bh_global_probe_resid <- predictAll(data = bh_global,
 plotModel(bh_global_probe_resid,
           main1 = 'bh_cancer_gene_resid',
           main2 = 'bh_cancer_gene_resid')
+
 

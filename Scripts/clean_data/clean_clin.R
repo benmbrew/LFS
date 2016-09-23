@@ -23,15 +23,19 @@ results_folder <- paste0(test, '/Results')
 
 clin1 <- read.csv(paste0(clin_data, '/clin1.csv'), na.strings=c("","NA"), 
                  stringsAsFactors = FALSE, sep = ',') # read the first sheet
-clin2 <- read.csv(paste0(clin_data, '/malkin_june_2.csv'), na.strings=c("","NA"),
+clin2 <- read.csv(paste0(clin_data, '/clin2.csv'), na.strings=c("","NA"),
                 stringsAsFactors = FALSE) # read the second sheet
 
 clin1$X <- NULL
 
 # For the time being drop family from clin1
 clin2$X <- NULL
+clin1$X.1 <- NULL
 # clin1$Family.Name <- NULL
 clin2$Pin53 <- NULL
+
+# remove the unverified WT in clin2 (after row 136)
+clin2 <- clin2[1:136,]
 
 # combine the two data sets
 clin <- rbind(clin1, clin2)
@@ -65,7 +69,7 @@ clin <- cleanColNames(clin)
 
 
 # clean NAs and N/As
-clin <- as.data.frame(apply(clin, 2, function(x) gsub('N/A', 'NA', x)))
+clin <- as.data.frame(apply(clin, 2, function(x) gsub('N/A', NA, x)))
 
 # clean white all leading and trailing white spaces 
 
@@ -81,56 +85,6 @@ convertColumn <- function(data) {
 
 
 clin <- convertColumn(clin)
-
-##########################################################################
-# clean malkin ids 
-clin$blood_dna_malkin_lab_ <- as.character(clin$blood_dna_malkin_lab_)
-NAs <- 'NA|nogermlineDNA|nosample|Nosample|samplefailed&discarded'
-ABs <- 'A|B'
-
-cleanIds <- function(data, column_name) { 
-    
-    id_vector <- data[, column_name]
-    
-    for (i in 1:length(id_vector)) {
-      
-      temp_id <- id_vector[i]
-      
-      if (grepl(NAs, temp_id)) {
-        temp_id <- NA
-      }
-      
-      if (grepl(ABs, temp_id)) {
-        temp_id <- substring(temp_id, 1, 4)
-      }
-      
-      if (grepl('receivedBMtransplant', temp_id)) {
-        
-        temp.2_id <- strsplit(temp_id, '(receivedBMtransplant)', , fixed = TRUE)
-        temp.3_id <- strsplit(temp.2_id[[1]][2], '-')
-        temp.4_id <- paste(unlist(temp.2_id[[1]][1]), temp.3_id[[1]][1], sep = '/')
-        temp_id <- temp.4_id
-        
-      }
-
-      if (grepl('receivedBMtransplantx2', temp_id)) {
-        
-        temp.2_id <- strsplit(temp_id, '(receivedBMtransplantx2)', , fixed = TRUE)
-        temp.3_id <- strsplit(temp.2_id[[1]][2], '-')
-        temp.4_id <- paste(unlist(temp.2_id[[1]][1]), temp.3_id[[1]][1], sep = '/')
-        temp_id <- temp.4_id
-        
-      }
-      
-      id_vector[i] <- temp_id
-    }
-    
-    data[, column_name] <- id_vector
-    return(data)
-    
-}
-
-clin <- cleanIds(clin, column_name = 'blood_dna_malkin_lab_')
 
 ##############################################
 # take any rows with double samples and split them into the number of rows equal to the number of samples.
@@ -184,8 +138,9 @@ cleanAge <-  function(data, column_name) {
       
     temp_age <- age_vector[i]
     
-    if(!grepl('y|m|d', temp_age)){
+    if(!grepl('1|2|3|4|5|6|7|8|9|0', temp_age)) {
       temp_age <- NA
+      
     
     } else {
         

@@ -1,5 +1,5 @@
 #####################################################################################################
-# This script will load bumphunter full data and run different variations of bumhunter and save results 
+# This script will load bumphunter full data and run different variations of bumhunter on p53 status and save results 
 library(minfi)
 library(bumphunter)
 library(dplyr)

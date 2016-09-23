@@ -27,11 +27,12 @@ bh_cancer_sub <- read.csv(paste0(data_folder, '/bh_cancer_sub.csv'))
 bh_global_sub <- read.csv(paste0(data_folder, '/bh_global_sub.csv'))
 bh_cancer_bal <- read.csv(paste0(data_folder, '/bh_cancer_balanced.csv'))
 bh_global_bal <- read.csv(paste0(data_folder, '/bh_global_balanced.csv'))
+bh_cancer_ind <-  read.csv(paste0(data_folder, '/bh_cancer_indicator.csv'))
 
 # read in methylation data with probes
 # methylation <- read.csv(paste0(data_folder, '/methyl_knn.csv'))
 # methylation$X <- NULL
-load('/home/benbrew/Desktop/methy.RData')
+load(paste0(data_folder, '/methyl_knn.RData'))
 ################################################
 # get probes for bumphunter results
 ###############################################
@@ -152,6 +153,11 @@ bh_cancer_bal_full <- getProbe(bh_cancer_bal)
 write.csv(bh_cancer_bal_full, paste0(data_folder, '/bh_cancer_bal_full.csv'))
 bh_global_bal_full <- getProbe(bh_global_bal)
 write.csv(bh_global_bal_full, paste0(data_folder, '/bh_global_bal_full.csv'))
+
+# cancer as indicator instead of p53
+bh_cancer_ind_full <- getProbe(bh_cancer_ind)
+write.csv(bh_cancer_ind_full, paste0(data_folder, '/bh_cancer_ind_full.csv'))
+
 
 # get union of all of them 
 bh_union <- rbind(bh_cancer_full, 

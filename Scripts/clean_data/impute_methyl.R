@@ -34,6 +34,7 @@ if('methyl_lsa.RData' %in% dir()){
   jvmGBLimit <- 8
   
   source(paste0(project_folder, '/Code/Functions/lsaImputation.R'))
+  source(paste0(project_folder, '/Code/Functions/knnImputation.R'))
   
   ################################################################
   # Read in methyl and clinical data and join by ids
@@ -52,20 +53,27 @@ if('methyl_lsa.RData' %in% dir()){
   # methyl_tumor <- methyl_tumor[, -1]
   
   # remove duplicate rownames,so it can impute
-  row.names(methyl)
-  
+  methyl <- methyl[!grepl('y', rownames(methyl)),]
   methyl <- as.matrix(methyl)
   
   # run lsaImputaion of methylation data
   methyl_impute_raw <- lsaImputation(incomplete_data = methyl, sample_rows = TRUE)
   #methyl_impute_raw_tumor <- lsaImputation(incomplete_data = methyl_tumor, sample_rows = TRUE)
+  # impute with knn as well
+  methyl_impute_knn <- knnImputation(methyl, sample_rows = TRUE)
 
   # join rownames and methyl_impute and then erase rownames
   methyl_impute_raw <- cbind(id = rownames(methyl_impute_raw), methyl_impute_raw)
   rownames(methyl_impute_raw) <- NULL
+  
+  # join rownames and methyl_impute and then erase rownames
+  methyl_impute_knn <- cbind(id = rownames(methyl_impute_knn), methyl_impute_knn)
+  rownames(methyl_impute_knn) <- NULL
 
   # Save data to be used later
   write.csv(methyl_impute_raw, paste0(data_folder, '/methyl_impute_raw.csv'))
+  write.csv(methyl_impute_knn, paste0(data_folder, '/methyl_impute_knn.csv'))
+  
   
   save.image(paste0(data_folder, '/methyl_lsa.RData'))
   
