@@ -38,6 +38,15 @@ clin$id <- gsub('A|B_', '', clin$blood_dna_malkin_lab_)
 full_data <- inner_join(clin, methyl,
                         by = 'id')
 
+
+# subset by complete age of diagnosisremove duplicates 
+full_data <- full_data[!is.na(full_data$age_diagnosis),]
+full_data <- full_data[!duplicated(full_data$id),]
+
+# subset full_data to just have age data and methylation data 
+full_data <- full_data[, c(6,8,29:ncol(full_data))]
+
+
 # Save data to be used later
 # write.csv(full_data, paste0(data_folder, '/full_data.csv'))
 
@@ -51,7 +60,7 @@ cor_mat <- cor(methyl[, -1])
 
 # find attributes that are highly correlated
 # 0.6 for methyl_cor, 0.4, methyl_cor_small and full_data_cor_small
-highly_cor <- findCorrelation(cor_mat, cutoff = 0.4, names = TRUE)
+highly_cor <- findCorrelation(cor_mat, cutoff = 0.5, names = TRUE)
 cor_index <- names(methyl) %in% highly_cor[2:length(highly_cor)]
 
 # remove highly correlated attributes
