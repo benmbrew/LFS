@@ -25,12 +25,20 @@ results_folder <- paste0(test, '/Results')
 
 # Read in data (clinical or clinical_two)
 clin <- read.csv(paste0(clin_data, '/clinical_two.csv'), stringsAsFactors = TRUE)
+
+# load methylation data imputed with lsa on genes
 methyl <- read.csv(paste0(data_folder, '/methyl_impute_raw.csv'))
 methyl$X <- NULL
+
+# load methylation data imputed with knn on probes
+load(paste0(data_folder, '/methyl_knn.RData'))
 
 # remove 'A, B and _ in methylation names and then drop the 5th character 
 methyl$id <- gsub('A|B|_', '', methyl$id)
 methyl$id <- substr(methyl$id, 1,4) 
+
+methylation$id <- gsub('A|B|_', '', methylation$id)
+methylation$id <- substr(methylation$id, 1,4) 
 
 clin$id <- gsub('A|B_', '', clin$blood_dna_malkin_lab_)
 
@@ -38,17 +46,26 @@ clin$id <- gsub('A|B_', '', clin$blood_dna_malkin_lab_)
 full_data <- inner_join(clin, methyl,
                         by = 'id')
 
+# inner_join clin
+full_data_probe <- inner_join(clin, methylation,
+                        by = 'id')
+
 
 # subset by complete age of diagnosisremove duplicates 
 full_data <- full_data[!is.na(full_data$age_diagnosis),]
 full_data <- full_data[!duplicated(full_data$id),]
 
+full_data_probe <- full_data_probe[!is.na(full_data_probe$age_diagnosis),]
+full_data_probe <- full_data_probe[!duplicated(full_data_probe$id),]
+
 # subset full_data to just have age data and methylation data 
 full_data <- full_data[, c(6,8,29:ncol(full_data))]
+full_data_probe <- full_data_probe[, c(6,8,29:ncol(full_data_probe))]
 
 
 # Save data to be used later
 # write.csv(full_data, paste0(data_folder, '/full_data.csv'))
+# write.csv(full_data_probe, paste0(data_folder, '/full_data_probe.csv'))
 
 ###################################################################################################
 # Using correlation

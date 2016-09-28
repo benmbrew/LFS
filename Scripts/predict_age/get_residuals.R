@@ -28,14 +28,22 @@ results_folder <- paste0(test, '/Results')
 full_data <- read.csv(paste0(data_folder, '/full_data.csv'), stringsAsFactors = F)
 full_data$X <- NULL
 
+full_data_probe <- read.csv(paste0(data_folder, '/full_data_probe.csv'), stringsAsFactors = F)
+full_data_probe$X <- NULL
+
+load('/home/benbrew/Desktop/probe_data.RData')
+
 getResidual <- function(data) {
   
   # get genes 
-  genes <- colnames(data)[3:ncol(data)]
+  genes <- colnames(data)[4:ncol(data)]
 
   # get matrix of sample collection and methylation
   data <- data[complete.cases(data),]
   
+  # data <-  apply(data, 2, function(x) round(x, 3))
+  # data <- as.data.frame(data)
+
   # predict each gene's methylation as a function of age of sample collection and save residuals - this will get the 
   # part of age of sample collection that is not predictive of gene methylation. your "instrument" is left hand side. 
   # some of the variance in the gene is predicted by age of sample collection, we want the variance that is independent 
@@ -44,9 +52,12 @@ getResidual <- function(data) {
   # gene that is not predicted (independent) of the age of sample collection and use that to predict age of diagnosis. 
   resid <- list()
   
-  for (i in 3:ncol(data)){
+  for (i in 4:ncol(data)){
     
-    resid[[i]] <- lm(data[, i] ~ data$age_sample_collection, data = data)$residuals
+    temp <- data[, i]
+    temp1 <- data$age_sample_collection
+    
+    resid[[i]] <- lm(temp ~ temp1)$residuals
 
     print(i)
     
@@ -61,8 +72,12 @@ getResidual <- function(data) {
 }
 
 resid_full <- getResidual(full_data)
+resid_full_probe <- getResidual(full_data_probe)
+
 
 write.csv(resid_full, paste0(data_folder, '/resid_full.csv'))
+write.csv(resid_full_probe, paste0(data_folder, '/resid_full_probe.csv'))
+
 
 
 

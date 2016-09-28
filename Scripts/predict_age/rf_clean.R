@@ -35,17 +35,30 @@ results_folder <- paste0(test, '/Results')
 full_data <- read.csv(paste0(data_folder, '/full_data.csv'), stringsAsFactors = F)
 full_data$X <- NULL
 
+full_data_probe <- read.csv(paste0(data_folder, '/full_data_probe.csv'), stringsAsFactors = F)
+full_data_probe$X <- NULL
+
 # make categroical variable from age of methylaion and age of sample collection
 full_data$age_diagnosis_fac <- as.integer(ifelse(full_data$age_diagnosis <= 48, 1, 2))
 full_data$age_sample_fac <- as.integer(ifelse(full_data$age_sample_collection <= 48, 1, 2))
+
+full_data_probe$age_diagnosis_fac <- as.integer(ifelse(full_data_probe$age_diagnosis <= 48, 1, 2))
+full_data_probe$age_sample_fac <- as.integer(ifelse(full_data_probe$age_sample_collection <= 48, 1, 2))
 
 # load in residual data
 resid_full <- read.csv(paste0(data_folder, '/resid_full.csv'), stringsAsFactors = F)
 resid_full$X <- NULL
 
+resid_full_probe <- read.csv(paste0(data_folder, '/resid_full_probe.csv'), stringsAsFactors = F)
+resid_full_probe$X <- NULL
+
 # make categroical variable from age of methylaion and age of sample collection
 resid_full$age_diagnosis_fac <- as.integer(ifelse(resid_full$age_diagnosis <= 48, 1, 2))
 resid_full$age_sample_fac <- as.integer(ifelse(resid_full$age_sample_collection <= 48, 1, 2))
+
+resid_full_probe$age_diagnosis_fac <- as.integer(ifelse(resid_full_probe$age_diagnosis <= 48, 1, 2))
+resid_full_probe$age_sample_fac <- as.integer(ifelse(resid_full_probe$age_sample_collection <= 48, 1, 2))
+
 
 #########################################
 # function that takes data and arguments for regression, cutoff, and selected features. 
@@ -260,28 +273,32 @@ plotModel <- function(result_list,
   plot(unlist(result_list[[4]]), unlist(result_list[[6]]), 
        xlim = xlim,
        ylim = ylim,
+       bty = 'n',
+       col = adjustcolor('blue', alpha.f = 0.6),
+       pch = 16,
        xlab = 'Predictions',
        ylab = 'Real Age of Diagnosis',
        main = main1)
-  abline(0,1)
+  abline(0,1, lty = 3)
   corr <- round(cor(unlist(result_list[[4]]), unlist(result_list[[6]])), 2)
-  legend("topleft", legend = paste0('correlation = ', corr), cex = 0.7)
-  legend("bottomright", legend = paste0('# obs = ', result_list[[15]]), cex = 0.7)
+  legend("topleft", legend = paste0('correlation = ', corr), cex = 1, bty = 'n')
+  legend("bottomright", legend = paste0('# obs = ', result_list[[15]]), cex = 1, bty = 'n')
   
   
   # plot predictions against ground truth
   plot(unlist(result_list[[4]]), unlist(result_list[[8]]), 
        xlim = xlim,
        ylim = ylim,
+       bty = 'n',
+       col = adjustcolor('blue', alpha.f = 0.6),
+       pch = 16,
        xlab = 'Predictions',
        ylab = 'Real Age of Sample Collection',
        main = main2)
-  abline(0,1)
+  abline(0,1, lty = 3)
   corr <- round(cor(unlist(result_list[[4]]), unlist(result_list[[8]]), use = "complete.obs"), 2)
-    legend("topleft", legend = paste0('correlation = ', corr), cex = 0.7)
-   legend("bottomright", legend = paste0('# obs = ', result_list[[15]]), cex = 0.7)
-  
-  
+  legend("topleft", legend = paste0('correlation = ', corr), cex = 1, bty = 'n')
+   legend("bottomright", legend = paste0('# obs = ', result_list[[15]]), cex = 1, bty = 'n')
   
 }
 
@@ -339,26 +356,26 @@ methyl_reg_log_resid <- predictAll(data = resid_full,
 
 
 plotModel(methyl_reg,
-          'Regression, All Data, No Log, No Resid',
-          'Regression, All Data, No Log, No Resid',
+          'Predicting Age of Onset',
+          'Predicting Age of Sample Collection',
           xlim = c(0,1000),
           ylim = c(0,1000))
 
 plotModel(methyl_reg_log,
-          'Regression, All Data, Log, No Resid',
-          'Regression, All Data, Log, No Resid',
+          'Predicting Age of Onset (Log)',
+          'Predicting Age of Sample Collection (Log)',
           xlim = c(0,10),
           ylim = c(0,10))
 
 plotModel(methyl_reg_resid,
-          'Regression, All Data, No Log, Resid',
-          'Regression, All Data, No Log, Resid',
+          'Predicting Age of Onset Residuals',
+          'Predicting Age of Sample Collection Residuals',
           xlim = c(0,1000),
           ylim = c(0,1000))
 
 plotModel(methyl_reg_log_resid,
-          'Regression, All Data, Log, Resid',
-          'Regression, All Data, Log, Resid',
+          'Predicting Age of Onset Residuals (Log)',
+          'Predicting Age of Sample Collection Residuals (Log)',
           xlim = c(0,15),
           ylim = c(0,15))
 

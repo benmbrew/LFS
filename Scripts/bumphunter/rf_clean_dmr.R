@@ -103,6 +103,29 @@ predictAll <- function(data,
   test_acc_samp <- list()
   test_stats_samp <- list()
   
+  # if (random) {
+  #   
+  #   # remove extra characters 
+  #   methyl_knn_probe$id <- gsub('_|A|B', '', methyl_knn_probe$id)
+  #   methyl_knn_probe$id <- substr(methyl_knn_probe$id, 1, 4)
+  #   
+  #   # select probes 
+  #   genes <- sample(colnames(methyl_knn_probe), threshold, replace = F)
+  #   methyl_knn_probe <- methyl_knn_probe[, c(2:genes)]
+  #   
+  #   #join methyl_gene and clin
+  #   model_data <- inner_join(methyl_knn_probe, clin, by = 'id')
+  #   model_data <- model_data[!is.na(model_data$age_diagnosis),]
+  #   
+  #   # remove duplicates
+  #   model_data <- model_data[!duplicated(model_data$id),]
+  #   # keep only biological data and age data
+  #   model_data <- model_data[c('age_diagnosis', 'age_sample_collection', probe_intersection)]
+  #   
+  #   
+  # }
+  
+  
   if (lsa_gene) {
     
     # get vector of gene names from bumphunter with cutoff 
@@ -115,7 +138,7 @@ predictAll <- function(data,
     # remove extra characters 
     methyl_lsa_gene$id <- gsub('_|A|B', '', methyl_lsa_gene$id)
     methyl_lsa_gene$id <- substr(methyl_lsa_gene$id, 1, 4)
-      
+    
     #join methyl_gene and clin
     model_data <- inner_join(methyl_lsa_gene, clin, by = 'id')
     model_data <- model_data[!is.na(model_data$age_diagnosis),]
@@ -126,10 +149,10 @@ predictAll <- function(data,
     # keep only biological data and age data
     model_data <- model_data[c('age_diagnosis', 'age_sample_collection', gene_intersection)]
     
-    }
+  }
   
   if (knn_gene) {
-      
+    
     # get vector of gene names from bumphunter with cutoff 
     genes <- data$nearestGeneSymbol[1:threshold]
     # get intersection of genes and colnames of methly_gene
@@ -207,7 +230,7 @@ predictAll <- function(data,
       # get min of model data and take absolute value then add that + 1 to model data
       model_data[, 3:ncol(model_data)] <-  model_data[, 3:ncol(model_data)] + abs(min(model_data[, 3:ncol(model_data)])) + .1
       model_data <- log(model_data)
-
+      
     }
     
   }
@@ -359,93 +382,113 @@ plotModel <- function(result_list,
   plot(unlist(result_list[[4]]), unlist(result_list[[6]]), 
        xlim = xlim,
        ylim = ylim,
+       bty = 'n',
+       col = adjustcolor('blue', alpha.f = 0.6),
+       pch = 16,
        xlab = 'Predictions',
        ylab = 'Real Age of Diagnosis',
        main = main1)
-  abline(0,1)
+  abline(0,1, lty = 3)
   corr <- round(cor(unlist(result_list[[4]]), unlist(result_list[[6]])), 2)
-  legend("topleft", legend = paste0('correlation = ', corr), cex = 0.7)
-  legend("bottomright", legend = paste0('# obs = ', result_list[[15]]), cex = 0.7)
+  legend("topleft", legend = paste0('correlation = ', corr), cex = 1, bty = 'n')
+  legend("bottomright", legend = paste0('# obs = ', result_list[[15]]), cex = 1, bty = 'n')
   
   
   # plot predictions against ground truth
   plot(unlist(result_list[[4]]), unlist(result_list[[8]]), 
        xlim = xlim,
        ylim = ylim,
+       bty = 'n',
+       col = adjustcolor('blue', alpha.f = 0.6),
+       pch = 16,
        xlab = 'Predictions',
        ylab = 'Real Age of Sample Collection',
        main = main2)
-  abline(0,1)
+  abline(0,1, lty = 3)
   corr <- round(cor(unlist(result_list[[4]]), unlist(result_list[[8]]), use = "complete.obs"), 2)
-  legend("topleft", legend = paste0('correlation = ', corr), cex = 0.7)
-  legend("bottomright", legend = paste0('# obs = ', result_list[[15]]), cex = 0.7)
+  legend("topleft", legend = paste0('correlation = ', corr), cex = 1, bty = 'n')
+  legend("bottomright", legend = paste0('# obs = ', result_list[[15]]), cex = 1, bty = 'n')
   
   
   
 }
 
+###### read in dmr variations
+# 
+# # cancer and global
+# bh_cancer, bh_global 
+# # subselection
+# bh_cancer_sub, bh_global_sub
+# # balanced
+# bh_cancer_bal, bh_global_bal
+# # read in union and intersection
+# bh_union, bh_intersection
+# # read in bumphunter results from cancer indicator
+# bh_cancer_ind 
+
+
 ###################
 # Regression, not log, no residual
 ###################
 
-# bh_global with lsa_gene
-bh_global_lsa_gene <- predictAll(data = bh_global,
-                            lsa_gene = T,
-                            knn_gene = F,
-                            knn_probe = F,
-                            threshold = nrow(bh_global),
-                            fac = F,
-                            log = F,
-                            cutoff = .7,
-                            residual = F,
-                            iterations = 10)
+# bh_global_sub with lsa_gene
+bh_global_sub_lsa_gene <- predictAll(data = bh_global_sub,
+                                     lsa_gene = T,
+                                     knn_gene = F,
+                                     knn_probe = F,
+                                     threshold = nrow(bh_global_sub),
+                                     fac = F,
+                                     log = F,
+                                     cutoff = .7,
+                                     residual = F,
+                                     iterations = 10)
 
 
-plotModel(bh_global_lsa_gene,
+plotModel(bh_global_sub_lsa_gene,
           xlim = c(0, 1000),
           ylim = c(0, 1000),
-          main1 = 'bh_cancer_lsa_gene',
-          main2 = 'bh_cancer_lsa_gene')
+          main1 = 'bh_global_sub_lsa_gene',
+          main2 = 'bh_global_sub_lsa_gene')
 
 
-# bh_global with knn_gene
-bh_global_knn_gene <- predictAll(data = bh_global,
-                                 lsa_gene = F,
-                                 knn_gene = T,
-                                 knn_probe = F,
-                                 threshold = nrow(bh_global),
-                                 fac = F,
-                                 log = F,
-                                 cutoff = .7,
-                                 residual = F,
-                                 iterations = 10)
+# bh_global_sub with knn_gene
+bh_global_sub_knn_gene <- predictAll(data = bh_global_sub,
+                                     lsa_gene = F,
+                                     knn_gene = T,
+                                     knn_probe = F,
+                                     threshold = nrow(bh_global_sub),
+                                     fac = F,
+                                     log = F,
+                                     cutoff = .7,
+                                     residual = F,
+                                     iterations = 10)
 
 
-plotModel(bh_global_knn_gene,
+plotModel(bh_global_sub_knn_gene,
           xlim = c(0, 1000),
           ylim = c(0, 1000),
-          main1 = 'bh_cancer_knn_gene',
-          main2 = 'bh_cancer_knn_gene')
+          main1 = 'bh_global_sub_knn_gene',
+          main2 = 'bh_global_sub_knn_gene')
 
 
-# bh_global with knn_probe
-bh_global_knn_probe <- predictAll(data = bh_global,
-                                 lsa_gene = F,
-                                 knn_gene = F,
-                                 knn_probe = T,
-                                 threshold = nrow(bh_global),
-                                 fac = F,
-                                 log = F,
-                                 cutoff = .7,
-                                 residual = F,
-                                 iterations = 10)
+# bh_global_sub with knn_probe
+bh_global_sub_knn_probe <- predictAll(data = bh_global_sub,
+                                      lsa_gene = F,
+                                      knn_gene = F,
+                                      knn_probe = T,
+                                      threshold = nrow(bh_global_sub),
+                                      fac = F,
+                                      log = F,
+                                      cutoff = .7,
+                                      residual = F,
+                                      iterations = 10)
 
 
-plotModel(bh_global_knn_probe,
+plotModel(bh_global_sub_knn_probe,
           xlim = c(0, 1000),
           ylim = c(0, 1000),
-          main1 = 'bh_cancer_knn_probe',
-          main2 = 'bh_cancer_knn_probe')
+          main1 = 'bh_global_sub_knn_probe',
+          main2 = 'bh_global_sub_knn_probe')
 
 
 
@@ -453,128 +496,128 @@ plotModel(bh_global_knn_probe,
 # Regression, not log, residual
 ###################
 
-# bh_global with lsa_gene
-bh_global_lsa_gene_resid <- predictAll(data = bh_global,
-                                 lsa_gene = T,
-                                 knn_gene = F,
-                                 knn_probe = F,
-                                 threshold = nrow(bh_global),
-                                 fac = F,
-                                 log = F,
-                                 cutoff = .7,
-                                 residual = T,
-                                 iterations = 10)
+# bh_global_sub with lsa_gene
+bh_global_sub_lsa_gene_resid <- predictAll(data = bh_global_sub,
+                                           lsa_gene = T,
+                                           knn_gene = F,
+                                           knn_probe = F,
+                                           threshold = nrow(bh_global_sub),
+                                           fac = F,
+                                           log = F,
+                                           cutoff = .7,
+                                           residual = T,
+                                           iterations = 10)
 
 
-plotModel(bh_global_lsa_gene_resid,
+plotModel(bh_global_sub_lsa_gene_resid,
           xlim = c(0, 1000),
           ylim = c(0, 1000),
-          main1 = 'bh_cancer_lsa_gene_resid',
-          main2 = 'bh_cancer_lsa_gene_resid')
+          main1 = 'bh_global_sub_lsa_gene_resid',
+          main2 = 'bh_global_sub_lsa_gene_resid')
 
 
-# bh_global with knn_gene
-bh_global_knn_gene_resid <- predictAll(data = bh_global,
-                                 lsa_gene = F,
-                                 knn_gene = T,
-                                 knn_probe = F,
-                                 threshold = nrow(bh_global),
-                                 fac = F,
-                                 log = F,
-                                 cutoff = .7,
-                                 residual = T,
-                                 iterations = 10)
+# bh_global_sub with knn_gene
+bh_global_sub_knn_gene_resid <- predictAll(data = bh_global_sub,
+                                           lsa_gene = F,
+                                           knn_gene = T,
+                                           knn_probe = F,
+                                           threshold = nrow(bh_global_sub),
+                                           fac = F,
+                                           log = F,
+                                           cutoff = .7,
+                                           residual = T,
+                                           iterations = 10)
 
 
-plotModel(bh_global_knn_gene_resid,
+plotModel(bh_global_sub_knn_gene_resid,
           xlim = c(0, 1000),
           ylim = c(0, 1000),
-          main1 = 'bh_cancer_knn_gene_resid',
-          main2 = 'bh_cancer_knn_gene_resid')
+          main1 = 'bh_global_sub_knn_gene_resid',
+          main2 = 'bh_global_sub_knn_gene_resid')
 
 
-# bh_global with knn_probe
-bh_global_knn_probe_resid <- predictAll(data = bh_global,
-                                  lsa_gene = F,
-                                  knn_gene = F,
-                                  knn_probe = T,
-                                  threshold = nrow(bh_global),
-                                  fac = F,
-                                  log = F,
-                                  cutoff = .7,
-                                  residual = T,
-                                  iterations = 10)
+# bh_global_sub with knn_probe
+bh_global_sub_knn_probe_resid <- predictAll(data = bh_global_sub,
+                                            lsa_gene = F,
+                                            knn_gene = F,
+                                            knn_probe = T,
+                                            threshold = nrow(bh_global_sub),
+                                            fac = F,
+                                            log = F,
+                                            cutoff = .7,
+                                            residual = T,
+                                            iterations = 10)
 
 
-plotModel(bh_global_knn_probe_resid,
+plotModel(bh_global_sub_knn_probe_resid,
           xlim = c(0, 1000),
           ylim = c(0, 1000),
-          main1 = 'bh_cancer_knn_probe_resid',
-          main2 = 'bh_cancer_knn_probe_resid')
+          main1 = 'bh_global_sub_knn_probe_resid',
+          main2 = 'bh_global_sub_knn_probe_resid')
 
 
 ###################
-# Regression, not log, residual
+# Regression, log, residual
 ###################
 
-# bh_global with lsa_gene
-bh_global_lsa_gene_resid_log <- predictAll(data = bh_global,
-                                       lsa_gene = T,
-                                       knn_gene = F,
-                                       knn_probe = F,
-                                       threshold = nrow(bh_global),
-                                       fac = F,
-                                       log = T,
-                                       cutoff = .7,
-                                       residual = T,
-                                       iterations = 10)
+# bh_global_sub with lsa_gene
+bh_global_sub_lsa_gene_resid_log <- predictAll(data = bh_global_sub,
+                                               lsa_gene = T,
+                                               knn_gene = F,
+                                               knn_probe = F,
+                                               threshold = nrow(bh_global_sub),
+                                               fac = F,
+                                               log = T,
+                                               cutoff = .7,
+                                               residual = T,
+                                               iterations = 10)
 
 
-plotModel(bh_global_lsa_gene_resid_log,
+plotModel(bh_global_sub_lsa_gene_resid_log,
           xlim = c(0, 10),
           ylim = c(0, 10),
-          main1 = 'bh_cancer_lsa_gene_resid_log',
-          main2 = 'bh_cancer_lsa_gene_resid_log')
+          main1 = 'bh_global_sub_lsa_gene_resid_log',
+          main2 = 'bh_global_sub_lsa_gene_resid_log')
 
 
-# bh_global with knn_gene
-bh_global_knn_gene_resid_log <- predictAll(data = bh_global,
-                                       lsa_gene = F,
-                                       knn_gene = T,
-                                       knn_probe = F,
-                                       threshold = nrow(bh_global),
-                                       fac = F,
-                                       log = T,
-                                       cutoff = .7,
-                                       residual = T,
-                                       iterations = 10)
+# bh_global_sub with knn_gene
+bh_global_sub_knn_gene_resid_log <- predictAll(data = bh_global_sub,
+                                               lsa_gene = F,
+                                               knn_gene = T,
+                                               knn_probe = F,
+                                               threshold = nrow(bh_global_sub),
+                                               fac = F,
+                                               log = T,
+                                               cutoff = .7,
+                                               residual = T,
+                                               iterations = 10)
 
 
-plotModel(bh_global_knn_gene_resid_log,
+plotModel(bh_global_sub_knn_gene_resid_log,
           xlim = c(0, 10),
           ylim = c(0, 10),
-          main1 = 'bh_cancer_knn_gene_resid_log',
-          main2 = 'bh_cancer_knn_gene_resid_log')
+          main1 = 'bh_global_sub_knn_gene_resid_log',
+          main2 = 'bh_global_sub_knn_gene_resid_log')
 
 
-# bh_global with knn_probe
-bh_global_knn_probe_resid_log <- predictAll(data = bh_global,
-                                        lsa_gene = F,
-                                        knn_gene = F,
-                                        knn_probe = T,
-                                        threshold = nrow(bh_global),
-                                        fac = F,
-                                        log = T,
-                                        cutoff = .7,
-                                        residual = T,
-                                        iterations = 10)
+# bh_global_sub with knn_probe
+bh_global_sub_knn_probe_resid_log <- predictAll(data = bh_global_sub,
+                                                lsa_gene = F,
+                                                knn_gene = F,
+                                                knn_probe = T,
+                                                threshold = nrow(bh_global_sub),
+                                                fac = F,
+                                                log = T,
+                                                cutoff = .7,
+                                                residual = T,
+                                                iterations = 10)
 
 
-plotModel(bh_global_knn_probe_resid_log,
+plotModel(bh_global_sub_knn_probe_resid_log,
           xlim = c(0, 10),
           ylim = c(0, 10),
-          main1 = 'bh_cancer_knn_probe_resid_log',
-          main2 = 'bh_cancer_knn_probe_resid_log')
+          main1 = 'bh_global_sub_knn_probe_resid_log',
+          main2 = 'bh_global_sub_knn_probe_resid_log')
 
 
 ######################################

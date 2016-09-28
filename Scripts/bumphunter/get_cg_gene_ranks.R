@@ -32,7 +32,7 @@ bh_cancer_ind <-  read.csv(paste0(data_folder, '/bh_cancer_indicator.csv'))
 # read in methylation data with probes
 # methylation <- read.csv(paste0(data_folder, '/methyl_knn.csv'))
 # methylation$X <- NULL
-load(paste0(data_folder, '/methyl_knn.RData'))
+# load(paste0(data_folder, '/methyl_knn.RData'))
 ################################################
 # get probes for bumphunter results
 ###############################################
