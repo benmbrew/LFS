@@ -2,15 +2,14 @@
 # base, and primarily, the getNearestGene function.
 # This is the third step in the pipeline
 library(FDb.InfiniumMethylation.hg19)
+library(IlluminaHumanMethylation450kanno.ilmn12.hg19)
 library(dplyr)
 
 home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects/'
 project_folder <- paste0(home_folder, '/LFS')
-test <- paste0(project_folder, '/Scripts/classification_template')
 data_folder <- paste0(project_folder, '/Data')
 methyl_data <- paste0(data_folder, '/methyl_data')
 clin_data <- paste0(data_folder, '/clin_data')
-results_folder <- paste0(test, '/Results')
 
 
 #################################################################
@@ -20,6 +19,65 @@ results_folder <- paste0(test, '/Results')
 # Read in methylation data 
 methylation <- read.csv(paste0(methyl_data, '/methylation.csv'), header = TRUE, check.names = FALSE)
 # methylation_tumor <- read.csv(paste0(methyl_data, '/methylation_tumor.csv'), header = TRUE, check.names = FALSE)
+
+
+# try different method of finding gene
+anno <- IlluminaHumanMethylation450kanno.ilmn12.hg19@data$Other
+anno <- as.data.frame(anno)
+
+# make row names that contain probe a column 
+anno$Probe <- rownames(anno)
+
+# inner join probe anno and methylation by probe
+methyl_gene <- inner_join(anno, methylation, by = 'Probe')
+
+# keep only necessary columns 
+methyl_gene$Forward_Sequence <- methyl_gene$SourceSeq <- methyl_gene$Random_Loci <- methyl_gene$Methyl27_Loci <- 
+  methyl_gene$UCSC_RefGene_Accession <- methyl_gene$UCSC_RefGene_Group <- methyl_gene$Phantom <-
+  methyl_gene$DMR <- methyl_gene$Enhancer <- methyl_gene$HMM_Island <- methyl_gene$Regulatory_Feature_Name <-
+  methyl_gene$Regulatory_Feature_Group <- methyl_gene$DHS <- NULL
+
+# lots of probes dont have corresponding genes. for the time being extract first gene and recode blanks
+# as "no_nearby_gene"
+
+names(methyl_gene)[1] <- 'gene'
+
+gene_names <- strsplit(methyl_gene$gene, ';')
+gene_names <- lapply(gene_names, function(x) x[(length(x) - length(x) +1)])
+gene_names <- do.call(rbind, gene_names)
+
+methyl_gene$gene <- as.factor(gene_names)
+
+methyl_gene$Probe <- NULL
+
+# group by gene and take mean 
+methyl_summarised <- methyl_gene %>%
+  filter(!is.na(gene)) %>%
+  group_by(gene) %>%
+  summarise_each(funs(mean))
+
+###################################################################
+# Transpose data and put in formate for analysis
+###################################################################
+col_names <- methyl_summarised$gene
+methyl <- as.data.frame(t(methyl_summarised))
+names(methyl)<- col_names
+methyl <- cbind(x = rownames(methyl), methyl) 
+methyl <- methyl[2:nrow(methyl),]
+names(methyl)[1] <- 'id'
+rownames(methyl) <- NULL
+methyl[, 2:ncol(methyl)] <-
+  apply(methyl[,2:ncol(methyl)], 2, function(x){as.numeric(as.character(x))})
+methyl <- as.data.frame(methyl)
+
+# drop duplicates from methylation so LSA work
+methyl <- methyl[!duplicated(methyl$id),]
+methyl <- methyl[!is.na(methyl$id),]
+rownames(methyl) <- methyl[,1]
+methyl <- methyl[, -1]
+
+
+write.csv(methyl, paste0(methyl_data, '/methyl.csv'), row.names = TRUE)
 
 # Load the 450k data from hg19 (bioconductor, library is FDb.InfiniumMethylation.hg19)
 hm450 <- get450k()

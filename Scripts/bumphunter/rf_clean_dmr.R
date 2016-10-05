@@ -149,6 +149,16 @@ predictAll <- function(data,
     # keep only biological data and age data
     model_data <- model_data[c('age_diagnosis', 'age_sample_collection', gene_intersection)]
     
+    if (fac) {
+      
+      model_data$age_diagnosis_fac <- as.integer(ifelse(model_data$age_diagnosis <= 48, 1, 2))
+      model_data$age_sample_fac <- as.integer(ifelse(model_data$age_sample_collection <= 48, 1, 2))
+      
+      # keep only biological data and age data
+      model_data <- model_data[c('age_diagnosis_fac', 'age_sample_fac', gene_intersection)]
+      
+    }
+    
   }
   
   if (knn_gene) {
@@ -174,6 +184,16 @@ predictAll <- function(data,
     # keep only biological data and age data
     model_data <- model_data[c('age_diagnosis', 'age_sample_collection', gene_intersection)]
     
+    if (fac) {
+      
+      model_data$age_diagnosis_fac <- as.integer(ifelse(model_data$age_diagnosis <= 48, 1, 2))
+      model_data$age_sample_fac <- as.integer(ifelse(model_data$age_sample_collection <= 48, 1, 2))
+      
+      # keep only biological data and age data
+      model_data <- model_data[c('age_diagnosis_fac', 'age_sample_fac', gene_intersection)]
+      
+    }
+    
   }
   
   if (knn_probe) {
@@ -196,10 +216,20 @@ predictAll <- function(data,
     # keep only biological data and age data
     model_data <- model_data[c('age_diagnosis', 'age_sample_collection', probe_intersection)]
     
+    if (fac) {
+      
+      model_data$age_diagnosis_fac <- as.integer(ifelse(model_data$age_diagnosis <= 48, 1, 2))
+      model_data$age_sample_fac <- as.integer(ifelse(model_data$age_sample_collection <= 48, 1, 2))
+      
+      # keep only biological data and age data
+      model_data <- model_data[c('age_diagnosis_fac', 'age_sample_fac', probe_intersection)]
+      
+    }
+    
   }
   
   
-  if (residual) {
+  if (residual & !fac) {
     
     feature_names <- colnames(model_data)[3:ncol(model_data)]
     
@@ -235,6 +265,34 @@ predictAll <- function(data,
     
   }
   
+  if (residual & fac) {
+    
+    feature_names <- colnames(model_data)[3:ncol(model_data)]
+    
+    # first subset data to complete cases- that is keep only samples where age of diagnosis and age of sample collection 
+    # are not missing 
+    
+    model_data <- model_data[complete.cases(model_data),]
+    
+    resid <- list()
+    
+    model_data$age_sample_fac <- as.factor(model_data$age_sample_fac)
+    
+    for (i in 3:ncol(model_data)){
+      
+      resid[[i]] <- lm(model_data[, i] ~ model_data$age_sample_fac, data = model_data)$residuals
+      
+      print(i)
+      
+    }
+    
+    resid_data <- as.data.frame(do.call('cbind', resid))
+    model_data <- cbind(model_data$age_diagnosis_fac, model_data$age_sample_fac, resid_data)
+    colnames(model_data) <- c('age_diagnosis_fac', 'age_sample_fac', feature_names)
+    
+  }
+  
+  
   if (log & !residual) {
     
     model_data <- log(model_data)
@@ -265,8 +323,6 @@ predictAll <- function(data,
         allowParallel = TRUE,
         summaryFunction = twoClassSummary)
       
-      model_data$age_diagnosis_fac <- as.integer(ifelse(model_data$age_diagnosis <= 48, 1, 2))
-      model_data$age_sample_fac <- as.integer(ifelse(model_data$age_sample_collection <= 48, 1, 2))
       y = make.names(as.factor(model_data$age_diagnosis_fac[train_index]))
       
     } else {
@@ -431,12 +487,12 @@ plotModel <- function(result_list,
 # Regression, not log, no residual
 ###################
 
-# bh_global_sub with lsa_gene
-bh_global_sub_lsa_gene <- predictAll(data = bh_global_sub,
+# bh_global_bal with lsa_gene
+bh_global_bal_lsa_gene <- predictAll(data = bh_global_bal,
                                      lsa_gene = T,
                                      knn_gene = F,
                                      knn_probe = F,
-                                     threshold = nrow(bh_global_sub),
+                                     threshold = nrow(bh_global_bal),
                                      fac = F,
                                      log = F,
                                      cutoff = .7,
@@ -444,19 +500,19 @@ bh_global_sub_lsa_gene <- predictAll(data = bh_global_sub,
                                      iterations = 10)
 
 
-plotModel(bh_global_sub_lsa_gene,
+plotModel(bh_global_bal_lsa_gene,
           xlim = c(0, 1000),
           ylim = c(0, 1000),
-          main1 = 'bh_global_sub_lsa_gene',
-          main2 = 'bh_global_sub_lsa_gene')
+          main1 = 'bh_global_bal_lsa_gene',
+          main2 = 'bh_global_bal_lsa_gene')
 
 
-# bh_global_sub with knn_gene
-bh_global_sub_knn_gene <- predictAll(data = bh_global_sub,
+# bh_global_bal with knn_gene
+bh_global_bal_knn_gene <- predictAll(data = bh_global_bal,
                                      lsa_gene = F,
                                      knn_gene = T,
                                      knn_probe = F,
-                                     threshold = nrow(bh_global_sub),
+                                     threshold = nrow(bh_global_bal),
                                      fac = F,
                                      log = F,
                                      cutoff = .7,
@@ -464,19 +520,19 @@ bh_global_sub_knn_gene <- predictAll(data = bh_global_sub,
                                      iterations = 10)
 
 
-plotModel(bh_global_sub_knn_gene,
+plotModel(bh_global_bal_knn_gene,
           xlim = c(0, 1000),
           ylim = c(0, 1000),
-          main1 = 'bh_global_sub_knn_gene',
-          main2 = 'bh_global_sub_knn_gene')
+          main1 = 'bh_global_bal_knn_gene',
+          main2 = 'bh_global_bal_knn_gene')
 
 
-# bh_global_sub with knn_probe
-bh_global_sub_knn_probe <- predictAll(data = bh_global_sub,
+# bh_global_bal with knn_probe
+bh_global_bal_knn_probe <- predictAll(data = bh_global_bal,
                                       lsa_gene = F,
                                       knn_gene = F,
                                       knn_probe = T,
-                                      threshold = nrow(bh_global_sub),
+                                      threshold = nrow(bh_global_bal),
                                       fac = F,
                                       log = F,
                                       cutoff = .7,
@@ -484,24 +540,41 @@ bh_global_sub_knn_probe <- predictAll(data = bh_global_sub,
                                       iterations = 10)
 
 
-plotModel(bh_global_sub_knn_probe,
+plotModel(bh_global_bal_knn_probe,
           xlim = c(0, 1000),
           ylim = c(0, 1000),
-          main1 = 'bh_global_sub_knn_probe',
-          main2 = 'bh_global_sub_knn_probe')
+          main1 = 'Bump Hunter Features',
+          main2 = 'Bump Hunter Features Sample Collection')
+# 480 features
+# get top features 
 
+temp <- as.data.frame(do.call(rbind, bh_global_bal_knn_probe[[14]]))
+colnames(temp) <- c('probe', 'importance')
+temp$importance <- as.numeric(as.character(temp$importance))
+temp <- temp[order(temp$importance, decreasing = T),]
+temp <- temp[!duplicated(temp$probe),]
+
+important_vars <- temp
+
+# join with bh_global_bal to get gene info
+location_info <- inner_join(important_vars, bh_global_bal, by = 'probe')
+
+location_info <- location_info[with(location_info, order(-importance, p.value)), ]
+
+# write.csv(location_info, '/home/benbrew/Desktop/location_info.csv')
+# write.csv(location_info_resid, '/home/benbrew/Desktop/location_info_resid.csv')
 
 
 ###################
 # Regression, not log, residual
 ###################
 
-# bh_global_sub with lsa_gene
-bh_global_sub_lsa_gene_resid <- predictAll(data = bh_global_sub,
+# bh_global_bal with lsa_gene
+bh_global_bal_lsa_gene_resid <- predictAll(data = bh_global_bal,
                                            lsa_gene = T,
                                            knn_gene = F,
                                            knn_probe = F,
-                                           threshold = nrow(bh_global_sub),
+                                           threshold = nrow(bh_global_bal),
                                            fac = F,
                                            log = F,
                                            cutoff = .7,
@@ -509,19 +582,19 @@ bh_global_sub_lsa_gene_resid <- predictAll(data = bh_global_sub,
                                            iterations = 10)
 
 
-plotModel(bh_global_sub_lsa_gene_resid,
+plotModel(bh_global_bal_lsa_gene_resid,
           xlim = c(0, 1000),
           ylim = c(0, 1000),
-          main1 = 'bh_global_sub_lsa_gene_resid',
-          main2 = 'bh_global_sub_lsa_gene_resid')
+          main1 = 'bh_global_bal_lsa_gene_resid',
+          main2 = 'bh_global_bal_lsa_gene_resid')
 
 
-# bh_global_sub with knn_gene
-bh_global_sub_knn_gene_resid <- predictAll(data = bh_global_sub,
+# bh_global_bal with knn_gene
+bh_global_bal_knn_gene_resid <- predictAll(data = bh_global_bal,
                                            lsa_gene = F,
                                            knn_gene = T,
                                            knn_probe = F,
-                                           threshold = nrow(bh_global_sub),
+                                           threshold = nrow(bh_global_bal),
                                            fac = F,
                                            log = F,
                                            cutoff = .7,
@@ -529,19 +602,19 @@ bh_global_sub_knn_gene_resid <- predictAll(data = bh_global_sub,
                                            iterations = 10)
 
 
-plotModel(bh_global_sub_knn_gene_resid,
+plotModel(bh_global_bal_knn_gene_resid,
           xlim = c(0, 1000),
           ylim = c(0, 1000),
-          main1 = 'bh_global_sub_knn_gene_resid',
-          main2 = 'bh_global_sub_knn_gene_resid')
+          main1 = 'bh_global_bal_knn_gene_resid',
+          main2 = 'bh_global_bal_knn_gene_resid')
 
 
-# bh_global_sub with knn_probe
-bh_global_sub_knn_probe_resid <- predictAll(data = bh_global_sub,
+# bh_global_bal with knn_probe
+bh_global_bal_knn_probe_resid <- predictAll(data = bh_global_bal,
                                             lsa_gene = F,
                                             knn_gene = F,
                                             knn_probe = T,
-                                            threshold = nrow(bh_global_sub),
+                                            threshold = nrow(bh_global_bal),
                                             fac = F,
                                             log = F,
                                             cutoff = .7,
@@ -549,43 +622,57 @@ bh_global_sub_knn_probe_resid <- predictAll(data = bh_global_sub,
                                             iterations = 10)
 
 
-plotModel(bh_global_sub_knn_probe_resid,
+plotModel(bh_global_bal_knn_probe_resid,
           xlim = c(0, 1000),
           ylim = c(0, 1000),
-          main1 = 'bh_global_sub_knn_probe_resid',
-          main2 = 'bh_global_sub_knn_probe_resid')
+          main1 = 'Bump Hunter Residual Features',
+          main2 = 'bh_global_bal_knn_probe_resid')
 
+temp <- as.data.frame(do.call(rbind, bh_global_bal_knn_probe_resid[[14]]))
+colnames(temp) <- c('probe', 'importance')
+temp$importance <- as.numeric(as.character(temp$importance))
+temp <- temp[order(temp$importance, decreasing = T),]
+temp <- temp[!duplicated(temp$probe),]
+
+important_vars <- temp
+
+# join with bh_global_bal to get gene info
+location_info <- inner_join(important_vars, bh_global_bal, by = 'probe')
+
+location_info_resid <- location_info
+
+location_info_resid <- location_info_resid[with(location_info_resid, order(-importance, p.value)), ]
 
 ###################
 # Regression, log, residual
 ###################
 
-# bh_global_sub with lsa_gene
-bh_global_sub_lsa_gene_resid_log <- predictAll(data = bh_global_sub,
+# bh_global_bal with lsa_gene
+bh_global_bal_lsa_gene_resid_log <- predictAll(data = bh_global_bal,
                                                lsa_gene = T,
                                                knn_gene = F,
                                                knn_probe = F,
-                                               threshold = nrow(bh_global_sub),
-                                               fac = F,
-                                               log = T,
+                                               threshold = nrow(bh_global_bal),
+                                               fac = T,
+                                               log = F,
                                                cutoff = .7,
                                                residual = T,
                                                iterations = 10)
 
 
-plotModel(bh_global_sub_lsa_gene_resid_log,
+plotModel(bh_global_bal_lsa_gene_resid_log,
           xlim = c(0, 10),
           ylim = c(0, 10),
-          main1 = 'bh_global_sub_lsa_gene_resid_log',
-          main2 = 'bh_global_sub_lsa_gene_resid_log')
+          main1 = 'bh_global_bal_lsa_gene_resid_log',
+          main2 = 'bh_global_bal_lsa_gene_resid_log')
 
 
-# bh_global_sub with knn_gene
-bh_global_sub_knn_gene_resid_log <- predictAll(data = bh_global_sub,
+# bh_global_bal with knn_gene
+bh_global_bal_knn_gene_resid_log <- predictAll(data = bh_global_bal,
                                                lsa_gene = F,
                                                knn_gene = T,
                                                knn_probe = F,
-                                               threshold = nrow(bh_global_sub),
+                                               threshold = nrow(bh_global_bal),
                                                fac = F,
                                                log = T,
                                                cutoff = .7,
@@ -593,19 +680,19 @@ bh_global_sub_knn_gene_resid_log <- predictAll(data = bh_global_sub,
                                                iterations = 10)
 
 
-plotModel(bh_global_sub_knn_gene_resid_log,
+plotModel(bh_global_bal_knn_gene_resid_log,
           xlim = c(0, 10),
           ylim = c(0, 10),
-          main1 = 'bh_global_sub_knn_gene_resid_log',
-          main2 = 'bh_global_sub_knn_gene_resid_log')
+          main1 = 'bh_global_bal_knn_gene_resid_log',
+          main2 = 'bh_global_bal_knn_gene_resid_log')
 
 
-# bh_global_sub with knn_probe
-bh_global_sub_knn_probe_resid_log <- predictAll(data = bh_global_sub,
+# bh_global_bal with knn_probe
+bh_global_bal_knn_probe_resid_log <- predictAll(data = bh_global_bal,
                                                 lsa_gene = F,
                                                 knn_gene = F,
                                                 knn_probe = T,
-                                                threshold = nrow(bh_global_sub),
+                                                threshold = nrow(bh_global_bal),
                                                 fac = F,
                                                 log = T,
                                                 cutoff = .7,
@@ -613,16 +700,231 @@ bh_global_sub_knn_probe_resid_log <- predictAll(data = bh_global_sub,
                                                 iterations = 10)
 
 
-plotModel(bh_global_sub_knn_probe_resid_log,
+plotModel(bh_global_bal_knn_probe_resid,
           xlim = c(0, 10),
           ylim = c(0, 10),
-          main1 = 'bh_global_sub_knn_probe_resid_log',
-          main2 = 'bh_global_sub_knn_probe_resid_log')
+          main1 = 'Bump Hunter Residual Features (Log)',
+          main2 = 'bh_global_bal_knn_probe_resid_log')
 
 
-######################################
+
+############################################################################
 # Same with factors as outcome
-#####################################
+###########################################################################3
 
+# bh_global with lsa_gene
+bh_global_lsa_gene <- predictAll(data = bh_global,
+                                     lsa_gene = T,
+                                     knn_gene = F,
+                                     knn_probe = F,
+                                     threshold = nrow(bh_global),
+                                     fac = T,
+                                     log = F,
+                                     cutoff = .7,
+                                     residual = F,
+                                     iterations = 10)
+
+# test acc for age of diagnosis
+mean(unlist(bh_global_lsa_gene[[9]]))
+
+# test acc for age of sample collection
+mean(unlist(bh_global_lsa_gene[[11]]))
+
+# confustion matrix age of diagnosis 10
+iterations <- 10
+temp <- list()
+for (i in 1:10){
+  temp[[i]] <- bh_global_lsa_gene[[10]][[i]]$table
+}
+mat <- unlist(temp)
+new_mat <- matrix(, 2, 2)
+
+mat_index <- seq(1, length(mat), 4)
+
+new_mat[1,1] <- sum(mat[mat_index])/iterations
+new_mat[2,1] <- sum(mat[mat_index + 1])/iterations
+new_mat[1,2] <- sum(mat[mat_index + 2])/iterations
+new_mat[2,2] <- sum(mat[mat_index + 3])/iterations
+
+
+# bh_global with knn_gene
+bh_global_knn_gene <- predictAll(data = bh_global,
+                                     lsa_gene = F,
+                                     knn_gene = T,
+                                     knn_probe = F,
+                                     threshold = nrow(bh_global),
+                                     fac = T,
+                                     log = F,
+                                     cutoff = .7,
+                                     residual = F,
+                                     iterations = 10)
+
+
+# test acc for age of diagnosis
+mean(unlist(bh_global_knn_gene[[9]]))
+
+# test acc for age of sample collection
+mean(unlist(bh_global_knn_gene[[11]]))
+
+# confustion matrix age of diagnosis 10
+iterations <- 10
+temp <- list()
+for (i in 1:10){
+  temp[[i]] <- bh_global_knn_gene[[10]][[i]]$table
+}
+mat <- unlist(temp)
+new_mat <- matrix(, 2, 2)
+
+mat_index <- seq(1, length(mat), 4)
+
+new_mat[1,1] <- sum(mat[mat_index])/iterations
+new_mat[2,1] <- sum(mat[mat_index + 1])/iterations
+new_mat[1,2] <- sum(mat[mat_index + 2])/iterations
+new_mat[2,2] <- sum(mat[mat_index + 3])/iterations
+
+
+# bh_global with knn_probe
+bh_global_knn_probe <- predictAll(data = bh_global,
+                                      lsa_gene = F,
+                                      knn_gene = F,
+                                      knn_probe = T,
+                                      threshold = nrow(bh_global),
+                                      fac = T,
+                                      log = F,
+                                      cutoff = .7,
+                                      residual = F,
+                                      iterations = 10)
+
+# test acc for age of diagnosis
+mean(unlist(bh_global_knn_probe[[9]]))
+
+# test acc for age of sample collection
+mean(unlist(bh_global_knn_probe[[11]]))
+
+# confustion matrix age of diagnosis 10
+iterations <- 10
+temp <- list()
+for (i in 1:10){
+  temp[[i]] <- bh_global_knn_probe[[10]][[i]]$table
+}
+mat <- unlist(temp)
+new_mat <- matrix(, 2, 2)
+
+mat_index <- seq(1, length(mat), 4)
+
+new_mat[1,1] <- sum(mat[mat_index])/iterations
+new_mat[2,1] <- sum(mat[mat_index + 1])/iterations
+new_mat[1,2] <- sum(mat[mat_index + 2])/iterations
+new_mat[2,2] <- sum(mat[mat_index + 3])/iterations
+
+
+
+###################
+# classification, not log, residual
+###################
+
+# bh_global with lsa_gene
+bh_global_lsa_gene_resid <- predictAll(data = bh_global,
+                                           lsa_gene = T,
+                                           knn_gene = F,
+                                           knn_probe = F,
+                                           threshold = nrow(bh_global),
+                                           fac = T,
+                                           log = F,
+                                           cutoff = .7,
+                                           residual = T,
+                                           iterations = 10)
+
+# test acc for age of diagnosis
+mean(unlist(bh_global_lsa_gene_resid[[9]]))
+
+# test acc for age of sample collection
+mean(unlist(bh_global_lsa_gene_resid[[11]]))
+
+# confustion matrix age of diagnosis 10
+iterations <- 10
+temp <- list()
+for (i in 1:10){
+  temp[[i]] <- bh_global_lsa_gene_resid[[10]][[i]]$table
+}
+mat <- unlist(temp)
+new_mat <- matrix(, 2, 2)
+
+mat_index <- seq(1, length(mat), 4)
+
+new_mat[1,1] <- sum(mat[mat_index])/iterations
+new_mat[2,1] <- sum(mat[mat_index + 1])/iterations
+new_mat[1,2] <- sum(mat[mat_index + 2])/iterations
+new_mat[2,2] <- sum(mat[mat_index + 3])/iterations
+
+
+# bh_global with knn_gene
+bh_global_knn_gene_resid <- predictAll(data = bh_global,
+                                           lsa_gene = F,
+                                           knn_gene = T,
+                                           knn_probe = F,
+                                           threshold = nrow(bh_global),
+                                           fac = T,
+                                           log = F,
+                                           cutoff = .7,
+                                           residual = T,
+                                           iterations = 10)
+
+# test acc for age of diagnosis
+mean(unlist(bh_global_knn_gene_resid[[9]]))
+
+# test acc for age of sample collection
+mean(unlist(bh_global_knn_gene_resid[[11]]))
+
+# confustion matrix age of diagnosis 10
+iterations <- 10
+temp <- list()
+for (i in 1:10){
+  temp[[i]] <- bh_global_knn_gene_resid[[10]][[i]]$table
+}
+mat <- unlist(temp)
+new_mat <- matrix(, 2, 2)
+
+mat_index <- seq(1, length(mat), 4)
+
+new_mat[1,1] <- sum(mat[mat_index])/iterations
+new_mat[2,1] <- sum(mat[mat_index + 1])/iterations
+new_mat[1,2] <- sum(mat[mat_index + 2])/iterations
+new_mat[2,2] <- sum(mat[mat_index + 3])/iterations
+
+
+# bh_global with knn_probe
+bh_global_knn_probe_resid <- predictAll(data = bh_global,
+                                            lsa_gene = F,
+                                            knn_gene = F,
+                                            knn_probe = T,
+                                            threshold = nrow(bh_global),
+                                            fac = T,
+                                            log = F,
+                                            cutoff = .7,
+                                            residual = T,
+                                            iterations = 10)
+
+# test acc for age of diagnosis
+mean(unlist(bh_global_knn_probe_resid[[9]]))
+
+# test acc for age of sample collection
+mean(unlist(bh_global_knn_probe_resid[[11]]))
+
+# confustion matrix age of diagnosis 10
+iterations <- 10
+temp <- list()
+for (i in 1:10){
+  temp[[i]] <- bh_global_knn_probe_resid[[10]][[i]]$table
+}
+mat <- unlist(temp)
+new_mat <- matrix(, 2, 2)
+
+mat_index <- seq(1, length(mat), 4)
+
+new_mat[1,1] <- sum(mat[mat_index])/iterations
+new_mat[2,1] <- sum(mat[mat_index + 1])/iterations
+new_mat[1,2] <- sum(mat[mat_index + 2])/iterations
+new_mat[2,2] <- sum(mat[mat_index + 3])/iterations
 
 

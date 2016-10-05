@@ -12,11 +12,9 @@ library(genefilter)
 # Initialize folders
 home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
-test <- paste0(project_folder, '/Scripts/Analyze')
 data_folder <- paste0(project_folder, '/Data')
 methyl_data <- paste0(data_folder, '/methyl_data')
 clin_data <- paste0(data_folder, '/clin_data')
-results_folder <- paste0(test, '/Results')
 
 
 #################################################################################################
@@ -46,6 +44,14 @@ clin$id <- gsub('A|B_', '', clin$blood_dna_malkin_lab_)
 full_data <- inner_join(clin, methyl,
                         by = 'id')
 
+full_data <- full_data[!is.na(full_data$age_diagnosis),]
+full_data <- full_data[!duplicated(full_data$blood_dna_malkin_lab_),]
+
+full_data_mut <- full_data[full_data$p53_germline == 'Mut',]
+full_data_mut <- full_data_mut[!duplicated(full_data_mut$tm_donor_),]
+full_data_mut <- full_data_mut[, c(6,8,29:ncol(full_data_mut))]
+
+
 # inner_join clin
 full_data_probe <- inner_join(clin, methylation,
                         by = 'id')
@@ -58,15 +64,23 @@ full_data <- full_data[!duplicated(full_data$id),]
 full_data_probe <- full_data_probe[!is.na(full_data_probe$age_diagnosis),]
 full_data_probe <- full_data_probe[!duplicated(full_data_probe$id),]
 
+full_data_probe_mut <- full_data_probe[full_data_probe$p53_germline == 'Mut',]
+full_data_probe_mut <- full_data_probe_mut[!duplicated(full_data_probe_mut$tm_donor_),]
+full_data_probe_mut <- full_data_probe_mut[, c(6,8,29:ncol(full_data_probe_mut))]
+
+
 # subset full_data to just have age data and methylation data 
 full_data <- full_data[, c(6,8,29:ncol(full_data))]
 full_data_probe <- full_data_probe[, c(6,8,29:ncol(full_data_probe))]
 
 
 # Save data to be used later
-# write.csv(full_data, paste0(data_folder, '/full_data.csv'))
-# write.csv(full_data_probe, paste0(data_folder, '/full_data_probe.csv'))
+write.csv(full_data, paste0(data_folder, '/full_data.csv'))
+write.csv(full_data_probe, paste0(data_folder, '/full_data_probe.csv'))
+write.csv(full_data, paste0(data_folder, '/full_data_mut.csv'))
+write.csv(full_data_probe, paste0(data_folder, '/full_data_probe_mut.csv'))
 
+save.image('/home/benbrew/Desktop/model_data2.RData')
 ###################################################################################################
 # Using correlation
 # scale methyl

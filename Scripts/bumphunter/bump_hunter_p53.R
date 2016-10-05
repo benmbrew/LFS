@@ -138,6 +138,7 @@ bumpHunter <- function(selection) {
 cancer <- bumpHunter(selection = 'cancer')
 global <- bumpHunter(selection = 'global')
 
+
 # look at summary stats of global and cancer
 
 # Cancer 
@@ -496,8 +497,11 @@ cancer <- bumpHunterBalanced(selection = 'cancer')
 global <- bumpHunterBalanced(selection = 'global')
 
 # look at summary stats of global and cancer
-
+cancer <- cancer[[1]]
+global <- global[[1]]
 # Cancer 
+
+
 # counts for wt
 cancer[[2]]
 # counts for mut

@@ -34,9 +34,11 @@ results_folder <- paste0(test, '/Results')
 # Read in 3 different data sets 
 full_data <- read.csv(paste0(data_folder, '/full_data.csv'), stringsAsFactors = F)
 full_data$X <- NULL
+full_data$id <- NULL
 
 full_data_probe <- read.csv(paste0(data_folder, '/full_data_probe.csv'), stringsAsFactors = F)
 full_data_probe$X <- NULL
+full_data_probe$id <- NULL
 
 # make categroical variable from age of methylaion and age of sample collection
 full_data$age_diagnosis_fac <- as.integer(ifelse(full_data$age_diagnosis <= 48, 1, 2))
@@ -59,7 +61,9 @@ resid_full$age_sample_fac <- as.integer(ifelse(resid_full$age_sample_collection 
 resid_full_probe$age_diagnosis_fac <- as.integer(ifelse(resid_full_probe$age_diagnosis <= 48, 1, 2))
 resid_full_probe$age_sample_fac <- as.integer(ifelse(resid_full_probe$age_sample_collection <= 48, 1, 2))
 
+# save.image('/home/benbrew/Desktop/model_dat.RData')
 
+# load('/home/benbrew/Desktop/model_data2.RData')
 #########################################
 # function that takes data and arguments for regression, cutoff, and selected features. 
 #########################################
@@ -70,6 +74,7 @@ predictAll <- function(data,
                        log,
                        resid,
                        cutoff,
+                       random,
                        iterations) {
   
   model <- list()
@@ -88,9 +93,14 @@ predictAll <- function(data,
   test_acc_samp <- list()
   test_stats_samp <- list()
   
-  
   # get features, and subset by complete age of diagnosis 
   selected_features <- colnames(data)[3:(ncol(data) -2)]
+  
+  if (random){
+    
+    selected_features <- sample(selected_features, 100, replace = F)
+    
+  }
   
   if (fac) {
     
@@ -113,8 +123,8 @@ predictAll <- function(data,
   
     if (log & resid) {
     
-    data <- log(data^2)
-    data <- as.data.frame(data)
+      data[, 3:ncol(data)] <-  data[, 3:ncol(data)] + abs(min(data[, 3:ncol(data)])) + .1
+      data <- log(data)
     
     }
   
@@ -302,7 +312,6 @@ plotModel <- function(result_list,
   
 }
 
-
 #######################################################################################
 # Methylation
 #######################################################################################
@@ -314,7 +323,8 @@ plotModel <- function(result_list,
 ####
 # regression, not log, not residual
 ####
-methyl_reg <- predictAll(data = full_data,
+methyl_reg <- predictAll(data = full_data_probe_mut,
+                         random = F,
                          reg = T,
                          fac = F,
                          log = F,
@@ -325,34 +335,37 @@ methyl_reg <- predictAll(data = full_data,
 ####
 # regression, log, not resid
 ####
-methyl_reg_log <- predictAll(data = full_data,
-                         reg = T,
-                         fac = F,
-                         log = T,
-                         cutoff = .7,
-                         resid = F,
-                         iterations = 10)
-####
-# regression, not log, resid
-####
-methyl_reg_resid <- predictAll(data = resid_full,
-                         reg = T,
-                         fac = F,
-                         log = F,
-                         cutoff = .7,
-                         resid = T,
-                         iterations = 10)
-
-####
-# regression, log, resid
-####
-methyl_reg_log_resid <- predictAll(data = resid_full,
+methyl_reg_log <- predictAll(data = full_data_probe,
+                             random = F,
                              reg = T,
                              fac = F,
                              log = T,
                              cutoff = .7,
-                             resid = T,
+                             resid = F,
                              iterations = 10)
+####
+# regression, not log, resid
+####
+methyl_reg_resid <- predictAll(data = resid_full_probe,
+                               random = F,
+                               reg = T,
+                               fac = F,
+                               log = F,
+                               cutoff = .7,
+                               resid = T,
+                               iterations = 10)
+
+####
+# regression, log, resid
+####
+methyl_reg_log_resid <- predictAll(data = resid_full_probe,
+                                   random = F,
+                                   reg = T,
+                                   fac = F,
+                                   log = T,
+                                   cutoff = .7,
+                                   resid = T,
+                                   iterations = 10)
 
 
 plotModel(methyl_reg,
@@ -383,9 +396,11 @@ plotModel(methyl_reg_log_resid,
 ###################
 # classification
 ###################
+load('/home/benbrew/Desktop/confusion.matrix.RData')
 
 # age of diagnosis, classification, not log
-methyl_fac <- predictAll(data = full_data,
+methyl_fac <- predictAll(data = full_data_probe,
+                         random = F,
                          reg = F,
                          fac = T,
                          log = F,
