@@ -109,5 +109,13 @@ write.csv(gene_knn, paste0(imputed_data, '/methyl_impute_gene_knn.csv'))
 probe <- imputeMethyl(methyl_probe,
                       probe = T)
 
+#extract data
+probe_lsa <- probe[[1]]
+probe_knn <- probe[[2]]
 
+# write csv
+write.csv(probe_lsa, paste0(imputed_data, '/methyl_impute_probe_lsa.csv'))
+write.csv(probe_knn, paste0(imputed_data, '/methyl_impute_probe_knn.csv'))
+
+save.image(paste0(imputed_data, '/imputed_gene_probe.RData'))
 
