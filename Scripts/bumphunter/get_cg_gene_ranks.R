@@ -18,21 +18,14 @@ library(IlluminaHumanMethylation450kmanifest)
 home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
 data_folder <- paste0(project_folder, '/Data')
+bumphunter_data <- paste0(data_folder, '/bumphunter_data')
 
 
-# read in different bumphunter results # 
-bh_cancer <- read.csv(paste0(data_folder, '/bh_cancer.csv'))
-bh_global <- read.csv(paste0(data_folder, '/bh_global.csv'))
-bh_cancer_sub <- read.csv(paste0(data_folder, '/bh_cancer_sub.csv'))
-bh_global_sub <- read.csv(paste0(data_folder, '/bh_global_sub.csv'))
-bh_cancer_bal <- read.csv(paste0(data_folder, '/bh_cancer_balanced.csv'))
-bh_global_bal <- read.csv(paste0(data_folder, '/bh_global_balanced.csv'))
-bh_cancer_ind <-  read.csv(paste0(data_folder, '/bh_cancer_indicator.csv'))
+# load data
+load(paste0(bumphunter_data, '/bh_regions.RData'))
 
-# read in methylation data with probes
-# methylation <- read.csv(paste0(data_folder, '/methyl_knn.csv'))
-# methylation$X <- NULL
-# load(paste0(data_folder, '/methyl_knn.RData'))
+
+
 ################################################
 # get probes for bumphunter results
 ###############################################

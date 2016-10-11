@@ -8,6 +8,13 @@ library(mlbench)
 library(caret)
 library(FactoMineR)
 library(genefilter)
+library(IlluminaHumanMethylation450kanno.ilmn12.hg19)
+library(impute)
+library(GenomicRanges)
+library(biovizBase)
+library(GEOquery)
+library(IlluminaHumanMethylation450kmanifest)
+
 
 # Initialize folders
 home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
@@ -16,6 +23,7 @@ data_folder <- paste0(project_folder, '/Data')
 methyl_data <- paste0(data_folder, '/methyl_data')
 imputed_data <- paste0(data_folder, '/imputed_data')
 model_data <- paste0(data_folder, '/model_data')
+bumphunter_data <- paste0(data_folder, '/bumphunter_data')
 clin_data <- paste0(data_folder, '/clin_data')
 
 
@@ -44,43 +52,80 @@ cleanIDs <- function(data){
   return(data)
 }
 
-gene_knn <- cleanIDs(gene_knn)
-gene_lsa <- cleanIDs(gene_lsa)
-probe_knn <- cleanIDs(probe_knn)
-probe_lsa <- cleanIDs(probe_lsa)
-
-
 ###########################################
 # get probe locations 
 ###########################################
 
-#idat files
-idatFiles <- list.files("GSE68777/idat", pattern = "idat.gz$", full = TRUE)
-sapply(idatFiles, gunzip, overwrite = TRUE)
+getIDAT <- function(cg_locations) {
+  
+  #idat files
+  idatFiles <- list.files("GSE68777/idat", pattern = "idat.gz$", full = TRUE)
+  sapply(idatFiles, gunzip, overwrite = TRUE)
+  
+  # read into rgSet
+  rgSet <- read.450k.exp("GSE68777/idat")
+  
+  # preprocess quantil
+  rgSet <- preprocessQuantile(rgSet)
+  
+  # get rangers 
+  rgSet <- granges(rgSet)
+  cg_locations <- as.data.frame(rgSet)
+  
+  # make rownames probe column
+  cg_locations$probe <- rownames(cg_locations)
+  rownames(cg_locations) <- NULL
+  
+  return(cg_locations)
+  
+}
 
-# read into rgSet
-rgSet <- read.450k.exp("GSE68777/idat")
 
-# preprocess quantil
-rgSet <- preprocessQuantile(rgSet)
-
-# get rangers 
-rgSet <- granges(rgSet)
-cg_locations <- as.data.frame(rgSet)
-
-# make rownames probe column
-cg_locations$probe <- rownames(cg_locations)
-rownames(cg_locations) <- NULL
+gene_knn <- cleanIDs(gene_knn)
+gene_lsa <- cleanIDs(gene_lsa)
+probe_knn <- cleanIDs(probe_knn)
+probe_lsa <- cleanIDs(probe_lsa)
+cg_locations <- getIDAT(cg_locations)
 
 # save image file 
 save.image(paste0(model_data, '/model_data.RData'))
 
+#######################################
+# format probe data for bumphunter
+#######################################
+# function that takes each methylation and merges with clinical - keep id, family, p53 status, age data
+joinData <- function(data) {
+  
+  features <- colnames(data)[2:(length(colnames(data)))]
+  data <- inner_join(data, clin, by = 'id')
+  data <- data[!is.na(data$p53_germline),]
+  data <- data[!duplicated(data$id),]
+  data <- data[!duplicated(data$tm_donor_),]
+  data <- data[, c('p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses', features)]
+  return(data)
+}
+
+# take p53 germline column and relevel factors to get rid of NA level
+relevelFactor <- function(data) {
+  data$p53_germline <- factor(data$p53_germline, levels = c('Mut', 'WT'))
+  return(data)
+}
+
+probe_knn <- joinData(probe_knn)
+probe_knn_bh <- relevelFactor(probe_knn)
+
+probe_lsa <- joinData(probe_lsa)
+probe_lsa_bh <- relevelFactor(probe_lsa)
+
+rm(gene_knn, gene_lsa, probe_knn, probe_lsa)
+
+save.image(paste0(bumphunter_data, '/bh_data.RData'))
 
 # ###################################################################################################
 # # Using correlation
 # # scale methyl
 # #methyl <- scale(methyl[, -1])
-# 
+# rm(agg1, d1,d2,d3,d4, )
 # # make a correlation matrix 
 # cor_mat <- cor(methyl[, -1])
 # 

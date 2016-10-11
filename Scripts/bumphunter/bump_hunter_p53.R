@@ -11,57 +11,57 @@ project_folder <- paste0(home_folder, '/LFS')
 data_folder <- paste0(project_folder, '/Data')
 clin_data <- paste0(data_folder, '/clin_data')
 model_data <- paste0(data_folder, '/model_data')
+bumphunter_data <- paste0(data_folder, '/bumphunter_data')
+
 
 
 # Load model data which contains all variations of methylation data
-load(paste0(model_data, '/model_data.RData'))
+load(paste0(bumphunter_data, '/bh_data.RData'))
+
+# remove gene data because bumhunter is on probes
+rm(rgSet)
 
 ####################################
 # function that matches mut and wt counts as well as creates relatively similar
 # samples for each category - cancer and age
 ####################################
 
-# function that takes each methylation and merges with clinical - keep id, family, p53 status, age data
-joinData <- function(data) {
-  
-  features <- colnames(data)[2:(length(colnames(data)))]
-  data <- inner_join(data, clin, by = 'id')
-  data <- data[!is.na(data$p53_germline),]
-  data <- data[!duplicated(data$id),]
-  data <- data[!duplicated(data$tm_donor_),]
-  data <- data[, c('p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses', features)]
-  return(data)
-}
-
-# take p53 germline column and relevel factors to get rid of NA level
-relevelFacor <- function(data) {
-  data$p53_germline <- factor(data$p53_germline, c('Mut', 'WT'))
-  return(data$p53_germline)
-}
-
 bumpHunterBalanced <- function(data,
                                selection) {
   
-  data <- joinData(data)
-  
-  data$p53_germline <- relevelFacor(data$p53_germline)
-  
   if (selection == 'cancer') {
     data <- data[data$cancer_diagnosis_diagnoses != 'Unaffected',]
-    # first subset by ACC and Other (the biggest difference is between "Other" cancers - so subset by just ACC and Unaffected)
-    data <- data[data$age_diagnosis <= 180,]
+    # first subset by ACC and Other (the biggest difference is between "Other" cancers - 
+    # so subset by just ACC and Unaffected)
+    data <- data[data$age_diagnosis <= 305,]
+    
+    # randomly remove Mut that have a less than 50 month age of diganosis to have balanced classes
+    remove_index <- which(data$p53_germline == 'Mut' & data$age_diagnosis <= 50)
+    remove_index <- sample(remove_index, 23, replace = F )
+    data <- data[-remove_index,]
+    
   }
   if (selection == 'global') {
-    data <- data[!is.na(data$p53_germline),]
-    # first subset by ACC and Other (the biggest difference is between "Other" cancers - so subset by just ACC and Unaffected)
+   
+    # subset cancer data by just acc and unaffected, because WT essetially only have these categories.
     data <- data[grepl('ACC|Unaffected', data$cancer_diagnosis_diagnoses),]
-    data <- data[data$age_diagnosis <= 180 | is.na(data$age_diagnosis),]
-    # data[data$cancer_diagnosis_diagnoses != 'Unaffected',] <- data$cancer_diagnosis_diagnoses != 'Unaffected'[data$age_diagnosis <= 180,]
+    # now mut v wt classes are more balanced 33 v 31
+    # mut has 20 Acc and 11 unaffected
+    # wt 13 acc and 20 unaffected
+    
+    # Balance Mut to 13 ACC and 11 Unaffected
+    remove_index <- which(data$p53_germline == 'Mut' & data$cancer_diagnosis_diagnoses == 'ACC')
+    remove_index <- sample(remove_index, 7, replace = F )
+    data <- data[-remove_index,]
+    
+    # Balance WT to 13 ACC and 13 Unaffected
+    remove_index <- which(data$p53_germline == 'WT' & data$cancer_diagnosis_diagnoses == 'Unaffected')
+    remove_index <- sample(remove_index, 7, replace = F )
+    data <- data[-remove_index,]
+    
   }
   
-  # Make a mut and WT population have "similar" age
-  #########################################
-  
+ 
   # remove rows that are all NA 
   all_na_ind <- apply(data, 1, function(x) all(is.na(x)))
   data <- data[ !all_na_ind, ]
@@ -78,30 +78,23 @@ bumpHunterBalanced <- function(data,
   # Get genetic locations
   ######################
   
+  data$p53_germline <- data$age_diagnosis <- data$cancer_diagnosis_diagnoses <- NULL
   # transpose methylation to join with cg_locations to get genetic location vector.
   data <- as.data.frame(t(data), stringsAsFactors = F)
-  
-  # make ids column names and remove first row
-  colnames(data) <- data[1,]
-  data <- data[-1,]
   
   # make probe a column in methyl
   data$probe <- rownames(data)
   rownames(data) <- NULL
   
-  # remove clinical rows at bottom of data set
-  bump_data <- data[1:212351,]
-  
   # inner join methyl and cg_locations by probe
-  methyl_cg <- inner_join(cg_locations, bump_data, by = 'probe')
+  methyl_cg <- inner_join(data, cg_locations, by = 'probe')
   
   # get chr and pos vector 
   chr <- methyl_cg$seqnames
   pos <- methyl_cg$start
   
   # create beta matrix
-  rownames(methyl_cg) <- methyl_cg$probe
-  beta <- methyl_cg[, 7:ncol(methyl_cg)]
+  beta <- methyl_cg[, 1:(ncol(methyl_cg) - 6)]
   
   # make beta numeric 
   for (i in 1:ncol(beta)) {
@@ -136,12 +129,6 @@ bumpHunterBalanced <- function(data,
   
   bump_hunter_results <- tab$table
   
-  if (selection == 'cancer') {
-    write.csv(bump_hunter_results, paste0(data_folder, '/bh_cancer_balanced.csv'))
-  }
-  if (selection == 'global') {
-    write.csv(bump_hunter_results, paste0(data_folder, '/bh_global_balanced.csv')) 
-  }
   
   # analyze the distribution of cancer and age in the bumphunter data 
   
@@ -164,41 +151,59 @@ bumpHunterBalanced <- function(data,
   
 }
 
-cancer <- bumpHunterBalanced(selection = 'cancer')
-global <- bumpHunterBalanced(selection = 'global')
+cancer_knn <- bumpHunterBalanced(data = probe_knn_bh, 
+                             selection = 'cancer')
+
+cancer_lsa <- bumpHunterBalanced(data = probe_lsa_bh, 
+                                 selection = 'cancer')
+
+global_knn <- bumpHunterBalanced(data = probe_knn_bh, 
+                             selection = 'global')
+
+global_lsa <- bumpHunterBalanced(data = probe_lsa_bh, 
+                                 selection = 'global')
 
 # look at summary stats of global and cancer
-cancer <- cancer[[1]]
-global <- global[[1]]
-# Cancer 
+probe_knn_cancer_bh <- cancer_knn[[1]]
+probe_lsa_cancer_bh <- cancer_lsa[[1]]
+
+probe_knn_global_bh <- global_knn[[1]]
+probe_lsa_global_bh <- global_lsa[[1]]
+
+rm(cg_locations, clin, probe_knn_bh, probe_lsa_bh, cancer_lsa, cancer_knn, global_knn, global_lsa)
+
+# save file 
+save.image(paste0(bumphunter_data, '/bh_regions.RData'))
 
 
-# counts for wt
-cancer[[2]]
-# counts for mut
-cancer[[3]]
-# summary for age wt
-cancer[[4]]
-#summary for age mut
-cancer[[5]]
-#summary for cancer wt
-cancer[[6]]
-#summary for cancer mut
-cancer[[7]]
 
-## Global
-# counts for wt
-global[[2]]
-# counts for mut
-global[[3]]
-# summary for age wt
-global[[4]]
-#summary for age mut
-global[[5]]
-#summary for cancer wt
-global[[6]]
-#summary for cancer mut
-global[[7]]
+
+# # counts for wt
+# cancer[[2]]
+# # counts for mut
+# cancer[[3]]
+# # summary for age wt
+# cancer[[4]]
+# #summary for age mut
+# cancer[[5]]
+# #summary for cancer wt
+# cancer[[6]]
+# #summary for cancer mut
+# cancer[[7]]
+# 
+# ## Global
+# # counts for wt
+# global[[2]]
+# # counts for mut
+# global[[3]]
+# # summary for age wt
+# global[[4]]
+# #summary for age mut
+# global[[5]]
+# #summary for cancer wt
+# global[[6]]
+# #summary for cancer mut
+# global[[7]]
 
 # # make function that selects the appropriate WT population and runs bumphunter
 # bumpHunter <- function(selection) {
