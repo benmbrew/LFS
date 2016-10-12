@@ -24,27 +24,29 @@ bumphunter_data <- paste0(data_folder, '/bumphunter_data')
 # load data
 load(paste0(bumphunter_data, '/bh_regions.RData'))
 
-
-
 ################################################
 # get probes for bumphunter results
 ###############################################
 
-#idat files
-idatFiles <- list.files("GSE68777/idat", pattern = "idat.gz$", full = TRUE)
-sapply(idatFiles, gunzip, overwrite = TRUE)
+getRgSet <- function() {
+  
+  #idat files
+  idatFiles <- list.files("GSE68777/idat", pattern = "idat.gz$", full = TRUE)
+  sapply(idatFiles, gunzip, overwrite = TRUE)
+  
+  # read into rgSet
+  rgSet <- read.450k.exp("GSE68777/idat")
+  
+  # preprocess quantil
+  rgSet <- preprocessQuantile(rgSet)
+  
+  # get rangers 
+  rgSet <- granges(rgSet)
+  rgSet <- as.data.frame(rgSet)
+  return(rgSet)
+}
 
-# read into rgSet
-rgSet <- read.450k.exp("GSE68777/idat")
-
-# preprocess quantil
-rgSet <- preprocessQuantile(rgSet)
-
-# get rangers 
-rgSet <- granges(rgSet)
-rgSet <- as.data.frame(rgSet)
-
-
+rgSet <- getRgSet()
 
 ###################################
 # create function that grabs probe site and gene name for results from bumphunter
@@ -62,7 +64,7 @@ getProbe <- function(data) {
   for (i in unique(data$chr)) {
     
     sub_data <- data[data$chr == i,]
-    sub_rg <- rgSet[rgSet$seqnames ==i, ]
+    sub_rg <- rgSet[rgSet$seqnames == i, ]
     
     for (j in 1:nrow(sub_data)) {
       
@@ -100,79 +102,66 @@ getProbe <- function(data) {
   # remove duplicates from dat_cg
   dat_cg <- dat_cg[!duplicated(dat_cg$probe),]
   
-  ####### Now get nearest gene
-  # First load the 450k data from hg19 (bioconductor, library is FDb.InfiniumMethylation.hg19)
-  hm450 <- get450k()
-  
-  # Get probe names from our methylation data  
-  probe_names <- as.character(dat_cg$probe)
-  
-  # remove probes that have less than 10 characters.
-  probe_names <- probe_names[nchar(probe_names) == 10]
-  
-  # get probes from hm450
-  probes <- hm450[probe_names]
-  #get the nearest gene to each probe location.
-  probe_info <- getNearestGene(probes)
-  probe_info <- cbind(probe = rownames(probe_info), probe_info)
-  rownames(probe_info) <- NULL
-  
-  # innerjoin dat_cg with probe_info by probe 
-  dat_cg <- inner_join(probe_info, dat_cg, by = 'probe')
-  
   # keep only necessary columns
-  dat_cg <- dat_cg[, c('chr', 'probe', 'nearestGeneSymbol', 'p.value', 'fwer')]
+  dat_cg <- dat_cg[, c('chr' , 'start','end', 'probe', 'p.value', 'fwer')]
   
-  # order by p.value and save file 
-  dat_cg <- dat_cg[order(dat_cg$p.value, decreasing = F),]
-  
-  
+  # ####### Now get nearest gene
+  # # First load the 450k data from hg19 (bioconductor, library is FDb.InfiniumMethylation.hg19)
+  # hm450 <- get450k()
+  # 
+  # # Get probe names from our methylation data  
+  # probe_names <- as.character(dat_cg$probe)
+  # 
+  # # remove probes that have less than 10 characters.
+  # probe_names <- probe_names[nchar(probe_names) == 10]
+  # 
+  # # get probes from hm450
+  # probes <- hm450[probe_names]
+  # #get the nearest gene to each probe location.
+  # probe_info <- getNearestGene(probes)
+  # probe_info <- cbind(probe = rownames(probe_info), probe_info)
+  # rownames(probe_info) <- NULL
+  # 
+  # # innerjoin dat_cg with probe_info by probe 
+  # dat_cg <- inner_join(probe_info, dat_cg, by = 'probe')
+  # 
+  # # keep only necessary columns
+  # dat_cg <- dat_cg[, c('chr', 'probe', 'p.value', 'fwer')]
+  # 
+  # # order by p.value and save file 
+  # dat_cg <- dat_cg[order(dat_cg$p.value, decreasing = F),]
+  # 
+  # 
   return(dat_cg)
   
 }
 
-# cancer and global
-bh_cancer_full <- getProbe(bh_cancer)
-write.csv(bh_cancer_full, paste0(data_folder, '/bh_cancer_full.csv'))
-bh_global_full <- getProbe(bh_global)
-write.csv(bh_global_full, paste0(data_folder, '/bh_global_full.csv'))
+# apply function to four data bh
+probe_knn_cancer_features <- getProbe(probe_knn_cancer_bh)
+probe_lsa_cancer_features <- getProbe(probe_lsa_cancer_bh)
 
-# subselect cancer and global
-bh_cancer_sub_full <- getProbe(bh_cancer_sub)
-write.csv(bh_cancer_sub_full, paste0(data_folder, '/bh_cancer_sub_full.csv'))
-bh_global_sub_full <- getProbe(bh_global_sub)
-write.csv(bh_global_sub_full, paste0(data_folder, '/bh_global_sub_full.csv'))
+probe_knn_global_features <- getProbe(probe_knn_global_bh)
+probe_lsa_global_features <- getProbe(probe_lsa_global_bh)
 
-# balanced cancer and global
-bh_cancer_bal_full <- getProbe(bh_cancer_bal)
-write.csv(bh_cancer_bal_full, paste0(data_folder, '/bh_cancer_bal_full.csv'))
-bh_global_bal_full <- getProbe(bh_global_bal)
-write.csv(bh_global_bal_full, paste0(data_folder, '/bh_global_bal_full.csv'))
-
-# cancer as indicator instead of p53
-bh_cancer_ind_full <- getProbe(bh_cancer_ind)
-write.csv(bh_cancer_ind_full, paste0(data_folder, '/bh_cancer_ind_full.csv'))
-
+rm(probe_knn_cancer_bh, probe_lsa_cancer_bh, probe_knn_global_bh, probe_lsa_global_bh, rgSet)
 
 # get union of all of them 
-bh_union <- rbind(bh_cancer_full, 
-                  bh_global_full, 
-                  bh_cancer_sub_full, 
-                  bh_global_sub_full, 
-                  bh_cancer_bal_full, 
-                  bh_global_bal_full)
+bh_union <- rbind(probe_knn_cancer_features,
+                  probe_lsa_cancer_features,
+                  probe_knn_global_features,
+                  probe_lsa_global_features)
 
 # remove duplicates to get union 
 bh_union <- bh_union[!duplicated(bh_union[,2]),]
-write.csv(bh_union, paste0(data_folder, '/bh_union.csv'))
-
 
 # get intersection of all of them 
-intersection <- paste(Reduce(intersect, list(bh_cancer_full$probe, bh_global_full$probe, bh_cancer_sub_full$probe, bh_global_sub_full$probe,
-                       bh_cancer_bal_full$probe, bh_global_bal_full$probe)),collapse = '|' )
+intersection <- paste(Reduce(intersect, list(probe_knn_cancer_features$probe, probe_lsa_cancer_features$probe,
+                                             probe_knn_global_features$probe, probe_lsa_global_features$probe)),collapse = '|' )
 
 # subset bh_union by these probes to get intersection
 bh_intersection <- bh_union[grepl(intersection, bh_union$probe),]
-write.csv(bh_intersection, paste0(data_folder, '/bh_intersection.csv'))
+
+# save data to modeldata
+save.image(paste0(model_data, '/bh_features.RData'))
 
 

@@ -14,12 +14,9 @@ model_data <- paste0(data_folder, '/model_data')
 bumphunter_data <- paste0(data_folder, '/bumphunter_data')
 
 
-
 # Load model data which contains all variations of methylation data
-load(paste0(bumphunter_data, '/bh_data.RData'))
-
-# remove gene data because bumhunter is on probes
-rm(rgSet)
+load(paste0(model_data, '/model_data.RData'))
+rm(gene_knn, gene_lsa)
 
 ####################################
 # function that matches mut and wt counts as well as creates relatively similar
@@ -67,7 +64,7 @@ bumpHunterBalanced <- function(data,
   data <- data[ !all_na_ind, ]
   
   # get clinical data 
-  bump_clin <- data[,1:3]
+  bump_clin <- data[,1:4]
   
   # get p53 and put into design matrix with intercept 1
   p53_vector <- data$p53_germline
@@ -78,7 +75,8 @@ bumpHunterBalanced <- function(data,
   # Get genetic locations
   ######################
   
-  data$p53_germline <- data$age_diagnosis <- data$cancer_diagnosis_diagnoses <- NULL
+  data$p53_germline <- data$age_diagnosis <- data$cancer_diagnosis_diagnoses <-
+    data$age_sample_collection <- NULL
   # transpose methylation to join with cg_locations to get genetic location vector.
   data <- as.data.frame(t(data), stringsAsFactors = F)
   
@@ -151,16 +149,16 @@ bumpHunterBalanced <- function(data,
   
 }
 
-cancer_knn <- bumpHunterBalanced(data = probe_knn_bh, 
+cancer_knn <- bumpHunterBalanced(data = probe_knn, 
                              selection = 'cancer')
 
-cancer_lsa <- bumpHunterBalanced(data = probe_lsa_bh, 
+cancer_lsa <- bumpHunterBalanced(data = probe_lsa, 
                                  selection = 'cancer')
 
-global_knn <- bumpHunterBalanced(data = probe_knn_bh, 
+global_knn <- bumpHunterBalanced(data = probe_knn, 
                              selection = 'global')
 
-global_lsa <- bumpHunterBalanced(data = probe_lsa_bh, 
+global_lsa <- bumpHunterBalanced(data = probe_lsa, 
                                  selection = 'global')
 
 # look at summary stats of global and cancer
@@ -170,7 +168,7 @@ probe_lsa_cancer_bh <- cancer_lsa[[1]]
 probe_knn_global_bh <- global_knn[[1]]
 probe_lsa_global_bh <- global_lsa[[1]]
 
-rm(cg_locations, clin, probe_knn_bh, probe_lsa_bh, cancer_lsa, cancer_knn, global_knn, global_lsa)
+rm(cg_locations, clin, probe_knn, probe_lsa, cancer_lsa, cancer_knn, global_knn, global_lsa)
 
 # save file 
 save.image(paste0(bumphunter_data, '/bh_regions.RData'))

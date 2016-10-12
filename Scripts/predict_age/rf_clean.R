@@ -20,50 +20,75 @@ registerDoParallel(1)
 # Initialize folders
 home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
-test <- paste0(project_folder, '/Scripts/Analyze')
 data_folder <- paste0(project_folder, '/Data')
 methyl_data <- paste0(data_folder, '/methyl_data')
 clin_data <- paste0(data_folder, '/clin_data')
-results_folder <- paste0(test, '/Results')
+bumphunter_data <- paste0(data_folder, '/bumphunter_data')
+model_data <- paste0(data_folder, '/model_data')
 
 
 ###########################################
-# Read in data -full_data and the two correlated data (normal and small)
+# Read in data- gene_knn, gene_lsa, 
+# probe_knn, probe_lsa, and bh_features
 ###########################################
 
-# Read in 3 different data sets 
-full_data <- read.csv(paste0(data_folder, '/full_data.csv'), stringsAsFactors = F)
-full_data$X <- NULL
-full_data$id <- NULL
+load(paste0(model_data, '/model_data.RData'))
+load(paste0(model_data, '/bh_features.RData'))
+rm(cg_locations)
 
-full_data_probe <- read.csv(paste0(data_folder, '/full_data_probe.csv'), stringsAsFactors = F)
-full_data_probe$X <- NULL
-full_data_probe$id <- NULL
+# Data types: 
+# 1) gene_knn, gene_lsa, probe_knn, probe_lsa all methylation data that needs
+# to be joined with clinical data
+# 2) probe_knn_cancer_features, probe_lsa_cancer_features,
+#    probe_knn_global_features, probe_lsa_global_features
+# simpy have the probes chosen as significant in the bumphunter analysis. 
 
-# make categroical variable from age of methylaion and age of sample collection
-full_data$age_diagnosis_fac <- as.integer(ifelse(full_data$age_diagnosis <= 48, 1, 2))
-full_data$age_sample_fac <- as.integer(ifelse(full_data$age_sample_collection <= 48, 1, 2))
+###################
+# function that combines model_data with 
+# clinical data
+###################
+joinData <- function(model_data) {
+  
+  features <- colnames(model_data)[2:(length(colnames(model_data)))]
+  model_data <- inner_join(model_data, clin, by = 'id')
+  model_data <- model_data[!is.na(model_data$p53_germline),]
+  model_data <- model_data[!duplicated(model_data$id),]
+  model_data <- model_data[!duplicated(model_data$tm_donor_),]
+  model_data <- model_data[, c('p53_germline', 'age_diagnosis', 'age_sample_collection', 'cancer_diagnosis_diagnoses', features)]
+  return(model_data)
+}
 
-full_data_probe$age_diagnosis_fac <- as.integer(ifelse(full_data_probe$age_diagnosis <= 48, 1, 2))
-full_data_probe$age_sample_fac <- as.integer(ifelse(full_data_probe$age_sample_collection <= 48, 1, 2))
+# take p53 germline column and relevel factors to get rid of NA level
+relevelFactor <- function(model_data) {
+  model_data$p53_germline <- factor(model_data$p53_germline, levels = c('Mut', 'WT'))
+  return(model_data)
+}
 
-# load in residual data
-resid_full <- read.csv(paste0(data_folder, '/resid_full.csv'), stringsAsFactors = F)
-resid_full$X <- NULL
+###################
+# Function that takes model model_data and obstains residual features based
+# on regressin each gene/probe on age of sample collection
+###################
+getResidual <- function(model_data) {
+  
+  feature_names <- colnames(model_data)[2:ncol(model_data)]
+  
+  resid <- list()
+  
+  for (i in 2:ncol(model_data)){
+    
+    resid[[i]] <- lm(model_data[, i] ~ model_data$age_sample_collection, data = model_data)$residuals
+    
+    print(i)
+    
+  }
+  
+  resid_data <- as.data.frame(do.call('cbind', resid))
+  model_data <- cbind(model_data$age_diagnosis, model_data$age_sample_collection, resid_data)
+  colnames(model_data) <- c('age_diagnosis', 'age_sample_collection', feature_names)
+  
+}
 
-resid_full_probe <- read.csv(paste0(data_folder, '/resid_full_probe.csv'), stringsAsFactors = F)
-resid_full_probe$X <- NULL
 
-# make categroical variable from age of methylaion and age of sample collection
-resid_full$age_diagnosis_fac <- as.integer(ifelse(resid_full$age_diagnosis <= 48, 1, 2))
-resid_full$age_sample_fac <- as.integer(ifelse(resid_full$age_sample_collection <= 48, 1, 2))
-
-resid_full_probe$age_diagnosis_fac <- as.integer(ifelse(resid_full_probe$age_diagnosis <= 48, 1, 2))
-resid_full_probe$age_sample_fac <- as.integer(ifelse(resid_full_probe$age_sample_collection <= 48, 1, 2))
-
-# save.image('/home/benbrew/Desktop/model_dat.RData')
-
-# load('/home/benbrew/Desktop/model_data2.RData')
 #########################################
 # function that takes data and arguments for regression, cutoff, and selected features. 
 #########################################

@@ -43,6 +43,10 @@ load(paste0(imputed_data, '/imputed_gene_probe.RData'))
 # remove unneeded object
 rm(methyl_gene, methyl_probe, data, gene, probe)
 
+#############################################
+# functions to clean and join data
+#############################################
+
 # clean ids in each data set 
 cleanIDs <- function(data){
   
@@ -52,47 +56,26 @@ cleanIDs <- function(data){
   return(data)
 }
 
-###########################################
 # get probe locations 
-###########################################
 
 getIDAT <- function(cg_locations) {
   
   #idat files
   idatFiles <- list.files("GSE68777/idat", pattern = "idat.gz$", full = TRUE)
   sapply(idatFiles, gunzip, overwrite = TRUE)
-  
   # read into rgSet
   rgSet <- read.450k.exp("GSE68777/idat")
-  
   # preprocess quantil
   rgSet <- preprocessQuantile(rgSet)
-  
   # get rangers 
   rgSet <- granges(rgSet)
   cg_locations <- as.data.frame(rgSet)
-  
   # make rownames probe column
   cg_locations$probe <- rownames(cg_locations)
   rownames(cg_locations) <- NULL
-  
   return(cg_locations)
-  
 }
 
-
-gene_knn <- cleanIDs(gene_knn)
-gene_lsa <- cleanIDs(gene_lsa)
-probe_knn <- cleanIDs(probe_knn)
-probe_lsa <- cleanIDs(probe_lsa)
-cg_locations <- getIDAT(cg_locations)
-
-# save image file 
-save.image(paste0(model_data, '/model_data.RData'))
-
-#######################################
-# format probe data for bumphunter
-#######################################
 # function that takes each methylation and merges with clinical - keep id, family, p53 status, age data
 joinData <- function(data) {
   
@@ -101,25 +84,36 @@ joinData <- function(data) {
   data <- data[!is.na(data$p53_germline),]
   data <- data[!duplicated(data$id),]
   data <- data[!duplicated(data$tm_donor_),]
-  data <- data[, c('p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses', features)]
+  data <- data[, c('p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses','age_sample_collection', features)]
   return(data)
 }
 
 # take p53 germline column and relevel factors to get rid of NA level
 relevelFactor <- function(data) {
+  
   data$p53_germline <- factor(data$p53_germline, levels = c('Mut', 'WT'))
   return(data)
 }
 
-probe_knn <- joinData(probe_knn)
-probe_knn_bh <- relevelFactor(probe_knn)
+gene_knn <- cleanIDs(gene_knn)
+gene_lsa <- cleanIDs(gene_lsa)
+probe_knn <- cleanIDs(probe_knn)
+probe_lsa <- cleanIDs(probe_lsa)
 
+gene_knn <- joinData(gene_knn)
+gene_lsa <- joinData(gene_lsa)
 probe_lsa <- joinData(probe_lsa)
-probe_lsa_bh <- relevelFactor(probe_lsa)
+probe_knn <- joinData(probe_knn)
 
-rm(gene_knn, gene_lsa, probe_knn, probe_lsa)
+gene_knn <- relevelFactor(gene_knn)
+gene_lsa <- relevelFactor(gene_lsa)
+probe_knn <- relevelFactor(probe_knn)
+probe_lsa <- relevelFactor(probe_lsa)
 
-save.image(paste0(bumphunter_data, '/bh_data.RData'))
+cg_locations <- getIDAT(cg_locations)
+
+# save image file 
+save.image(paste0(model_data, '/model_data.RData'))
 
 # ###################################################################################################
 # # Using correlation
