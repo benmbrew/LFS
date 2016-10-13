@@ -173,9 +173,6 @@ rm(cg_locations, clin, probe_knn, probe_lsa, cancer_lsa, cancer_knn, global_knn,
 # save file 
 save.image(paste0(bumphunter_data, '/bh_regions.RData'))
 
-
-
-
 # # counts for wt
 # cancer[[2]]
 # # counts for mut

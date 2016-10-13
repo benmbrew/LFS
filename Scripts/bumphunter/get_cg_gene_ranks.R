@@ -137,31 +137,29 @@ getProbe <- function(data) {
 }
 
 # apply function to four data bh
-probe_knn_cancer_features <- getProbe(probe_knn_cancer_bh)
-probe_lsa_cancer_features <- getProbe(probe_lsa_cancer_bh)
+bh_probe_knn_cancer_features <- getProbe(probe_knn_cancer_bh)
+bh_probe_lsa_cancer_features <- getProbe(probe_lsa_cancer_bh)
 
-probe_knn_global_features <- getProbe(probe_knn_global_bh)
-probe_lsa_global_features <- getProbe(probe_lsa_global_bh)
+bh_probe_knn_global_features <- getProbe(probe_knn_global_bh)
+bh_probe_lsa_global_features <- getProbe(probe_lsa_global_bh)
 
 rm(probe_knn_cancer_bh, probe_lsa_cancer_bh, probe_knn_global_bh, probe_lsa_global_bh, rgSet)
 
 # get union of all of them 
-bh_union <- rbind(probe_knn_cancer_features,
-                  probe_lsa_cancer_features,
-                  probe_knn_global_features,
-                  probe_lsa_global_features)
+bh_union <- rbind(bh_probe_knn_cancer_features,
+                  bh_probe_lsa_cancer_features,
+                  bh_probe_knn_global_features,
+                  bh_probe_lsa_global_features)
 
 # remove duplicates to get union 
 bh_union <- bh_union[!duplicated(bh_union[,2]),]
 
 # get intersection of all of them 
-intersection <- paste(Reduce(intersect, list(probe_knn_cancer_features$probe, probe_lsa_cancer_features$probe,
-                                             probe_knn_global_features$probe, probe_lsa_global_features$probe)),collapse = '|' )
+intersection <- paste(Reduce(intersect, list(bh_probe_knn_cancer_features$probe, bh_probe_lsa_cancer_features$probe,
+                                             bh_probe_knn_global_features$probe, bh_probe_lsa_global_features$probe)),collapse = '|' )
 
 # subset bh_union by these probes to get intersection
 bh_intersection <- bh_union[grepl(intersection, bh_union$probe),]
 
 # save data to modeldata
 save.image(paste0(model_data, '/bh_features.RData'))
-
-

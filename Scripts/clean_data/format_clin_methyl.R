@@ -95,6 +95,14 @@ relevelFactor <- function(data) {
   return(data)
 }
 
+# Function to convert all genes/probe columns to numeric
+makeNum <- function(model_data) {
+  
+  model_data[, 5:ncol(model_data)] <- apply(model_data[, 5:ncol(model_data)], 2, function(x) as.numeric(as.character(x)))
+  
+  return(model_data)
+}
+
 gene_knn <- cleanIDs(gene_knn)
 gene_lsa <- cleanIDs(gene_lsa)
 probe_knn <- cleanIDs(probe_knn)
@@ -110,7 +118,14 @@ gene_lsa <- relevelFactor(gene_lsa)
 probe_knn <- relevelFactor(probe_knn)
 probe_lsa <- relevelFactor(probe_lsa)
 
+gene_knn <- makeNum(gene_knn)
+gene_lsa <- makeNum(gene_lsa)
+probe_knn <- makeNum(probe_knn)
+probe_lsa <- makeNum(probe_lsa)
+
 cg_locations <- getIDAT(cg_locations)
+
+
 
 # save image file 
 save.image(paste0(model_data, '/model_data.RData'))
