@@ -114,9 +114,40 @@ plotModel <- function(result_list,
 }
 
 
+conMatrix <- function(results) {
+  
+  # test acc for age of diagnosis
+  acc_age <- mean(unlist(results[[7]]))
+  
+  # test acc for age of sample collection
+  acc_samp <-mean(unlist(results[[9]]))
+  
+  # confustion matrix age of diagnosis 10
+  iterations <- 10
+  temp <- list()
+  for (i in 1:10){
+    temp[[i]] <- results[[8]][[i]]$table
+  }
+  mat <- unlist(temp)
+  new_mat <- matrix(, 2, 2)
+  
+  mat_index <- seq(1, length(mat), 4)
+  
+  new_mat[1,1] <- sum(mat[mat_index])/iterations
+  new_mat[2,1] <- sum(mat[mat_index + 1])/iterations
+  new_mat[1,2] <- sum(mat[mat_index + 2])/iterations
+  new_mat[2,2] <- sum(mat[mat_index + 3])/iterations
+  
+  return(list(new_mat, acc_age, acc_samp))
+  
+}
+
+
+
+
 # function that runs random forest as a classification
 
-rfPredictFac <- function(data,
+rfPredictFac <- function(model_data,
                          cutoff,
                          iterations) {
   

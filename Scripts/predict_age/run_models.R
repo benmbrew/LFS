@@ -42,12 +42,92 @@ rm(cg_locations)
 # 2) bh features: bh_probe_knn_cancer_features, bh_probe_lsa_cancer_features,
 #    bh_probe_knn_global_features, bh_probe_lsa_global_features
 
+# function to run models - subset, get residuals, get categorical, predict with regression and fac. 
+runModels <- function(data,
+                      bump_hunter) {
+  
+  # get differenct variations of data
+  data <- subsetDat(data)
+  data_resid <- getResidual(data)
+  
+  if (bump_hunter) {
+    
+    data <- bhSubset(data)
+    data_resid <- bhSubset(data_resid)
+    
+  }
+  
+  data_fac <- makeFac(data, threshold = 48)
+  data_resid_fac <- makeFac(data_resid, threshold = 48)
+  
+  # run models 
+  data_result <- rfPredictReg(data, cutoff = .7, iterations = 10)
+  data_resid_result <- rfPredictReg(data_resid, cutoff = .7, iterations = 10)
+  data_fac_result <- rfPredictFac(data_fac, cutoff = .7, iterations = 10)
+  data_resid_fac_result <- rfPredictFac(data_resid_fac, cutoff = .7, iterations = 10)
+  
+  return(list(data_result, data_resid_result, data_fac_result, data_resid_fac_result))
+  
+}
 
 ###################################
 # first run each gene data - gene_knn, gene_lsa, with fac
 ###################################
 
-# GENE KNN
+###### GENE KNN
+gene_knn_models <- runModels(gene_knn, bump_hunter = F)
+# plot models 
+plotModel(gene_knn_models[[1]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Gene KNN Diagnosis ',
+          main2 = 'Gene KNN Sample' )
+
+plotModel(gene_knn_models[[2]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Gene KNN Diagnosis (Resid) ',
+          main2 = 'Gene KNN Sample (Resid)' )
+
+# get confusion matrix 
+conMatrix(gene_knn_models[[3]])
+conMatrix(gene_knn_models[[4]])
+
+###### GENE lsa
+gene_lsa_models <- runModels(gene_lsa, bump_hunter = F)
+# plot models 
+plotModel(gene_lsa_models[[1]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Gene lsa Diagnosis ',
+          main2 = 'Gene lsa Sample' )
+
+plotModel(gene_lsa_models[[2]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Gene lsa Diagnosis (Resid) ',
+          main2 = 'Gene lsa Sample (Resid)' )
+
+# get confusion matrix 
+conMatrix(gene_lsa_models[[3]])
+conMatrix(gene_lsa_models[[4]])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # get differenct variations of data
 gene_knn <- subsetDat(gene_knn)
@@ -61,4 +141,17 @@ gene_knn_result <- rfPredictReg(gene_knn, cutoff = .7, iterations = 10)
 gene_knn_resid_result <- rfPredictReg(gene_knn_resid, cutoff = .7, iterations = 10)
 gene_knn_fac_result <- rfPredictFac(gene_knn_fac, cutoff = .7, iterations = 10)
 gene_knn_resid_fac_result <- rfPredictFac(gene_knn_resid_fac, cutoff = .7, iterations = 10)
+
+# plot models 
+plotModel(gene_knn_result, xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Gene KNN Diagnosis ',
+          main2 = 'Gene KNN Sample' )
+
+plotModel(gene_knn_resid_result, xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Gene KNN Diagnosis (Resid) ',
+          main2 = 'Gene KNN Sample (Resid)' )
+
+# get confusion matrix 
+conMatrix(gene_knn_fac_result)
+conMatrix(gene_knn_resid_fac_result)
+
+
 
