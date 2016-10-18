@@ -20,7 +20,9 @@ bhSubset <- function(model_data,
                      bh_data) {
   
   bh_features <- bh_data$probe
-  model_data <- model_data[, c('age_diagnosis', 'age_sample_collection', bh_features)]
+  model_features <- colnames(model_data)
+  bh_intersect <- intersect(bh_features, model_features)
+  model_data <- model_data[, c('age_diagnosis', 'age_sample_collection', bh_intersect)]
   
   return(model_data)
 }
@@ -58,7 +60,7 @@ getResidual <- function(model_data) {
     temp_var <- model_data$age_sample_collection
     
     resid[[i]] <- lm(temp_response ~ temp_var)$residuals
-  
+    
     print(i)
     
   }
@@ -70,6 +72,9 @@ getResidual <- function(model_data) {
   return(model_data)
   
 }
+
+
+
 
 
 # Function that takes results list from regression and plots predictions against ground truth

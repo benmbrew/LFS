@@ -44,18 +44,19 @@ rm(cg_locations)
 
 # function to run models - subset, get residuals, get categorical, predict with regression and fac. 
 runModels <- function(data,
-                      bump_hunter) {
+                      bump_hunter,
+                      bump_hunter_data) {
   
   # get differenct variations of data
   data <- subsetDat(data)
-  data_resid <- getResidual(data)
   
   if (bump_hunter) {
     
-    data <- bhSubset(data)
-    data_resid <- bhSubset(data_resid)
-    
+    data <- bhSubset(data, bh_data = bump_hunter_data)
+
   }
+  
+  data_resid <- getResidual(data)
   
   data_fac <- makeFac(data, threshold = 48)
   data_resid_fac <- makeFac(data_resid, threshold = 48)
@@ -101,57 +102,102 @@ conMatrix(gene_lsa_models[[3]])
 conMatrix(gene_lsa_models[[4]])
 
 
+###################################
+# second run each probe data - probe_knn, probe_lsa, with fac
+###################################
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# get differenct variations of data
-gene_knn <- subsetDat(gene_knn)
-gene_knn_resid <- getResidual(gene_knn)
-
-gene_knn_fac <- makeFac(gene_knn, threshold = 48)
-gene_knn_resid_fac <- makeFac(gene_knn_resid, threshold = 48)
-
-# run models 
-gene_knn_result <- rfPredictReg(gene_knn, cutoff = .7, iterations = 10)
-gene_knn_resid_result <- rfPredictReg(gene_knn_resid, cutoff = .7, iterations = 10)
-gene_knn_fac_result <- rfPredictFac(gene_knn_fac, cutoff = .7, iterations = 10)
-gene_knn_resid_fac_result <- rfPredictFac(gene_knn_resid_fac, cutoff = .7, iterations = 10)
-
+###### probe KNN
+probe_knn_models <- runModels(probe_knn, bump_hunter = F)
 # plot models 
-plotModel(gene_knn_result, xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Gene KNN Diagnosis ',
-          main2 = 'Gene KNN Sample' )
+plotModel(probe_knn_models[[1]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Probe KNN Diagnosis ',
+          main2 = 'Probe KNN Sample' )
 
-plotModel(gene_knn_resid_result, xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Gene KNN Diagnosis (Resid) ',
-          main2 = 'Gene KNN Sample (Resid)' )
+plotModel(probe_knn_models[[2]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Probe KNN Diagnosis (Resid) ',
+          main2 = 'Probe KNN Sample (Resid)' )
 
 # get confusion matrix 
-conMatrix(gene_knn_fac_result)
-conMatrix(gene_knn_resid_fac_result)
+conMatrix(probe_knn_models[[3]])
+conMatrix(probe_knn_models[[4]])
+
+###### probe lsa
+probe_lsa_models <- runModels(probe_lsa, bump_hunter = F)
+# plot models 
+plotModel(probe_lsa_models[[1]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Probe lsa Diagnosis ',
+          main2 = 'Probe lsa Sample' )
+
+plotModel(probe_lsa_models[[2]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Probe lsa Diagnosis (Resid) ',
+          main2 = 'Probe lsa Sample (Resid)' )
+
+# get confusion matrix 
+conMatrix(probe_lsa_models[[3]])
+conMatrix(probe_lsa_models[[4]])
+
+# # Save main model data (use of all features)
+# save.image(paste0(model_data, '/model_results_all_features.RData'))
+# load(paste0(model_data, '/model_results_all_features.RData'))
+
+###################################
+# Third, run probe_knn and probe_lsa with all different bumphunter features
+###################################
+
+###### probe knn with global features
+probe_knn_global_models <- runModels(probe_knn, bump_hunter = T, 
+                                     bump_hunter_data = bh_probe_knn_global_features)
+# plot models 
+plotModel(probe_knn_global_models[[1]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Probe lsa Diagnosis ',
+          main2 = 'Probe lsa Sample' )
+
+plotModel(probe_knn_global_models[[2]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Probe lsa Diagnosis (Resid) ',
+          main2 = 'Probe lsa Sample (Resid)' )
+
+# get confusion matrix 
+conMatrix(probe_knn_global_models[[3]])
+conMatrix(probe_knn_global_models[[4]])
+
+###### probe knn with cancer features
+probe_knn_cancer_models <- runModels(probe_knn, bump_hunter = T, 
+                                     bump_hunter_data = bh_probe_knn_cancer_features)
+# plot models 
+plotModel(probe_knn_cancer_models[[1]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Probe lsa Diagnosis ',
+          main2 = 'Probe lsa Sample' )
+
+plotModel(probe_knn_cancer_models[[2]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Probe lsa Diagnosis (Resid) ',
+          main2 = 'Probe lsa Sample (Resid)' )
+
+# get confusion matrix 
+conMatrix(probe_knn_cancer_models[[3]])
+conMatrix(probe_knn_cancer_models[[4]])
+
+
+
+###### probe lsa with global features
+probe_lsa_global_models <- runModels(probe_lsa, bump_hunter = T, 
+                                     bump_hunter_data = bh_probe_lsa_global_features)
+# plot models 
+plotModel(probe_lsa_global_models[[1]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Probe lsa Diagnosis ',
+          main2 = 'Probe lsa Sample' )
+
+plotModel(probe_lsa_global_models[[2]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Probe lsa Diagnosis (Resid) ',
+          main2 = 'Probe lsa Sample (Resid)' )
+
+# get confusion matrix 
+conMatrix(probe_lsa_global_models[[3]])
+conMatrix(probe_lsa_global_models[[4]])
+
+###### probe lsa with cancer features
+probe_lsa_cancer_models <- runModels(probe_lsa, bump_hunter = T, 
+                                     bump_hunter_data = bh_probe_lsa_cancer_features)
+# plot models 
+plotModel(probe_lsa_cancer_models[[1]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Probe lsa Diagnosis ',
+          main2 = 'Probe lsa Sample' )
+
+plotModel(probe_lsa_cancer_models[[2]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Probe lsa Diagnosis (Resid) ',
+          main2 = 'Probe lsa Sample (Resid)' )
+
+# get confusion matrix 
+conMatrix(probe_lsa_cancer_models[[3]])
+conMatrix(probe_lsa_cancer_models[[4]])
+
 
 
 
