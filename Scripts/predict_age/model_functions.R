@@ -379,4 +379,197 @@ rfPredictReg <- function(model_data,
   
 }
 
+extractResults <- function (result_list,
+                            data_name) {
+  
+  # extract regression normal, correlation for mut and all
+  temp.1 <- list()
+  reg_cor <- list()
+  for (status in 1:length(p53)) {
+    temp.1[[status]] <- result_list[[1]][[status]]
+    reg_cor[[status]] <- round(cor(unlist(temp.1[[status]][[4]]), unlist(temp.1[[status]][[6]])), 2)
+  }
 
+  reg_cor <- as.data.frame(do.call(rbind, reg_cor))
+  colnames(reg_cor) <- 'score'
+  reg_cor$p53_status <- p53
+  reg_cor$age <- 'regression'
+  reg_cor$type <- 'normal'
+  reg_cor$data <- data_name
+  reg_cor$features <- features_mut <- c(paste0(result_list[[1]][[1]][[15]], collapse = ' '), paste0(result_list[[1]][[2]][[15]], collapse = ' '))
+  
+  # extract regression resid , resid_correlation for mut and all
+  temp.1 <- list()
+  reg_resid_cor <- list()
+  for (status in 1:length(p53)) {
+    temp.1[[status]] <- result_list[[2]][[status]]
+    reg_resid_cor[[status]] <- round(cor(unlist(temp.1[[status]][[4]]), unlist(temp.1[[status]][[6]])), 2)
+  }
+  
+  reg_resid_cor <- as.data.frame(do.call(rbind, reg_resid_cor))
+  colnames(reg_resid_cor) <- 'score'
+  reg_resid_cor$p53_status <- p53
+  reg_resid_cor$age <- 'regression'
+  reg_resid_cor$type <- 'resid'
+  reg_resid_cor$data <- data_name
+  reg_resid_cor$features <- features_mut <- c(paste0(result_list[[1]][[1]][[15]], collapse = ' '), paste0(result_list[[1]][[2]][[15]], collapse = ' '))
+  
+  
+  # extract fac normal, acc for mut and all
+  temp.1 <- list()
+  temp.2 <- list()
+  fac_final <- list()
+  for (level in 1:length(data_thresholds)) {
+    temp.1[[level]] <- result_list[[3]][[level]]
+    for(status in 1:length(p53)) {
+      temp.2[[status]] <- round(mean(unlist(temp.1[[level]][[status]][[9]])), 2)
+    }
+    fac_final[[level]] <- temp.2
+  }
+  
+  fac_final <- as.data.frame(unlist(fac_final))
+  colnames(fac_final) <- 'score'
+  fac_final$p53_status <- rep(p53, length(thresholds))
+  fac_final$age <- c(48, 48, 60, 60, 72, 72, 84, 84)
+  fac_final$type <- 'normal'
+  fac_final$data <- data_name
+  fac_final$features <- rep(c(result_list[[3]][[1]][[1]][13], result_list[[3]][[1]][[2]][13]), length(thresholds))
+  
+  
+  # extract fac resid, acc for mut and all
+  temp.1 <- list()
+  temp.2 <- list()
+  fac_final_resid <- list()
+  for (level in 1:length(data_thresholds)) {
+    temp.1[[level]] <- result_list[[4]][[level]]
+    for(status in 1:length(p53)) {
+      temp.2[[status]] <- round(mean(unlist(temp.1[[level]][[status]][[9]])),2)
+    }
+    fac_final_resid[[level]] <- temp.2
+  }
+  
+  
+  fac_final_resid <- as.data.frame(unlist(fac_final_resid))
+  colnames(fac_final_resid) <- 'score'
+  fac_final_resid$p53_status <- rep(p53, length(thresholds))
+  fac_final_resid$age <- c(48, 48, 60, 60, 72, 72, 84, 84)
+  fac_final_resid$type <- 'resid'
+  fac_final_resid$data <- data_name
+  fac_final_resid$features <- rep(c(result_list[[3]][[1]][[1]][13], result_list[[3]][[1]][[2]][13]), length(thresholds))
+  
+  # combine all four result tables 
+  
+  result_table <- rbind(reg_cor, reg_resid_cor, fac_final, fac_final_resid)
+  
+  return(result_table)
+  
+}
+
+
+# make function that takes a result list and creates an object for plotting 
+plotObject <- function (result_list, residual, p53_mut) {
+  
+  if (residual) {
+    
+    if (p53_mut) {
+      plot_object <- result_list[[2]][[1]]
+    } else {
+      plot_object <- result_list[[2]][[2]]
+    }
+    
+  } else {
+   
+     if (p53_mut) {
+      plot_object <- result_list[[1]][[1]]
+    } else {
+      plot_object <- result_list[[1]][[2]]
+    }
+  }
+  
+  return(plot_object)
+}
+
+matObject <- function(result_list, age, residual, p53_mut) {
+  
+  if(residual) {
+    
+    if (age == 48) {
+      if (p53_mut) {
+        con_object <- result_list[[4]][[1]][[1]]
+        
+      } else {
+        con_object <- result_list[[4]][[1]][[2]]
+      }
+    }
+    
+    if (age == 60) {
+      if (p53_mut) {
+        con_object <- result_list[[4]][[2]][[1]]
+        
+      } else {
+        con_object <- result_list[[4]][[2]][[2]]
+      }
+    }
+    
+    if (age == 72) {
+      if (p53_mut) {
+        con_object <- result_list[[4]][[3]][[1]]
+        
+      } else {
+        con_object <- result_list[[4]][[3]][[2]]
+      }
+    }
+    
+    if (age == 84) {
+      if (p53_mut) {
+        con_object <- result_list[[4]][[4]][[1]]
+        
+      } else {
+        con_object <- result_list[[4]][[4]][[2]]
+      }
+    }
+    
+  } else {
+    
+    if (age == 48) {
+      if (p53_mut) {
+        con_object <- result_list[[3]][[1]][[1]]
+        
+      } else {
+        con_object <- result_list[[3]][[1]][[2]]
+      }
+    }
+    
+    if (age == 60) {
+      if (p53_mut) {
+        con_object <- result_list[[3]][[2]][[1]]
+        
+      } else {
+        con_object <- result_list[[3]][[2]][[2]]
+      }
+    }
+    
+    if (age == 72) {
+      if (p53_mut) {
+        con_object <- result_list[[3]][[3]][[1]]
+        
+      } else {
+        con_object <- result_list[[3]][[3]][[2]]
+      }
+    }
+    
+    if (age == 84) {
+      if (p53_mut) {
+        con_object <- result_list[[3]][[4]][[1]]
+        
+      } else {
+        con_object <- result_list[[3]][[4]][[2]]
+      }
+    }
+    
+  }
+  
+  
+  return(con_object)
+  
+}

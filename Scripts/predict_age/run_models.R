@@ -28,6 +28,7 @@ source(paste0(scripts_folder, '/predict_age/model_functions.R'))
 
 # set parameters 
 data_thresholds <- c(48, 60, 72, 84)
+p53 <- c('Mut', 'WT')
 
 ###########################################
 # Read in data- gene_knn, gene_lsa, 
@@ -111,7 +112,7 @@ runModels <- function(data,
     }
     
     data_fac_result[[dat]] <- temp.data_fac_result
-    data_resid_fac_result[[dat]] <- temp.data_fac_result
+    data_resid_fac_result[[dat]] <- temp.data_resid_fac_result
     
   }
   
@@ -125,30 +126,12 @@ runModels <- function(data,
 
 ###### GENE KNN
 gene_knn_models <- runModels(gene_knn, bump_hunter = F)
-# plot models 
-plotModel(gene_knn_models[[1]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Gene KNN Diagnosis ',
-          main2 = 'Gene KNN Sample' )
 
-plotModel(gene_knn_models[[2]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Gene KNN Diagnosis (Resid) ',
-          main2 = 'Gene KNN Sample (Resid)' )
-
-# get confusion matrix 
-conMatrix(gene_knn_models[[3]])
-conMatrix(gene_knn_models[[4]])
+# get result table 
+gene_knn_table <- extractResults(gene_knn_models, data_name = 'gene knn all features')
 
 ###### GENE lsa
 gene_lsa_models <- runModels(gene_lsa, bump_hunter = F)
-# plot models 
-plotModel(gene_lsa_models[[1]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Gene lsa Diagnosis ',
-          main2 = 'Gene lsa Sample' )
-
-plotModel(gene_lsa_models[[2]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Gene lsa Diagnosis (Resid) ',
-          main2 = 'Gene lsa Sample (Resid)' )
-
-# get confusion matrix 
-conMatrix(gene_lsa_models[[3]])
-conMatrix(gene_lsa_models[[4]])
-
 
 ###################################
 # second run each probe data - probe_knn, probe_lsa, with fac
@@ -156,29 +139,10 @@ conMatrix(gene_lsa_models[[4]])
 
 ###### probe KNN
 probe_knn_models <- runModels(probe_knn, bump_hunter = F)
-# plot models 
-plotModel(probe_knn_models[[1]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Probe KNN Diagnosis ',
-          main2 = 'Probe KNN Sample' )
-
-plotModel(probe_knn_models[[2]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Probe KNN Diagnosis (Resid) ',
-          main2 = 'Probe KNN Sample (Resid)' )
-
-# get confusion matrix 
-conMatrix(probe_knn_models[[3]])
-conMatrix(probe_knn_models[[4]])
 
 ###### probe lsa
 probe_lsa_models <- runModels(probe_lsa, bump_hunter = F)
-# plot models 
-plotModel(probe_lsa_models[[1]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Probe lsa Diagnosis ',
-          main2 = 'Probe lsa Sample' )
 
-plotModel(probe_lsa_models[[2]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Probe lsa Diagnosis (Resid) ',
-          main2 = 'Probe lsa Sample (Resid)' )
-
-# get confusion matrix 
-conMatrix(probe_lsa_models[[3]])
-conMatrix(probe_lsa_models[[4]])
 
 ###################################
 # Third, run probe_knn and probe_lsa with all different bumphunter features
@@ -187,84 +151,16 @@ conMatrix(probe_lsa_models[[4]])
 ###### probe knn with global features
 probe_knn_global_models <- runModels(probe_knn, random = F, bump_hunter = T, 
                                      bump_hunter_data = bh_probe_knn_global_features)
-# plot models 
-plotModel(probe_knn_global_models[[1]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Probe knn global Diagnosis ',
-          main2 = 'Probe knn global Sample' )
-
-plotModel(probe_knn_global_models[[2]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Probe lsa Diagnosis (Resid) ',
-          main2 = 'Probe lsa Sample (Resid)' )
-
-# get confusion matrix 
-conMatrix(probe_knn_global_models[[3]])
-conMatrix(probe_knn_global_models[[4]])
-
-# dims 
-probe_knn_global_models[[1]][15]
-probe_knn_global_models[[2]][15]
-probe_knn_global_models[[3]][13]
-probe_knn_global_models[[4]][13]
-
 ###### probe knn with cancer features
 probe_knn_cancer_models <- runModels(probe_knn, bump_hunter = T, 
                                      bump_hunter_data = bh_probe_knn_cancer_features)
-# plot models 
-plotModel(probe_knn_cancer_models[[1]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Probe knn cancer Diagnosis ',
-          main2 = 'Probe knn cancer Sample' )
-
-plotModel(probe_knn_cancer_models[[2]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Probe lsa Diagnosis (Resid) ',
-          main2 = 'Probe lsa Sample (Resid)' )
-
-# get confusion matrix 
-conMatrix(probe_knn_cancer_models[[3]])
-conMatrix(probe_knn_cancer_models[[4]])
-
-# dims 
-probe_knn_cancer_models[[1]][15]
-probe_knn_cancer_models[[2]][15]
-probe_knn_cancer_models[[3]][13]
-probe_knn_cancer_models[[4]][13]
-
 
 ###### probe lsa with global features
 probe_lsa_global_models <- runModels(probe_lsa, bump_hunter = T, 
                                      bump_hunter_data = bh_probe_lsa_global_features)
-# plot models 
-plotModel(probe_lsa_global_models[[1]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Probe lsa global Diagnosis ',
-          main2 = 'Probe lsa global Sample' )
-
-plotModel(probe_lsa_global_models[[2]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Probe lsa global Diagnosis (Resid) ',
-          main2 = 'Probe lsa global Sample (Resid)' )
-
-# get confusion matrix 
-conMatrix(probe_lsa_global_models[[3]])
-conMatrix(probe_lsa_global_models[[4]])
-
-# dims 
-probe_lsa_global_models[[1]][15]
-probe_lsa_global_models[[2]][15]
-probe_lsa_global_models[[3]][13]
-probe_lsa_global_models[[4]][13]
-
 ###### probe lsa with cancer features
 probe_lsa_cancer_models <- runModels(probe_lsa, bump_hunter = T, 
                                      bump_hunter_data = bh_probe_lsa_cancer_features)
-# plot models 
-plotModel(probe_lsa_cancer_models[[1]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Probe lsa cancer Diagnosis ',
-          main2 = 'Probe lsa cancer Sample' )
-
-plotModel(probe_lsa_cancer_models[[2]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Probe lsa cancer Diagnosis (Resid) ',
-          main2 = 'Probe lsa cancer Sample (Resid)' )
-
-# get confusion matrix 
-conMatrix(probe_lsa_cancer_models[[3]])
-conMatrix(probe_lsa_cancer_models[[4]])
-
-# dims 
-probe_lsa_cancer_models[[1]][15]
-probe_lsa_cancer_models[[2]][15]
-probe_lsa_cancer_models[[3]][13]
-probe_lsa_cancer_models[[4]][13]
-
 
 ###################################
 # Finally run each gene and probe data with random features
@@ -272,87 +168,48 @@ probe_lsa_cancer_models[[4]][13]
 
 ###### GENE KNN
 gene_knn_rand <- runModels(gene_knn, random = T)
-# plot rand 
-plotModel(gene_knn_rand[[1]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Gene KNN Rand Diagnosis ',
-          main2 = 'Gene KNN Rand Sample' )
-
-plotModel(gene_knn_rand[[2]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Gene KNN Rand Diagnosis (Resid) ',
-          main2 = 'Gene KNN Rand Sample (Resid)' )
-
-# get confusion matrix 
-conMatrix(gene_knn_rand[[3]])
-conMatrix(gene_knn_rand[[4]])
-
-# dims 
-gene_knn_rand[[1]][15]
-gene_knn_rand[[2]][15]
-gene_knn_rand[[3]][13]
-gene_knn_rand[[4]][13]
-
-
 
 ###### GENE lsa
 gene_lsa_rand <- runModels(gene_lsa, random = T)
-# plot rand 
-plotModel(gene_lsa_rand[[1]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Gene lsa Rand Diagnosis ',
-          main2 = 'Gene lsa Rand Sample' )
-
-plotModel(gene_lsa_rand[[2]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Gene lsa Rand Diagnosis (Resid) ',
-          main2 = 'Gene lsa Rand Sample (Resid)' )
-
-# get confusion matrix 
-conMatrix(gene_lsa_rand[[3]])
-conMatrix(gene_lsa_rand[[4]])
-
-# dims 
-gene_lsa_rand[[1]][15]
-gene_lsa_rand[[2]][15]
-gene_lsa_rand[[3]][13]
-gene_lsa_rand[[4]][13]
-
 
 ###### probe KNN
 probe_knn_rand <- runModels(probe_knn, random = T)
-# plot rand 
-plotModel(probe_knn_rand[[1]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Probe KNN Rand Diagnosis ',
-          main2 = 'Probe KNN Rand  Sample' )
-
-plotModel(probe_knn_rand[[2]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Probe KNN Rand Diagnosis (Resid) ',
-          main2 = 'Probe KNN Rand Sample (Resid)' )
-
-# get confusion matrix 
-conMatrix(probe_knn_rand[[3]])
-conMatrix(probe_knn_rand[[4]])
-
-# dims 
-probe_knn_rand[[1]][15]
-probe_knn_rand[[2]][15]
-probe_knn_rand[[3]][13]
-probe_knn_rand[[4]][13]
-
 
 ###### probe lsa
 probe_lsa_rand <- runModels(probe_lsa, random = T)
-# plot rand 
-plotModel(probe_lsa_rand[[1]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Probe lsa Rand Diagnosis ',
-          main2 = 'Probe lsa Rand Sample' )
-
-plotModel(probe_lsa_rand[[2]], xlim = c(0, 1000), ylim = c(0,1000), main1 = 'Probe lsa Rand Diagnosis (Resid) ',
-          main2 = 'Probe lsa Rand Sample (Resid)' )
-
-# get confusion matrix 
-conMatrix(probe_lsa_rand[[3]])
-conMatrix(probe_lsa_rand[[4]])
-
-# dims 
-probe_lsa_rand[[1]][15]
-probe_lsa_rand[[2]][15]
-probe_lsa_rand[[3]][13]
-probe_lsa_rand[[4]][13]
 
 # # Save main model data (use of all features)
 # save.image(paste0(model_data, '/model_results_all_features.RData'))
 # load(paste0(model_data, '/model_results_all_features.RData'))
+# 
+# # get plot objects
+# plot_mut <- plotObject(gene_knn_models, residual = F, p53_mut = T)
+# plot_all <- plotObject(gene_knn_models, residual = F, p53_mut = F)
+# plot_resid_mut <- plotObject(gene_knn_models, residual = T, p53_mut = T)
+# plot_resid_all <- plotObject(gene_knn_models, residual = T, p53_mut = F)
+# 
+# # get confusion matrix objects
+# con_48_mut <- matObject(gene_knn_models, age = 48, residual = F, p53_mut = T)
+# con_48_all <- matObject(gene_knn_models, age = 48, residual = F, p53_mut = F)
+# con_60_mut <- matObject(gene_knn_models, age = 60, residual = F, p53_mut = T)
+# con_60_all <- matObject(gene_knn_models, age = 60, residual = F, p53_mut = F)
+# con_72_mut <- matObject(gene_knn_models, age = 72, residual = F, p53_mut = T)
+# con_72_all <- matObject(gene_knn_models, age = 72, residual = F, p53_mut = F)
+# con_84_mut <- matObject(gene_knn_models, age = 84, residual = F, p53_mut = T)
+# con_84_all <- matObject(gene_knn_models, age = 84, residual = F, p53_mut = F)
+# 
+# con_48_mut <- matObject(gene_knn_models, age = 48, residual = F, p53_mut = T)
+# con_48_all <- matObject(gene_knn_models, age = 48, residual = F, p53_mut = F)
+# con_60_mut <- matObject(gene_knn_models, age = 60, residual = F, p53_mut = T)
+# con_60_all <- matObject(gene_knn_models, age = 60, residual = F, p53_mut = F)
+# con_72_mut <- matObject(gene_knn_models, age = 72, residual = F, p53_mut = T)
+# con_72_all <- matObject(gene_knn_models, age = 72, residual = F, p53_mut = F)
+# con_84_mut <- matObject(gene_knn_models, age = 84, residual = F, p53_mut = T)
+# con_84_all <- matObject(gene_knn_models, age = 84, residual = F, p53_mut = F)
+
+
+
+
 
 
 
