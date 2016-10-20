@@ -126,23 +126,31 @@ runModels <- function(data,
 
 ###### GENE KNN
 gene_knn_models <- runModels(gene_knn, bump_hunter = F)
-
 # get result table 
 gene_knn_table <- extractResults(gene_knn_models, data_name = 'gene knn all features')
 
 ###### GENE lsa
 gene_lsa_models <- runModels(gene_lsa, bump_hunter = F)
+# get result table 
+gene_lsa_table <- extractResults(gene_lsa_models, data_name = 'gene lsa all features')
 
+
+# # Save main model data (use of all features)
+# save.image(paste0(model_data, '/model_results_all_features.RData'))
+# load(paste0(model_data, '/model_results_all_features.RData'))
 ###################################
 # second run each probe data - probe_knn, probe_lsa, with fac
 ###################################
 
 ###### probe KNN
 probe_knn_models <- runModels(probe_knn, bump_hunter = F)
+# get result table 
+probe_knn_table <- extractResults(probe_knn_models, data_name = 'probe knn all features')
 
 ###### probe lsa
 probe_lsa_models <- runModels(probe_lsa, bump_hunter = F)
-
+# get result table 
+probe_lsa_table <- extractResults(probe_lsa_models, data_name = 'probe lsa all features')
 
 ###################################
 # Third, run probe_knn and probe_lsa with all different bumphunter features
@@ -151,16 +159,27 @@ probe_lsa_models <- runModels(probe_lsa, bump_hunter = F)
 ###### probe knn with global features
 probe_knn_global_models <- runModels(probe_knn, random = F, bump_hunter = T, 
                                      bump_hunter_data = bh_probe_knn_global_features)
+# get result table 
+probe_knn_global_table <- extractResults(probe_knn_global_models, data_name = 'probe knn global')
+
 ###### probe knn with cancer features
 probe_knn_cancer_models <- runModels(probe_knn, bump_hunter = T, 
                                      bump_hunter_data = bh_probe_knn_cancer_features)
+# get result table 
+probe_knn_cancer_table <- extractResults(probe_knn_cancer_models, data_name = 'probe knn cancer')
+
 
 ###### probe lsa with global features
 probe_lsa_global_models <- runModels(probe_lsa, bump_hunter = T, 
                                      bump_hunter_data = bh_probe_lsa_global_features)
+# get result table 
+probe_lsa_global_table <- extractResults(probe_lsa_global_models, data_name = 'probe lsa global')
+
 ###### probe lsa with cancer features
 probe_lsa_cancer_models <- runModels(probe_lsa, bump_hunter = T, 
                                      bump_hunter_data = bh_probe_lsa_cancer_features)
+# get result table 
+probe_lsa_cancer_table <- extractResults(probe_lsa_cancer_models, data_name = 'probe lsa cancer')
 
 ###################################
 # Finally run each gene and probe data with random features
@@ -178,9 +197,7 @@ probe_knn_rand <- runModels(probe_knn, random = T)
 ###### probe lsa
 probe_lsa_rand <- runModels(probe_lsa, random = T)
 
-# # Save main model data (use of all features)
-# save.image(paste0(model_data, '/model_results_all_features.RData'))
-# load(paste0(model_data, '/model_results_all_features.RData'))
+
 # 
 # # get plot objects
 # plot_mut <- plotObject(gene_knn_models, residual = F, p53_mut = T)

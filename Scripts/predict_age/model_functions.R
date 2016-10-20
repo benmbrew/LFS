@@ -429,11 +429,11 @@ extractResults <- function (result_list,
   
   fac_final <- as.data.frame(unlist(fac_final))
   colnames(fac_final) <- 'score'
-  fac_final$p53_status <- rep(p53, length(thresholds))
+  fac_final$p53_status <- rep(p53, length(data_thresholds))
   fac_final$age <- c(48, 48, 60, 60, 72, 72, 84, 84)
   fac_final$type <- 'normal'
   fac_final$data <- data_name
-  fac_final$features <- rep(c(result_list[[3]][[1]][[1]][13], result_list[[3]][[1]][[2]][13]), length(thresholds))
+  fac_final$features <- rep(c(result_list[[3]][[1]][[1]][13], result_list[[3]][[1]][[2]][13]), length(data_thresholds))
   
   
   # extract fac resid, acc for mut and all
@@ -451,11 +451,11 @@ extractResults <- function (result_list,
   
   fac_final_resid <- as.data.frame(unlist(fac_final_resid))
   colnames(fac_final_resid) <- 'score'
-  fac_final_resid$p53_status <- rep(p53, length(thresholds))
+  fac_final_resid$p53_status <- rep(p53, length(data_thresholds))
   fac_final_resid$age <- c(48, 48, 60, 60, 72, 72, 84, 84)
   fac_final_resid$type <- 'resid'
   fac_final_resid$data <- data_name
-  fac_final_resid$features <- rep(c(result_list[[3]][[1]][[1]][13], result_list[[3]][[1]][[2]][13]), length(thresholds))
+  fac_final_resid$features <- rep(c(result_list[[3]][[1]][[1]][13], result_list[[3]][[1]][[2]][13]), length(data_thresholds))
   
   # combine all four result tables 
   
