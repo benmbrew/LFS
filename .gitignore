@@ -3,6 +3,7 @@
 *.csv
 *.txt
 *.xlsx
+*.idat
 /Data
 data/
 .Rproj.user
