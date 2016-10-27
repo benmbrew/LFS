@@ -136,30 +136,54 @@ getProbe <- function(data) {
   
 }
 
-# apply function to four data bh
+# apply function to four data bh (balanced)
 bh_probe_knn_cancer_features <- getProbe(probe_knn_cancer_bh)
 bh_probe_lsa_cancer_features <- getProbe(probe_lsa_cancer_bh)
 
 bh_probe_knn_global_features <- getProbe(probe_knn_global_bh)
 bh_probe_lsa_global_features <- getProbe(probe_lsa_global_bh)
 
-rm(probe_knn_cancer_bh, probe_lsa_cancer_bh, probe_knn_global_bh, probe_lsa_global_bh, rgSet)
+# apply function to four data bh (unbalanced)
+bh_probe_knn_cancer_unbal_features <- getProbe(probe_knn_cancer_unbal_bh)
+bh_probe_lsa_cancer_unbal_features <- getProbe(probe_lsa_cancer_unbal_bh)
+
+bh_probe_knn_global_unbal_features <- getProbe(probe_knn_global_unbal_bh)
+bh_probe_lsa_global_unbal_features <- getProbe(probe_lsa_global_unbal_bh)
+
+rm(probe_knn_cancer_bh, probe_lsa_cancer_bh, probe_knn_global_bh, probe_lsa_global_bh, 
+   probe_knn_cancer_unbal_bh, probe_lsa_cancer_unbal_bh, probe_knn_global_unbal_bh, probe_lsa_global_unbal_bh,
+   cg_locations, rgSet)
 
 # get union of all of them 
-bh_union <- rbind(bh_probe_knn_cancer_features,
+bh_union_bal <- rbind(bh_probe_knn_cancer_features,
                   bh_probe_lsa_cancer_features,
                   bh_probe_knn_global_features,
                   bh_probe_lsa_global_features)
 
+bh_union_unbal <- rbind(bh_probe_knn_cancer_unbal_features,
+                        bh_probe_lsa_cancer_unbal_features,
+                        bh_probe_knn_global_unbal_features,
+                        bh_probe_lsa_global_unbal_features)
+                  
+
 # remove duplicates to get union 
-bh_union <- bh_union[!duplicated(bh_union[,2]),]
+bh_union_bal <- bh_union_bal[!duplicated(bh_union_bal[,2]),]
+bh_union_unbal <- bh_union_unbal[!duplicated(bh_union_unbal[,2]),]
+
 
 # get intersection of all of them 
-intersection <- paste(Reduce(intersect, list(bh_probe_knn_cancer_features$probe, bh_probe_lsa_cancer_features$probe,
+intersection_bal <- paste(Reduce(intersect, list(bh_probe_knn_cancer_features$probe, bh_probe_lsa_cancer_features$probe,
                                              bh_probe_knn_global_features$probe, bh_probe_lsa_global_features$probe)),collapse = '|' )
 
 # subset bh_union by these probes to get intersection
-bh_intersection <- bh_union[grepl(intersection, bh_union$probe),]
+bh_intersection_bal <- bh_union_bal[grepl(intersection_bal, bh_union_bal$probe),]
+
+# get intersection of all of them 
+intersection_unbal <- paste(Reduce(intersect, list(bh_probe_knn_cancer_unbal_features$probe, bh_probe_lsa_cancer_unbal_features$probe,
+                                                 bh_probe_knn_global_unbal_features$probe, bh_probe_lsa_global_unbal_features$probe)),collapse = '|' )
+
+# subset bh_union by these probes to get intersection
+bh_intersection_unbal <- bh_union_unbal[grepl(intersection_unbal, bh_union_unbal$probe),]
 
 # save data to modeldata
 save.image(paste0(model_data, '/bh_features.RData'))

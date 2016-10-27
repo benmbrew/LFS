@@ -34,8 +34,9 @@ bhSubset <- function(model_data,
 # function that selects random features for model
 getRand <- function(model_data) {
   
+  set.seed(10)
   feature_names <- colnames(model_data[[1]])[3:ncol(model_data[[1]])]
-  rand_features <- sample(feature_names, 1000, replace = F)
+  rand_features <- sample(feature_names, 500, replace = F)
   
   model_data_mut <- model_data[[1]][, c('age_diagnosis', 'age_sample_collection', rand_features)]
   model_data_all <- model_data[[2]][, c('age_diagnosis', 'age_sample_collection', rand_features)]

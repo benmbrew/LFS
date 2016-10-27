@@ -24,37 +24,55 @@ rm(gene_knn, gene_lsa)
 ####################################
 
 bumpHunterBalanced <- function(data,
+                               unbalanced,
                                selection) {
   
-  if (selection == 'cancer') {
-    data <- data[data$cancer_diagnosis_diagnoses != 'Unaffected',]
-    # first subset by ACC and Other (the biggest difference is between "Other" cancers - 
-    # so subset by just ACC and Unaffected)
-    data <- data[data$age_diagnosis <= 305,]
+  if (unbalanced) {
     
-    # randomly remove Mut that have a less than 50 month age of diganosis to have balanced classes
-    remove_index <- which(data$p53_germline == 'Mut' & data$age_diagnosis <= 50)
-    remove_index <- sample(remove_index, 23, replace = F )
-    data <- data[-remove_index,]
+    if (selection == 'cancer') {
+      data <- data[data$cancer_diagnosis_diagnoses != 'Unaffected',]
+      # first subset by ACC and Other (the biggest difference is between "Other" cancers - 
+      # so subset by just ACC and Unaffected)
+    }
+    if (selection == 'global') {
+      
+      data <- data
+      
+    }
     
-  }
-  if (selection == 'global') {
+  } else {
    
-    # subset cancer data by just acc and unaffected, because WT essetially only have these categories.
-    data <- data[grepl('ACC|Unaffected', data$cancer_diagnosis_diagnoses),]
-    # now mut v wt classes are more balanced 33 v 31
-    # mut has 20 Acc and 11 unaffected
-    # wt 13 acc and 20 unaffected
-    
-    # Balance Mut to 13 ACC and 11 Unaffected
-    remove_index <- which(data$p53_germline == 'Mut' & data$cancer_diagnosis_diagnoses == 'ACC')
-    remove_index <- sample(remove_index, 7, replace = F )
-    data <- data[-remove_index,]
-    
-    # Balance WT to 13 ACC and 13 Unaffected
-    remove_index <- which(data$p53_germline == 'WT' & data$cancer_diagnosis_diagnoses == 'Unaffected')
-    remove_index <- sample(remove_index, 7, replace = F )
-    data <- data[-remove_index,]
+     if (selection == 'cancer') {
+      data <- data[data$cancer_diagnosis_diagnoses != 'Unaffected',]
+      # first subset by ACC and Other (the biggest difference is between "Other" cancers - 
+      # so subset by just ACC and Unaffected)
+      data <- data[data$age_diagnosis <= 305,]
+      
+      # randomly remove Mut that have a less than 50 month age of diganosis to have balanced classes
+      remove_index <- which(data$p53_germline == 'Mut' & data$age_diagnosis <= 50)
+      remove_index <- sample(remove_index, 23, replace = F )
+      data <- data[-remove_index,]
+      
+    }
+    if (selection == 'global') {
+      
+      # subset cancer data by just acc and unaffected, because WT essetially only have these categories.
+      data <- data[grepl('ACC|Unaffected', data$cancer_diagnosis_diagnoses),]
+      # now mut v wt classes are more balanced 33 v 31
+      # mut has 20 Acc and 11 unaffected
+      # wt 13 acc and 20 unaffected
+      
+      # Balance Mut to 13 ACC and 11 Unaffected
+      remove_index <- which(data$p53_germline == 'Mut' & data$cancer_diagnosis_diagnoses == 'ACC')
+      remove_index <- sample(remove_index, 7, replace = F )
+      data <- data[-remove_index,]
+      
+      # Balance WT to 13 ACC and 13 Unaffected
+      remove_index <- which(data$p53_germline == 'WT' & data$cancer_diagnosis_diagnoses == 'Unaffected')
+      remove_index <- sample(remove_index, 7, replace = F )
+      data <- data[-remove_index,]
+      
+    }
     
   }
   
@@ -149,16 +167,38 @@ bumpHunterBalanced <- function(data,
   
 }
 
-cancer_knn <- bumpHunterBalanced(data = probe_knn, 
-                             selection = 'cancer')
-
-cancer_lsa <- bumpHunterBalanced(data = probe_lsa, 
+# balanced with all data
+cancer_knn <- bumpHunterBalanced(data = probe_knn,
+                                 unbalanced = F,
                                  selection = 'cancer')
 
-global_knn <- bumpHunterBalanced(data = probe_knn, 
-                             selection = 'global')
+cancer_lsa <- bumpHunterBalanced(data = probe_lsa,
+                                 unbalanced = F,
+                                 selection = 'cancer')
 
-global_lsa <- bumpHunterBalanced(data = probe_lsa, 
+global_knn <- bumpHunterBalanced(data = probe_knn,
+                                 unbalanced = F,
+                                 selection = 'global')
+
+global_lsa <- bumpHunterBalanced(data = probe_lsa,
+                                 unbalanced = F,
+                                 selection = 'global')
+
+# unbalanced with all data
+cancer_knn_unbal <- bumpHunterBalanced(data = probe_knn, 
+                                 unbalanced = T,
+                                 selection = 'cancer')
+
+cancer_lsa_unbal <- bumpHunterBalanced(data = probe_lsa, 
+                                 unbalanced = T,
+                                 selection = 'cancer')
+
+global_knn_unbal <- bumpHunterBalanced(data = probe_knn, 
+                                 unbalanced = T,
+                                 selection = 'global')
+
+global_lsa_unbal <- bumpHunterBalanced(data = probe_lsa, 
+                                 unbalanced = T,
                                  selection = 'global')
 
 # look at summary stats of global and cancer
@@ -167,6 +207,13 @@ probe_lsa_cancer_bh <- cancer_lsa[[1]]
 
 probe_knn_global_bh <- global_knn[[1]]
 probe_lsa_global_bh <- global_lsa[[1]]
+
+# look at summary stats of unbalanced global and cancer 
+probe_knn_cancer_unbal_bh <- cancer_knn_unbal[[1]]
+probe_lsa_cancer_unbal_bh <- cancer_lsa_unbal[[1]]
+
+probe_knn_global_unbal_bh <- global_knn_unbal[[1]]
+probe_lsa_global_unbal_bh <- global_lsa_unbal[[1]]
 
 rm(cg_locations, clin, probe_knn, probe_lsa, cancer_lsa, cancer_knn, global_knn, global_lsa)
 

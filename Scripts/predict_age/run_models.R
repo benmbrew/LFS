@@ -37,12 +37,14 @@ p53 <- c('Mut', 'WT')
 
 load(paste0(model_data, '/model_data.RData'))
 load(paste0(model_data, '/bh_features.RData'))
-rm(cg_locations)
 
 # Data types: 
 # 1) full_data : gene_knn, gene_lsa, probe_knn, probe_lsa 
-# 2) bh features: bh_probe_knn_cancer_features, bh_probe_lsa_cancer_features,
+# 2) bh features_balanced: bh_probe_knn_cancer_features, bh_probe_lsa_cancer_features,
 #    bh_probe_knn_global_features, bh_probe_lsa_global_features
+# 3) bh features_unbalanced: bh_probe_knn_cancer_unbal_features, bh_probe_lsa_cancer_unbal_features,
+#    bh_probe_knn_global_unbal_features, bh_probe_lsa_global_unbal_features
+# 4) random with each one
 
 # function to run models - subset, get residuals, get categorical, predict with regression and fac. 
 runModels <- function(data,
@@ -168,7 +170,6 @@ probe_knn_cancer_models <- runModels(probe_knn, bump_hunter = T,
 # get result table 
 probe_knn_cancer_table <- extractResults(probe_knn_cancer_models, data_name = 'probe knn cancer')
 
-
 ###### probe lsa with global features
 probe_lsa_global_models <- runModels(probe_lsa, bump_hunter = T, 
                                      bump_hunter_data = bh_probe_lsa_global_features)
@@ -181,22 +182,118 @@ probe_lsa_cancer_models <- runModels(probe_lsa, bump_hunter = T,
 # get result table 
 probe_lsa_cancer_table <- extractResults(probe_lsa_cancer_models, data_name = 'probe lsa cancer')
 
+###### probe knn union 
+probe_knn_union_models <- runModels(probe_knn, random = F, bump_hunter = T, 
+                                    bump_hunter_data = bh_union)
+# get result table 
+probe_knn_union_table <- extractResults(probe_knn_union_models, data_name = 'probe knn union')
+
+###### probe knn intersection
+probe_knn_int_models <- runModels(probe_knn, random = F, bump_hunter = T, 
+                                    bump_hunter_data = bh_intersection)
+# get result table 
+probe_knn_int_table <- extractResults(probe_knn_int_models, data_name = 'probe knn intersection')
+
+###### probe lsa union 
+probe_lsa_union_models <- runModels(probe_lsa, random = F, bump_hunter = T, 
+                                    bump_hunter_data = bh_union_bal)
+# get result table 
+probe_lsa_union_table <- extractResults(probe_lsa_union_models, data_name = 'probe lsa union')
+
+###### probe lsa intersection
+probe_lsa_int_models <- runModels(probe_lsa, random = F, bump_hunter = T, 
+                                  bump_hunter_data = bh_intersection_bal)
+# get result table 
+probe_lsa_int_table <- extractResults(probe_lsa_int_models, data_name = 'probe lsa intersection')
+
+###################################
+# Fourth, run probe_knn and probe_lsa with all different bumphunter features that are unbalanced 
+###################################
+
+###### probe knn with global features
+probe_knn_global_unbal_models <- runModels(probe_knn, random = F, bump_hunter = T, 
+                                     bump_hunter_data = bh_probe_knn_global_unbal_features)
+# get result table 
+probe_knn_global_unbal_table <- extractResults(probe_knn_global_unbal_models, data_name = 'probe knn global unbalanced')
+
+###### probe knn with cancer features
+probe_knn_cancer_unbal_models <- runModels(probe_knn, bump_hunter = T, 
+                                     bump_hunter_data = bh_probe_knn_cancer_unbal_features)
+# get result table 
+probe_knn_cancer_unbal_table <- extractResults(probe_knn_cancer_unbal_models, data_name = 'probe knn cancer unbalanced')
+
+###### probe lsa with global features
+probe_lsa_global_unbal_models <- runModels(probe_lsa, bump_hunter = T, 
+                                     bump_hunter_data = bh_probe_lsa_global_unbal_features)
+# get result table 
+probe_lsa_global_unbal_table <- extractResults(probe_lsa_global_unbal_models, data_name = 'probe lsa global unbalanced')
+
+###### probe lsa with cancer features
+probe_lsa_cancer_unbal_models <- runModels(probe_lsa, bump_hunter = T, 
+                                     bump_hunter_data = bh_probe_lsa_cancer_unbal_features)
+# get result table 
+probe_lsa_cancer_unbal_table <- extractResults(probe_lsa_cancer_unbal_models, data_name = 'probe lsa cancer unbalanced')
+
+###### probe knn union 
+probe_knn_union_unbal_models <- runModels(probe_knn, random = F, bump_hunter = T, 
+                                    bump_hunter_data = bh_union_unbal)
+# get result table 
+probe_knn_union_unbal_table <- extractResults(probe_knn_union_unbal_models, data_name = 'probe knn union unbalanced')
+
+###### probe knn intersection
+probe_knn_int_unbal_models <- runModels(probe_knn, random = F, bump_hunter = T,  
+                                  bump_hunter_data = bh_intersection_unbal)
+# get result table 
+probe_knn_int_unbal_table <- extractResults(probe_knn_int_unbal_models, data_name = 'probe knn intersection unbalanced')
+
+###### probe lsa union 
+probe_lsa_union_unbal_models <- runModels(probe_lsa, random = F, bump_hunter = T, 
+                                    bump_hunter_data = bh_union_unbal)
+# get result table 
+probe_lsa_union_unbal_table <- extractResults(probe_lsa_union_unbal_models, data_name = 'probe lsa union unbalanced')
+
+###### probe lsa intersection
+probe_lsa_int_unbal_models <- runModels(probe_lsa, random = F, bump_hunter = T, 
+                                  bump_hunter_data = bh_intersection_unbal)
+# get result table 
+probe_lsa_int_unbal_table <- extractResults(probe_lsa_int_unbal_models, data_name = 'probe lsa intersection unbalanced')
+
+
 ###################################
 # Finally run each gene and probe data with random features
 ###################################
 
 ###### GENE KNN
-gene_knn_rand <- runModels(gene_knn, random = T)
+gene_knn_rand_models <- runModels(gene_knn, random = T)
+
+# get table
+gene_knn_rand_table <- extractResults(gene_knn_rand_models, data_name = 'gene knn random')
 
 ###### GENE lsa
-gene_lsa_rand <- runModels(gene_lsa, random = T)
+gene_lsa_rand_models <- runModels(gene_lsa, random = T)
+
+# get table
+gene_lsa_rand_table <- extractResults(gene_lsa_rand_models, data_name = 'gene lsa random')
 
 ###### probe KNN
-probe_knn_rand <- runModels(probe_knn, random = T)
+probe_knn_rand_models <- runModels(probe_knn, random = T)
+
+# get table
+probe_knn_rand_table <- extractResults(probe_knn_rand_models, data_name = 'probe knn random')
 
 ###### probe lsa
-probe_lsa_rand <- runModels(probe_lsa, random = T)
+probe_lsa_rand_models <- runModels(probe_lsa, random = T)
 
+# get table
+probe_lsa_rand_table <- extractResults(probe_lsa_rand_models, data_name = 'probe lsa random')
+
+# # Save main model data (use of all features)
+# save.image(paste0(model_data, '/partial_bh_results.RData'))
+# load(paste0(model_data, '/partial_bh_results.RData'))
+###################################
+# Aggregate results tables 
+###################################
+final_results <- rbind()
 
 # 
 # # get plot objects
