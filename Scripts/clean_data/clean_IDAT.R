@@ -17,9 +17,11 @@ idat_data <- paste0(methyl_data, '/raw_files')
 clin_data <- paste0(data_folder, '/clin_data')
 results_folder <- paste0(test, '/Results')
 
-# this function will read in each idat file using read.450k.exp from minifi package and store them in a 
-# list
+####################
+# this function will read in each idat file using read.450k.exp from minifi package and store them in a list
+####################
 
+rgSetList <- list()
 readIDAT <- function(path) {
   
   rgSet <- list()
@@ -27,7 +29,7 @@ readIDAT <- function(path) {
   
   for (folder in directory){
     # read into rgSet
-    rgSet[[folder]] <- read.450k.exp(paste(path, folder, sep = '/'))
+    rgSet[[folder]] <- read.metharray.exp(paste(path, folder, sep = '/'))
   }
   
   return(rgSet)
@@ -35,7 +37,8 @@ readIDAT <- function(path) {
 }
 
 rgSetList <- readIDAT(idat_data)
-# problem here at 5760666027
-temp <- read.metharray.exp(paste(idat_data, "5760666027", sep = '/'))
-rm(temp)
-directory
+
+####################
+# Now we have a list of 20 elements. use minfi functions to process data
+####################
+

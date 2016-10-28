@@ -184,13 +184,13 @@ probe_lsa_cancer_table <- extractResults(probe_lsa_cancer_models, data_name = 'p
 
 ###### probe knn union 
 probe_knn_union_models <- runModels(probe_knn, random = F, bump_hunter = T, 
-                                    bump_hunter_data = bh_union)
+                                    bump_hunter_data = bh_union_bal)
 # get result table 
 probe_knn_union_table <- extractResults(probe_knn_union_models, data_name = 'probe knn union')
 
 ###### probe knn intersection
 probe_knn_int_models <- runModels(probe_knn, random = F, bump_hunter = T, 
-                                    bump_hunter_data = bh_intersection)
+                                    bump_hunter_data = bh_intersection_bal)
 # get result table 
 probe_knn_int_table <- extractResults(probe_knn_int_models, data_name = 'probe knn intersection')
 
@@ -287,14 +287,34 @@ probe_lsa_rand_models <- runModels(probe_lsa, random = T)
 # get table
 probe_lsa_rand_table <- extractResults(probe_lsa_rand_models, data_name = 'probe lsa random')
 
-# # Save main model data (use of all features)
-# save.image(paste0(model_data, '/partial_bh_results.RData'))
-# load(paste0(model_data, '/partial_bh_results.RData'))
 ###################################
 # Aggregate results tables 
 ###################################
-final_results <- rbind()
+final_results <- rbind(probe_knn_global_table, 
+                       probe_knn_cancer_table,
+                       probe_lsa_global_table,
+                       probe_lsa_cancer_table,
+                       probe_knn_union_table, 
+                       probe_knn_int_table,
+                       probe_lsa_union_table,
+                       probe_lsa_int_table, 
+                       probe_knn_global_unbal_table,
+                       probe_knn_cancer_unbal_table,
+                       probe_lsa_global_unbal_table,
+                       probe_lsa_cancer_unbal_table, 
+                       probe_knn_union_unbal_table,
+                       probe_knn_int_unbal_table,
+                       probe_lsa_union_unbal_table,
+                       probe_lsa_int_unbal_table,
+                       gene_knn_rand_table, 
+                       gene_lsa_rand_table, 
+                       probe_knn_rand_table,
+                       probe_lsa_rand_table)
 
+
+# # Save main model data (use of all features)
+# save.image(paste0(model_data, '/partial_bh_results.RData'))
+# load(paste0(model_data, '/partial_bh_results.RData'))
 # 
 # # get plot objects
 # plot_mut <- plotObject(gene_knn_models, residual = F, p53_mut = T)
