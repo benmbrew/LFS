@@ -23,7 +23,7 @@ results_folder <- paste0(test, '/Results')
 # Load id_map to later merge with methylation values. clean it.
 ####################
 id_map <- read.csv(paste0(methyl_data, '/ids_map.csv'), stringsAsFactors = F)
-
+id_map <- as.data.frame(id_map)
 # remove top rows 
 id_map <- id_map[-c(1:6),]
 
@@ -58,24 +58,46 @@ readIDAT <- function(path) {
 rgSetList <- readIDAT(idat_data)
 
 ####################
-# Loop through list and convert to beta, m, and cn values 
+# function that Loops through list, preprocesses, and convert to beta, m, and cn values 
 ####################
-Mset <- list()
-ratioSet <- list()
-gset <- list()
-beta <- list()
-m <- list()
-cn <- list()
 
-for (dat in 1:length(rgSetList)) {
-  Mset[[dat]] <-preprocessRaw(rgSetList[[dat]])
-  ratioSet[[dat]] <- ratioConvert(Mset[[dat]], what = 'both', keepCN = T)
-  gset[[dat]] <- mapToGenome(ratioSet[[dat]]) 
-  beta[[dat]] <- getBeta(gset[[dat]])
-  m[[dat]] <- getM(gset[[dat]])
-  cn[[dat]] <- getCN(gset[[dat]])
-  print(dat)
+preprocessMethod <- function(data, preprocess) {
+  
+  Mset <- list()
+  ratioSet <- list()
+  gset <- list()
+  beta <- list()
+  m <- list()
+  cn <- list()
+  
+  for (dat in 1:length(data)) {
+    
+    if (preprocess == 'raw') {
+      Mset[[dat]] <-preprocessRaw(data[[dat]])
+      ratioSet[[dat]] <- ratioConvert(Mset[[dat]], what = 'both', keepCN = T)
+    } else if (preprocess == 'illumina') {
+      Mset[[dat]] <-preprocessIllumina(data[[dat]])
+      ratioSet[[dat]] <- ratioConvert(Mset[[dat]], what = 'both', keepCN = T)
+    } else if (preprocess == 'swan') {
+      Mset[[dat]] <-preprocessSWAN(data[[dat]])
+      ratioSet[[dat]] <- ratioConvert(Mset[[dat]], what = 'both', keepCN = T)
+    } else if (preprocess == 'funnorm') {
+      ratioSet[[dat]] <-preprocessFunnorm(data[[dat]])
+    } else if (preprocess == 'quantile') {
+      ratioSet[[dat]] <- preprocessQuantile(data[[dat]], fixOutliers = TRUE,
+                                            removeBadSamples = TRUE, badSampleCutoff = 10.5,
+                                            quantileNormalize = TRUE, stratified = TRUE,
+                                            mergeManifest = FALSE, sex = NULL)
+    }
+    gset[[dat]] <- mapToGenome(ratioSet[[dat]]) 
+    beta[[dat]] <- getBeta(gset[[dat]])
+    m[[dat]] <- getM(gset[[dat]])
+    cn[[dat]] <- getCN(gset[[dat]])
+    print(dat)
+  }
+  return(list(beta, m, cn))
 }
+
 
 ####################
 # Function that combines elements of a list into a data frame
@@ -90,92 +112,124 @@ combineList <- function(list) {
   return(data)
 }
 
-beta_values <- combineList(beta)
-m_values <- combineList(m)
-cn_values <- combineList(cn)
-
-
 ####################
 # Function that combines methylation matrices with id_map, to get ids for methylation
 ####################
 
-findIds <- function(data) {
-  data <- as.data.frame(data)
-  data$identifier <- rownames(data)
-  data$identifier <- as.factor(data$identifier)
-  beta_methyl <- inner_join(beta_values, id_map, by = 'identifier')
+findIds <- function(data_methyl) {
+  data_methyl <- as.data.frame(data_methyl)
+  data_methyl$identifier <- rownames(data_methyl)
+  data_methyl$identifier <- as.factor(data_methyl$identifier)
+  # loop to combine identifiers, without merging large table
+  data_methyl$ids <- NA
+  for (i in data_methyl$identifier) {
+    data_methyl$ids[data_methyl$identifier == i] <- id_map$sample_name[id_map$identifier == i]
+    print(i)
+  }
+  
+  return(data_methyl)
 }
 
-beta_methyl <- findIds(beta_values)
+####################
+# Function that gets malkin id from sample_name
+####################
+getIdName <- function(data) {
+  
+  column_split <- strsplit(as.character(data$ids), '#')
+  last_digits <- lapply(column_split, function(x) x[length(x)])
+  sub_ids <- unlist(last_digits)
+  sub_ids <- gsub('RD-', '', sub_ids)
+  data$ids <- sub_ids
+  data$sentrix_position <- NULL
+  data$sentrix_id <- NULL
+  data$pool_id <- NULL
+  data$sample_group <- NULL
+  data$sample_plate <- NULL
+  data$sample_well <- NULL
+  data$sample_name <- NULL
+  data$identifier <- NULL
+  return(data)
+  
+}
 
 ###########################
-# Preprocessing and normilization
+# Main function that specifies a preprocessing method and get beta, m, cn_values
 ###########################
 
-# As seen before, it converts a RGChannelSet to a MethylSet by converting the Red and
-# Green channels into a matrix of methylated signals and a matrix of unmethylated signals.
-# No normalization is performed.
+getMethyl <- function(data_list, method) {
+ 
+  processed_list <- list()
+  processed_list <-preprocessMethod(data_list, preprocess = method)
+  
+  # combinelist
+  beta_methyl <- combineList(processed_list[[1]])
+  m_methyl <- combineList(processed_list[[2]])
+  cn_methyl <- combineList(processed_list[[3]])
+  
+  # find ids
+  beta_methyl <- findIds(beta_methyl)
+  m_methyl <- findIds(m_methyl)
+  cn_methyl <- findIds(cn_methyl)
+  
+  # clean ids
+  beta_methyl <- getIdName(beta_methyl)
+  m_methyl <- getIdName(m_methyl)
+  cn_methyl <- getIdName(cn_methyl)
+  
+  return(list(beta_methyl, m_methyl, cn_methyl))
+  
+  
+}
 
-####### PreprocessIllumina
-# Convert a RGChannelSet to a MethylSet by implementing the preprocessing choices as
-# available in Genome Studio: background subtraction and control normalization. Both of
-# them are optional and turning them off is equivalent to raw preprocessing (preprocessRaw):
-MSet.illumina <- preprocessIllumina(RGSet, bg.correct = TRUE,
-                                    normalize = "controls")
+# run the 5 different preprocessing and normilization methods
+raw <- getMethyl(rgSetList, method = 'raw')
+beta_raw <- raw[[1]]
+m_raw <- raw[[2]]
+cn_raw <- raw[[3]]
+rm(raw)
+save.image(paste0(methyl_data, '/raw.RData'))
+rm(beta_raw, m_raw, cn_raw)
+
+illum <- getMethyl(rgSetList, method = 'illumina')
+beta_illumina <- illum[[1]]
+m_illumina <- illum[[2]]
+cn_illumina <- illum[[3]]
+rm(illum)
+save.image(paste0(methyl_data, '/illum.RData'))
+rm(m_illumina, beta_illumina, cn_illumina)
+
+swan <- getMethyl(rgSetList, method = 'swan')
+beta_swan <- swan[[1]]
+m_swan <- swan[[2]]
+cn_swan <- swan[[3]]
+rm(swan)
+save.image(paste0(methyl_data, '/swan.RData'))
+rm(beta_swan, m_swan, cn_swan)
+
+funnorm <- getMethyl(rgSetList, method = 'funnorm')
+beta_funnorm <- funnorm[[1]]
+m_funnorm <- funnorm[[2]]
+cn_funnorm <- funnorm[[3]]
+rm(funnorm)
+save.image(paste0(methyl_data, '/funnorm.RData'))
+rm(beta_funnorm, m_funnorm, cn_funnorm)
+
+quan <- getMethyl(rgSetList, method = 'quantile')
+beta_quan <- quan[[1]]
+m_quan <- quan[[2]]
+cn_quan <- quan[[3]]
+rm(quan)
+save.image(paste0(methyl_data, '/quan.RData'))
+rm(beta_quan, m_quan, cn_quan)
 
 
-####### PreprocessSWAN
-
-# Perform Subset-quantile within array normalization (SWAN) [6], a within-array normalization
-# correction for the technical differences between the Type I and Type II array designs.
-# The algorithm matches the Beta-value distributions of the Type I and Type II probes by
-# applying a within-array quantile normalization separately for different subsets of probes (divided
-#                                                                                            by CpG content). The input of SWAN is a MethylSet, and the function returns
-# a MethylSet as well. If an RGChannelSet is provided instead, the function will first call
-# preprocessRaw on the RGChannelSet, and then apply the SWAN normalization. We recommend
-# setting a seed (using set.seed) before using preprocessSWAN to ensure that the
-# normalized intensities will be reproducible.
-
-MSet.swan <- preprocessSWAN(RGSet)
 
 
-######## PreprocessQuantile
-
-# This function implements stratified quantile normalization preprocessing. The normalization
-# procedure is applied to the Meth and Unmeth intensities separately. The distribution of type
-# I and type II signals is forced to be the same by first quantile normalizing the type II probes
-# across samples and then interpolating a reference distribution to which we normalize the
-# type I probes. Since probe types and probe regions are confounded and we know that
-# DNAm distributions vary across regions we stratify the probes by region before applying
-# this interpolation. Note that this algorithm relies on the assumptions necessary for quantile
-# normalization to be applicable and thus is not recommended for cases where global changes
-# are expected such as in cancer-normal comparisons. Note that this normalization procedure
-# is essentially similar to one previously presented [7]. The different options can be summarized
-# into the following list:
-
-# 1) If fixMethOutlier is TRUE, the functions fixes outliers of both the methylated and
-# unmethylated channels when small intensities are close to zero.
-# 2) If removeBadSamples is TRUE, it removes bad samples using the QC criterion discussed
-# previously
-# 3) Performs stratified subset quantile normalization if quantileNormalize=TRUE and
-# stratified=TRUE
-# 4) Predicts the sex (if not provided in the sex argument) using the function getSex and
-# normalizes males and females separately for the probes on the X and Y chromosomes
-
-gset.quantile <- preprocessQuantile(RGSet, fixOutliers = TRUE,
-                                    removeBadSamples = TRUE, badSampleCutoff = 10.5,
-                                    quantileNormalize = TRUE, stratified = TRUE,
-                                    mergeManifest = FALSE, sex = NULL)
 
 
-############## PreprocessFunnorm
-# The function preprocessFunnorm implements the functional normalization algorithm developed
-# in [8]. Briefly, it uses the internal control probes present on the array to infer
-# between-array technical variation. It is particularly useful for studies comparing conditions
-# with known large-scale differences, such as cancer/normal studies, or between-tissue studies.
-# It has been shown that for such studies, functional normalization outperforms other existing
-# approaches [8]. By default, is uses the first two principal components of the control probes
-# to infer the unwanted variation.
 
-# gset.funnorm <- preprocessFunnorm(RGSet)
+
+
+
+
 

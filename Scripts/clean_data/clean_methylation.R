@@ -50,7 +50,17 @@ methylation_raw <-  vector('list', num_sets)
 # read in raw methylation files. 
 for(i in (1:num_sets)){
   methylation_raw[[i]] <- read.delim(paste(data_folder, data_name, i, '.txt', sep = ''), header = TRUE)
+  print(i)
 }
+
+# temp <- list()
+# for(i in 1:length(methylation_raw)) {
+# temp[[i]] <- methylation_raw[[i]]$X
+# }
+# 
+# temp <- unlist(temp)
+# length(which(!duplicated(temp)))
+
 
 # iterate through each data set and retrieve the IDs then combine them into one data table in same format as 
 # Previous methylation data

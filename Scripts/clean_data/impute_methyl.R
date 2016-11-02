@@ -35,6 +35,14 @@ source(paste0(project_folder, '/Code/Functions/knnImputation.R'))
 ################################################################
 # Read in methylation probe and gene
 ################################################################
+# load idat files to be imputed with knn
+load(paste0(methyl_data, '/raw.RData'))
+load(paste0(methyl_data, '/illum.RData'))
+load(paste0(methyl_data, '/swan.RData'))
+load(paste0(methyl_data, '/funnorm.RData'))
+load(paste0(methyl_data, '/quan.RData'))
+rm(id_map)
+
 
 # Read in methylation data
 methyl_gene <- read.csv(paste0(methyl_data, '/methyl.csv'), stringsAsFactors = FALSE)
@@ -42,8 +50,9 @@ methyl_gene <- read.csv(paste0(methyl_data, '/methyl.csv'), stringsAsFactors = F
 # read in probe level methylation 
 methyl_probe <- read.csv(paste0(methyl_data, '/methylation.csv'), header = TRUE, check.names = FALSE)
 
+#################
 # function that imputes both knn and lsa on methylation data
-
+#################
 imputeMethyl <- function(data,
                          probe){
   
@@ -118,4 +127,36 @@ write.csv(probe_lsa, paste0(imputed_data, '/methyl_impute_probe_lsa.csv'))
 write.csv(probe_knn, paste0(imputed_data, '/methyl_impute_probe_knn.csv'))
 
 save.image(paste0(imputed_data, '/imputed_gene_probe.RData'))
+
+
+#################
+# function that imputes just knn on original idat data
+#################
+imputeIdat <- function(data) {
+  
+  # put ids in rownames for imputation
+  rownames(data) <- data[,1]
+  data <- data[, -1]
+  
+  # remove duplicate rownames,so it can impute
+  data <- data[!grepl('y', rownames(data)),]
+  data <- as.matrix(data)
+  
+  # run lsaImputaion of methylation data
+  data_lsa <- lsaImputation(incomplete_data = data, sample_rows = TRUE)
+  # impute with knn as well
+  data_knn <- knnImputation(data, sample_rows = TRUE)
+  
+  # join rownames and methyl_impute and then erase rownames
+  data_lsa <- cbind(id = rownames(data_lsa), data_lsa)
+  rownames(data_lsa) <- NULL
+  
+  # join rownames and methyl_impute and then erase rownames
+  data_knn <- cbind(id = rownames(data_knn), data_knn)
+  rownames(data_knn) <- NULL
+  
+  return(list(data_lsa, data_knn))
+  
+}
+
 
