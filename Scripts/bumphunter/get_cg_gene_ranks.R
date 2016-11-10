@@ -20,7 +20,6 @@ project_folder <- paste0(home_folder, '/LFS')
 data_folder <- paste0(project_folder, '/Data')
 bumphunter_data <- paste0(data_folder, '/bumphunter_data')
 
-
 # load data
 load(paste0(bumphunter_data, '/bh_regions.RData'))
 

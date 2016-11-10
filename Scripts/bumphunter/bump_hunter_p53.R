@@ -10,13 +10,18 @@ home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
 data_folder <- paste0(project_folder, '/Data')
 clin_data <- paste0(data_folder, '/clin_data')
+methyl_data <- paste0(data_folder, '/methyl_data')
 model_data <- paste0(data_folder, '/model_data')
+imputed_data <- paste0(data_folder, '/imputed_data')
+idat_data <- paste0(methyl_data, '/raw_files')
 bumphunter_data <- paste0(data_folder, '/bumphunter_data')
 
 
 # Load model data which contains all variations of methylation data
 load(paste0(model_data, '/model_data.RData'))
-rm(gene_knn, gene_lsa)
+load(paste0(idat_data, '/imputed_idat_betas_final.RData'))
+
+rm(gene_knn, gene_lsa, beta_illumina)
 
 ####################################
 # function that matches mut and wt counts as well as creates relatively similar

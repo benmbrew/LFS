@@ -21,10 +21,9 @@ knnImputation <- function(incompleteData, sample_rows) {
   concatenatedIncompleteData <- incompleteData
   
   # Impute the missing data
-  set.seed(10)
+  set.seed(1)
   concatenatedImputedData <- impute.knn(concatenatedIncompleteData, k = 10)$data
-  
-  
+
   # Reorient the data to its original form
   if (transposeData) {
     imputedData <- t(concatenatedImputedData)

@@ -20,7 +20,7 @@ clin_data <- paste0(data_folder, '/clin_data')
 # clin2 <- gsheet2tbl('https://docs.google.com/spreadsheets/d/1zUOYEXFh9RAQFpNPFjpPNBSLbFgnqQItucuNzuznivk/edit#gid=621772204')
 # write.csv(clin2, '/home/benbrew/Desktop/clin2.csv')
 
-clin1 <- read.csv(paste0(clin_data, '/clin1.csv'), na.strings=c("","NA"), 
+clin1 <- read.csv(paste0(clin_data, '/clin_1.csv'), na.strings=c("","NA"), 
                  stringsAsFactors = FALSE, sep = ',') # read the first sheet
 clin2 <- read.csv(paste0(clin_data, '/clin2.csv'), na.strings=c("","NA"),
                 stringsAsFactors = FALSE) # read the second sheet

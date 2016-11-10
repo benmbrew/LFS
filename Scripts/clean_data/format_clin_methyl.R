@@ -22,6 +22,7 @@ project_folder <- paste0(home_folder, '/LFS')
 data_folder <- paste0(project_folder, '/Data')
 methyl_data <- paste0(data_folder, '/methyl_data')
 imputed_data <- paste0(data_folder, '/imputed_data')
+idat_data <- paste0(methyl_data, '/raw_files')
 model_data <- paste0(data_folder, '/model_data')
 bumphunter_data <- paste0(data_folder, '/bumphunter_data')
 clin_data <- paste0(data_folder, '/clin_data')
@@ -32,13 +33,19 @@ clin_data <- paste0(data_folder, '/clin_data')
 #################################################################################################
 
 # Read in data (clinical or clinical_two)
-clin <- read.csv(paste0(clin_data, '/clinical_two.csv'), stringsAsFactors = TRUE)
+clin <- read.csv(paste0(clin_data, '/clinical_two.csv'), stringsAsFactors = F)
 
 # clin clinical ids
 clin$id <-  gsub('A|B|_', '', clin$blood_dna_malkin_lab_)
 
 # load methylation data - probe, gene, knn, lsa
 load(paste0(imputed_data, '/imputed_gene_probe.RData'))
+
+# load idat methylation imputerd- probe, knn - raw, swan, quan, funnorm
+load(paste0(idat_data, '/imputed_idat_betas.RData'))
+load(paste0(idat_data, '/imputed_idat_betas_control.RData'))
+
+# reformat to look like other data so it fits in to function
 
 # remove unneeded object
 rm(methyl_gene, methyl_probe, data, gene, probe)
@@ -77,14 +84,57 @@ getIDAT <- function(cg_locations) {
 }
 
 # function that takes each methylation and merges with clinical - keep id, family, p53 status, age data
-joinData <- function(data) {
+joinData <- function(data, control) {
   
+  # get intersection of clin ids and data ids
+  intersected_ids <- intersect(data$id, clin$id)
   features <- colnames(data)[2:(length(colnames(data)))]
-  data <- inner_join(data, clin, by = 'id')
-  data <- data[!is.na(data$p53_germline),]
-  data <- data[!duplicated(data$id),]
-  data <- data[!duplicated(data$tm_donor_),]
-  data <- data[, c('p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses','age_sample_collection', features)]
+  
+ 
+  if(!control) {
+    # loop to combine identifiers, without merging large table
+    data$p53_germline <- NA
+    data$age_diagnosis <- NA
+    data$cancer_diagnosis_diagnoses <- NA
+    data$age_sample_collection <- NA
+    data$tm_donor_ <- NA
+    
+    for (i in intersected_ids) {
+      
+      data$p53_germline[data$id == i] <- clin$p53_germline[which(clin$id == i)]
+      data$age_diagnosis[data$id == i] <- clin$age_diagnosis[which(clin$id == i)]
+      data$cancer_diagnosis_diagnoses[data$id == i] <- clin$cancer_diagnosis_diagnoses[which(clin$id == i)]
+      data$age_sample_collection[data$id == i] <- clin$age_sample_collection[which(clin$id == i)]
+      data$tm_donor_[data$id == i] <- clin$tm_donor_[which(clin$id == i)]
+      
+      print(i)
+    } 
+    data <- data[!is.na(data$p53_germline),]
+    data <- data[!duplicated(data$id),]
+    data <- data[!duplicated(data$tm_donor_),]
+    data <- data[, c('id', 'p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses','age_sample_collection', features)]
+  } else {
+    # loop to combine identifiers, without merging large table
+    data$p53_germline <- NA
+    data$cancer_diagnosis_diagnoses <- NA
+    data$age_sample_collection <- NA
+    data$tm_donor_ <- NA
+    
+    for (i in intersected_ids) {
+      
+      data$p53_germline[data$id == i] <- clin$p53_germline[which(clin$id == i)]
+      data$cancer_diagnosis_diagnoses[data$id == i] <- clin$cancer_diagnosis_diagnoses[which(clin$id == i)]
+      data$age_sample_collection[data$id == i] <- clin$age_sample_collection[which(clin$id == i)]
+      data$tm_donor_[data$id == i] <- clin$tm_donor_[which(clin$id == i)]
+      
+      print(i)
+    } 
+    data <- data[!is.na(data$p53_germline),]
+    data <- data[!duplicated(data$id),]
+    data <- data[!duplicated(data$tm_donor_),]
+    data <- data[, c('id', 'p53_germline', 'cancer_diagnosis_diagnoses','age_sample_collection', features)]
+  }
+  
   return(data)
 }
 
@@ -98,10 +148,21 @@ relevelFactor <- function(data) {
 # Function to convert all genes/probe columns to numeric
 makeNum <- function(model_data) {
   
-  model_data[, 5:ncol(model_data)] <- apply(model_data[, 5:ncol(model_data)], 2, function(x) as.numeric(as.character(x)))
+  model_data[, 6:ncol(model_data)] <- apply(model_data[, 6:ncol(model_data)], 2, function(x) as.numeric(as.character(x)))
   
   return(model_data)
 }
+
+reformatData <- function(data) {
+  data <- as.data.frame(data)
+  names(data)[1] <- 'id'
+  return(data)
+}
+
+
+###########################
+# apply functions to gene and probe original dta
+###########################
 
 gene_knn <- cleanIDs(gene_knn)
 gene_lsa <- cleanIDs(gene_lsa)
@@ -125,10 +186,43 @@ probe_lsa <- makeNum(probe_lsa)
 
 cg_locations <- getIDAT(cg_locations)
 
-
-
 # save image file 
 save.image(paste0(model_data, '/model_data.RData'))
+
+
+###########################
+# apply functions to idat data
+###########################
+beta_raw <- reformatData(beta_raw)
+beta_swan <- reformatData(beta_swan)
+beta_quan <- reformatData(beta_quan)
+beta_funnorm <- reformatData(beta_funnorm)
+
+beta_raw <- cleanIDs(beta_raw)
+beta_quan <- cleanIDs(beta_quan)
+beta_swan <- cleanIDs(beta_swan)
+beta_funnorm <- cleanIDs(beta_funnorm)
+
+beta_raw <- joinData(beta_raw, control = T)
+beta_quan <- joinData(beta_quan, control = T)
+beta_swan <- joinData(beta_swan)
+beta_funnorm <- joinData(beta_funnorm)
+
+beta_raw <- relevelFactor(beta_raw)
+beta_quan <- relevelFactor(beta_quan)
+beta_swan <- relevelFactor(beta_swan)
+beta_funnorm <- relevelFactor(beta_funnorm)
+
+# load(paste0(imputed_data, '/imputed_gene_probe.RData'))
+beta_raw <- makeNum(beta_raw)
+beta_quan <- makeNum(beta_quan)
+beta_swan <- makeNum(beta_swan)
+beta_funnorm <- makeNum(beta_funnorm)
+
+# save image file 
+# save.image(paste0(idat_data, '/imputed_idat_betas_final.RData'))
+save.image(paste0(idat_data, '/imputed_idat_betas_final_control.RData'))
+
 
 # ###################################################################################################
 # # Using correlation
