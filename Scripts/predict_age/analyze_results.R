@@ -1,5 +1,6 @@
 ####################################################################
 # This script will analyze the results table from models on idat data.
+library(dplyr)
 # Initialize folders
 home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
@@ -18,13 +19,23 @@ source(paste0(scripts_folder, '/predict_age/model_functions.R'))
 # load in results table 
 load(paste0(model_data, '/idat_beta_table_results.RData'))
 
-# load in control table 
+
+rm(beta_funnorm_cancer_bal_table, beta_funnorm_cancer_unbal_table, beta_funnorm_global_bal_table, beta_funnorm_global_unbal_table,
+   beta_raw_cancer_bal_table, beta_raw_cancer_unbal_table, beta_raw_global_bal_table, beta_raw_global_unbal_table,
+   beta_quan_cancer_bal_table, beta_quan_cancer_unbal_table, beta_quan_global_bal_table, beta_quan_global_unbal_table,
+   beta_swan_cancer_bal_table, beta_swan_cancer_unbal_table, beta_swan_global_bal_table, beta_swan_global_unbal_table,
+   beta_raw_rand_table, beta_quan_rand_table, beta_swan_rand_table, beta_funnorm_rand_table, data_thresholds)
+
+# order results 
+beta_idat_results <- beta_idat_results[order(beta_idat_results$score, decreasing = T),]
+
 
 # this one filters out resid
 temp <- beta_idat_results %>% 
   filter(p53_status == 'Mut') %>% 
   filter(type == 'normal') %>% 
-  group_by(data, age) %>% 
+  filter(age == 48) %>%
+  group_by(data) %>% 
   summarise(mean_score = mean(score))
 
 temp <- temp[order(temp$mean_score, decreasing = T),]

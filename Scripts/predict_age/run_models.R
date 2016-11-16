@@ -139,7 +139,7 @@ beta_raw_cancer_bal_table <- extractResults(beta_raw_cancer_bal_models, data_nam
 beta_raw_global_bal_models <- runModels(beta_raw, random = F, bump_hunter = T, 
                                         bump_hunter_data = beta_raw_global_bal_features)
 
-beta_raw_global_bal_table <- extractResults(beta_raw_cancer_bal_models, data_name = 'beta_raw_global_bal')
+beta_raw_global_bal_table <- extractResults(beta_raw_global_bal_models, data_name = 'beta_raw_global_bal')
 
 # cancer unbalanced
 beta_raw_cancer_unbal_models <- runModels(beta_raw, random = F, bump_hunter = T, 
@@ -151,7 +151,7 @@ beta_raw_cancer_unbal_table <- extractResults(beta_raw_cancer_unbal_models, data
 beta_raw_global_unbal_models <- runModels(beta_raw, random = F, bump_hunter = T, 
                                         bump_hunter_data = beta_raw_global_unbal_features)
 
-beta_raw_global_unbal_table <- extractResults(beta_raw_cancer_unbal_models, data_name = 'beta_raw_global_unbal')
+beta_raw_global_unbal_table <- extractResults(beta_raw_global_unbal_models, data_name = 'beta_raw_global_unbal')
 
 
 ##################################
@@ -167,7 +167,7 @@ beta_swan_cancer_bal_table <- extractResults(beta_swan_cancer_bal_models, data_n
 beta_swan_global_bal_models <- runModels(beta_swan, random = F, bump_hunter = T, 
                                         bump_hunter_data = beta_swan_global_bal_features)
 
-beta_swan_global_bal_table <- extractResults(beta_swan_cancer_bal_models, data_name = 'beta_swan_global_bal')
+beta_swan_global_bal_table <- extractResults(beta_swan_global_bal_models, data_name = 'beta_swan_global_bal')
 
 # cancer unbalanced
 beta_swan_cancer_unbal_models <- runModels(beta_swan, random = F, bump_hunter = T, 
@@ -179,7 +179,7 @@ beta_swan_cancer_unbal_table <- extractResults(beta_swan_cancer_unbal_models, da
 beta_swan_global_unbal_models <- runModels(beta_swan, random = F, bump_hunter = T, 
                                           bump_hunter_data = beta_swan_global_unbal_features)
 
-beta_swan_global_unbal_table <- extractResults(beta_swan_cancer_unbal_models, data_name = 'beta_swan_global_unbal')
+beta_swan_global_unbal_table <- extractResults(beta_swan_global_unbal_models, data_name = 'beta_swan_global_unbal')
 
 
 ##################################
@@ -195,7 +195,7 @@ beta_quan_cancer_bal_table <- extractResults(beta_quan_cancer_bal_models, data_n
 beta_quan_global_bal_models <- runModels(beta_quan, random = F, bump_hunter = T, 
                                         bump_hunter_data = beta_quan_global_bal_features)
 
-beta_quan_global_bal_table <- extractResults(beta_quan_cancer_bal_models, data_name = 'beta_quan_global_bal')
+beta_quan_global_bal_table <- extractResults(beta_quan_global_bal_models, data_name = 'beta_quan_global_bal')
 
 # cancer unbalanced
 beta_quan_cancer_unbal_models <- runModels(beta_quan, random = F, bump_hunter = T, 
@@ -207,7 +207,7 @@ beta_quan_cancer_unbal_table <- extractResults(beta_quan_cancer_unbal_models, da
 beta_quan_global_unbal_models <- runModels(beta_quan, random = F, bump_hunter = T, 
                                           bump_hunter_data = beta_quan_global_unbal_features)
 
-beta_quan_global_unbal_table <- extractResults(beta_quan_cancer_unbal_models, data_name = 'beta_quan_global_unbal')
+beta_quan_global_unbal_table <- extractResults(beta_quan_global_unbal_models, data_name = 'beta_quan_global_unbal')
 
 
 ##################################
@@ -223,7 +223,7 @@ beta_funnorm_cancer_bal_table <- extractResults(beta_funnorm_cancer_bal_models, 
 beta_funnorm_global_bal_models <- runModels(beta_funnorm, random = F, bump_hunter = T, 
                                         bump_hunter_data = beta_funnorm_global_bal_features)
 
-beta_funnorm_global_bal_table <- extractResults(beta_funnorm_cancer_bal_models, data_name = 'beta_funnorm_global_bal')
+beta_funnorm_global_bal_table <- extractResults(beta_funnorm_global_bal_models, data_name = 'beta_funnorm_global_bal')
 
 # cancer unbalanced
 beta_funnorm_cancer_unbal_models <- runModels(beta_funnorm, random = F, bump_hunter = T, 
@@ -235,7 +235,7 @@ beta_funnorm_cancer_unbal_table <- extractResults(beta_funnorm_cancer_unbal_mode
 beta_funnorm_global_unbal_models <- runModels(beta_funnorm, random = F, bump_hunter = T, 
                                           bump_hunter_data = beta_funnorm_global_unbal_features)
 
-beta_funnorm_global_unbal_table <- extractResults(beta_funnorm_cancer_unbal_models, data_name = 'beta_funnorm_global_unbal')
+beta_funnorm_global_unbal_table <- extractResults(beta_funnorm_global_unbal_models, data_name = 'beta_funnorm_global_unbal')
 
 #####################################
 # Now run each beta with random features
@@ -272,7 +272,7 @@ rm(beta_raw_cancer_bal_features, beta_raw_cancer_bal_models, beta_raw_cancer_unb
    beta_funnorm_global_bal_features, beta_funnorm_global_bal_models, beta_funnorm_global_unbal_features, beta_funnorm_global_unbal_models,
    beta_raw, beta_quan, beta_swan, beta_funnorm, beta_funnorm_rand, beta_raw_rand, beta_quan_rand, beta_swan_rand)
 
-load(paste0(model_data, '/idat_beta_table_results.RData'))
+save.image(paste0(model_data, '/idat_beta_table_results.RData'))
 
 #####################################
 # # first run each gene data - gene_knn, gene_lsa, with fac

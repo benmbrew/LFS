@@ -29,7 +29,7 @@ model_data <- paste0(data_folder, '/model_data')
 #######################################
 load(paste0(idat_data, '/imputed_idat_betas_final_control.RData'))
 load(paste0(model_data, '/bh_features_idat.RData'))
-load(paste0(model_data, '/idat_beta_table_results.RData'))
+# load(paste0(model_data, '/idat_beta_table_results.RData'))
 
 
 # function to remove unnecssary columns 
@@ -39,8 +39,11 @@ removeCol <- function(data) {
   data$cancer_diagnosis_diagnoses <- NULL
   return(data)
 }
-
+beta_raw <- removeCol(beta_raw)
+beta_swan <- removeCol(beta_swan)
+beta_quan <- removeCol(beta_quan)
 beta_funnorm <- removeCol(beta_funnorm)
+
 
 getFeatures <- function(data, bh_features) {
   
@@ -51,7 +54,52 @@ getFeatures <- function(data, bh_features) {
   return(data)
 }
 
-beta_funnorm_bh <- getFeatures(beta_funnorm, beta_funnorm_cancer_unbal_features)
+getRand <- function(data) {
+  features <- colnames(data)[5:ncol(data)]
+  rand_features <- sample(features, 100, replace = F)
+  data <-  data[, c('age_sample_collection', rand_features)]
+  return(data)
+}
+
+#####################
+# Prepare data
+#####################
+
+# beta raw
+beta_raw_global_unbal_bh <- getFeatures(beta_raw, beta_raw_global_unbal_features)
+beta_raw_cancer_unbal_bh <- getFeatures(beta_raw, beta_raw_cancer_unbal_features)
+beta_raw_global_bal_bh <- getFeatures(beta_raw, beta_raw_global_bal_features)
+beta_raw_cancer_bal_bh <- getFeatures(beta_raw, beta_raw_cancer_bal_features)
+beta_raw_rand <- getRand(beta_raw)
+
+# beta quan
+beta_quan_global_unbal_bh <- getFeatures(beta_quan, beta_quan_global_unbal_features)
+beta_quan_cancer_unbal_bh <- getFeatures(beta_quan, beta_quan_cancer_unbal_features)
+beta_quan_global_bal_bh <- getFeatures(beta_quan, beta_quan_global_bal_features)
+beta_quan_cancer_bal_bh <- getFeatures(beta_quan, beta_quan_cancer_bal_features)
+beta_quan_rand <- getRand(beta_quan)
+
+
+# beta swan
+beta_swan_global_unbal_bh <- getFeatures(beta_swan, beta_swan_global_unbal_features)
+beta_swan_cancer_unbal_bh <- getFeatures(beta_swan, beta_swan_cancer_unbal_features)
+beta_swan_global_bal_bh <- getFeatures(beta_swan, beta_swan_global_bal_features)
+beta_swan_cancer_bal_bh <- getFeatures(beta_swan, beta_swan_cancer_bal_features)
+beta_swan_rand <- getRand(beta_swan)
+
+
+# beta funnorm
+beta_funnorm_global_unbal_bh <- getFeatures(beta_funnorm, beta_funnorm_global_unbal_features)
+beta_funnorm_cancer_unbal_bh <- getFeatures(beta_funnorm, beta_funnorm_cancer_unbal_features)
+beta_funnorm_global_bal_bh <- getFeatures(beta_funnorm, beta_funnorm_global_bal_features)
+beta_funnorm_cancer_bal_bh <- getFeatures(beta_funnorm, beta_funnorm_cancer_bal_features)
+beta_funnorm_rand <- getRand(beta_funnorm)
+
+# remove unneeded objects
+rm(beta_raw, beta_raw_cancer_bal_features, beta_raw_cancer_unbal_features, beta_raw_global_bal_features, beta_raw_global_unbal_features,
+   beta_quan, beta_quan_cancer_bal_features, beta_quan_cancer_unbal_features, beta_quan_global_bal_features, beta_quan_global_unbal_features,
+   beta_swan, beta_swan_cancer_bal_features, beta_swan_cancer_unbal_features, beta_swan_global_bal_features, beta_swan_global_unbal_features,
+   beta_funnorm, beta_funnorm_cancer_bal_features, beta_funnorm_cancer_unbal_features, beta_funnorm_global_bal_features, beta_funnorm_global_unbal_features)
 
 
 # function that runs random forest as a classification
@@ -150,11 +198,6 @@ rfPredictFac <- function(model_data,
 ###############################
 # Apply function to beta_funnorm 
 ###############################
-
-beta_funnorm_model <- rfPredictFac(beta_funnorm_bh, 
-                                   cutoff = .7, 
-                                   iterations = 10)
-
 # function that runs random forest as a regression
 
 rfPredictReg <- function(model_data,
@@ -233,8 +276,8 @@ rfPredictReg <- function(model_data,
     
   }
   
-  return(list(train.mse, test.mse,  train.predictions, test.predictions, train.ground_truth, test.ground_truth, train.sample_collection,
-              test.sample_collection, test_acc, test_stats, test_acc_samp, test_stats_samp, model, importance, dims))
+  return(list(train.mse, test.mse,  train.predictions, test.predictions, train.ground_truth, test.ground_truth,
+              test_acc, test_stats,  model, importance, dims))
   
 }
 
@@ -243,8 +286,7 @@ rfPredictReg <- function(model_data,
 # Function that takes results list from regression and plots predictions against ground truth
 
 plotModel <- function(result_list,
-                      main1,
-                      main2,
+                      main,
                       xlim,
                       ylim) {
   
@@ -257,43 +299,26 @@ plotModel <- function(result_list,
        pch = 16,
        xlab = 'Predictions',
        ylab = 'Real Age of Diagnosis',
-       main = main1)
+       main = main)
   abline(0,1, lty = 3)
   corr <- round(cor(unlist(result_list[[4]]), unlist(result_list[[6]])), 2)
   legend("topleft", legend = paste0('correlation = ', corr), cex = 1, bty = 'n')
-  legend("bottomright", legend = paste0('# dims = ', result_list[[15]]), cex = 1, bty = 'n')
+  legend("bottomright", legend = paste0('# dims = ', result_list[[11]]), cex = 1, bty = 'n')
   
   
-  # plot predictions against ground truth
-  plot(unlist(result_list[[4]]), unlist(result_list[[8]]), 
-       xlim = xlim,
-       ylim = ylim,
-       bty = 'n',
-       col = adjustcolor('blue', alpha.f = 0.6),
-       pch = 16,
-       xlab = 'Predictions',
-       ylab = 'Real Age of Sample Collection',
-       main = main2)
-  abline(0,1, lty = 3)
-  corr <- round(cor(unlist(result_list[[4]]), unlist(result_list[[8]]), use = "complete.obs"), 2)
-  legend("topleft", legend = paste0('correlation = ', corr), cex = 1, bty = 'n')
-  legend("bottomright", legend = paste0('# dims = ', result_list[[15]]), cex = 1, bty = 'n')
   
 }
 
 conMatrix <- function(results) {
   
   # test acc for age of diagnosis
-  acc_age <- mean(unlist(results[[7]]))
-  
-  # test acc for age of sample collection
-  acc_samp <-mean(unlist(results[[9]]))
-  
+  acc_age <- mean(unlist(results[[5]]))
+ 
   # confustion matrix age of diagnosis 10
   iterations <- 10
   temp <- list()
   for (i in 1:10){
-    temp[[i]] <- results[[8]][[i]]$table
+    temp[[i]] <- results[[6]][[i]]$table
   }
   mat <- unlist(temp)
   new_mat <- matrix(, 2, 2)
@@ -305,12 +330,337 @@ conMatrix <- function(results) {
   new_mat[1,2] <- sum(mat[mat_index + 2])/iterations
   new_mat[2,2] <- sum(mat[mat_index + 3])/iterations
   
-  return(list(new_mat, acc_age, acc_samp))
+  return(list(new_mat, acc_age))
   
 }
 
 
 
+#########################################3
+# apply functions to all preprocessing methods
+########################################
+
+
+##### BETA RAW
+
+# global unbal
+beta_raw_global_unbal_model_fac <- rfPredictFac(beta_raw_global_unbal_bh, 
+                                                cutoff = .7, 
+                                                iterations = 10)
+
+conMatrix(beta_raw_global_unbal_model_fac)
+
+beta_raw_global_unbal_model_reg <- rfPredictReg(beta_raw_global_unbal_bh,
+                                                cutoff = .7,
+                                                iterations = 10)
+
+plotModel(beta_raw_global_unbal_model_reg, main = 'raw prepocessing, unbal, global',
+          xlim = c(0, 1000),
+          ylim = c(0, 1000))
+
+# global bal
+beta_raw_global_bal_model_fac <- rfPredictFac(beta_raw_global_bal_bh, 
+                                                cutoff = .7, 
+                                                iterations = 10)
+
+conMatrix(beta_raw_global_bal_model_fac)
+
+beta_raw_global_bal_model_reg <- rfPredictReg(beta_raw_global_bal_bh,
+                                                cutoff = .7,
+                                                iterations = 10)
+
+plotModel(beta_raw_global_bal_model_reg, main = 'raw prepocessing, bal, global',
+          xlim = c(0, 1000),
+          ylim = c(0, 1000))
+
+# cancer unbal
+beta_raw_cancer_unbal_model_fac <- rfPredictFac(beta_raw_cancer_unbal_bh, 
+                                                cutoff = .7, 
+                                                iterations = 10)
+
+conMatrix(beta_raw_cancer_unbal_model_fac)
+
+beta_raw_cancer_unbal_model_reg <- rfPredictReg(beta_raw_cancer_unbal_bh,
+                                                cutoff = .7,
+                                                iterations = 10)
+
+plotModel(beta_raw_cancer_unbal_model_reg, main = 'raw prepocessing, unbal, cancer',
+          xlim = c(0, 1000),
+          ylim = c(0, 1000))
+
+
+# cancer bal
+beta_raw_cancer_bal_model_fac <- rfPredictFac(beta_raw_cancer_bal_bh, 
+                                                cutoff = .7, 
+                                                iterations = 10)
+
+conMatrix(beta_raw_cancer_bal_model_fac)
+
+beta_raw_cancer_bal_model_reg <- rfPredictReg(beta_raw_cancer_bal_bh,
+                                                cutoff = .7,
+                                                iterations = 10)
+
+plotModel(beta_raw_cancer_bal_model_reg, main = 'raw prepocessing, bal, cancer',
+          xlim = c(0, 1000),
+          ylim = c(0, 1000))
+
+# random
+beta_raw_rand_fac <- rfPredictFac(beta_raw_rand, 
+                                  cutoff = .7, 
+                                  iterations = 10)
+
+conMatrix(beta_raw_rand_fac)
+
+beta_raw_rand_reg <- rfPredictReg(beta_raw_rand,
+                                  cutoff = .7,
+                                  iterations = 10)
+
+plotModel(beta_raw_rand_reg, main = 'raw random',
+          xlim = c(0, 1000),
+          ylim = c(0, 1000))
+
+
+######################################
+# BETA quan
+
+# global unbal
+beta_quan_global_unbal_model_fac <- rfPredictFac(beta_quan_global_unbal_bh, 
+                                                cutoff = .7, 
+                                                iterations = 10)
+
+conMatrix(beta_quan_global_unbal_model_fac)
+
+beta_quan_global_unbal_model_reg <- rfPredictReg(beta_quan_global_unbal_bh,
+                                                cutoff = .7,
+                                                iterations = 10)
+
+plotModel(beta_quan_global_unbal_model_reg, main = 'quan prepocessing, unbal, global',
+          xlim = c(0, 1000),
+          ylim = c(0, 1000))
+
+# global bal
+beta_quan_global_bal_model_fac <- rfPredictFac(beta_quan_global_bal_bh, 
+                                              cutoff = .7, 
+                                              iterations = 10)
+
+conMatrix(beta_quan_global_bal_model_fac)
+
+beta_quan_global_bal_model_reg <- rfPredictReg(beta_quan_global_bal_bh,
+                                              cutoff = .7,
+                                              iterations = 10)
+
+plotModel(beta_quan_global_bal_model_reg, main = 'quan prepocessing, bal, global',
+          xlim = c(0, 1000),
+          ylim = c(0, 1000))
+
+# cancer unbal
+beta_quan_cancer_unbal_model_fac <- rfPredictFac(beta_quan_cancer_unbal_bh, 
+                                                cutoff = .7, 
+                                                iterations = 10)
+
+conMatrix(beta_quan_cancer_unbal_model_fac)
+
+beta_quan_cancer_unbal_model_reg <- rfPredictReg(beta_quan_cancer_unbal_bh,
+                                                cutoff = .7,
+                                                iterations = 10)
+
+plotModel(beta_quan_cancer_unbal_model_reg, main = 'quan prepocessing, unbal, cancer',
+          xlim = c(0, 1000),
+          ylim = c(0, 1000))
+
+
+# cancer bal
+beta_quan_cancer_bal_model_fac <- rfPredictFac(beta_quan_cancer_bal_bh, 
+                                              cutoff = .7, 
+                                              iterations = 10)
+
+conMatrix(beta_quan_cancer_bal_model_fac)
+
+beta_quan_cancer_bal_model_reg <- rfPredictReg(beta_quan_cancer_bal_bh,
+                                              cutoff = .7,
+                                              iterations = 10)
+
+plotModel(beta_quan_cancer_bal_model_reg, main = 'quan prepocessing, bal, cancer',
+          xlim = c(0, 1000),
+          ylim = c(0, 1000))
+
+
+# random
+beta_quan_rand_fac <- rfPredictFac(beta_quan_rand, 
+                                  cutoff = .7, 
+                                  iterations = 10)
+
+conMatrix(beta_quan_rand_fac)
+
+beta_quan_rand_reg <- rfPredictReg(beta_quan_rand,
+                                  cutoff = .7,
+                                  iterations = 10)
+
+plotModel(beta_quan_rand_reg, main = 'quan random',
+          xlim = c(0, 1000),
+          ylim = c(0, 1000))
+
+
+######################################
+# BETA swan
+
+# global unbal
+beta_swan_global_unbal_model_fac <- rfPredictFac(beta_swan_global_unbal_bh, 
+                                                 cutoff = .7, 
+                                                 iterations = 10)
+
+conMatrix(beta_swan_global_unbal_model_fac)
+
+beta_swan_global_unbal_model_reg <- rfPredictReg(beta_swan_global_unbal_bh,
+                                                 cutoff = .7,
+                                                 iterations = 10)
+
+plotModel(beta_swan_global_unbal_model_reg, main = 'swan prepocessing, unbal, global',
+          xlim = c(0, 1000),
+          ylim = c(0, 1000))
+
+# global bal
+beta_swan_global_bal_model_fac <- rfPredictFac(beta_swan_global_bal_bh, 
+                                               cutoff = .7, 
+                                               iterations = 10)
+
+conMatrix(beta_swan_global_bal_model_fac)
+
+beta_swan_global_bal_model_reg <- rfPredictReg(beta_swan_global_bal_bh,
+                                               cutoff = .7,
+                                               iterations = 10)
+
+plotModel(beta_swan_global_bal_model_reg, main = 'swan prepocessing, bal, global',
+          xlim = c(0, 1000),
+          ylim = c(0, 1000))
+
+# cancer unbal
+beta_swan_cancer_unbal_model_fac <- rfPredictFac(beta_swan_cancer_unbal_bh, 
+                                                 cutoff = .7, 
+                                                 iterations = 10)
+
+conMatrix(beta_swan_cancer_unbal_model_fac)
+
+beta_swan_cancer_unbal_model_reg <- rfPredictReg(beta_swan_cancer_unbal_bh,
+                                                 cutoff = .7,
+                                                 iterations = 10)
+
+plotModel(beta_swan_cancer_unbal_model_reg, main = 'swan prepocessing, unbal, cancer',
+          xlim = c(0, 1000),
+          ylim = c(0, 1000))
+
+
+# cancer bal
+beta_swan_cancer_bal_model_fac <- rfPredictFac(beta_swan_cancer_bal_bh, 
+                                               cutoff = .7, 
+                                               iterations = 10)
+
+conMatrix(beta_swan_cancer_bal_model_fac)
+
+beta_swan_cancer_bal_model_reg <- rfPredictReg(beta_swan_cancer_bal_bh,
+                                               cutoff = .7,
+                                               iterations = 10)
+
+plotModel(beta_swan_cancer_bal_model_reg, main = 'swan prepocessing, bal, cancer',
+          xlim = c(0, 1000),
+          ylim = c(0, 1000))
+
+# random
+beta_swan_rand_fac <- rfPredictFac(beta_swan_rand, 
+                                  cutoff = .7, 
+                                  iterations = 10)
+
+conMatrix(beta_swan_rand_fac)
+
+beta_swan_rand_reg <- rfPredictReg(beta_swan_rand,
+                                  cutoff = .7,
+                                  iterations = 10)
+
+plotModel(beta_swan_rand_reg, main = 'swan random',
+          xlim = c(0, 1000),
+          ylim = c(0, 1000))
 
 
 
+######################################
+# BETA funnorm
+
+# global unbal
+beta_funnorm_global_unbal_model_fac <- rfPredictFac(beta_funnorm_global_unbal_bh, 
+                                                 cutoff = .7, 
+                                                 iterations = 10)
+
+conMatrix(beta_funnorm_global_unbal_model_fac)
+
+beta_funnorm_global_unbal_model_reg <- rfPredictReg(beta_funnorm_global_unbal_bh,
+                                                 cutoff = .7,
+                                                 iterations = 10)
+
+plotModel(beta_funnorm_global_unbal_model_reg, main = 'funnorm prepocessing, unbal, global',
+          xlim = c(0, 1000),
+          ylim = c(0, 1000))
+
+# global bal
+beta_funnorm_global_bal_model_fac <- rfPredictFac(beta_funnorm_global_bal_bh, 
+                                               cutoff = .7, 
+                                               iterations = 10)
+
+conMatrix(beta_funnorm_global_bal_model_fac)
+
+beta_funnorm_global_bal_model_reg <- rfPredictReg(beta_funnorm_global_bal_bh,
+                                               cutoff = .7,
+                                               iterations = 10)
+
+plotModel(beta_funnorm_global_bal_model_reg, main = 'funnorm prepocessing, bal, global',
+          xlim = c(0, 1000),
+          ylim = c(0, 1000))
+
+# cancer unbal
+beta_funnorm_cancer_unbal_model_fac <- rfPredictFac(beta_funnorm_cancer_unbal_bh, 
+                                                 cutoff = .7, 
+                                                 iterations = 10)
+
+conMatrix(beta_funnorm_cancer_unbal_model_fac)
+
+beta_funnorm_cancer_unbal_model_reg <- rfPredictReg(beta_funnorm_cancer_unbal_bh,
+                                                 cutoff = .7,
+                                                 iterations = 10)
+
+plotModel(beta_funnorm_cancer_unbal_model_reg, main = 'funnorm prepocessing, unbal, cancer',
+          xlim = c(0, 1000),
+          ylim = c(0, 1000))
+
+
+# cancer bal
+beta_funnorm_cancer_bal_model_fac <- rfPredictFac(beta_funnorm_cancer_bal_bh, 
+                                               cutoff = .7, 
+                                               iterations = 10)
+
+conMatrix(beta_funnorm_cancer_bal_model_fac)
+
+beta_funnorm_cancer_bal_model_reg <- rfPredictReg(beta_funnorm_cancer_bal_bh,
+                                               cutoff = .7,
+                                               iterations = 10)
+
+plotModel(beta_funnorm_cancer_bal_model_reg, main = 'funnorm prepocessing, bal, cancer',
+          xlim = c(0, 1000),
+          ylim = c(0, 1000))
+
+# random
+beta_funnorm_rand_fac <- rfPredictFac(beta_funnorm_rand, 
+                                  cutoff = .7, 
+                                  iterations = 10)
+
+conMatrix(beta_funnorm_rand_fac)
+
+beta_funnorm_rand_reg <- rfPredictReg(beta_funnorm_rand,
+                                  cutoff = .7,
+                                  iterations = 10)
+
+plotModel(beta_funnorm_rand_reg, main = 'funnorm random',
+          xlim = c(0, 1000),
+          ylim = c(0, 1000))
+
+
+###############################
+# MAYBE INSTEAD OF PLOTTING EACH ONE, CREAT A TABLE SIMILAR TO RESULTS TABLE FROM IDAT MODELS
