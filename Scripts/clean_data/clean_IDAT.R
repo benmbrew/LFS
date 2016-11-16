@@ -129,6 +129,7 @@ combineList <- function(list) {
 ####################
 
 findIds <- function(data_methyl, id_map) {
+  
   data_methyl <- as.data.frame(data_methyl)
   data_methyl$identifier <- rownames(data_methyl)
   data_methyl$identifier <- as.factor(data_methyl$identifier)

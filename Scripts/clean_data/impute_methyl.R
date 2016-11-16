@@ -211,11 +211,11 @@ imputeIdat <- function (data) {
   
 }
 
-beta_raw <- imputeIdat(beta_raw) #303, 493
+beta_raw <- imputeIdat(beta_raw) #303, 552
 # beta_illumina <- imputeIdat(beta_illumina)# 31406
-beta_quan <- imputeIdat(beta_quan) #0, 0
-beta_swan <- imputeIdat(beta_swan)#0, 0
-beta_funnorm <- imputeIdat(beta_funnorm)#0, 0
+# beta_quan <- imputeIdat(beta_quan) #0, 0
+# beta_swan <- imputeIdat(beta_swan)#0, 0
+# beta_funnorm <- imputeIdat(beta_funnorm)#0, 0
 
 # dont save illumina because it has too many missing values
 save.image(paste0(idat_data, '/imputed_idat_betas_control.RData'))

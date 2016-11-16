@@ -577,6 +577,8 @@ clin <- left_join(clin, methylation_names)
 
 # recode true and false 
 clin$methyl_indicator <- ifelse(is.na(clin$methyl_indicator), 'No', 'Yes')
+"4258" "3572" "3351" "1981"
+
 
 # write clin to data_folder so it can be loaded to database
 write.csv(clin, paste(clin_data,'clinical_two.csv', sep ='/'), row.names = FALSE)

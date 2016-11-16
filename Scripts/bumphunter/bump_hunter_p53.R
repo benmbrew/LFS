@@ -17,9 +17,12 @@ idat_data <- paste0(methyl_data, '/raw_files')
 bumphunter_data <- paste0(data_folder, '/bumphunter_data')
 
 
-# Load model data which contains all variations of methylation data
+# # Load model data which contains all variations of methylation data
 load(paste0(model_data, '/model_data.RData'))
-load(paste0(idat_data, '/imputed_idat_betas_final.RData'))
+rm(gene_knn, gene_lsa, probe_knn, probe_lsa)
+# load(paste0(idat_data, '/imputed_idat_betas_final.RData'))
+load(paste0(idat_data, '/imputed_idat_betas_final_control.RData'))
+
 
 rm(gene_knn, gene_lsa, beta_illumina)
 
@@ -40,7 +43,6 @@ bumpHunterBalanced <- function(data,
       # so subset by just ACC and Unaffected)
     }
     if (selection == 'global') {
-      
       data <- data
       
     }
@@ -99,7 +101,7 @@ bumpHunterBalanced <- function(data,
   ######################
   
   data$p53_germline <- data$age_diagnosis <- data$cancer_diagnosis_diagnoses <-
-    data$age_sample_collection <- NULL
+    data$age_sample_collection <- data$id <- NULL
   # transpose methylation to join with cg_locations to get genetic location vector.
   data <- as.data.frame(t(data), stringsAsFactors = F)
   
@@ -152,23 +154,23 @@ bumpHunterBalanced <- function(data,
   
   
   # analyze the distribution of cancer and age in the bumphunter data 
+  # 
+  # # get counts for mut and WT 
+  # wt_count <- nrow(bump_clin[which(bump_clin$p53_germline == 'WT'),])
+  # mut_count <- nrow(bump_clin[which(bump_clin$p53_germline == 'Mut'),])
+  # 
+  # 
+  # # difference in age between 
+  # wt_age_summary <- summary(bump_clin$age_diagnosis[which(bump_clin$p53_germline == 'WT')])
+  # mut_age_summary <- summary(bump_clin$age_diagnosis[which(bump_clin$p53_germline == 'Mut')])
+  # 
+  # 
+  # # difference in cancer cancer 
+  # wt_cancer_summary <- summary(bump_clin$cancer_diagnosis_diagnoses[which(bump_clin$p53_germline == 'WT')])
+  # mut_cancer_summary <- summary(bump_clin$cancer_diagnosis_diagnoses[which(bump_clin$p53_germline == 'Mut')])
   
-  # get counts for mut and WT 
-  wt_count <- nrow(bump_clin[which(bump_clin$p53_germline == 'WT'),])
-  mut_count <- nrow(bump_clin[which(bump_clin$p53_germline == 'Mut'),])
   
-  
-  # difference in age between 
-  wt_age_summary <- summary(bump_clin$age_diagnosis[which(bump_clin$p53_germline == 'WT')])
-  mut_age_summary <- summary(bump_clin$age_diagnosis[which(bump_clin$p53_germline == 'Mut')])
-  
-  
-  # difference in cancer cancer 
-  wt_cancer_summary <- summary(bump_clin$cancer_diagnosis_diagnoses[which(bump_clin$p53_germline == 'WT')])
-  mut_cancer_summary <- summary(bump_clin$cancer_diagnosis_diagnoses[which(bump_clin$p53_germline == 'Mut')])
-  
-  
-  return(list(bump_hunter_results, wt_count, mut_count, wt_age_summary, mut_age_summary, wt_cancer_summary, mut_cancer_summary))
+  return(bump_hunter_results)
   
 }
 
@@ -206,6 +208,7 @@ global_lsa_unbal <- bumpHunterBalanced(data = probe_lsa,
                                  unbalanced = T,
                                  selection = 'global')
 
+
 # look at summary stats of global and cancer
 probe_knn_cancer_bh <- cancer_knn[[1]]
 probe_lsa_cancer_bh <- cancer_lsa[[1]]
@@ -224,6 +227,43 @@ rm(cg_locations, clin, probe_knn, probe_lsa, cancer_lsa, cancer_knn, global_knn,
 
 # save file 
 save.image(paste0(bumphunter_data, '/bh_regions.RData'))
+
+####################################
+# Now Apply to Original IDAT data
+####################################
+
+# beta raw
+beta_raw_cancer_bal <- bumpHunterBalanced(beta_raw, unbalanced = F, selection = 'cancer')[[1]]
+beta_raw_global_bal <- bumpHunterBalanced(beta_raw, unbalanced = F, selection = 'global')[[1]]
+beta_raw_cancer_unbal <- bumpHunterBalanced(beta_raw, unbalanced = T, selection = 'cancer')[[1]]
+beta_raw_global_unbal <- bumpHunterBalanced(beta_raw, unbalanced = T, selection = 'global')[[1]]
+
+# beta swan
+beta_swan_cancer_bal <- bumpHunterBalanced(beta_swan, unbalanced = F, selection = 'cancer')[[1]]
+beta_swan_global_bal <- bumpHunterBalanced(beta_swan, unbalanced = F, selection = 'global')[[1]]
+beta_swan_cancer_unbal <- bumpHunterBalanced(beta_swan, unbalanced = T, selection = 'cancer')[[1]]
+beta_swan_global_unbal <- bumpHunterBalanced(beta_swan, unbalanced = T, selection = 'global')[[1]]
+
+# beta quan
+beta_quan_cancer_bal <- bumpHunterBalanced(beta_quan, unbalanced = F, selection = 'cancer')[[1]]
+beta_quan_global_bal <- bumpHunterBalanced(beta_quan, unbalanced = F, selection = 'global')[[1]]
+beta_quan_cancer_unbal <- bumpHunterBalanced(beta_quan, unbalanced = T, selection = 'cancer')[[1]]
+beta_quan_global_unbal <- bumpHunterBalanced(beta_quan, unbalanced = T, selection = 'global')[[1]]
+
+# beta funnorm
+beta_funnorm_cancer_bal <- bumpHunterBalanced(beta_funnorm, unbalanced = F, selection = 'cancer')[[1]]
+beta_funnorm_global_bal <- bumpHunterBalanced(beta_funnorm, unbalanced = F, selection = 'global')[[1]]
+beta_funnorm_cancer_unbal <- bumpHunterBalanced(beta_funnorm, unbalanced = T, selection = 'cancer')[[1]]
+beta_funnorm_global_unbal <- bumpHunterBalanced(beta_funnorm, unbalanced = T, selection = 'global')[[1]]
+
+# save.image(paste0(idat_data, '/imputed_idat_betas_bh.RData'))
+# save.image(paste0(idat_data, '/imputed_idat_betas_bh_controls.RData'))
+
+
+
+
+
+
 
 # # counts for wt
 # cancer[[2]]

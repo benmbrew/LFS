@@ -19,9 +19,19 @@ home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
 data_folder <- paste0(project_folder, '/Data')
 bumphunter_data <- paste0(data_folder, '/bumphunter_data')
+methyl_data <- paste0(data_folder, '/methyl_data')
+model_data <- paste0(data_folder, '/model_data')
+imputed_data <- paste0(data_folder, '/imputed_data')
+idat_data <- paste0(methyl_data, '/raw_files')
+bumphunter_data <- paste0(data_folder, '/bumphunter_data')
 
 # load data
 load(paste0(bumphunter_data, '/bh_regions.RData'))
+
+# load idat data
+load(paste0(idat_data, '/imputed_idat_betas_bh.RData'))
+rm(beta_raw, beta_quan, beta_swan, beta_funnorm)
+
 
 ################################################
 # get probes for bumphunter results
@@ -134,6 +144,40 @@ getProbe <- function(data) {
   return(dat_cg)
   
 }
+
+# apply function to beta_raw
+beta_raw_cancer_bal_features <- getProbe(beta_raw_cancer_bal)
+beta_raw_cancer_unbal_features <- getProbe(beta_raw_cancer_unbal)
+beta_raw_global_bal_features <- getProbe(beta_raw_global_bal)
+beta_raw_global_unbal_features <- getProbe(beta_raw_global_unbal)
+
+# apply function to beta_swan
+beta_swan_cancer_bal_features <- getProbe(beta_swan_cancer_bal)
+beta_swan_cancer_unbal_features <- getProbe(beta_swan_cancer_unbal)
+beta_swan_global_bal_features <- getProbe(beta_swan_global_bal)
+beta_swan_global_unbal_features <- getProbe(beta_swan_global_unbal)
+
+# apply function to beta_quan
+beta_quan_cancer_bal_features <- getProbe(beta_quan_cancer_bal)
+beta_quan_cancer_unbal_features <- getProbe(beta_quan_cancer_unbal)
+beta_quan_global_bal_features <- getProbe(beta_quan_global_bal)
+beta_quan_global_unbal_features <- getProbe(beta_quan_global_unbal)
+
+# apply function to beta_funnorm
+beta_funnorm_cancer_bal_features <- getProbe(beta_funnorm_cancer_bal)
+beta_funnorm_cancer_unbal_features <- getProbe(beta_funnorm_cancer_unbal)
+beta_funnorm_global_bal_features <- getProbe(beta_funnorm_global_bal)
+beta_funnorm_global_unbal_features <- getProbe(beta_funnorm_global_unbal)
+
+rm(beta_raw_cancer_bal, beta_raw_cancer_unbal, beta_raw_global_bal, beta_raw_global_unbal,
+   beta_quan_cancer_bal, beta_quan_cancer_unbal, beta_quan_global_bal, beta_quan_global_unbal,
+   beta_swan_cancer_bal, beta_swan_cancer_unbal, beta_swan_global_bal, beta_swan_global_unbal,
+   beta_funnorm_cancer_bal, beta_funnorm_cancer_unbal, beta_funnorm_global_bal, beta_funnorm_global_unbal,
+   cg_locations, clin, rgSet)
+
+save.image(paste0(model_data, '/bh_features_idat.RData'))
+
+###############
 
 # apply function to four data bh (balanced)
 bh_probe_knn_cancer_features <- getProbe(probe_knn_cancer_bh)

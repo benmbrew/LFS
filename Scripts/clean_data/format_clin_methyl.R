@@ -39,10 +39,10 @@ clin <- read.csv(paste0(clin_data, '/clinical_two.csv'), stringsAsFactors = F)
 clin$id <-  gsub('A|B|_', '', clin$blood_dna_malkin_lab_)
 
 # load methylation data - probe, gene, knn, lsa
-load(paste0(imputed_data, '/imputed_gene_probe.RData'))
+# load(paste0(imputed_data, '/imputed_gene_probe.RData'))
 
 # load idat methylation imputerd- probe, knn - raw, swan, quan, funnorm
-load(paste0(idat_data, '/imputed_idat_betas.RData'))
+# load(paste0(idat_data, '/imputed_idat_betas.RData'))
 load(paste0(idat_data, '/imputed_idat_betas_control.RData'))
 
 # reformat to look like other data so it fits in to function
@@ -131,7 +131,7 @@ joinData <- function(data, control) {
     } 
     data <- data[!is.na(data$p53_germline),]
     data <- data[!duplicated(data$id),]
-    data <- data[!duplicated(data$tm_donor_),]
+    # data <- data[!duplicated(data$tm_donor_),]
     data <- data[, c('id', 'p53_germline', 'cancer_diagnosis_diagnoses','age_sample_collection', features)]
   }
   
@@ -205,8 +205,8 @@ beta_funnorm <- cleanIDs(beta_funnorm)
 
 beta_raw <- joinData(beta_raw, control = T)
 beta_quan <- joinData(beta_quan, control = T)
-beta_swan <- joinData(beta_swan)
-beta_funnorm <- joinData(beta_funnorm)
+beta_swan <- joinData(beta_swan, control = T)
+beta_funnorm <- joinData(beta_funnorm, control = T)
 
 beta_raw <- relevelFactor(beta_raw)
 beta_quan <- relevelFactor(beta_quan)
@@ -216,12 +216,13 @@ beta_funnorm <- relevelFactor(beta_funnorm)
 # load(paste0(imputed_data, '/imputed_gene_probe.RData'))
 beta_raw <- makeNum(beta_raw)
 beta_quan <- makeNum(beta_quan)
+save.image('/home/benbrew/Desktop/temp_control.RData')
 beta_swan <- makeNum(beta_swan)
 beta_funnorm <- makeNum(beta_funnorm)
 
 # save image file 
 # save.image(paste0(idat_data, '/imputed_idat_betas_final.RData'))
-save.image(paste0(idat_data, '/imputed_idat_betas_final_control.RData'))
+# save.image(paste0(idat_data, '/imputed_idat_betas_final_control.RData'))
 
 
 # ###################################################################################################
@@ -359,4 +360,9 @@ save.image(paste0(idat_data, '/imputed_idat_betas_final_control.RData'))
 #                  samples$methyl_indicator == 'No',]
 # 
 # ids <- ids[complete.cases(ids),]
-# 
+### clin = clin, clin_ids
+### controls = controls, ids_controls
+
+### idat/new clin = old_temp, old_ids
+
+### idat/old clin = older_temp, old_ids
