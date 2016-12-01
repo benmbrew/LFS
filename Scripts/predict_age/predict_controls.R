@@ -27,23 +27,42 @@ model_data <- paste0(data_folder, '/model_data')
 #######################################
 # find best method and apply to controls data
 #######################################
-load(paste0(idat_data, '/imputed_idat_betas_final_control.RData'))
+# load(paste0(idat_data, '/imputed_idat_betas_final_control.RData'))
+# load(paste0(idat_data, '/imputed_idat_betas_final.RData'))
 load(paste0(model_data, '/bh_features_idat.RData'))
 # load(paste0(model_data, '/idat_beta_table_results.RData'))
+load(paste0(model_data, '/transform.controls.RData'))
 
 
+# ######################################
+# # check distribution of age of sample collection between 
+# # mut cancer and mut unaffected
+# ######################################
+# mut_cancer <- beta_raw[which(beta_raw$p53_germline == 'Mut' & 
+#                                beta_raw$cancer_diagnosis_diagnoses != 'Unaffected'),]
+# 
+# mut_none <- beta_raw[which(beta_raw$p53_germline == 'Mut' & 
+#                                beta_raw$cancer_diagnosis_diagnoses == 'Unaffected'),]
+# 
+# hist(mut_cancer$age_sample_collection)
+# hist(mut_none$age_sample_collection)
+# beta_raw <- mut_none
+######################################
+# include mut unaffected from original data in control data (9 extra samples?)
+#####################################
+
+######################################
 # function to remove unnecssary columns 
+######################################
 removeCol <- function(data) {
   data$id <- NULL
   data$p53_germline <- NULL
   data$cancer_diagnosis_diagnoses <- NULL
+  data <- data[!is.na(data$age_sample_collection),]
   return(data)
 }
-beta_raw <- removeCol(beta_raw)
-beta_swan <- removeCol(beta_swan)
-beta_quan <- removeCol(beta_quan)
-beta_funnorm <- removeCol(beta_funnorm)
 
+beta_raw_controls <- removeCol(transform_controls)
 
 getFeatures <- function(data, bh_features) {
   
@@ -61,39 +80,60 @@ getRand <- function(data) {
   return(data)
 }
 
+
+
+
+
 #####################
 # Prepare data
 #####################
 
 # beta raw
-beta_raw_global_unbal_bh <- getFeatures(beta_raw, beta_raw_global_unbal_features)
-beta_raw_cancer_unbal_bh <- getFeatures(beta_raw, beta_raw_cancer_unbal_features)
-beta_raw_global_bal_bh <- getFeatures(beta_raw, beta_raw_global_bal_features)
-beta_raw_cancer_bal_bh <- getFeatures(beta_raw, beta_raw_cancer_bal_features)
-beta_raw_rand <- getRand(beta_raw)
+beta_raw_global_unbal_bh <- getFeatures(beta_raw_controls, beta_raw_global_unbal_features)
+beta_raw_cancer_unbal_bh <- getFeatures(beta_raw_controls, beta_raw_cancer_unbal_features)
+beta_raw_global_bal_bh <- getFeatures(beta_raw_controls, beta_raw_global_bal_features)
+beta_raw_cancer_bal_bh <- getFeatures(beta_raw_controls, beta_raw_cancer_bal_features)
+beta_raw_rand <- getRand(beta_raw_controls)
 
-# beta quan
-beta_quan_global_unbal_bh <- getFeatures(beta_quan, beta_quan_global_unbal_features)
-beta_quan_cancer_unbal_bh <- getFeatures(beta_quan, beta_quan_cancer_unbal_features)
-beta_quan_global_bal_bh <- getFeatures(beta_quan, beta_quan_global_bal_features)
-beta_quan_cancer_bal_bh <- getFeatures(beta_quan, beta_quan_cancer_bal_features)
-beta_quan_rand <- getRand(beta_quan)
+# make numeric 
+# Function to convert all genes/probe columns to numeric
+makeNum <- function(model_data) {
+  
+  model_data[, 1:ncol(model_data)] <- apply(model_data[, 1:ncol(model_data)], 2, function(x) as.numeric(as.character(x)))
+  
+  return(model_data)
+}
+
+beta_raw_global_unbal_bh <- makeNum(beta_raw_global_unbal_bh)
+beta_raw_cancer_unbal_bh <- makeNum(beta_raw_cancer_unbal_bh)
+beta_raw_global_bal_bh <- makeNum(beta_raw_global_bal_bh)
+beta_raw_cancer_bal_bh <- makeNum(beta_raw_cancer_bal_bh)
+beta_raw_rand <- makeNum(beta_raw_rand)
 
 
-# beta swan
-beta_swan_global_unbal_bh <- getFeatures(beta_swan, beta_swan_global_unbal_features)
-beta_swan_cancer_unbal_bh <- getFeatures(beta_swan, beta_swan_cancer_unbal_features)
-beta_swan_global_bal_bh <- getFeatures(beta_swan, beta_swan_global_bal_features)
-beta_swan_cancer_bal_bh <- getFeatures(beta_swan, beta_swan_cancer_bal_features)
-beta_swan_rand <- getRand(beta_swan)
 
-
-# beta funnorm
-beta_funnorm_global_unbal_bh <- getFeatures(beta_funnorm, beta_funnorm_global_unbal_features)
-beta_funnorm_cancer_unbal_bh <- getFeatures(beta_funnorm, beta_funnorm_cancer_unbal_features)
-beta_funnorm_global_bal_bh <- getFeatures(beta_funnorm, beta_funnorm_global_bal_features)
-beta_funnorm_cancer_bal_bh <- getFeatures(beta_funnorm, beta_funnorm_cancer_bal_features)
-beta_funnorm_rand <- getRand(beta_funnorm)
+# # beta quan
+# beta_quan_global_unbal_bh <- getFeatures(beta_quan, beta_quan_global_unbal_features)
+# beta_quan_cancer_unbal_bh <- getFeatures(beta_quan, beta_quan_cancer_unbal_features)
+# beta_quan_global_bal_bh <- getFeatures(beta_quan, beta_quan_global_bal_features)
+# beta_quan_cancer_bal_bh <- getFeatures(beta_quan, beta_quan_cancer_bal_features)
+# beta_quan_rand <- getRand(beta_quan)
+# 
+# 
+# # beta swan
+# beta_swan_global_unbal_bh <- getFeatures(beta_swan, beta_swan_global_unbal_features)
+# beta_swan_cancer_unbal_bh <- getFeatures(beta_swan, beta_swan_cancer_unbal_features)
+# beta_swan_global_bal_bh <- getFeatures(beta_swan, beta_swan_global_bal_features)
+# beta_swan_cancer_bal_bh <- getFeatures(beta_swan, beta_swan_cancer_bal_features)
+# beta_swan_rand <- getRand(beta_swan)
+# 
+# 
+# # beta funnorm
+# beta_funnorm_global_unbal_bh <- getFeatures(beta_funnorm, beta_funnorm_global_unbal_features)
+# beta_funnorm_cancer_unbal_bh <- getFeatures(beta_funnorm, beta_funnorm_cancer_unbal_features)
+# beta_funnorm_global_bal_bh <- getFeatures(beta_funnorm, beta_funnorm_global_bal_features)
+# beta_funnorm_cancer_bal_bh <- getFeatures(beta_funnorm, beta_funnorm_cancer_bal_features)
+# beta_funnorm_rand <- getRand(beta_funnorm)
 
 # remove unneeded objects
 rm(beta_raw, beta_raw_cancer_bal_features, beta_raw_cancer_unbal_features, beta_raw_global_bal_features, beta_raw_global_unbal_features,
@@ -123,7 +163,7 @@ rfPredictFac <- function(model_data,
   
   selected_features <- names(model_data[, 2:ncol(model_data)])
   
-  model_data$age_sample_fac <- ifelse(model_data$age_sample_collection > 150, 1,2)
+  model_data$age_sample_fac <- ifelse(model_data$age_sample_collection > 290, 1,2)
   model_data$age_sample_collection <- NULL
   
   for (i in 1:iterations) {

@@ -6,12 +6,39 @@ library(gsheet)
 ### This Script will read in clinical data and clean it.
 # This is the first step in the pipeline
 # Initialize folders
-home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects/'
+# Initialize folders
+home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
-test <- paste0(project_folder, '/Scripts/classification_template')
+scripts_folder <- paste0(project_folder, '/Scripts')
 data_folder <- paste0(project_folder, '/Data')
 methyl_data <- paste0(data_folder, '/methyl_data')
+idat_data <- paste0(methyl_data, '/raw_files')
 clin_data <- paste0(data_folder, '/clin_data')
+bumphunter_data <- paste0(data_folder, '/bumphunter_data')
+model_data <- paste0(data_folder, '/model_data')
+
+
+##########################################################################
+# read in methylation column names to make clinical column with methyl indicator
+##########################################################################
+load(paste0(idat_data, '/imputed_idat_betas_final.RData'))
+
+methylation_names <- beta_raw$id
+
+# remove 'A' and '_' in methylation names
+methylation_names <- gsub('_', '', methylation_names)
+methylation_names <- gsub('A', '', methylation_names)
+
+############################################################################
+# add a column to clin to indicate if methylation data is available
+# add '1' and make data frame 
+methylation_names <- as.data.frame(cbind(methylation_names, rep.int(1, length(methylation_names))))
+methylation_names$methylation_names <- as.character(methylation_names$methylation_names)
+methylation_names$V2 <- as.character(methylation_names$V2)
+names(methylation_names) <- c("blood_dna_malkin_lab_", "methyl_indicator")
+methylation_names <- methylation_names[!duplicated(methylation_names),]
+
+
 
 #######################################################################
 # clean clinical data sent from Ana on 1/29/2016 
@@ -511,17 +538,6 @@ clin$mdm2.nG[clin$mdm2 == 'G/G'] <- 2
 table(clin$mdm2)
 table(clin$mdm2.nG)
 
-
-############################################################################33
-# read in methylation column names to make clinical column with methyl indicator
-##########################################################################
-methylation_names <- colnames(read.csv(paste0(methyl_data, '/methylation.csv'), 
-                                       stringsAsFactors = F, check.names = FALSE, nrows = 1))
-
-# remove 'A' and '_' in methylation names
-methylation_names <- gsub('_', '', methylation_names)
-methylation_names <- gsub('A', '', methylation_names)
-
 ##############################################################
 # Get clin in format to run a model
 
@@ -563,21 +579,13 @@ for (i in 1:nrow(clin)) {
 
 clin$family_name <- tolower(gsub(" ", "_", clin$family_name))
 
-############################################################################
-# add a column to clin to indicate if methylation data is available
-# add '1' and make data frame 
-methylation_names <- as.data.frame(cbind(methylation_names, rep.int(1, length(methylation_names))))
-methylation_names$methylation_names <- as.character(methylation_names$methylation_names)
-methylation_names$V2 <- as.character(methylation_names$V2)
-names(methylation_names) <- c("blood_dna_malkin_lab_", "methyl_indicator")
-methylation_names <- methylation_names[!duplicated(methylation_names),]
-
+###############
 # join methylation names to clin
 clin <- left_join(clin, methylation_names)
 
 # recode true and false 
 clin$methyl_indicator <- ifelse(is.na(clin$methyl_indicator), 'No', 'Yes')
-"4258" "3572" "3351" "1981"
+# "4258" "3572" "3351" "1981"
 
 
 # write clin to data_folder so it can be loaded to database

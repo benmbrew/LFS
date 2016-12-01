@@ -46,8 +46,6 @@ id_map <- cleanIdMap(id_map)
 id_map_control <- cleanIdMap(id_map_control)
 
 
-
-
 ####################
 # this function will read in each idat file using read.450k.exp from minifi package and store them in a list
 ####################

@@ -29,7 +29,9 @@ rm(beta_funnorm_cancer_bal_table, beta_funnorm_cancer_unbal_table, beta_funnorm_
 # order results 
 beta_idat_results <- beta_idat_results[order(beta_idat_results$score, decreasing = T),]
 
-
+#### 
+# find the ones that score high on regression -> then link to categorical.
+# if they just score high on cateogrical, then ignore (could include random)
 # this one filters out resid
 temp <- beta_idat_results %>% 
   filter(p53_status == 'Mut') %>% 

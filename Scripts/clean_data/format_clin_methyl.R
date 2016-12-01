@@ -42,8 +42,8 @@ clin$id <-  gsub('A|B|_', '', clin$blood_dna_malkin_lab_)
 # load(paste0(imputed_data, '/imputed_gene_probe.RData'))
 
 # load idat methylation imputerd- probe, knn - raw, swan, quan, funnorm
-# load(paste0(idat_data, '/imputed_idat_betas.RData'))
-load(paste0(idat_data, '/imputed_idat_betas_control.RData'))
+load(paste0(idat_data, '/imputed_idat_betas.RData'))
+# load(paste0(idat_data, '/imputed_idat_betas_control.RData'))
 
 # reformat to look like other data so it fits in to function
 
@@ -131,7 +131,7 @@ joinData <- function(data, control) {
     } 
     data <- data[!is.na(data$p53_germline),]
     data <- data[!duplicated(data$id),]
-    # data <- data[!duplicated(data$tm_donor_),]
+    data <- data[!duplicated(data$tm_donor_),]
     data <- data[, c('id', 'p53_germline', 'cancer_diagnosis_diagnoses','age_sample_collection', features)]
   }
   
