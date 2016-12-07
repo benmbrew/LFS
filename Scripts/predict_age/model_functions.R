@@ -141,7 +141,8 @@ plotModel <- function(result_list,
   abline(0,1, lty = 3)
   corr <- round(cor(unlist(result_list[[4]]), unlist(result_list[[6]])), 2)
   legend("topleft", legend = paste0('correlation = ', corr), cex = 1, bty = 'n')
-  legend("bottomright", legend = paste0('# dims = ', result_list[[15]]), cex = 1, bty = 'n')
+  legend("bottomright", legend = paste0('# samples = ', 
+                                        result_list[[15]][1], 'and', result_list[[15]][2], 'features used' ), cex = 1, bty = 'n')
   
   
   # plot predictions against ground truth

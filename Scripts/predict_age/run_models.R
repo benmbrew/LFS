@@ -261,17 +261,18 @@ beta_idat_results <- rbind(beta_raw_cancer_bal_table, beta_raw_cancer_unbal_tabl
                            beta_funnorm_cancer_bal_table, beta_funnorm_cancer_unbal_table, beta_funnorm_global_bal_table, beta_funnorm_global_unbal_table,
                            beta_raw_rand_table, beta_swan_rand_table, beta_quan_rand_table, beta_funnorm_rand_table)
 
+# 
+# rm(beta_raw_cancer_bal_features, beta_raw_cancer_bal_models, beta_raw_cancer_unbal_features, beta_raw_cancer_unbal_models,
+#    beta_raw_global_bal_features, beta_raw_global_bal_models, beta_raw_global_unbal_features, beta_raw_global_unbal_models,
+#    beta_swan_cancer_bal_features, beta_swan_cancer_bal_models, beta_swan_cancer_unbal_features, beta_swan_cancer_unbal_models,
+#    beta_swan_global_bal_features, beta_swan_global_bal_models, beta_swan_global_unbal_features, beta_swan_global_unbal_models,
+#    beta_quan_cancer_bal_features, beta_quan_cancer_bal_models, beta_quan_cancer_unbal_features, beta_quan_cancer_unbal_models,
+#    beta_quan_global_bal_features, beta_quan_global_bal_models, beta_quan_global_unbal_features, beta_quan_global_unbal_models,
+#    beta_funnorm_cancer_bal_features, beta_funnorm_cancer_bal_models, beta_funnorm_cancer_unbal_features, beta_funnorm_cancer_unbal_models,
+#    beta_funnorm_global_bal_features, beta_funnorm_global_bal_models, beta_funnorm_global_unbal_features, beta_funnorm_global_unbal_models,
+#    beta_raw, beta_quan, beta_swan, beta_funnorm, beta_funnorm_rand, beta_raw_rand, beta_quan_rand, beta_swan_rand)
 
-rm(beta_raw_cancer_bal_features, beta_raw_cancer_bal_models, beta_raw_cancer_unbal_features, beta_raw_cancer_unbal_models,
-   beta_raw_global_bal_features, beta_raw_global_bal_models, beta_raw_global_unbal_features, beta_raw_global_unbal_models,
-   beta_swan_cancer_bal_features, beta_swan_cancer_bal_models, beta_swan_cancer_unbal_features, beta_swan_cancer_unbal_models,
-   beta_swan_global_bal_features, beta_swan_global_bal_models, beta_swan_global_unbal_features, beta_swan_global_unbal_models,
-   beta_quan_cancer_bal_features, beta_quan_cancer_bal_models, beta_quan_cancer_unbal_features, beta_quan_cancer_unbal_models,
-   beta_quan_global_bal_features, beta_quan_global_bal_models, beta_quan_global_unbal_features, beta_quan_global_unbal_models,
-   beta_funnorm_cancer_bal_features, beta_funnorm_cancer_bal_models, beta_funnorm_cancer_unbal_features, beta_funnorm_cancer_unbal_models,
-   beta_funnorm_global_bal_features, beta_funnorm_global_bal_models, beta_funnorm_global_unbal_features, beta_funnorm_global_unbal_models,
-   beta_raw, beta_quan, beta_swan, beta_funnorm, beta_funnorm_rand, beta_raw_rand, beta_quan_rand, beta_swan_rand)
-
+# rm(beta_raw, beta_funnorm, beta_swan, beta_quan)
 save.image(paste0(model_data, '/idat_beta_table_results.RData'))
 
 #####################################
