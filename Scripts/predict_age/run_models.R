@@ -67,7 +67,7 @@ runModels <- function(data,
   
   if (random) {
     
-    data <- getRand(data)
+  data <- getRand(data)
     
   }
   
@@ -272,8 +272,10 @@ beta_idat_results <- rbind(beta_raw_cancer_bal_table, beta_raw_cancer_unbal_tabl
 #    beta_funnorm_global_bal_features, beta_funnorm_global_bal_models, beta_funnorm_global_unbal_features, beta_funnorm_global_unbal_models,
 #    beta_raw, beta_quan, beta_swan, beta_funnorm, beta_funnorm_rand, beta_raw_rand, beta_quan_rand, beta_swan_rand)
 
-# rm(beta_raw, beta_funnorm, beta_swan, beta_quan)
+ # rm(beta_raw, beta_funnorm, beta_swan, beta_quan)
 save.image(paste0(model_data, '/idat_beta_table_results.RData'))
+# load(paste0(model_data, '/idat_beta_table_results.RData'))
+
 
 #####################################
 # # first run each gene data - gene_knn, gene_lsa, with fac

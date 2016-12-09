@@ -252,7 +252,7 @@ rfPredictFac <- function(model_data,
                         , verbose = FALSE)
     
     temp <- varImp(model[[i]])[[1]]
-    importance[[i]] <- cbind(rownames(temp), temp$Overall)
+    importance[[i]] <- cbind(rownames(temp), temp$X1)
     
     test.predictions[[i]] <- predict(model[[i]] 
                                      , newdata = model_data[-train_index, selected_features]
@@ -347,14 +347,14 @@ rfPredictReg <- function(model_data,
         allowParallel = TRUE
         )
     
-      y <- model_data$age_diagnosis[train_index]
+    y <- model_data$age_diagnosis[train_index]
     
     # mtry: Number of variables randomly sampled as candidates at each split.
     # ntree: Number of trees to grow.
     mtry <- sqrt(ncol(model_data[train_index, selected_features]))
     tunegrid <- expand.grid(.mtry=mtry)
       
-      model[[i]] <- train(x = model_data[train_index, selected_features]
+    model[[i]] <- train(x = model_data[train_index, selected_features]
                           , y = y
                           , method = "rf"
                           , trControl = fitControl
@@ -362,28 +362,28 @@ rfPredictReg <- function(model_data,
                           , importance = T
                           , verbose = FALSE)
       
-      temp <- varImp(model[[i]])[[1]]
-      importance[[i]] <- cbind(rownames(temp), temp$Overall)
+    temp <- varImp(model[[i]])[[1]]
+    importance[[i]] <- cbind(rownames(temp), temp$Overall)
       
     
-      test.predictions[[i]] <- predict(model[[i]] 
+    test.predictions[[i]] <- predict(model[[i]] 
                                        , newdata = model_data[-train_index, selected_features])
       
-      train.predictions[[i]] <- predict(model[[i]] 
+    train.predictions[[i]] <- predict(model[[i]] 
                                         , newdata = model_data[train_index, selected_features])
       
       
       
       
-   
-      train.ground_truth[[i]] <- model_data$age_diagnosis[train_index]
-      test.ground_truth[[i]] <- model_data$age_diagnosis[-train_index]
-      train.sample_collection[[i]] = model_data$age_sample_collection[train_index]
-      test.sample_collection[[i]] = model_data$age_sample_collection[-train_index]
-      train.mse[[i]] <- rmse(unlist(train.predictions[[i]]), unlist(train.ground_truth[[i]]))
-      test.mse[[i]] <- rmse(unlist(test.predictions[[i]]), unlist(test.ground_truth[[i]]))
-      
-      
+ 
+    train.ground_truth[[i]] <- model_data$age_diagnosis[train_index]
+    test.ground_truth[[i]] <- model_data$age_diagnosis[-train_index]
+    train.sample_collection[[i]] = model_data$age_sample_collection[train_index]
+    test.sample_collection[[i]] = model_data$age_sample_collection[-train_index]
+    train.mse[[i]] <- rmse(unlist(train.predictions[[i]]), unlist(train.ground_truth[[i]]))
+    test.mse[[i]] <- rmse(unlist(test.predictions[[i]]), unlist(test.ground_truth[[i]]))
+    
+    
       
     
     print(i)

@@ -20,11 +20,25 @@ bumphunter_data <- paste0(data_folder, '/bumphunter_data')
 # # Load model data which contains all variations of methylation data
 load(paste0(model_data, '/model_data.RData'))
 rm(gene_knn, gene_lsa, probe_knn, probe_lsa)
-# load(paste0(idat_data, '/imputed_idat_betas_final.RData'))
-load(paste0(idat_data, '/imputed_idat_betas_final_control.RData'))
+load(paste0(idat_data, '/imputed_idat_betas_final.RData'))
+# load(paste0(idat_data, '/imputed_idat_betas_final_control.RData'))
 
 
 rm(gene_knn, gene_lsa, beta_illumina)
+
+# #####
+# data <- beta_raw
+# data <- data[1:104, 1:100]
+# # summary of clinical data
+# temp <- data %>%
+#   group_by(cancer_diagnosis_diagnoses, p53_germline) %>%
+#   summarise(counts = n(),
+#             mean_age = mean(age_diagnosis, na.rm = T))
+# 
+# temp1 <- data %>%
+#   filter(cancer_diagnosis_diagnoses != 'Unaffected') %>%
+#   group_by(p53_germline) %>%
+#   summarise(counts = n())
 
 ####################################
 # function that matches mut and wt counts as well as creates relatively similar
