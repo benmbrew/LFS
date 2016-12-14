@@ -1,65 +1,37 @@
+##### This Script will read in clinical data and clean it.
+# This is the first step in the pipeline
+
+##########
 # initialize folders
+##########
 library(gsubfn)
 library(xlsx)
 library(gsheet)
 
-### This Script will read in clinical data and clean it.
-# This is the first step in the pipeline
+##########
 # Initialize folders
-# Initialize folders
+##########
 home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
-scripts_folder <- paste0(project_folder, '/Scripts')
 data_folder <- paste0(project_folder, '/Data')
 methyl_data <- paste0(data_folder, '/methyl_data')
 idat_data <- paste0(methyl_data, '/raw_files')
 clin_data <- paste0(data_folder, '/clin_data')
-bumphunter_data <- paste0(data_folder, '/bumphunter_data')
-model_data <- paste0(data_folder, '/model_data')
 
-
-##########################################################################
-# read in methylation column names to make clinical column with methyl indicator
-##########################################################################
-load(paste0(idat_data, '/imputed_idat_betas_final.RData'))
-
-methylation_names <- beta_raw$id
-
-# remove 'A' and '_' in methylation names
-methylation_names <- gsub('_', '', methylation_names)
-methylation_names <- gsub('A', '', methylation_names)
-
-############################################################################
-# add a column to clin to indicate if methylation data is available
-# add '1' and make data frame 
-methylation_names <- as.data.frame(cbind(methylation_names, rep.int(1, length(methylation_names))))
-methylation_names$methylation_names <- as.character(methylation_names$methylation_names)
-methylation_names$V2 <- as.character(methylation_names$V2)
-names(methylation_names) <- c("blood_dna_malkin_lab_", "methyl_indicator")
-methylation_names <- methylation_names[!duplicated(methylation_names),]
-
-
-
-#######################################################################
-# clean clinical data sent from Ana on 1/29/2016 
-# clin1 <- as.data.frame(gsheet2tbl('https://docs.google.com/spreadsheets/d/1zUOYEXFh9RAQFpNPFjpPNBSLbFgnqQItucuNzuznivk/edit#gid=0'))
-# write.csv(clin1, '/home/benbrew/Desktop/clin1.csv')
-# clin2 <- gsheet2tbl('https://docs.google.com/spreadsheets/d/1zUOYEXFh9RAQFpNPFjpPNBSLbFgnqQItucuNzuznivk/edit#gid=621772204')
-# write.csv(clin2, '/home/benbrew/Desktop/clin2.csv')
-
-clin1 <- read.csv(paste0(clin_data, '/clin_1.csv'), na.strings=c("","NA"), 
+##########
+# read in clinical data, sheets 1 and 2
+##########
+clin1 <- read.csv(paste0(clin_data, '/clin1.csv'), na.strings=c("","NA"), 
                  stringsAsFactors = FALSE, sep = ',') # read the first sheet
 clin2 <- read.csv(paste0(clin_data, '/clin2.csv'), na.strings=c("","NA"),
                 stringsAsFactors = FALSE) # read the second sheet
-
+##########
+# remove unneeded fields and combine
+##########
 clin1$X <- NULL
-
-# For the time being drop family from clin1
 clin2$X <- NULL
 clin1$X.1 <- NULL
-# clin1$Family.Name <- NULL
 clin2$Pin53 <- NULL
-
 # remove the unverified WT in clin2 (after row 136)
 clin2 <- clin2[1:136,]
 
@@ -72,8 +44,14 @@ clin <- clin[, colSums(is.na(clin)) < nrow(clin)]
 # remove all rows that are completely NA
 clin <- clin[rowSums(is.na(clin)) < ncol(clin),]
 
-#########################################
-# make column names lower case and remove any '.' and replace with '_'
+#########
+# clean NAs and N/As
+#########
+clin <- as.data.frame(apply(clin, 2, function(x) gsub('N/A', NA, x)))
+
+##########
+# function to make column names lower case and remove any '.' and replace with '_'
+##########
 cleanColNames <- function(data) {
  
   col_names <- colnames(data)
@@ -93,12 +71,9 @@ cleanColNames <- function(data) {
 
 clin <- cleanColNames(clin)
 
-
-# clean NAs and N/As
-clin <- as.data.frame(apply(clin, 2, function(x) gsub('N/A', NA, x)))
-
-# clean white all leading and trailing white spaces 
-
+##########
+# function clean white all leading and trailing white spaces 
+##########
 convertColumn <- function(data) {
   
   for( i in names(data)) {
@@ -112,9 +87,9 @@ convertColumn <- function(data) {
 
 clin <- convertColumn(clin)
 
-##############################################
-# take any rows with double samples and split them into the number of rows equal to the number of samples.
-
+#########
+# function to split rows with multiple sample ids
+#########
 splitRows <- function(data, duplicate_table){
   
   for (i in 1:nrow(data)) {
@@ -148,14 +123,15 @@ splitRows <- function(data, duplicate_table){
 empty_table <- data.frame(matrix(ncol = ncol(clin), nrow = 0))
 clin <- splitRows(clin, empty_table)
 
+#########
 # Clean age of diagnosis column
+#########
 clin$age_diagnosis <- as.character(clin$age_diagnosis)
 clin$age_sample_collection <- as.character(clin$age_sample_collection)
 
-##########################################################
-
+##########
 # Clean the age variable so that is expressed in years
-
+##########
 cleanAge <-  function(data, column_name) {
   
   age_vector <- data[, column_name]
@@ -260,17 +236,21 @@ cleanAge <-  function(data, column_name) {
 clin <- cleanAge(clin, column_name = 'age_diagnosis')
 clin<- cleanAge(clin, column_name = 'age_sample_collection')
 
+##########
 # Convert age of diagnosis and sample collection to months 
+##########
 clin$age_diagnosis <- clin$age_diagnosis*12
 clin$age_sample_collection <- clin$age_sample_collection*12
 
-############################################################
+##########
 # clean date column and create variable for patient age 
+##########
 clin$dob <- ifelse(grepl('unknown', as.character(clin$dob)), NA, 
                   ifelse(grepl('notknown', as.character(clin$dob)), NA, as.character(clin$dob)))
   
+##########
 # extract only the last four characters to get year of birth
-
+##########
 substrRight <- function(x, n){
   substr(x, nchar(x)-n+1, nchar(x))
 }
@@ -279,8 +259,9 @@ clin$yob <- as.numeric(substrRight(as.character(clin$dob), 4))
 clin$age <- 2016 - clin$yob
 
 
-############################################################
+##########
 # clean p53
+##########
 clin$p53_germline <- as.character(clin$p53_germline)
 
 cleanp53 <- 
@@ -324,14 +305,14 @@ cleanp53 <-
 
 clin <- cleanp53(clin, column_name = 'p53_germline')
 
-############################################################
-# clean cancer_diagnoses
-# clean p53
+##########
+# function to clean cancer_diagnoses
+##########
 clin$cancer_diagnosis_diagnoses <- as.character(clin$cancer_diagnosis_diagnoses)
 
 cleanCancer <- 
   
-  function(data, column_name) {
+  function (data, column_name) {
     
     cancer_vector <- data[, column_name]
     
@@ -416,23 +397,60 @@ cleanCancer <-
 
 clin <- cleanCancer(clin, column_name = 'cancer_diagnosis_diagnoses')
 
-# reclean cancer
-
-
-# clean relationship column
-
-############################################################
+##########
 # clean p53
+##########
 clin$gender <- as.character(clin$gender)
 clin$gender <- ifelse(clin$gender == 1, 'M', 
                       ifelse(clin$gender == 0, 'F', 
                              ifelse(clin$gender == 'unknown', NA, clin$gender)))
 
 
-###################################################################
-# add lauren's changes 
-trim <- function (x) gsub("^\\s+|\\s+$", "", x)
+##########
+# remove leading and trailing white space 
+##########
+clin$blood_dna_malkin_lab_ <- gsub("^\\s+|\\s+$", "", clin$blood_dna_malkin_lab_)
 
+# replace LFS with family
+clin$family_name <- gsub('LFS', 'Family', clin$family_name)
+
+
+##########
+# functon to clean family column 
+##########
+for (i in 1:nrow(clin)) {
+  
+  sub_clin <- clin$family_name[i]
+  
+  if(is.na(sub_clin)) {
+    temp <- NA
+    
+  } else {
+    
+    if(nchar(sub_clin) == 11) {
+      temp <- substr(sub_clin, 1, 8)
+    }
+    
+    if(nchar(sub_clin) == 12) {
+      temp <- substr(sub_clin, 1, 9)
+    }
+    
+    if(nchar(sub_clin) == 13) {
+      temp <- substr(sub_clin, 1, 10)
+    }
+    
+  }
+  clin$family_name[i] <- temp
+  
+}
+
+clin$family_name <- tolower(gsub(" ", "_", clin$family_name))
+
+##########################################################################################
+##########
+# lauren's changes
+##########
+trim <- function (x) gsub("^\\s+|\\s+$", "", x)
 
 ###
 #     GDNA VARS
@@ -538,56 +556,16 @@ clin$mdm2.nG[clin$mdm2 == 'G/G'] <- 2
 table(clin$mdm2)
 table(clin$mdm2.nG)
 
-##############################################################
-# Get clin in format to run a model
-
-# remove leading and trailing white space 
-clin$blood_dna_malkin_lab_ <- gsub("^\\s+|\\s+$", "", clin$blood_dna_malkin_lab_)
-
-# replace LFS with family
-clin$family_name <- gsub('LFS', 'Family', clin$family_name)
-
-
-# differences in family in regards to clinical variables 
-
-# clean family column 
-for (i in 1:nrow(clin)) {
-  
-  sub_clin <- clin$family_name[i]
-  
-  if(is.na(sub_clin)) {
-    temp <- NA
-    
-  } else {
-    
-    if(nchar(sub_clin) == 11) {
-      temp <- substr(sub_clin, 1, 8)
-    }
-    
-    if(nchar(sub_clin) == 12) {
-      temp <- substr(sub_clin, 1, 9)
-    }
-    
-    if(nchar(sub_clin) == 13) {
-      temp <- substr(sub_clin, 1, 10)
-    }
-    
-  }
-  clin$family_name[i] <- temp
-  
-}
-
-clin$family_name <- tolower(gsub(" ", "_", clin$family_name))
-
-###############
-# join methylation names to clin
-clin <- left_join(clin, methylation_names)
-
-# recode true and false 
-clin$methyl_indicator <- ifelse(is.na(clin$methyl_indicator), 'No', 'Yes')
-# "4258" "3572" "3351" "1981"
-
-
+######
+# # find errors
+# temp_age <- clin$age_diagnosis
+# temp_sample <- clin$age_sample_collection
+# temp_cancer <- clin$cancer_diagnosis_diagnoses
+# temp_p53  <- clin$p53_germline
+# temp_id <- clin$blood_dna_malkin_lab_
+# 
+# temp_id[grepl('y|m|w', temp_id)]
+# temp_id[grepl("[[:digit:]]", temp_id)]
 # write clin to data_folder so it can be loaded to database
 write.csv(clin, paste(clin_data,'clinical_two.csv', sep ='/'), row.names = FALSE)
 

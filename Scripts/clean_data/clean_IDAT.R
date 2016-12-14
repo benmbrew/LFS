@@ -1,39 +1,44 @@
-## Script for cleaning IDAT files
-# this data could be used to replace methylation from nardine
-# this script will be documented heavily as to provide a guide for IDAT files in minfi package to lab.
+###### Script for cleaning IDAT files
+# this is 2nd step in pipeline
 
+##########
 # initialize libraries
+##########
 library(minfi)
 library(dplyr)
 
 # Use this https://www.bioconductor.org/help/course-materials/2014/BioC2014/minfi_BioC2014.pdf
 
+##########
 # initialize folders
+##########
 home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
-test <- paste0(project_folder, '/Scripts/classification_template')
 data_folder <- paste0(project_folder, '/Data')
 methyl_data <- paste0(data_folder, '/methyl_data')
 idat_data <- paste0(methyl_data, '/raw_files')
 idat_data_controls <- paste0(methyl_data, '/controls')
 clin_data <- paste0(data_folder, '/clin_data')
-results_folder <- paste0(test, '/Results')
 
 
-####################
-# Load id_map to later merge with methylation values. clean it.
-####################
+##########
+# Load id_map, which has ids to merge with methylation - do for cases and controls
+##########
 id_map <- read.csv(paste0(methyl_data, '/ids_map.csv'), stringsAsFactors = F)
 id_map_control <- read.csv(paste0(methyl_data, '/ids_map_controls.csv'), stringsAsFactors = F)
 
 
+##########
+# clean IdMap
+##########
+
 cleanIdMap <- function(data) {
- 
+  
   data <- as.data.frame(data)
   
   # new colnames, lowercase
   colnames(data) <- tolower(colnames(data))
-
+  
   # combine sentrix_id and sentrix_position 
   data$identifier <- paste(data$sentrix_id, data$sentrix_position, sep = '_')
   data$identifier <- as.factor(data$identifier)
@@ -46,11 +51,13 @@ id_map <- cleanIdMap(id_map)
 id_map_control <- cleanIdMap(id_map_control)
 
 
-####################
+##########
 # this function will read in each idat file using read.450k.exp from minifi package and store them in a list
-####################
+##########
 
 rgSetList <- list()
+rgSetListControls <- list()
+
 readIDAT <- function(path) {
   
   rgSet <- list()
@@ -65,12 +72,12 @@ readIDAT <- function(path) {
   
 }
 
-rgSetList <- readIDAT(idat_data_controls)
+rgSetListControls <- readIDAT(idat_data_controls)
+rgSetList <- readIDAT(idat_data)
 
-####################
+##########
 # function that Loops through list, preprocesses, and convert to beta, m, and cn values 
-####################
-
+##########
 preprocessMethod <- function(data, preprocess) {
   
   Mset <- list()
@@ -109,10 +116,9 @@ preprocessMethod <- function(data, preprocess) {
 }
 
 
-####################
+##########
 # Function that combines elements of a list into a data frame
-####################
-
+##########
 combineList <- function(list) {
   
   for (dat in 1:length(list)) {
@@ -122,10 +128,9 @@ combineList <- function(list) {
   return(data)
 }
 
-####################
+##########
 # Function that combines methylation matrices with id_map, to get ids for methylation
-####################
-
+##########
 findIds <- function(data_methyl, id_map) {
   
   data_methyl <- as.data.frame(data_methyl)
@@ -141,9 +146,9 @@ findIds <- function(data_methyl, id_map) {
   return(data_methyl)
 }
 
-####################
+##########
 # Function that gets malkin id from sample_name
-####################
+##########
 getIdName <- function(data) {
   
   column_split <- strsplit(as.character(data$ids), '#')
@@ -163,47 +168,53 @@ getIdName <- function(data) {
   
 }
 
-###########################
-# Main function that specifies a preprocessing method and get beta, m, cn_values
-###########################
-
+##########
+# Main function that specifies a preprocessing method and get beta
+##########
 getMethyl <- function(data_list, method, control) {
- 
+  
   processed_list <- list()
   processed_list <-preprocessMethod(data_list, preprocess = method)
   
   # combinelist
   beta_methyl <- combineList(processed_list[[1]])
-  m_methyl <- combineList(processed_list[[2]])
-  cn_methyl <- combineList(processed_list[[3]])
+  # m_methyl <- combineList(processed_list[[2]])
+  # cn_methyl <- combineList(processed_list[[3]])
   
-  # find ids
-  beta_methyl <- findIds(beta_methyl, id_map_control)
-  m_methyl <- findIds(m_methyl, id_map_control)
-  cn_methyl <- findIds(cn_methyl, id_map_control)
-  
-  if(!control) {
+  if (!control) {
     
+    beta_methyl <- findIds(beta_methyl, id_map)
     # clean ids
     beta_methyl <- getIdName(beta_methyl)
-    m_methyl <- getIdName(m_methyl)
-    cn_methyl <- getIdName(cn_methyl)
+    # m_methyl <- getIdName(m_methyl)
+    # cn_methyl <- getIdName(cn_methyl)
+  } else {
+    
+    # find ids
+    beta_methyl <- findIds(beta_methyl, id_map_control)
+    
+    # m_methyl <- findIds(m_methyl, id_map_control)
+    # cn_methyl <- findIds(cn_methyl, id_map_control)
   }
- 
   
-  return(list(beta_methyl, m_methyl, cn_methyl))
   
+  return(beta_methyl)
   
 }
 
-# run the 5 different preprocessing and normilization methods
-raw <- getMethyl(rgSetList, method = 'raw', control = T)
-beta_raw <- raw[[1]]
-m_raw <- raw[[2]]
-cn_raw <- raw[[3]]
-rm(raw)
-save.image(paste0(methyl_data, '/raw_control.RData'))
-rm(beta_raw, m_raw, cn_raw)
+##########
+# apply functions to get both cases and controls data
+##########
+
+# raw
+beta_raw <- getMethyl(rgSetList, method = 'raw', control = F)
+beta_raw_controls <- getMethyl(rgSetListControls, method = 'raw', control = T)
+
+# beta_raw <- raw[[1]]
+# m_raw <- raw[[2]]
+# cn_raw <- raw[[3]]
+save.image(paste0(methyl_data, '/raw.RData'))
+rm(beta_raw, beta_raw_controls)
 
 # illum <- getMethyl(rgSetList, method = 'illumina', control = T)
 # beta_illumina <- illum[[1]]
@@ -213,31 +224,34 @@ rm(beta_raw, m_raw, cn_raw)
 # save.image(paste0(methyl_data, '/illum.RData'))
 # rm(m_illumina, beta_illumina, cn_illumina)
 
-swan <- getMethyl(rgSetList, method = 'swan', control = T)
-beta_swan <- swan[[1]]
-m_swan <- swan[[2]]
-cn_swan <- swan[[3]]
-rm(swan)
-save.image(paste0(methyl_data, '/swan_control.RData'))
-rm(beta_swan, m_swan, cn_swan)
+# swan
+beta_swan <- getMethyl(rgSetList, method = 'swan', control = F)
+beta_swan_controls <- getMethyl(rgSetListControls, method = 'swan', control = T)
 
-funnorm <- getMethyl(rgSetList, method = 'funnorm', control = T)
-beta_funnorm <- funnorm[[1]]
-m_funnorm <- funnorm[[2]]
-cn_funnorm <- funnorm[[3]]
-rm(funnorm)
-save.image(paste0(methyl_data, '/funnorm_control.RData'))
-rm(beta_funnorm, m_funnorm, cn_funnorm)
+# beta_swan <- swan[[1]]
+# m_swan <- swan[[2]]
+# cn_swan <- swan[[3]]
+save.image(paste0(methyl_data, '/swan.RData'))
+rm(beta_swan, beta_swan_controls)
 
-quan <- getMethyl(rgSetList, method = 'quantile', control = T)
-beta_quan <- quan[[1]]
-m_quan <- quan[[2]]
-cn_quan <- quan[[3]]
-rm(quan)
-save.image(paste0(methyl_data, '/quan_control.RData'))
-rm(beta_quan, m_quan, cn_quan)
+# quan
+beta_quan <- getMethyl(rgSetList, method = 'quantile', control = F)
+beta_quan_controls <- getMethyl(rgSetListControls, method = 'quantile', control = T)
+# beta_quan <- quan[[1]]
+# m_quan <- quan[[2]]
+# cn_quan <- quan[[3]]
+save.image(paste0(methyl_data, '/quan.RData'))
+rm(beta_quan, beta_quan_controls)
 
+# funnorm
+beta_funnorm <- getMethyl(rgSetList, method = 'funnorm', control = F)
+beta_funnorm_controls <- getMethyl(rgSetListControls, method = 'funnorm', control = T)
 
+# beta_funnorm <- funnorm[[1]]
+# m_funnorm <- funnorm[[2]]
+# cn_funnorm <- funnorm[[3]]
+save.image(paste0(methyl_data, '/funnorm.RData'))
+rm(beta_funnorm, beta_funnorm_controls)
 
 
 
