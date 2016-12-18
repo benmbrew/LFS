@@ -18,13 +18,13 @@ bumphunter_data <- paste0(data_folder, '/bumphunter_data')
 
 
 ##########
-# load imputed methylation data
+# load imputed methylation data and cg_locations csv
 ##########
+load(paste0(model_data, '/model_data_cases.RData'))
+load(paste0(model_data, '/model_data_controls.RData'))
 
-# first load old model data to get cg_locations, then remove unneccesaary data
-load(paste0(model_data, '/model_data.RData'))
-rm(gene_knn, gene_lsa, probe_knn, probe_lsa)
-load(paste0(idat_data, '/imputed_idat_betas_final.RData'))
+cg_locations <- read.csv(cg_locations, paste0(model_data, '/cg_locations.csv'))
+
 
 #########
 # function that looks within cancer and sets WT as controls

@@ -8,7 +8,6 @@
 library(minfi)
 library(bumphunter)
 library(dplyr)
-library(MatchIt)
 
 ##########
 # Initialize folders
@@ -26,19 +25,8 @@ bumphunter_data <- paste0(data_folder, '/bumphunter_data')
 #########
 # Load model data which contains all variations of methylation data
 #########
-
-# load controls and rename
-load(paste0(idat_data, '/imputed_idat_betas_final_control.RData'))
-beta_raw_controls <- beta_raw
-beta_swan_controls <- beta_swan
-beta_quan_controls <- beta_quan
-beta_funnorm_controls <- beta_funnorm
-# remove old named controls
-rm(beta_raw, beta_swan, beta_quan, beta_funnorm)
-
-# load original
-load(paste0(idat_data, '/imputed_idat_betas_final.RData'))
-
+load(paste0(model_data, '/model_data_cases.RData'))
+load(paste0(model_data, '/model_data_controls.RData'))
 
 ##########
 # function to find overlapping probes and subset control and regular by those probes
@@ -67,6 +55,7 @@ rm(beta_raw, beta_raw_controls, beta_swan, beta_swan_controls, beta_quan, beta_q
 ##########
 # function that takes LFS patients and run balanced and unbalanced bumphunter on cancer and controls
 ##########
+# will return one unbalanced, one balanced by age, and balanced by age and counts
 
 bumpHunterBalanced <- function(dat,
                                balanced,
@@ -83,7 +72,7 @@ bumpHunterBalanced <- function(dat,
     # hist(dat$age_sample_collection[dat$indicator == 'cases'])
     # hist(dat$age_sample_collection[dat$indicator == 'controls'])
     # remove a few from ranges 100-200, 300-400
-    # randomly remove Mut that have a less than 50 month age of diganosis to have balanced classes
+    # randomly remove controls that have a less than 50 month age of diganosis to have balanced classes
     remove_index <- which(dat$indicator == 'controls' & (dat$age_sample_collection >= 100 & dat$age_sample_collection <= 200) |
                             (dat$age_sample_collection >= 300 & dat$age_sample_collection <= 400))
     
@@ -92,20 +81,16 @@ bumpHunterBalanced <- function(dat,
     
     if (even_counts) {
       
- # balance numbers
+      # balance numbers
       # nrow(dat[dat$indicator == 'cases',]) # 80
       # nrow(dat[dat$indicator == 'controls',]) #50
       remove_index <- which(dat$indicator == 'cases')
-      remove_index <- sample(nrow(dat), 30, replace = F )
+      remove_index <- sample(remove_index, 30, replace = F )
       dat <- dat[-remove_index,]
       
     } 
-    
-    
-    
   } 
 
-  
   ##########
   # get clinical dat 
   ##########

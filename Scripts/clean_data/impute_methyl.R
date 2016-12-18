@@ -145,11 +145,7 @@ imputeIdat <- function (data) {
   return(data_knn)
   
 }
-save.image(paste0(methyl_data, '/imputed_others.RData'))
 
-
-# Remove swan, quan, and funnorm because they dont have missing values
-rm(beta_swan, beta_quan, beta_funnorm, beta_swan_controls, beta_quan_controls, beta_funnorm_controls)
 ##########
 # apply to cases
 ##########
@@ -167,7 +163,7 @@ beta_raw_controls <- imputeIdat(beta_raw_controls)#552
 # beta_funnorm_controls <- imputeIdat(beta_funnorm_controls)#0
 
 # dont save illumina because it has too many missing values
-save.image(paste0(methyl_data, '/imputed_raw.RData'))
+save.image(paste0(methyl_data, '/imputed_betas.RData'))
 
 
 # #########################################################################################

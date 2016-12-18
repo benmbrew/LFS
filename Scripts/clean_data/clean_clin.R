@@ -22,9 +22,11 @@ clin_data <- paste0(data_folder, '/clin_data')
 # read in clinical data, sheets 1 and 2
 ##########
 clin1 <- read.csv(paste0(clin_data, '/clin1.csv'), na.strings=c("","NA"), 
-                 stringsAsFactors = FALSE, sep = ',') # read the first sheet
+                 stringsAsFactors = FALSE) # read the first sheet
 clin2 <- read.csv(paste0(clin_data, '/clin2.csv'), na.strings=c("","NA"),
                 stringsAsFactors = FALSE) # read the second sheet
+
+
 ##########
 # remove unneeded fields and combine
 ##########

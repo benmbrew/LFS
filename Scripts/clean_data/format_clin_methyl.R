@@ -14,7 +14,6 @@ library(biovizBase)
 library(GEOquery)
 library(IlluminaHumanMethylation450kmanifest)
 
-
 ##########
 # Initialize folders
 ##########
@@ -28,26 +27,19 @@ model_data <- paste0(data_folder, '/model_data')
 bumphunter_data <- paste0(data_folder, '/bumphunter_data')
 clin_data <- paste0(data_folder, '/clin_data')
 
+##########
+# load beta values
+##########
+load(paste0(methyl_data, '/imputed_betas.RData'))
 
 ##########
-# Read in methyl and clinical data and join by ids
+# read in clinical data
 ##########
-# Read in data (clinical or clinical_two)
 clin <- read.csv(paste0(clin_data, '/clinical_two.csv'), stringsAsFactors = F)
 
-# clin clinical ids
-clin$id <-  gsub('A|B|_', '', clin$blood_dna_malkin_lab_)
+# clean clinical ids
+clin$id <-  gsub('A|B|_|-', '', clin$blood_dna_malkin_lab_)
 
-# load idat methylation imputed - first read others, then raw
-load(paste0(methyl_data, '/imputed_others.RData'))
-rm(beta_raw, beta_raw_controls)
-load(paste0(methyl_data, '/imputed_raw.RData'))
-
-# make beta_raw and beta_raw_controls a data frame since it was imputed on and saved separately
-beta_raw <- as.data.frame(beta_raw)
-beta_raw_controls <- as.data.frame(beta_raw_controls)
-
-load('/home/benbrew/Desktop/temp.RData')
 ##########
 # function to clean id names and get methyl_indicator for clin
 ##########
@@ -88,7 +80,6 @@ getMethylVar <- function(dat_cases, dat_controls) {
   # summary(clin$methyl_indicator) # 193
 }
 
-clin <- getMethylVar(beta_raw, beta_raw_controls)
 
 ##########
 # functions to clean and join data
@@ -164,7 +155,7 @@ joinData <- function(data, control) {
     } 
     data <- data[!is.na(data$p53_germline),]
     data <- data[!duplicated(data$id),]
-    data <- data[!duplicated(data$tm_donor_),]
+    # data <- data[!duplicated(data$tm_donor_),]
     data <- data[, c('id', 'p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses','age_sample_collection', features)]
   }
   
@@ -178,29 +169,54 @@ relevelFactor <- function (data) {
   return(data)
 }
 
-# Function to convert all genes/probe columns to numeric
-makeNum <- function (model_data) {
+# # Function to convert all genes/probe columns to numeric
+# makeNum <- function (model_data) {
+#   
+#   model_data[, 6:ncol(model_data)] <- apply (model_data[, 6:ncol(model_data)], 2, function(x) as.numeric(as.character(x)))
+#   
+#   return(model_data)
+# }
+
+# test this with smaller data
+makeNumFast <- function(model_data) {
   
-  model_data[, 6:ncol(model_data)] <- apply (model_data[, 6:ncol(model_data)], 2, function(x) as.numeric(as.character(x)))
+  temp_list <- list()
+  for (i in 6:ncol(model_data)) {
+    temp.row <- model_data[,i]
+    temp.row <-   as.numeric(levels(temp.row))[temp.row]
+    temp_list[[i]] <- temp.row
+    print(i)
+    
+  }
   
+  num_features <- as.data.frame(do.call(cbind, temp_list))
+  feature_names <- names(model_data)[6:ncol(model_data)]
+  model_data <- cbind(id = model_data$id, p53_germline = model_data$p53_germline, age_diagnosis = model_data$age_diagnosis,
+                      cancer_diagnosis_diagnoses = model_data$cancer_diagnosis_diagnoses, 
+                      age_sample_collection = model_data$age_sample_collection, num_features)
+  names(model_data)[6:ncol(model_data)] <- feature_names
+
   return(model_data)
 }
 
-
-###########################
+##########
 # apply functions to idat data - cases and controls and save to model_data folder
-###########################
-# get cg locations
-getIdat()
+##########
+# get clinical methylation indicator
+clin <- getMethylVar(beta_raw, beta_raw_controls)
 
+# get cg locations
+cg_locations <- getIDAT()
+
+write.csv(cg_locations, paste0(model_data, '/cg_locations.csv'))
 ##########
 # First do cases
 ##########
 # first clean ids
-beta_raw <- cleanIDs(beta_raw, control = F)
-beta_quan <- cleanIDs(beta_quan, control = F)
-beta_swan <- cleanIDs(beta_swan, control = F)
-beta_funnorm <- cleanIDs(beta_funnorm, control = F)
+beta_raw <- cleanIDs(beta_raw)
+beta_quan <- cleanIDs(beta_quan)
+beta_swan <- cleanIDs(beta_swan)
+beta_funnorm <- cleanIDs(beta_funnorm)
 
 # second join data
 beta_raw <- joinData(beta_raw, control = F)
@@ -209,28 +225,22 @@ beta_swan <- joinData(beta_swan, control = F)
 beta_funnorm <- joinData(beta_funnorm, control = F)
 
 # thrid relevel factors
-beta_raw <- relevelFactor(beta_raw, control = F)
-beta_quan <- relevelFactor(beta_quan, control = F)
-beta_swan <- relevelFactor(beta_swan, control = F)
-beta_funnorm <- relevelFactor(beta_funnorm, control = F)
+beta_raw <- relevelFactor(beta_raw)
+beta_quan <- relevelFactor(beta_quan)
+beta_swan <- relevelFactor(beta_swan)
+beta_funnorm <- relevelFactor(beta_funnorm)
 
-# 4th make numeric
-beta_raw <- makeNum(beta_raw, control = F)
-beta_quan <- makeNum(beta_quan, control = F)
-beta_swan <- makeNum(beta_swan, control = F)
-beta_funnorm <- makeNum(beta_funnorm, control = F)
-
-save.image(paste0(model_data, '/model_data_cases.RData'))
-rm(beta_raw, beta_quan, beta_swan, beta_funnorm)
+# 4th make numeric - only beta_raw, since that was imputed on and made into a factor
+beta_raw <- makeNumFast(beta_raw)
 
 ##########
 # 2nd do controls
 ##########
 # first clean ids
-beta_raw_controls <- cleanIDs(beta_raw_controls, control = T)
-beta_quan_controls <- cleanIDs(beta_quan_controls, control = T)
-beta_swan_controls <- cleanIDs(beta_swan_controls, control = T)
-beta_funnorm_controls <- cleanIDs(beta_funnorm_controls, control = T)
+beta_raw_controls <- cleanIDs(beta_raw_controls)
+beta_quan_controls <- cleanIDs(beta_quan_controls)
+beta_swan_controls <- cleanIDs(beta_swan_controls)
+beta_funnorm_controls <- cleanIDs(beta_funnorm_controls)
 
 # second join data
 beta_raw_controls <- joinData(beta_raw_controls, control = T)
@@ -238,19 +248,12 @@ beta_quan_controls <- joinData(beta_quan_controls, control = T)
 beta_swan_controls <- joinData(beta_swan_controls, control = T)
 beta_funnorm_controls <- joinData(beta_funnorm_controls, control = T)
 
-# thrid relevel factors
-beta_raw_controls <- relevelFactor(beta_raw_controls, control = T)
-beta_quan_controls <- relevelFactor(beta_quan_controls, control = T)
-beta_swan_controls <- relevelFactor(beta_swan_controls, control = T)
-beta_funnorm_controls <- relevelFactor(beta_funnorm_controls, control = T)
+# 4th make numeric - only beta_raw, since that was imputed on and made into a factor
+beta_raw_controls <- makeNumFast(beta_raw_controls)
 
-# 4th make numeric
-beta_raw_controls <- makeNum(beta_raw_controls, control = T)
-beta_quan_controls <- makeNum(beta_quan_controls, control = T)
-beta_swan_controls <- makeNum(beta_swan_controls, control = T)
-beta_funnorm_controls <- makeNum(beta_funnorm_controls, control = T)
 
+##########
+# Save data images seperately
+##########
+save.image(paste0(model_data, '/model_data_cases.RData'))
 save.image(paste0(model_data, '/model_data_controls.RData'))
-
-
-
