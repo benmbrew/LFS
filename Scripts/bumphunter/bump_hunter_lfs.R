@@ -1,11 +1,17 @@
-#####################################################################################################
-# This script will load bumphunter full data and run different variations of bumhunter on p53 status and save results 
+####### This script will run bumhunter on cancer patients and using p53 WT as control
+# this is 5th (part B) step in pipeline
+
+##########
+# initialize libraries
+##########
 library(minfi)
 library(bumphunter)
 library(dplyr)
 library(MatchIt)
 
+##########
 # Initialize folders
+##########
 home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
 data_folder <- paste0(project_folder, '/Data')
@@ -21,28 +27,25 @@ bumphunter_data <- paste0(data_folder, '/bumphunter_data')
 # load imputed methylation data and cg_locations csv
 ##########
 load(paste0(model_data, '/model_data_cases.RData'))
-load(paste0(model_data, '/model_data_controls.RData'))
-
-cg_locations <- read.csv(cg_locations, paste0(model_data, '/cg_locations.csv'))
+cg_locations <- read.csv(paste0(model_data, '/cg_locations.csv'))
 
 
 #########
 # function that looks within cancer and sets WT as controls
 #########
-
 bumpHunterBalanced <- function(dat,
                                balanced,
                                even_counts) {
   
-  # subset data so its just cancer patietns
-  dat <- dat[dat$cancer_diagnosis_diagnoses != 'Unaffected',]
+    # subset data so its just cancer patietns
+    dat <- dat[dat$cancer_diagnosis_diagnoses != 'Unaffected',]
   
   
   if (balanced) {
     
-    hist(dat$age_sample_collection[dat$p53_germline == 'Mut'])
-    hist(dat$age_sample_collection[dat$p53_germline == 'WT'])
-    
+    # hist(dat$age_sample_collection[dat$p53_germline == 'Mut'])
+    # hist(dat$age_sample_collection[dat$p53_germline == 'WT'])
+    # 
     # randomly remove 3 WT that have age of sample collection between 100 and 200
     remove_index <- which(dat$p53_germline == 'WT' & (dat$age_sample_collection >= 100 & 
                                                         dat$age_sample_collection <= 200))
@@ -91,7 +94,7 @@ bumpHunterBalanced <- function(dat,
   pos <- methyl_cg$start
   
   # create beta matrix
-  beta <- methyl_cg[, 1:(ncol(methyl_cg) - 6)]
+  beta <- methyl_cg[, 1:(ncol(methyl_cg) - 7)]
   
   # make beta numeric 
   for (i in 1:ncol(beta)) {
@@ -100,7 +103,6 @@ bumpHunterBalanced <- function(dat,
   } 
   
   beta <- as.matrix(beta)
-  
   
   ##########
   # Run bumphunter
@@ -137,28 +139,28 @@ bumpHunterBalanced <- function(dat,
 ##########
 
 # beta raw
-beta_raw_bal <- bumpHunterBalanced(beta_raw, balanced = T, even_counts = F)
-beta_raw_bal_counts <- bumpHunterBalanced(beta_raw, balanced = T, even_counts = T)
-beta_raw_unbal <- bumpHunterBalanced(beta_raw, balanced = F, even_counts = F)
+beta_raw_bal_p53 <- bumpHunterBalanced(beta_raw, balanced = T, even_counts = F)
+beta_raw_bal_counts_p53 <- bumpHunterBalanced(beta_raw, balanced = T, even_counts = T)
+beta_raw_unbal_p53 <- bumpHunterBalanced(beta_raw, balanced = F, even_counts = F)
 
 # beta swan
-beta_swan_bal <- bumpHunterBalanced(beta_swan, balanced = T, even_counts = F)
-beta_swan_bal_counts <- bumpHunterBalanced(beta_swan, balanced = T, even_counts = T)
-beta_swan_unbal <- bumpHunterBalanced(beta_swan, balanced = F, even_counts = F)
+beta_swan_bal_p53 <- bumpHunterBalanced(beta_swan, balanced = T, even_counts = F)
+beta_swan_bal_counts_p53 <- bumpHunterBalanced(beta_swan, balanced = T, even_counts = T)
+beta_swan_unbal_p53 <- bumpHunterBalanced(beta_swan, balanced = F, even_counts = F)
 
 # beta quan
-beta_quan_bal <- bumpHunterBalanced(beta_quan, balanced = T, even_counts = F)
-beta_quan_bal_counts <- bumpHunterBalanced(beta_quan, balanced = T, even_counts = T)
-beta_quan_unbal <- bumpHunterBalanced(beta_quan, balanced = F, even_counts = F)
+beta_quan_bal_p53 <- bumpHunterBalanced(beta_quan, balanced = T, even_counts = F)
+beta_quan_bal_counts_p53 <- bumpHunterBalanced(beta_quan, balanced = T, even_counts = T)
+beta_quan_unbal_p53 <- bumpHunterBalanced(beta_quan, balanced = F, even_counts = F)
 
 # beta funnorm
-beta_funnorm_bal <- bumpHunterBalanced(beta_funnorm, balanced = T, even_counts = F)
-beta_funnorm_bal_counts <- bumpHunterBalanced(beta_funnorm, balanced = T, even_counts = T)
-beta_funnorm_unbal <- bumpHunterBalanced(beta_funnorm, balanced = F, even_counts = F)
+beta_funnorm_bal_p53 <- bumpHunterBalanced(beta_funnorm, balanced = T, even_counts = F)
+beta_funnorm_bal_counts_p53 <- bumpHunterBalanced(beta_funnorm, balanced = T, even_counts = T)
+beta_funnorm_unbal_p53 <- bumpHunterBalanced(beta_funnorm, balanced = F, even_counts = F)
 
-# remove unneeded objects
-rm(beta_raw, beta_swan, beta_quan, beta_funnorm, cg_locations)
+# remove larger objects
+rm(beta_raw, beta_swan, beta_quan, beta_funnorm, clin)
 
 # save data
-save.image(paste0(idat_data, '/imputed_bh_lfs.RData'))
+save.image(paste0(idat_data, '/beta_p53_bh.RData'))
 

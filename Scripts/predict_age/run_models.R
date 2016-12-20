@@ -1,6 +1,9 @@
-##################################################################3
-# this script will source model_functions.R and run models
-##################################################################
+####### This script will predict age of onset and save results
+# this is 7th step in pipeline
+
+##########
+# initialize libraries
+##########
 library(caret)
 library(glmnet)
 library(randomForest)
@@ -12,7 +15,9 @@ library(nnet)
 
 registerDoParallel(1)
 
+##########
 # Initialize folders
+##########
 home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
 scripts_folder <- paste0(project_folder, '/Scripts')
@@ -22,35 +27,33 @@ idat_data <- paste0(methyl_data, '/raw_files')
 clin_data <- paste0(data_folder, '/clin_data')
 bumphunter_data <- paste0(data_folder, '/bumphunter_data')
 model_data <- paste0(data_folder, '/model_data')
+results_folder <- paste0(project_folder, '/Results')
 
-
+##########
 # source model_functions to get functions to run models 
+##########
 source(paste0(scripts_folder, '/predict_age/model_functions.R'))
 
+##########
 # set parameters 
+##########
 data_thresholds <- c(48, 60, 72, 84)
 p53 <- c('Mut', 'WT')
 
-###########################################
-# Read in data- gene_knn, gene_lsa, 
-# probe_knn, probe_lsa, and bh_features
-###########################################
+##########
+# Read in cases and bumphunter features
+##########
+load(paste0(model_data, '/model_data_cases.RData'))
+load(paste0(model_data, '/bh_features.RData'))
 
-load(paste0(idat_data, '/imputed_idat_betas_final.RData'))
-load(paste0(model_data, '/bh_features_idat.RData'))
+##########
+# Read in controls (if needed)
+##########
+# load(paste0(model_data, '/model_data_controls.RData'))
 
-# load(paste0(model_data, '/model_data.RData'))
-# load(paste0(model_data, '/bh_features.RData'))
-
-# Data types: 
-# 1) full_data : gene_knn, gene_lsa, probe_knn, probe_lsa 
-# 2) bh features_balanced: bh_probe_knn_cancer_features, bh_probe_lsa_cancer_features,
-#    bh_probe_knn_global_features, bh_probe_lsa_global_features
-# 3) bh features_unbalanced: bh_probe_knn_cancer_unbal_features, bh_probe_lsa_cancer_unbal_features,
-#    bh_probe_knn_global_unbal_features, bh_probe_lsa_global_unbal_features
-# 4) random with each one
-
+##########
 # function to run models - subset, get residuals, get categorical, predict with regression and fac. 
+##########
 runModels <- function(data,
                       random = F,
                       bump_hunter = F,
@@ -126,380 +129,376 @@ runModels <- function(data,
   
 }
 
-##################################
-# beta_raw_
-##################################
-# cancer balanced
-beta_raw_cancer_bal_models <- runModels(beta_raw, random = F, bump_hunter = T, 
-                              bump_hunter_data = beta_raw_cancer_bal_features)
+##########
+# get stats of data used in model
+##########
+# get data info from 
+data_stats <- dataStats(beta_raw)
 
-beta_raw_cancer_bal_table <- extractResults(beta_raw_cancer_bal_models, data_name = 'beta_raw_cancer_bal')
+saveRDS(data_stats, file = paste0(results_folder, '/model_data_stats.rda'))
 
-#global balanced
-beta_raw_global_bal_models <- runModels(beta_raw, random = F, bump_hunter = T, 
-                                        bump_hunter_data = beta_raw_global_bal_features)
+# remove object
+rm(data_stats)
 
-beta_raw_global_bal_table <- extractResults(beta_raw_global_bal_models, data_name = 'beta_raw_global_bal')
+##########
+# beta_raw
+##########
+# cancer balanced 
+beta_raw_bal_cancer_models <- runModels(beta_raw, random = F, bump_hunter = T, 
+                                        bump_hunter_data = beta_raw_bal_cancer_features)
 
-# cancer unbalanced
-beta_raw_cancer_unbal_models <- runModels(beta_raw, random = F, bump_hunter = T, 
-                                        bump_hunter_data = beta_raw_cancer_unbal_features)
-
-beta_raw_cancer_unbal_table <- extractResults(beta_raw_cancer_unbal_models, data_name = 'beta_raw_cancer_unbal')
-
-#global unbalanced
-beta_raw_global_unbal_models <- runModels(beta_raw, random = F, bump_hunter = T, 
-                                        bump_hunter_data = beta_raw_global_unbal_features)
-
-beta_raw_global_unbal_table <- extractResults(beta_raw_global_unbal_models, data_name = 'beta_raw_global_unbal')
+beta_raw_bal_cancer_table <- extractResults(beta_raw_bal_cancer_models, data_name = 'beta_raw_bal_cancer')
 
 
-##################################
-# beta_swan_
-##################################
-# cancer balanced
-beta_swan_cancer_bal_models <- runModels(beta_swan, random = F, bump_hunter = T, 
-                                        bump_hunter_data = beta_swan_cancer_bal_features)
+# cancer balanced counts
+beta_raw_bal_counts_cancer_models <- runModels(beta_raw, random = F, bump_hunter = T, 
+                                        bump_hunter_data = beta_raw_bal_counts_cancer_features)
 
-beta_swan_cancer_bal_table <- extractResults(beta_swan_cancer_bal_models, data_name = 'beta_swan_cancer_bal')
+beta_raw_bal_counts_cancer_table <- extractResults(beta_raw_bal_counts_cancer_models, data_name = 'beta_raw_bal_counts_cancer')
 
-#global balanced
-beta_swan_global_bal_models <- runModels(beta_swan, random = F, bump_hunter = T, 
-                                        bump_hunter_data = beta_swan_global_bal_features)
+# cancer unbalanced 
+beta_raw_unbal_cancer_models <- runModels(beta_raw, random = F, bump_hunter = T, 
+                                               bump_hunter_data = beta_raw_unbal_cancer_features)
 
-beta_swan_global_bal_table <- extractResults(beta_swan_global_bal_models, data_name = 'beta_swan_global_bal')
+beta_raw_unbal_cancer_table <- extractResults(beta_raw_unbal_cancer_models, data_name = 'beta_raw_unbal_cancer')
 
-# cancer unbalanced
-beta_swan_cancer_unbal_models <- runModels(beta_swan, random = F, bump_hunter = T, 
-                                          bump_hunter_data = beta_swan_cancer_unbal_features)
+# p53 balanced 
+beta_raw_bal_p53_models <- runModels(beta_raw, random = F, bump_hunter = T, 
+                                        bump_hunter_data = beta_raw_bal_p53_features)
 
-beta_swan_cancer_unbal_table <- extractResults(beta_swan_cancer_unbal_models, data_name = 'beta_swan_cancer_unbal')
-
-#global unbalanced
-beta_swan_global_unbal_models <- runModels(beta_swan, random = F, bump_hunter = T, 
-                                          bump_hunter_data = beta_swan_global_unbal_features)
-
-beta_swan_global_unbal_table <- extractResults(beta_swan_global_unbal_models, data_name = 'beta_swan_global_unbal')
+beta_raw_bal_p53_table <- extractResults(beta_raw_bal_p53_models, data_name = 'beta_raw_bal_p53')
 
 
-##################################
-# beta_quan_
-##################################
-# cancer balanced
-beta_quan_cancer_bal_models <- runModels(beta_quan, random = F, bump_hunter = T, 
-                                        bump_hunter_data = beta_quan_cancer_bal_features)
+# p53 balanced counts
+beta_raw_bal_counts_p53_models <- runModels(beta_raw, random = F, bump_hunter = T, 
+                                               bump_hunter_data = beta_raw_bal_counts_p53_features)
 
-beta_quan_cancer_bal_table <- extractResults(beta_quan_cancer_bal_models, data_name = 'beta_quan_cancer_bal')
+beta_raw_bal_counts_p53_table <- extractResults(beta_raw_bal_counts_p53_models, data_name = 'beta_raw_bal_counts_p53')
 
-#global balanced
-beta_quan_global_bal_models <- runModels(beta_quan, random = F, bump_hunter = T, 
-                                        bump_hunter_data = beta_quan_global_bal_features)
+# p53 unbalanced 
+beta_raw_unbal_p53_models <- runModels(beta_raw, random = F, bump_hunter = T, 
+                                          bump_hunter_data = beta_raw_unbal_p53_features)
 
-beta_quan_global_bal_table <- extractResults(beta_quan_global_bal_models, data_name = 'beta_quan_global_bal')
+beta_raw_unbal_p53_table <- extractResults(beta_raw_unbal_p53_models, data_name = 'beta_raw_unbal_p53')
 
-# cancer unbalanced
-beta_quan_cancer_unbal_models <- runModels(beta_quan, random = F, bump_hunter = T, 
-                                          bump_hunter_data = beta_quan_cancer_unbal_features)
+# load('/home/benbrew/Desktop/temp_raw_model_results.RData')
 
-beta_quan_cancer_unbal_table <- extractResults(beta_quan_cancer_unbal_models, data_name = 'beta_quan_cancer_unbal')
-
-#global unbalanced
-beta_quan_global_unbal_models <- runModels(beta_quan, random = F, bump_hunter = T, 
-                                          bump_hunter_data = beta_quan_global_unbal_features)
-
-beta_quan_global_unbal_table <- extractResults(beta_quan_global_unbal_models, data_name = 'beta_quan_global_unbal')
+##########
+# rbind results
+##########
+beta_raw_results <- as.data.frame(rbind(beta_raw_bal_cancer_table, beta_raw_bal_counts_cancer_table, beta_raw_unbal_cancer_table,
+                                    beta_raw_bal_p53_table, beta_raw_bal_counts_p53_table, beta_raw_unbal_p53_table))
 
 
-##################################
-# beta_funnorm_
-##################################
-# cancer balanced
-beta_funnorm_cancer_bal_models <- runModels(beta_funnorm, random = F, bump_hunter = T, 
-                                        bump_hunter_data = beta_funnorm_cancer_bal_features)
+# get rows and columns variable 
+beta_raw_results <- getDims(beta_raw_results)
 
-beta_funnorm_cancer_bal_table <- extractResults(beta_funnorm_cancer_bal_models, data_name = 'beta_funnorm_cancer_bal')
+##########
+# save results table and models for beta raw
+##########
+# first save results table or beta_raw
+saveRDS(beta_raw_results, file = paste0(results_folder, '/beta_raw_model_results.rda'))
 
-#global balanced
-beta_funnorm_global_bal_models <- runModels(beta_funnorm, random = F, bump_hunter = T, 
-                                        bump_hunter_data = beta_funnorm_global_bal_features)
+# save models for beta_raw cancer
+saveRDS(beta_raw_unbal_cancer_models, file = paste0(results_folder, '/beta_raw_unbal_cancer_models.rda'))
+saveRDS(beta_raw_bal_cancer_models, file = paste0(results_folder, '/beta_raw_bal_cancer_models.rda'))
+saveRDS(beta_raw_bal_counts_cancer_models, file = paste0(results_folder, '/beta_raw_bal_counts_cancer_models.rda'))
 
-beta_funnorm_global_bal_table <- extractResults(beta_funnorm_global_bal_models, data_name = 'beta_funnorm_global_bal')
+# save models for beta_raw p53
+saveRDS(beta_raw_unbal_p53_models, file = paste0(results_folder, '/beta_raw_unbal_p53_models.rda'))
+saveRDS(beta_raw_bal_p53_models, file = paste0(results_folder, '/beta_raw_bal_p53_models.rda'))
+saveRDS(beta_raw_bal_counts_p53_models, file = paste0(results_folder, '/beta_raw_bal_counts_p53_models.rda'))
 
-# cancer unbalanced
-beta_funnorm_cancer_unbal_models <- runModels(beta_funnorm, random = F, bump_hunter = T, 
-                                          bump_hunter_data = beta_funnorm_cancer_unbal_features)
+##########
+# remove unneeded objects
+##########
+rm(beta_raw_bal_cancer_features, beta_raw_bal_counts_cancer_features, beta_raw_unbal_cancer_features,
+   beta_raw_bal_p53_features, beta_raw_bal_counts_p53_features, beta_raw_unbal_p53_features,
+   beta_raw_bal_cancer_models, beta_raw_bal_counts_cancer_models, beta_raw_unbal_cancer_models,
+   beta_raw_bal_p53_models, beta_raw_bal_counts_p53_models, beta_raw_unbal_p53_models,
+   beta_raw_bal_cancer_table, beta_raw_bal_counts_cancer_table, beta_raw_unbal_cancer_table,
+   beta_raw_bal_p53_table, beta_raw_bal_counts_p53_table, beta_raw_unbal_p53_table, beta_raw_results)
 
-beta_funnorm_cancer_unbal_table <- extractResults(beta_funnorm_cancer_unbal_models, data_name = 'beta_funnorm_cancer_unbal')
+######################################################################################################################
 
-#global unbalanced
-beta_funnorm_global_unbal_models <- runModels(beta_funnorm, random = F, bump_hunter = T, 
-                                          bump_hunter_data = beta_funnorm_global_unbal_features)
+##########
+# beta_swan
+##########
+# cancer balanced 
+beta_swan_bal_cancer_models <- runModels(beta_swan, random = F, bump_hunter = T, 
+                                        bump_hunter_data = beta_swan_bal_cancer_features)
 
-beta_funnorm_global_unbal_table <- extractResults(beta_funnorm_global_unbal_models, data_name = 'beta_funnorm_global_unbal')
+beta_swan_bal_cancer_table <- extractResults(beta_swan_bal_cancer_models, data_name = 'beta_swan_bal_cancer')
 
-#####################################
+
+# cancer balanced counts
+beta_swan_bal_counts_cancer_models <- runModels(beta_swan, random = F, bump_hunter = T, 
+                                               bump_hunter_data = beta_swan_bal_counts_cancer_features)
+
+beta_swan_bal_counts_cancer_table <- extractResults(beta_swan_bal_counts_cancer_models, data_name = 'beta_swan_bal_counts_cancer')
+
+# cancer unbalanced 
+beta_swan_unbal_cancer_models <- runModels(beta_swan, random = F, bump_hunter = T, 
+                                          bump_hunter_data = beta_swan_unbal_cancer_features)
+
+beta_swan_unbal_cancer_table <- extractResults(beta_swan_unbal_cancer_models, data_name = 'beta_swan_unbal_cancer')
+
+# p53 balanced 
+beta_swan_bal_p53_models <- runModels(beta_swan, random = F, bump_hunter = T, 
+                                     bump_hunter_data = beta_swan_bal_p53_features)
+
+beta_swan_bal_p53_table <- extractResults(beta_swan_bal_p53_models, data_name = 'beta_swan_bal_p53')
+
+
+# p53 balanced counts
+beta_swan_bal_counts_p53_models <- runModels(beta_swan, random = F, bump_hunter = T, 
+                                            bump_hunter_data = beta_swan_bal_counts_p53_features)
+
+beta_swan_bal_counts_p53_table <- extractResults(beta_swan_bal_counts_p53_models, data_name = 'beta_swan_bal_counts_p53')
+
+# p53 unbalanced 
+beta_swan_unbal_p53_models <- runModels(beta_swan, random = F, bump_hunter = T, 
+                                       bump_hunter_data = beta_swan_unbal_p53_features)
+
+beta_swan_unbal_p53_table <- extractResults(beta_swan_unbal_p53_models, data_name = 'beta_swan_unbal_p53')
+
+##########
+# rbind results
+##########
+beta_swan_results <- as.data.frame(rbind(beta_swan_bal_cancer_table, beta_swan_bal_counts_cancer_table, beta_swan_unbal_cancer_table,
+                                        beta_swan_bal_p53_table, beta_swan_bal_counts_p53_table, beta_swan_unbal_p53_table))
+
+
+# get rows and columns variable 
+beta_swan_results <- getDims(beta_swan_results)
+
+##########
+# save results table and models for beta swan
+##########
+# first save results table or beta_swan
+saveRDS(beta_swan_results, file = paste0(results_folder, '/beta_swan_model_results.rda'))
+
+# save models for beta_swan cancer
+saveRDS(beta_swan_unbal_cancer_models, file = paste0(results_folder, '/beta_swan_unbal_cancer_models.rda'))
+saveRDS(beta_swan_bal_cancer_models, file = paste0(results_folder, '/beta_swan_bal_cancer_models.rda'))
+saveRDS(beta_swan_bal_counts_cancer_models, file = paste0(results_folder, '/beta_swan_bal_counts_cancer_models.rda'))
+
+# save models for beta_swan p53
+saveRDS(beta_swan_unbal_p53_models, file = paste0(results_folder, '/beta_swan_unbal_p53_models.rda'))
+saveRDS(beta_swan_bal_p53_models, file = paste0(results_folder, '/beta_swan_bal_p53_models.rda'))
+saveRDS(beta_swan_bal_counts_p53_models, file = paste0(results_folder, '/beta_swan_bal_counts_p53_models.rda'))
+
+##########
+# remove unneeded objects
+##########
+rm(beta_swan_bal_cancer_features, beta_swan_bal_counts_cancer_features, beta_swan_unbal_cancer_features,
+   beta_swan_bal_p53_features, beta_swan_bal_counts_p53_features, beta_swan_unbal_p53_features,
+   beta_swan_bal_cancer_models, beta_swan_bal_counts_cancer_models, beta_swan_unbal_cancer_models,
+   beta_swan_bal_p53_models, beta_swan_bal_counts_p53_models, beta_swan_unbal_p53_models,
+   beta_swan_bal_cancer_table, beta_swan_bal_counts_cancer_table, beta_swan_unbal_cancer_table,
+   beta_swan_bal_p53_table, beta_swan_bal_counts_p53_table, beta_swan_unbal_p53_table, beta_swan_results)
+
+
+######################################################################################################################
+
+##########
+# beta_quan
+##########
+# cancer balanced 
+beta_quan_bal_cancer_models <- runModels(beta_quan, random = F, bump_hunter = T, 
+                                        bump_hunter_data = beta_quan_bal_cancer_features)
+
+beta_quan_bal_cancer_table <- extractResults(beta_quan_bal_cancer_models, data_name = 'beta_quan_bal_cancer')
+
+
+# cancer balanced counts
+beta_quan_bal_counts_cancer_models <- runModels(beta_quan, random = F, bump_hunter = T, 
+                                               bump_hunter_data = beta_quan_bal_counts_cancer_features)
+
+beta_quan_bal_counts_cancer_table <- extractResults(beta_quan_bal_counts_cancer_models, data_name = 'beta_quan_bal_counts_cancer')
+
+# cancer unbalanced 
+beta_quan_unbal_cancer_models <- runModels(beta_quan, random = F, bump_hunter = T, 
+                                          bump_hunter_data = beta_quan_unbal_cancer_features)
+
+beta_quan_unbal_cancer_table <- extractResults(beta_quan_unbal_cancer_models, data_name = 'beta_quan_unbal_cancer')
+
+# p53 balanced 
+beta_quan_bal_p53_models <- runModels(beta_quan, random = F, bump_hunter = T, 
+                                     bump_hunter_data = beta_quan_bal_p53_features)
+
+beta_quan_bal_p53_table <- extractResults(beta_quan_bal_p53_models, data_name = 'beta_quan_bal_p53')
+
+
+# p53 balanced counts
+beta_quan_bal_counts_p53_models <- runModels(beta_quan, random = F, bump_hunter = T, 
+                                            bump_hunter_data = beta_quan_bal_counts_p53_features)
+
+beta_quan_bal_counts_p53_table <- extractResults(beta_quan_bal_counts_p53_models, data_name = 'beta_quan_bal_counts_p53')
+
+# p53 unbalanced 
+beta_quan_unbal_p53_models <- runModels(beta_quan, random = F, bump_hunter = T, 
+                                       bump_hunter_data = beta_quan_unbal_p53_features)
+
+beta_quan_unbal_p53_table <- extractResults(beta_quan_unbal_p53_models, data_name = 'beta_quan_unbal_p53')
+
+##########
+# rbind results
+##########
+beta_quan_results <- as.data.frame(rbind(beta_quan_bal_cancer_table, beta_quan_bal_counts_cancer_table, beta_quan_unbal_cancer_table,
+                                        beta_quan_bal_p53_table, beta_quan_bal_counts_p53_table, beta_quan_unbal_p53_table))
+
+# get rows and columns variable 
+beta_quan_results <- getDims(beta_quan_results)
+
+##########
+# save results table and models for beta quan
+##########
+# first save results table or beta_quan
+saveRDS(beta_quan_results, file = paste0(results_folder, '/beta_quan_model_results.rda'))
+
+# save models for beta_quan cancer
+saveRDS(beta_quan_unbal_cancer_models, file = paste0(results_folder, '/beta_quan_unbal_cancer_models.rda'))
+saveRDS(beta_quan_bal_cancer_models, file = paste0(results_folder, '/beta_quan_bal_cancer_models.rda'))
+saveRDS(beta_quan_bal_counts_cancer_models, file = paste0(results_folder, '/beta_quan_bal_counts_cancer_models.rda'))
+
+# save models for beta_quan p53
+saveRDS(beta_quan_unbal_p53_models, file = paste0(results_folder, '/beta_quan_unbal_p53_models.rda'))
+saveRDS(beta_quan_bal_p53_models, file = paste0(results_folder, '/beta_quan_bal_p53_models.rda'))
+saveRDS(beta_quan_bal_counts_p53_models, file = paste0(results_folder, '/beta_quan_bal_counts_p53_models.rda'))
+
+##########
+# remove unneeded objects
+##########
+rm(beta_quan_bal_cancer_features, beta_quan_bal_counts_cancer_features, beta_quan_unbal_cancer_features,
+   beta_quan_bal_p53_features, beta_quan_bal_counts_p53_features, beta_quan_unbal_p53_features,
+   beta_quan_bal_cancer_models, beta_quan_bal_counts_cancer_models, beta_quan_unbal_cancer_models,
+   beta_quan_bal_p53_models, beta_quan_bal_counts_p53_models, beta_quan_unbal_p53_models,
+   beta_quan_bal_cancer_table, beta_quan_bal_counts_cancer_table, beta_quan_unbal_cancer_table,
+   beta_quan_bal_p53_table, beta_quan_bal_counts_p53_table, beta_quan_unbal_p53_table, beta_quan_results)
+
+#########################################################################################################################
+
+##########
+# beta_funnorm
+##########
+# cancer balanced 
+beta_funnorm_bal_cancer_models <- runModels(beta_funnorm, random = F, bump_hunter = T, 
+                                        bump_hunter_data = beta_funnorm_bal_cancer_features)
+
+beta_funnorm_bal_cancer_table <- extractResults(beta_funnorm_bal_cancer_models, data_name = 'beta_funnorm_bal_cancer')
+
+
+# cancer balanced counts
+beta_funnorm_bal_counts_cancer_models <- runModels(beta_funnorm, random = F, bump_hunter = T, 
+                                               bump_hunter_data = beta_funnorm_bal_counts_cancer_features)
+
+beta_funnorm_bal_counts_cancer_table <- extractResults(beta_funnorm_bal_counts_cancer_models, data_name = 'beta_funnorm_bal_counts_cancer')
+
+# cancer unbalanced 
+beta_funnorm_unbal_cancer_models <- runModels(beta_funnorm, random = F, bump_hunter = T, 
+                                          bump_hunter_data = beta_funnorm_unbal_cancer_features)
+
+beta_funnorm_unbal_cancer_table <- extractResults(beta_funnorm_unbal_cancer_models, data_name = 'beta_funnorm_unbal_cancer')
+
+# p53 balanced 
+beta_funnorm_bal_p53_models <- runModels(beta_funnorm, random = F, bump_hunter = T, 
+                                     bump_hunter_data = beta_funnorm_bal_p53_features)
+
+beta_funnorm_bal_p53_table <- extractResults(beta_funnorm_bal_p53_models, data_name = 'beta_funnorm_bal_p53')
+
+
+# p53 balanced counts
+beta_funnorm_bal_counts_p53_models <- runModels(beta_funnorm, random = F, bump_hunter = T, 
+                                            bump_hunter_data = beta_funnorm_bal_counts_p53_features)
+
+beta_funnorm_bal_counts_p53_table <- extractResults(beta_funnorm_bal_counts_p53_models, data_name = 'beta_funnorm_bal_counts_p53')
+
+# p53 unbalanced 
+beta_funnorm_unbal_p53_models <- runModels(beta_funnorm, random = F, bump_hunter = T, 
+                                       bump_hunter_data = beta_funnorm_unbal_p53_features)
+
+beta_funnorm_unbal_p53_table <- extractResults(beta_funnorm_unbal_p53_models, data_name = 'beta_funnorm_unbal_p53')
+
+##########
+# rbind results
+##########
+beta_funnorm_results <- as.data.frame(rbind(beta_funnorm_bal_cancer_table, beta_funnorm_bal_counts_cancer_table, beta_funnorm_unbal_cancer_table,
+                                        beta_funnorm_bal_p53_table, beta_funnorm_bal_counts_p53_table, beta_funnorm_unbal_p53_table))
+
+
+# get rows and columns variable 
+beta_funnorm_results <- getDims(beta_funnorm_results)
+
+##########
+# save results table and models for beta funnorm
+##########
+# first save results table or beta_funnorm
+saveRDS(beta_funnorm_results, file = paste0(results_folder, '/beta_funnorm_model_results.rda'))
+
+# save models for beta_funnorm cancer
+saveRDS(beta_funnorm_unbal_cancer_models, file = paste0(results_folder, '/beta_funnorm_unbal_cancer_models.rda'))
+saveRDS(beta_funnorm_bal_cancer_models, file = paste0(results_folder, '/beta_funnorm_bal_cancer_models.rda'))
+saveRDS(beta_funnorm_bal_counts_cancer_models, file = paste0(results_folder, '/beta_funnorm_bal_counts_cancer_models.rda'))
+
+# save models for beta_funnorm p53
+saveRDS(beta_funnorm_unbal_p53_models, file = paste0(results_folder, '/beta_funnorm_unbal_p53_models.rda'))
+saveRDS(beta_funnorm_bal_p53_models, file = paste0(results_folder, '/beta_funnorm_bal_p53_models.rda'))
+saveRDS(beta_funnorm_bal_counts_p53_models, file = paste0(results_folder, '/beta_funnorm_bal_counts_p53_models.rda'))
+
+##########
+# remove unneeded objects
+##########
+rm(beta_funnorm_bal_cancer_features, beta_funnorm_bal_counts_cancer_features, beta_funnorm_unbal_cancer_features,
+   beta_funnorm_bal_p53_features, beta_funnorm_bal_counts_p53_features, beta_funnorm_unbal_p53_features,
+   beta_funnorm_bal_cancer_models, beta_funnorm_bal_counts_cancer_models, beta_funnorm_unbal_cancer_models,
+   beta_funnorm_bal_p53_models, beta_funnorm_bal_counts_p53_models, beta_funnorm_unbal_p53_models,
+   beta_funnorm_bal_cancer_table, beta_funnorm_bal_counts_cancer_table, beta_funnorm_unbal_cancer_table,
+   beta_funnorm_bal_p53_table, beta_funnorm_bal_counts_p53_table, beta_funnorm_unbal_p53_table, beta_funnorm_results)
+
+######################################################################################################################
+
+##########
 # Now run each beta with random features
-####################################
-beta_raw_rand <- runModels(beta_raw, random = T, bump_hunter = F)
-beta_raw_rand_table <- extractResults(beta_raw_rand, data_name = 'beta_raw_rand')
+##########
+beta_raw_rand_models <- runModels(beta_raw, random = T, bump_hunter = F)
+beta_raw_rand_table <- extractResults(beta_raw_rand_models, data_name = 'beta_raw_rand')
 
-beta_swan_rand <- runModels(beta_swan, random = T, bump_hunter = F)
-beta_swan_rand_table <- extractResults(beta_swan_rand, data_name = 'beta_swan_rand')
+beta_swan_rand_models <- runModels(beta_swan, random = T, bump_hunter = F)
+beta_swan_rand_table <- extractResults(beta_swan_rand_models, data_name = 'beta_swan_rand')
 
-beta_quan_rand <- runModels(beta_quan, random = T, bump_hunter = F)
-beta_quan_rand_table <- extractResults(beta_quan_rand, data_name = 'beta_quan_rand')
+beta_quan_rand_models <- runModels(beta_quan, random = T, bump_hunter = F)
+beta_quan_rand_table <- extractResults(beta_quan_rand_models, data_name = 'beta_quan_rand')
 
-beta_funnorm_rand <- runModels(beta_quan, random = T, bump_hunter = F)
-beta_funnorm_rand_table <- extractResults(beta_funnorm_rand, data_name = 'beta_funnorm_rand')
+beta_funnorm_rand_models <- runModels(beta_quan, random = T, bump_hunter = F)
+beta_funnorm_rand_table <- extractResults(beta_funnorm_rand_models, data_name = 'beta_funnorm_rand')
 
-#######################################
-# rbind final results
-#######################################
-beta_idat_results <- rbind(beta_raw_cancer_bal_table, beta_raw_cancer_unbal_table, beta_raw_global_bal_table, beta_raw_global_unbal_table,
-                           beta_swan_cancer_bal_table, beta_swan_cancer_unbal_table, beta_swan_global_bal_table, beta_swan_global_unbal_table,
-                           beta_quan_cancer_bal_table, beta_quan_cancer_unbal_table, beta_quan_global_bal_table, beta_quan_global_unbal_table,
-                           beta_funnorm_cancer_bal_table, beta_funnorm_cancer_unbal_table, beta_funnorm_global_bal_table, beta_funnorm_global_unbal_table,
-                           beta_raw_rand_table, beta_swan_rand_table, beta_quan_rand_table, beta_funnorm_rand_table)
-
-# 
-# rm(beta_raw_cancer_bal_features, beta_raw_cancer_bal_models, beta_raw_cancer_unbal_features, beta_raw_cancer_unbal_models,
-#    beta_raw_global_bal_features, beta_raw_global_bal_models, beta_raw_global_unbal_features, beta_raw_global_unbal_models,
-#    beta_swan_cancer_bal_features, beta_swan_cancer_bal_models, beta_swan_cancer_unbal_features, beta_swan_cancer_unbal_models,
-#    beta_swan_global_bal_features, beta_swan_global_bal_models, beta_swan_global_unbal_features, beta_swan_global_unbal_models,
-#    beta_quan_cancer_bal_features, beta_quan_cancer_bal_models, beta_quan_cancer_unbal_features, beta_quan_cancer_unbal_models,
-#    beta_quan_global_bal_features, beta_quan_global_bal_models, beta_quan_global_unbal_features, beta_quan_global_unbal_models,
-#    beta_funnorm_cancer_bal_features, beta_funnorm_cancer_bal_models, beta_funnorm_cancer_unbal_features, beta_funnorm_cancer_unbal_models,
-#    beta_funnorm_global_bal_features, beta_funnorm_global_bal_models, beta_funnorm_global_unbal_features, beta_funnorm_global_unbal_models,
-#    beta_raw, beta_quan, beta_swan, beta_funnorm, beta_funnorm_rand, beta_raw_rand, beta_quan_rand, beta_swan_rand)
-
- # rm(beta_raw, beta_funnorm, beta_swan, beta_quan)
-save.image(paste0(model_data, '/idat_beta_table_results.RData'))
-# load(paste0(model_data, '/idat_beta_table_results.RData'))
+##########
+# rbind results
+##########
+beta_rand_results <- as.data.frame(rbind(beta_raw_rand_table, 
+                                         beta_swan_rand_table, 
+                                         beta_quan_rand_table,
+                                         beta_funnorm_rand_table))
 
 
-#####################################
-# # first run each gene data - gene_knn, gene_lsa, with fac
-# ###################################
-# 
-# ###### GENE KNN
-# gene_knn_models <- runModels(gene_knn, bump_hunter = F)
-# # get result table 
-# gene_knn_table <- extractResults(gene_knn_models, data_name = 'gene knn all features')
-# 
-# ###### GENE lsa
-# gene_lsa_models <- runModels(gene_lsa, bump_hunter = F)
-# # get result table 
-# gene_lsa_table <- extractResults(gene_lsa_models, data_name = 'gene lsa all features')
-# 
-# 
-# # # Save main model data (use of all features)
-# # save.image(paste0(model_data, '/model_results_all_features.RData'))
-# # load(paste0(model_data, '/model_results_all_features.RData'))
-# ###################################
-# # second run each probe data - probe_knn, probe_lsa, with fac
-# ###################################
-# 
-# ###### probe KNN
-# probe_knn_models <- runModels(probe_knn, bump_hunter = F)
-# # get result table 
-# probe_knn_table <- extractResults(probe_knn_models, data_name = 'probe knn all features')
-# 
-# ###### probe lsa
-# probe_lsa_models <- runModels(probe_lsa, bump_hunter = F)
-# # get result table 
-# probe_lsa_table <- extractResults(probe_lsa_models, data_name = 'probe lsa all features')
-# 
-# ###################################
-# # Third, run probe_knn and probe_lsa with all different bumphunter features
-# ###################################
-# 
-# ###### probe knn with global features
-# probe_knn_global_models <- runModels(probe_knn, random = F, bump_hunter = T, 
-#                                      bump_hunter_data = bh_probe_knn_global_features)
-# # get result table 
-# probe_knn_global_table <- extractResults(probe_knn_global_models, data_name = 'probe knn global')
-# 
-# ###### probe knn with cancer features
-# probe_knn_cancer_models <- runModels(probe_knn, bump_hunter = T, 
-#                                      bump_hunter_data = bh_probe_knn_cancer_features)
-# # get result table 
-# probe_knn_cancer_table <- extractResults(probe_knn_cancer_models, data_name = 'probe knn cancer')
-# 
-# ###### probe lsa with global features
-# probe_lsa_global_models <- runModels(probe_lsa, bump_hunter = T, 
-#                                      bump_hunter_data = bh_probe_lsa_global_features)
-# # get result table 
-# probe_lsa_global_table <- extractResults(probe_lsa_global_models, data_name = 'probe lsa global')
-# 
-# ###### probe lsa with cancer features
-# probe_lsa_cancer_models <- runModels(probe_lsa, bump_hunter = T, 
-#                                      bump_hunter_data = bh_probe_lsa_cancer_features)
-# # get result table 
-# probe_lsa_cancer_table <- extractResults(probe_lsa_cancer_models, data_name = 'probe lsa cancer')
-# 
-# ###### probe knn union 
-# probe_knn_union_models <- runModels(probe_knn, random = F, bump_hunter = T, 
-#                                     bump_hunter_data = bh_union_bal)
-# # get result table 
-# probe_knn_union_table <- extractResults(probe_knn_union_models, data_name = 'probe knn union')
-# 
-# ###### probe knn intersection
-# probe_knn_int_models <- runModels(probe_knn, random = F, bump_hunter = T, 
-#                                     bump_hunter_data = bh_intersection_bal)
-# # get result table 
-# probe_knn_int_table <- extractResults(probe_knn_int_models, data_name = 'probe knn intersection')
-# 
-# ###### probe lsa union 
-# probe_lsa_union_models <- runModels(probe_lsa, random = F, bump_hunter = T, 
-#                                     bump_hunter_data = bh_union_bal)
-# # get result table 
-# probe_lsa_union_table <- extractResults(probe_lsa_union_models, data_name = 'probe lsa union')
-# 
-# ###### probe lsa intersection
-# probe_lsa_int_models <- runModels(probe_lsa, random = F, bump_hunter = T, 
-#                                   bump_hunter_data = bh_intersection_bal)
-# # get result table 
-# probe_lsa_int_table <- extractResults(probe_lsa_int_models, data_name = 'probe lsa intersection')
-# 
-# ###################################
-# # Fourth, run probe_knn and probe_lsa with all different bumphunter features that are unbalanced 
-# ###################################
-# 
-# ###### probe knn with global features
-# probe_knn_global_unbal_models <- runModels(probe_knn, random = F, bump_hunter = T, 
-#                                      bump_hunter_data = bh_probe_knn_global_unbal_features)
-# # get result table 
-# probe_knn_global_unbal_table <- extractResults(probe_knn_global_unbal_models, data_name = 'probe knn global unbalanced')
-# 
-# ###### probe knn with cancer features
-# probe_knn_cancer_unbal_models <- runModels(probe_knn, bump_hunter = T, 
-#                                      bump_hunter_data = bh_probe_knn_cancer_unbal_features)
-# # get result table 
-# probe_knn_cancer_unbal_table <- extractResults(probe_knn_cancer_unbal_models, data_name = 'probe knn cancer unbalanced')
-# 
-# ###### probe lsa with global features
-# probe_lsa_global_unbal_models <- runModels(probe_lsa, bump_hunter = T, 
-#                                      bump_hunter_data = bh_probe_lsa_global_unbal_features)
-# # get result table 
-# probe_lsa_global_unbal_table <- extractResults(probe_lsa_global_unbal_models, data_name = 'probe lsa global unbalanced')
-# 
-# ###### probe lsa with cancer features
-# probe_lsa_cancer_unbal_models <- runModels(probe_lsa, bump_hunter = T, 
-#                                      bump_hunter_data = bh_probe_lsa_cancer_unbal_features)
-# # get result table 
-# probe_lsa_cancer_unbal_table <- extractResults(probe_lsa_cancer_unbal_models, data_name = 'probe lsa cancer unbalanced')
-# 
-# ###### probe knn union 
-# probe_knn_union_unbal_models <- runModels(probe_knn, random = F, bump_hunter = T, 
-#                                     bump_hunter_data = bh_union_unbal)
-# # get result table 
-# probe_knn_union_unbal_table <- extractResults(probe_knn_union_unbal_models, data_name = 'probe knn union unbalanced')
-# 
-# ###### probe knn intersection
-# probe_knn_int_unbal_models <- runModels(probe_knn, random = F, bump_hunter = T,  
-#                                   bump_hunter_data = bh_intersection_unbal)
-# # get result table 
-# probe_knn_int_unbal_table <- extractResults(probe_knn_int_unbal_models, data_name = 'probe knn intersection unbalanced')
-# 
-# ###### probe lsa union 
-# probe_lsa_union_unbal_models <- runModels(probe_lsa, random = F, bump_hunter = T, 
-#                                     bump_hunter_data = bh_union_unbal)
-# # get result table 
-# probe_lsa_union_unbal_table <- extractResults(probe_lsa_union_unbal_models, data_name = 'probe lsa union unbalanced')
-# 
-# ###### probe lsa intersection
-# probe_lsa_int_unbal_models <- runModels(probe_lsa, random = F, bump_hunter = T, 
-#                                   bump_hunter_data = bh_intersection_unbal)
-# # get result table 
-# probe_lsa_int_unbal_table <- extractResults(probe_lsa_int_unbal_models, data_name = 'probe lsa intersection unbalanced')
-# 
-# 
-# ###################################
-# # Finally run each gene and probe data with random features
-# ###################################
-# 
-# ###### GENE KNN
-# gene_knn_rand_models <- runModels(gene_knn, random = T)
-# 
-# # get table
-# gene_knn_rand_table <- extractResults(gene_knn_rand_models, data_name = 'gene knn random')
-# 
-# ###### GENE lsa
-# gene_lsa_rand_models <- runModels(gene_lsa, random = T)
-# 
-# # get table
-# gene_lsa_rand_table <- extractResults(gene_lsa_rand_models, data_name = 'gene lsa random')
-# 
-# ###### probe KNN
-# probe_knn_rand_models <- runModels(probe_knn, random = T)
-# 
-# # get table
-# probe_knn_rand_table <- extractResults(probe_knn_rand_models, data_name = 'probe knn random')
-# 
-# ###### probe lsa
-# probe_lsa_rand_models <- runModels(probe_lsa, random = T)
-# 
-# # get table
-# probe_lsa_rand_table <- extractResults(probe_lsa_rand_models, data_name = 'probe lsa random')
-# 
-# ###################################
-# # Aggregate results tables 
-# ###################################
-# final_results <- rbind(probe_knn_global_table, 
-#                        probe_knn_cancer_table,
-#                        probe_lsa_global_table,
-#                        probe_lsa_cancer_table,
-#                        probe_knn_union_table, 
-#                        probe_knn_int_table,
-#                        probe_lsa_union_table,
-#                        probe_lsa_int_table, 
-#                        probe_knn_global_unbal_table,
-#                        probe_knn_cancer_unbal_table,
-#                        probe_lsa_global_unbal_table,
-#                        probe_lsa_cancer_unbal_table, 
-#                        probe_knn_union_unbal_table,
-#                        probe_knn_int_unbal_table,
-#                        probe_lsa_union_unbal_table,
-#                        probe_lsa_int_unbal_table,
-#                        gene_knn_rand_table, 
-#                        gene_lsa_rand_table, 
-#                        probe_knn_rand_table,
-#                        probe_lsa_rand_table)
-# 
-# 
-# # # Save main model data (use of all features)
-# # save.image(paste0(model_data, '/partial_bh_results.RData'))
-# # load(paste0(model_data, '/partial_bh_results.RData'))
-# # 
-# # # get plot objects
-# # plot_mut <- plotObject(gene_knn_models, residual = F, p53_mut = T)
-# # plot_all <- plotObject(gene_knn_models, residual = F, p53_mut = F)
-# # plot_resid_mut <- plotObject(gene_knn_models, residual = T, p53_mut = T)
-# # plot_resid_all <- plotObject(gene_knn_models, residual = T, p53_mut = F)
-# # 
-# # # get confusion matrix objects
-# # con_48_mut <- matObject(gene_knn_models, age = 48, residual = F, p53_mut = T)
-# # con_48_all <- matObject(gene_knn_models, age = 48, residual = F, p53_mut = F)
-# # con_60_mut <- matObject(gene_knn_models, age = 60, residual = F, p53_mut = T)
-# # con_60_all <- matObject(gene_knn_models, age = 60, residual = F, p53_mut = F)
-# # con_72_mut <- matObject(gene_knn_models, age = 72, residual = F, p53_mut = T)
-# # con_72_all <- matObject(gene_knn_models, age = 72, residual = F, p53_mut = F)
-# # con_84_mut <- matObject(gene_knn_models, age = 84, residual = F, p53_mut = T)
-# # con_84_all <- matObject(gene_knn_models, age = 84, residual = F, p53_mut = F)
-# # 
-# # con_48_mut <- matObject(gene_knn_models, age = 48, residual = F, p53_mut = T)
-# # con_48_all <- matObject(gene_knn_models, age = 48, residual = F, p53_mut = F)
-# # con_60_mut <- matObject(gene_knn_models, age = 60, residual = F, p53_mut = T)
-# # con_60_all <- matObject(gene_knn_models, age = 60, residual = F, p53_mut = F)
-# # con_72_mut <- matObject(gene_knn_models, age = 72, residual = F, p53_mut = T)
-# # con_72_all <- matObject(gene_knn_models, age = 72, residual = F, p53_mut = F)
-# # con_84_mut <- matObject(gene_knn_models, age = 84, residual = F, p53_mut = T)
-# # con_84_all <- matObject(gene_knn_models, age = 84, residual = F, p53_mut = F)
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
+# get rows and columns variable 
+beta_rand_results <- getDims(beta_rand_results)
+
+##########
+# save results table and models for beta raw
+##########
+# first save results table or beta_raw
+saveRDS(beta_rand_results, file = paste0(results_folder, '/beta_rand_model_results.rda'))
+
+# save models for beta_raw cancer
+saveRDS(beta_raw_rand_models, file = paste0(results_folder, '/beta_raw_rand_models.rda'))
+saveRDS(beta_swan_rand_models, file = paste0(results_folder, '/beta_swan_rand_models.rda'))
+saveRDS(beta_quan_rand_models, file = paste0(results_folder, '/beta_quan_rand_models.rda'))
+saveRDS(beta_funnorm_rand_models, file = paste0(results_folder, '/beta_funnorm_rand_models.rda'))
+
+##########
+# remove unneeded objects
+##########
+rm(beta_raw_rand_models, beta_swan_rand_models, beta_quan_rand_models, beta_funnorm_rand_models,
+   beta_raw_rand_table, beta_swan_rand_table, beta_quan_rand_table, beta_funnorm_rand_table, beta_rand_results)

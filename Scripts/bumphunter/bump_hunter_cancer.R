@@ -1,6 +1,5 @@
-#####################################################################################################
-# This script will load bumphunter full data and run different variations of bumhunter
-# using lfs patients and controls are those without cancer
+####### Script will run bumphunter on p53 Mut and use non cancer (family members) as controls
+# this is 5th (part A) step in pipeline
 
 ##########
 # initialize libraries
@@ -23,10 +22,12 @@ idat_data <- paste0(methyl_data, '/raw_files')
 bumphunter_data <- paste0(data_folder, '/bumphunter_data')
 
 #########
-# Load model data which contains all variations of methylation data
+# Load model data which contains all variations of methylation data and cg_locations csv
 #########
 load(paste0(model_data, '/model_data_cases.RData'))
 load(paste0(model_data, '/model_data_controls.RData'))
+
+cg_locations <- read.csv(paste0(model_data, '/cg_locations.csv'))
 
 ##########
 # function to find overlapping probes and subset control and regular by those probes
@@ -123,7 +124,7 @@ bumpHunterBalanced <- function(dat,
   pos <- methyl_cg$start
   
   # create beta matrix
-  beta <- methyl_cg[, 1:(ncol(methyl_cg) - 6)]
+  beta <- methyl_cg[, 1:(ncol(methyl_cg) - 7)]
   
   # make beta numeric 
   for (i in 1:ncol(beta)) {
@@ -167,13 +168,27 @@ bumpHunterBalanced <- function(dat,
 #########
 
 # beta raw
-beta_raw_unbal <- bumpHunterBalanced(beta_raw, unbalanced = F)
-beta_raw_bal_ <- bumpHunterBalanced(beta_raw, unbalanced = F)
+beta_raw_bal_cancer <- bumpHunterBalanced(beta_raw_full, balanced = T, even_counts = F)
+beta_raw_bal_counts_cancer <- bumpHunterBalanced(beta_raw_full, balanced = T, even_counts = T)
+beta_raw_unbal_cancer <- bumpHunterBalanced(beta_raw_full, balanced = F, even_counts = F)
 
-beta_raw_global_bal <- bumpHunterBalanced(beta_raw, unbalanced = F)[[1]]
-beta_raw_cancer_unbal <- bumpHunterBalanced(beta_raw, unbalanced = T)[[1]]
-beta_raw_global_unbal <- bumpHunterBalanced(beta_raw, unbalanced = T)[[1]]
+# beta swan
+beta_swan_bal_cancer <- bumpHunterBalanced(beta_swan_full, balanced = T, even_counts = F)
+beta_swan_bal_counts_cancer <- bumpHunterBalanced(beta_swan_full, balanced = T, even_counts = T)
+beta_swan_unbal_cancer <- bumpHunterBalanced(beta_swan_full, balanced = F, even_counts = F)
 
+# beta quan
+beta_quan_bal_cancer <- bumpHunterBalanced(beta_quan_full, balanced = T, even_counts = F)
+beta_quan_bal_counts_cancer <- bumpHunterBalanced(beta_quan_full, balanced = T, even_counts = T)
+beta_quan_unbal_cancer <- bumpHunterBalanced(beta_quan_full, balanced = F, even_counts = F)
 
-# save.image(paste0(idat_data, '/imputed_idat_betas_bh.RData'))
+# beta funnorm
+beta_funnorm_bal_cancer <- bumpHunterBalanced(beta_funnorm_full, balanced = T, even_counts = F)
+beta_funnorm_bal_counts_cancer <- bumpHunterBalanced(beta_funnorm_full, balanced = T, even_counts = T)
+beta_funnorm_unbal_cancer <- bumpHunterBalanced(beta_funnorm_full, balanced = F, even_counts = F)
+
+# remove larger objects
+rm(beta_raw_full, beta_swan_full, beta_quan_full, beta_funnorm_full, clin)
+
+save.image(paste0(idat_data, '/beta_cancer_bh.RData'))
 

@@ -1,8 +1,9 @@
-###########################################################################################################
-# this script will get the cg probes and genes that bumphunter selected ordered by pvalue and FWER
+####### Script will map regions to probes and save the final bh features for both cancer and lfs
+# this is 6th step in pipeline
 
-#######################################################################################
-# This script will run bumphunter on methylation probes 
+##########
+# initialize libraries
+##########
 library(minfi)
 library(bumphunter)
 library(dplyr)
@@ -14,7 +15,9 @@ library(biovizBase)
 library(GEOquery)
 library(IlluminaHumanMethylation450kmanifest)
 
+##########
 # Initialize folders
+##########
 home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
 data_folder <- paste0(project_folder, '/Data')
@@ -28,19 +31,16 @@ bumphunter_data <- paste0(data_folder, '/bumphunter_data')
 #########
 # load bump_hunter_lfs
 #########
-load(paste0(idat_data, '/imputed_idat_betas_bh.RData'))
-rm(beta_raw, beta_quan, beta_swan, beta_funnorm)
+load(paste0(idat_data, '/beta_p53_bh.RData'))
 
 #########
 # load bump_hunter_cancer data
 #########
-load(paste0(idat_data, '/imputed_idat_betas_bh.RData'))
-rm(beta_raw, beta_quan, beta_swan, beta_funnorm)
+load(paste0(idat_data, '/beta_cancer_bh.RData'))
 
-
-################################################
+##########
 # get probes for bumphunter results
-###############################################
+##########
 
 getRgSet <- function() {
   
@@ -62,9 +62,10 @@ getRgSet <- function() {
 
 rgSet <- getRgSet()
 
-###################################
+###########
 # create function that grabs probe site and gene name for results from bumphunter
-###################################
+###########
+
 results <- list()
 results_data <- list()
 
@@ -123,35 +124,68 @@ getProbe <- function(data) {
   
 }
 
-# apply function to beta_raw
-beta_raw_cancer_bal_features <- getProbe(beta_raw_cancer_bal)
-beta_raw_cancer_unbal_features <- getProbe(beta_raw_cancer_unbal)
-beta_raw_global_bal_features <- getProbe(beta_raw_global_bal)
-beta_raw_global_unbal_features <- getProbe(beta_raw_global_unbal)
+##########
+# apply function to cancer bh
+##########
 
-# apply function to beta_swan
-beta_swan_cancer_bal_features <- getProbe(beta_swan_cancer_bal)
-beta_swan_cancer_unbal_features <- getProbe(beta_swan_cancer_unbal)
-beta_swan_global_bal_features <- getProbe(beta_swan_global_bal)
-beta_swan_global_unbal_features <- getProbe(beta_swan_global_unbal)
+# beta raw
+beta_raw_bal_counts_cancer_features <- getProbe(beta_raw_bal_counts_cancer)
+beta_raw_bal_cancer_features <- getProbe(beta_raw_bal_cancer)
+beta_raw_unbal_cancer_features <- getProbe(beta_raw_unbal_cancer)
 
-# apply function to beta_quan
-beta_quan_cancer_bal_features <- getProbe(beta_quan_cancer_bal)
-beta_quan_cancer_unbal_features <- getProbe(beta_quan_cancer_unbal)
-beta_quan_global_bal_features <- getProbe(beta_quan_global_bal)
-beta_quan_global_unbal_features <- getProbe(beta_quan_global_unbal)
+# beta swan
+beta_swan_bal_counts_cancer_features <- getProbe(beta_swan_bal_counts_cancer)
+beta_swan_bal_cancer_features <- getProbe(beta_swan_bal_cancer)
+beta_swan_unbal_cancer_features <- getProbe(beta_swan_unbal_cancer)
 
-# apply function to beta_funnorm
-beta_funnorm_cancer_bal_features <- getProbe(beta_funnorm_cancer_bal)
-beta_funnorm_cancer_unbal_features <- getProbe(beta_funnorm_cancer_unbal)
-beta_funnorm_global_bal_features <- getProbe(beta_funnorm_global_bal)
-beta_funnorm_global_unbal_features <- getProbe(beta_funnorm_global_unbal)
+# beta quan
+beta_quan_bal_counts_cancer_features <- getProbe(beta_quan_bal_counts_cancer)
+beta_quan_bal_cancer_features <- getProbe(beta_quan_bal_cancer)
+beta_quan_unbal_cancer_features <- getProbe(beta_quan_unbal_cancer)
 
-rm(beta_raw_cancer_bal, beta_raw_cancer_unbal, beta_raw_global_bal, beta_raw_global_unbal,
-   beta_quan_cancer_bal, beta_quan_cancer_unbal, beta_quan_global_bal, beta_quan_global_unbal,
-   beta_swan_cancer_bal, beta_swan_cancer_unbal, beta_swan_global_bal, beta_swan_global_unbal,
-   beta_funnorm_cancer_bal, beta_funnorm_cancer_unbal, beta_funnorm_global_bal, beta_funnorm_global_unbal,
-   cg_locations, clin, rgSet)
+# beta funnorm
+beta_funnorm_bal_counts_cancer_features <- getProbe(beta_funnorm_bal_counts_cancer)
+beta_funnorm_bal_cancer_features <- getProbe(beta_funnorm_bal_cancer)
+beta_funnorm_unbal_cancer_features <- getProbe(beta_funnorm_unbal_cancer)
 
-save.image(paste0(model_data, '/bh_features_idat.RData'))
+##########
+# apply function to p53 bh
+##########
+
+# beta raw
+beta_raw_bal_counts_p53_features <- getProbe(beta_raw_bal_counts_p53)
+beta_raw_bal_p53_features <- getProbe(beta_raw_bal_p53)
+beta_raw_unbal_p53_features <- getProbe(beta_raw_unbal_p53)
+
+# beta swan
+beta_swan_bal_counts_p53_features <- getProbe(beta_swan_bal_counts_p53)
+beta_swan_bal_p53_features <- getProbe(beta_swan_bal_p53)
+beta_swan_unbal_p53_features <- getProbe(beta_swan_unbal_p53)
+
+# beta quan
+beta_quan_bal_counts_p53_features <- getProbe(beta_quan_bal_counts_p53)
+beta_quan_bal_p53_features <- getProbe(beta_quan_bal_p53)
+beta_quan_unbal_p53_features <- getProbe(beta_quan_unbal_p53)
+
+# beta funnorm
+beta_funnorm_bal_counts_p53_features <- getProbe(beta_funnorm_bal_counts_p53)
+beta_funnorm_bal_p53_features <- getProbe(beta_funnorm_bal_p53)
+beta_funnorm_unbal_p53_features <- getProbe(beta_funnorm_unbal_p53)
+
+
+##########
+# remove unneeded objects
+##########
+
+rm(beta_raw_bal_counts_p53, beta_raw_bal_p53, beta_raw_unbal_p53, 
+   beta_swan_bal_counts_p53, beta_swan_bal_p53, beta_swan_unbal_p53,
+   beta_quan_bal_counts_p53, beta_quan_bal_p53, beta_quan_unbal_p53,
+   beta_funnorm_bal_counts_p53, beta_funnorm_bal_p53, beta_funnorm_unbal_p53,
+   beta_raw_bal_counts_cancer, beta_raw_bal_cancer, beta_raw_unbal_cancer, 
+   beta_swan_bal_counts_cancer, beta_swan_bal_cancer, beta_swan_unbal_cancer,
+   beta_quan_bal_counts_cancer, beta_quan_bal_cancer, beta_quan_unbal_cancer,
+   beta_funnorm_bal_counts_cancer, beta_funnorm_bal_cancer, beta_funnorm_unbal_cancer,
+   cg_locations, rgSet)
+
+save.image(paste0(model_data, '/bh_features.RData'))
 

@@ -4,6 +4,7 @@
 *.txt
 *.xlsx
 *.idat
+*.rda
 /Data
 data/
 .Rproj.user

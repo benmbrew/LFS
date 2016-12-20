@@ -1,6 +1,38 @@
 #############################################################################################################
 # This script will create functions to prepare data for modeling and functions for actual modeling.
 ##################################################################################################
+# function that gets summary statistics from data used in model
+dataStats <- function(model_data) {
+  
+  feature_names <- colnames(model_data)[5:ncol(model_data)]
+  
+  # for non resid models
+  model_data_all <- model_data[!is.na(model_data$age_diagnosis),]
+  model_data_resid_all <- model_data_all[!is.na(model_data_all$age_sample_collection),]
+  
+  # for resid models
+  model_data_mut <- model_data_all[model_data_all$p53_germline == 'Mut',]
+  model_data_resid_mut <- model_data_resid_all[model_data_resid_all$p53_germline == 'Mut',]
+  
+  # for non resid
+  cancer_stats_all <- summary(model_data_all$cancer_diagnosis_diagnoses)
+  cancer_stats_mut <- summary(model_data_mut$cancer_diagnosis_diagnoses)
+  age_stats_all <- summary(model_data_all$age_sample_collection)
+  age_stats_mut <- summary(model_data_mut$age_sample_collection)
+  
+  # for resid
+  cancer_stats_all_resid <- summary(model_data_resid_all$cancer_diagnosis_diagnoses)
+  cancer_stats_mut_resid <- summary(model_data_resid_mut$cancer_diagnosis_diagnoses)
+  age_stats_all_resid <- summary(model_data_resid_all$age_sample_collection)
+  age_stats_mut_resid <- summary(model_data_resid_mut$age_sample_collection)
+
+
+  return(list(cancer_stats_all, cancer_stats_mut, age_stats_all, age_stats_mut,
+              cancer_stats_all_resid, cancer_stats_mut_resid, age_stats_all_resid, 
+              age_stats_mut_resid))
+}
+
+
 # function that sunsets by age of diagnosis and mut
 subsetDat <- function(model_data) {
   
@@ -587,5 +619,35 @@ matObject <- function(result_list, age, residual, p53_mut) {
   
   
   return(con_object)
+  
+}
+
+
+##########
+# function takes the result table and creates a row and column variable from list "features" in model table"
+##########
+getDims <- function(results_table) {
+  
+  results_table$features <- as.character(results_table$features)
+  
+  for (i in 1:nrow(results_table)) {
+    
+    sub_dat <- results_table$features[[i]]
+    if(grepl('c', sub_dat)) {
+      sub_dat <- gsub('c(', '', sub_dat, fixed = T)
+      sub_dat <- gsub(')', '', sub_dat, fixed = T)
+      
+      results_table$rows[i] <- strsplit(sub_dat, ',')[[1]][[1]]
+      results_table$columns [i] <- strsplit(sub_dat, ',')[[1]][[2]]
+      
+    } else {
+      results_table$rows[i] <- strsplit(sub_dat, ' ')[[1]][[1]]
+      results_table$columns[i] <- strsplit(sub_dat, ' ')[[1]][[2]]
+    }
+    
+  }
+  
+  results_table$features <- NULL
+  return(results_table)
   
 }

@@ -208,7 +208,8 @@ clin <- getMethylVar(beta_raw, beta_raw_controls)
 # get cg locations
 cg_locations <- getIDAT()
 
-write.csv(cg_locations, paste0(model_data, '/cg_locations.csv'))
+# write.csv(cg_locations, paste0(model_data, '/cg_locations.csv'))
+# write.csv(clin, paste0(clin_data, '/clinical_two.csv'))
 ##########
 # First do cases
 ##########
