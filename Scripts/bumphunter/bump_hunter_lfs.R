@@ -15,13 +15,7 @@ library(MatchIt)
 home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
 data_folder <- paste0(project_folder, '/Data')
-clin_data <- paste0(data_folder, '/clin_data')
-methyl_data <- paste0(data_folder, '/methyl_data')
 model_data <- paste0(data_folder, '/model_data')
-imputed_data <- paste0(data_folder, '/imputed_data')
-idat_data <- paste0(methyl_data, '/raw_files')
-bumphunter_data <- paste0(data_folder, '/bumphunter_data')
-
 
 ##########
 # load imputed methylation data and cg_locations csv
