@@ -101,7 +101,7 @@ runModels <- function(data,
   data_fac_result <- list()
   data_resid_fac_result <- list()
   
-  for(dat in 1:length(data_fac)) {
+  for (dat in 1:length(data_fac)) {
     
     sub_dat_fac <- data_fac[[dat]]
     sub_dat_resid_fac <- data_resid_fac[[dat]]
@@ -109,7 +109,7 @@ runModels <- function(data,
     temp.data_fac_result <- list()
     temp.data_resid_fac_result <- list()
     
-    for(sub_dat in 1:length(sub_dat_fac)) {
+    for (sub_dat in 1:length(sub_dat_fac)) {
       
       temp.sub_dat_fac <- sub_dat_fac[[sub_dat]]
       temp.sub_dat_resid_fac <- sub_dat_resid_fac[[sub_dat]]
@@ -124,7 +124,7 @@ runModels <- function(data,
     
   }
   
-  return(list(data_result, 
+  return (list(data_result, 
               data_resid_result, 
               data_fac_result, 
               data_resid_fac_result))
@@ -137,7 +137,8 @@ runModels <- function(data,
 # get data info from 
 data_stats <- dataStats(beta_raw)
 
-saveRDS(data_stats, file = paste0(results_folder, 
+saveRDS(data_stats, 
+        file = paste0(results_folder, 
                                   '/model_data_stats.rda'))
 
 # remove object
@@ -215,7 +216,6 @@ beta_raw_results <- as.data.frame(rbind(beta_raw_bal_cancer_table,
                                         beta_raw_bal_p53_table, 
                                         beta_raw_bal_counts_p53_table, 
                                         beta_raw_unbal_p53_table))
-
 
 # get rows and columns variable 
 beta_raw_results <- getDims(beta_raw_results)
