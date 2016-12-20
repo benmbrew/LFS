@@ -2,7 +2,8 @@
 # This script will create functions to prepare data for modeling and functions for actual modeling.
 ##################################################################################################
 # function that gets summary statistics from data used in model
-dataStats <- function(model_data) {
+dataStats <- function(model_data) 
+{
   
   feature_names <- colnames(model_data)[5:ncol(model_data)]
   
@@ -34,7 +35,8 @@ dataStats <- function(model_data) {
 
 
 # function that sunsets by age of diagnosis and mut
-subsetDat <- function(model_data) {
+subsetDat <- function(model_data) 
+{
   
   feature_names <- colnames(model_data)[5:ncol(model_data)]
   
@@ -49,7 +51,8 @@ subsetDat <- function(model_data) {
   
 }
 
-runControl <- function(model_data, bh_data) {
+runControl <- function(model_data, bh_data) 
+{
   
   feature_names <- colnames(model_data)[5:ncol(model_data)]
   
@@ -65,7 +68,8 @@ runControl <- function(model_data, bh_data) {
 
 # function that takes a full data set and subsets it by bumphunter features
 bhSubset <- function(model_data, 
-                     bh_data) {
+                     bh_data) 
+{
   
   bh_features <- bh_data$probe
   model_features <- colnames(model_data[[1]])
@@ -78,11 +82,12 @@ bhSubset <- function(model_data,
 }
 
 # function that selects random features for model
-getRand <- function(model_data) {
+getRand <- function(model_data, num_features) 
+{
   
   set.seed(10)
   feature_names <- colnames(model_data[[1]])[3:ncol(model_data[[1]])]
-  rand_features <- sample(feature_names, 200, replace = F)
+  rand_features <- sample(feature_names, num_features, replace = F)
   
   model_data_mut <- model_data[[1]][, c('age_diagnosis', 'age_sample_collection', rand_features)]
   model_data_all <- model_data[[2]][, c('age_diagnosis', 'age_sample_collection', rand_features)]
@@ -93,7 +98,8 @@ getRand <- function(model_data) {
 
 # Function that takes model model_data and obstains residual features based on regressin each gene/probe on age of sample collection
 
-getResidual <- function(model_data) {
+getResidual <- function(model_data) 
+{
   
   data_list <- list()
   
@@ -129,7 +135,8 @@ getResidual <- function(model_data) {
 
 # Function that creates factor for a given threshold
 makeFac <- function(model_data, 
-                    threshold) {
+                    threshold) 
+{
   
   data_list <- list()
   for(data in 1:length(model_data)) {
@@ -158,7 +165,8 @@ plotModel <- function(result_list,
                       main1,
                       main2,
                       xlim,
-                      ylim) {
+                      ylim) 
+{
   
   # plot predictions against ground truth
   plot(unlist(result_list[[4]]), unlist(result_list[[6]]), 
@@ -195,7 +203,8 @@ plotModel <- function(result_list,
 }
 
 
-conMatrix <- function(results) {
+conMatrix <- function(results) 
+{
   
   # test acc for age of diagnosis
   acc_age <- mean(unlist(results[[7]]))
@@ -228,7 +237,8 @@ conMatrix <- function(results) {
 
 rfPredictFac <- function(model_data,
                          cutoff,
-                         iterations) {
+                         iterations) 
+{
   
   model <- list()
   best_features <- list()
@@ -342,7 +352,8 @@ rfPredictFac <- function(model_data,
 rfPredictReg <- function(model_data,
                         cutoff,
                         features,
-                        iterations) {
+                        iterations) 
+{
   
   model <- list()
   best_features <- list()
@@ -428,7 +439,8 @@ rfPredictReg <- function(model_data,
 }
 
 extractResults <- function (result_list,
-                            data_name) {
+                            data_name) 
+{
   
   # extract regression normal, correlation for mut and all
   temp.1 <- list()
@@ -515,7 +527,8 @@ extractResults <- function (result_list,
 
 
 # make function that takes a result list and creates an object for plotting 
-plotObject <- function (result_list, residual, p53_mut) {
+plotObject <- function (result_list, residual, p53_mut) 
+{
   
   if (residual) {
     
@@ -537,7 +550,8 @@ plotObject <- function (result_list, residual, p53_mut) {
   return(plot_object)
 }
 
-matObject <- function(result_list, age, residual, p53_mut) {
+matObject <- function(result_list, age, residual, p53_mut) 
+{
   
   if(residual) {
     
@@ -626,7 +640,8 @@ matObject <- function(result_list, age, residual, p53_mut) {
 ##########
 # function takes the result table and creates a row and column variable from list "features" in model table"
 ##########
-getDims <- function(results_table) {
+getDims <- function(results_table) 
+{
   
   results_table$features <- as.character(results_table$features)
   

@@ -15,6 +15,8 @@ home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
 data_folder <- paste0(project_folder, '/Data')
 results_folder <- paste0(project_folder, '/Results')
+scripts_folder <- paste0(project_folder, '/Scripts')
+
 
 # source model_functions to get functions to run models 
 source(paste0(scripts_folder, '/predict_age/model_functions.R'))
@@ -22,10 +24,18 @@ source(paste0(scripts_folder, '/predict_age/model_functions.R'))
 ##########
 # load table rda files
 ##########
+# load table results 
 beta_raw <- readRDS(paste0(results_folder, '/beta_raw_model_results.rda'))
 beta_quan <- readRDS(paste0(results_folder, '/beta_quan_model_results.rda'))
 beta_swan <- readRDS(paste0(results_folder, '/beta_swan_model_results.rda'))
 beta_funnorm <- readRDS(paste0(results_folder, '/beta_funnorm_model_results.rda'))
+beta_rand <- readRDS(paste0(results_folder, '/beta_rand_model_results.rda'))
+
+# load table results for random
+beta_raw_rand <- readRDS <- readRDS(paste0(results_folder, '/beta_raw_rand_models.rda'))
+beta_swan_rand <- readRDS(paste0(results_folder, '/beta_swan_rand_models.rda'))
+beta_quan_rand <- readRDS(paste0(results_folder, '/beta_quan_rand_models.rda'))
+beta_funnorm_rand <- readRDS(paste0(results_folder, '/beta_funnorm_rand_models.rda'))
 
 ##########
 # combine results
@@ -33,27 +43,44 @@ beta_funnorm <- readRDS(paste0(results_folder, '/beta_funnorm_model_results.rda'
 result_table <- rbind(beta_raw, 
                       beta_quan, 
                       beta_swan, 
-                      beta_funnorm)
+                      beta_funnorm,
+                      beta_raw_rand, 
+                      beta_quan_rand, 
+                      beta_swan_rand, 
+                      beta_funnorm_rand)
 
 # remove objects
 rm(beta_raw,
    beta_quan,
    beta_swan,
-   beta_funnorm)
+   beta_funnorm,
+   beta_raw_rand, 
+   beta_quan_rand, 
+   beta_swan_rand, 
+   beta_funnorm_rand)
 
 ##########
 # find the ones that score high on regression -> then link to categorical.
 ##########
-result_table <- beta_idat_results %>% 
+result_mut <- result_table %>% 
   filter(p53_status == 'Mut') %>% 
   group_by(data, type, age) %>% 
   summarise(mean_score = mean(score))
 
-result_table <- result_table[order(result_table$mean_score, decreasing = T),]
+result_mut <- result_mut[order(result_mut$mean_score, decreasing = T),]
 
-#########
+
+##########
+# load in model data summaries
+##########
+model_data_stats <- readRDS(paste0(results_folder, '/model_data_stats.rda'))
+
+# 
+
+
+##########
 # Get plot for beta_funnorm_cancer_bal_models
-#########
+##########
 plot_object <- plotObject(beta_funnorm_cancer_bal_models, 
                           residual = T, 
                           p53_mut = T)
@@ -186,11 +213,11 @@ topProbeObject <- function(results,
                            normal, 
                            fac) {
   
-  if(normal) {
+  if (normal) {
     normal_reg <- results[[1]]
     normal_fac <- results[[3]]
     
-    if(fac) {
+    if (fac) {
       data_48 <- normal_fac[[1]]
       data_48_mut <- data_48[[1]]
       data_48_mut_features <- data_48_mut[[12]]
@@ -203,7 +230,7 @@ topProbeObject <- function(results,
     resid_reg <- results[[2]]
     resid_fac <- results[[4]]
     
-    if(fac) {
+    if (fac) {
       # slot 2 is for 68
       data_48 <- resid_fac[[2]]
       data_48_mut <- data_48[[1]]
@@ -237,6 +264,7 @@ beta_funnorm_cancer_bal_feature_importance_reg <- topProbeObject(beta_funnorm_ca
 
 # function to get top 50 non duplicated importance probes
 getImportance <- function(importance_data) {
+  
   importance_data <- as.data.frame(do.call(rbind, importance_data))
   importance_data$V2 <- as.numeric(as.character(importance_data$V2))
   importance_data <- importance_data[order(importance_data$V2, decreasing = T),]
@@ -244,7 +272,6 @@ getImportance <- function(importance_data) {
   importance_data <- importance_data %>% group_by(V1) %>% summarise_each(funs(mean))
   importance_data <- importance_data[order(importance_data$V2, decreasing = T),]
   return(importance_data)
-  
 }
 
 fac_importance <- getImportance(beta_funnorm_cancer_bal_feature_importance_fac)
@@ -254,7 +281,7 @@ names(reg_importance) <- c('probe', 'correlation')
 
 
 
-###########
+##########
 # compare both regression and classification
 ##########
 
@@ -275,9 +302,9 @@ both_importance <- inner_join(fac_importance, reg_importance, by = 'probe')
 ################################################################################################################################
 # load in regions data and find regions, genes that match the top spaces
 
-################################################
+##########
 # get probes for bumphunter results
-################################################
+##########
 library(minfi)
 setwd('/home/benbrew/')
 
@@ -317,10 +344,3 @@ joinData <- function(data) {
 reg_importance <- joinData(reg_importance)
 fac_importance <- joinData(fac_importance)
 both_importance <- joinData(both_importance)
-
-
-
-
-
-
-
