@@ -17,6 +17,7 @@ project_folder <- paste0(home_folder, '/LFS')
 data_folder <- paste0(project_folder, '/Data')
 model_data <- paste0(data_folder, '/model_data')
 
+
 ##########
 # load imputed methylation data and cg_locations csv
 ##########
@@ -156,5 +157,5 @@ beta_funnorm_unbal_p53 <- bumpHunterBalanced(beta_funnorm, balanced = F, even_co
 rm(beta_raw, beta_swan, beta_quan, beta_funnorm, clin)
 
 # save data
-save.image(paste0(idat_data, '/beta_p53_bh.RData'))
+save.image(paste0(model_data, '/beta_p53_bh.RData'))
 

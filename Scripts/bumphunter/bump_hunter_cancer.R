@@ -16,6 +16,7 @@ project_folder <- paste0(home_folder, '/LFS')
 data_folder <- paste0(project_folder, '/Data')
 model_data <- paste0(data_folder, '/model_data')
 
+
 #########
 # Load model data which contains all variations of methylation data and cg_locations csv
 #########
@@ -185,5 +186,27 @@ beta_funnorm_unbal_cancer <- bumpHunterBalanced(beta_funnorm_full, balanced = F,
 # remove larger objects
 rm(beta_raw_full, beta_swan_full, beta_quan_full, beta_funnorm_full, clin)
 
-save.image(paste0(idat_data, '/beta_cancer_bh.RData'))
+load(paste0(model_data, '/beta_cancer_bh.RData'))
+
+##########
+# check region distance
+##########
+checkDis <- function(dat) {
+  dist <- dat$end - dat$start
+  counts <- length(which(dist != 0))
+}
+
+##########
+# intersection of cancer features
+##########
+
+##########
+# union of cancer features
+##########
+
+
+
+
+
+# save.image(paste0(model_data, '/beta_cancer_bh.RData'))
 
