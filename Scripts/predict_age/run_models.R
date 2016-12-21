@@ -816,7 +816,7 @@ beta_funnorm_rand_models_10000 <- runModels(beta_quan,
 beta_funnorm_rand_table_10000 <- extractResults(beta_funnorm_rand_models_10000, 
                                               data_name = 'beta_funnorm_rand_10000')
 
-
+#HERE
 ##########
 # rbind results
 ##########
@@ -853,52 +853,52 @@ saveRDS(beta_rand_results, file = paste0(results_folder,
                                          '/beta_rand_model_results.rda'))
 
 # save models for 100
-saveRDS(beta_raw_rand_models, 
+saveRDS(beta_raw_rand_models_100, 
         file = paste0(results_folder, '/beta_raw_rand_models_100.rda'))
-saveRDS(beta_swan_rand_models, 
+saveRDS(beta_swan_rand_models_100, 
         file = paste0(results_folder, '/beta_swan_rand_models_100.rda'))
-saveRDS(beta_quan_rand_models, 
+saveRDS(beta_quan_rand_models_100, 
         file = paste0(results_folder, '/beta_quan_rand_models_100.rda'))
-saveRDS(beta_funnorm_rand_models, 
+saveRDS(beta_funnorm_rand_models_100, 
         file = paste0(results_folder, '/beta_funnorm_rand_models_100.rda'))
 
 # save models for 500
-saveRDS(beta_raw_rand_models, 
+saveRDS(beta_raw_rand_models_500, 
         file = paste0(results_folder, '/beta_raw_rand_models_500.rda'))
-saveRDS(beta_swan_rand_models, 
+saveRDS(beta_swan_rand_models_500, 
         file = paste0(results_folder, '/beta_swan_rand_models_500.rda'))
-saveRDS(beta_quan_rand_models, 
+saveRDS(beta_quan_rand_models_500, 
         file = paste0(results_folder, '/beta_quan_rand_models_500.rda'))
-saveRDS(beta_funnorm_rand_models, 
+saveRDS(beta_funnorm_rand_models_500, 
         file = paste0(results_folder, '/beta_funnorm_rand_models_500.rda'))
 
 # save models for 1000
-saveRDS(beta_raw_rand_models, 
+saveRDS(beta_raw_rand_models_1000, 
         file = paste0(results_folder, '/beta_raw_rand_models_1000.rda'))
-saveRDS(beta_swan_rand_models, 
+saveRDS(beta_swan_rand_models_1000, 
         file = paste0(results_folder, '/beta_swan_rand_models_1000.rda'))
-saveRDS(beta_quan_rand_models, 
+saveRDS(beta_quan_rand_models_1000, 
         file = paste0(results_folder, '/beta_quan_rand_models_1000.rda'))
-saveRDS(beta_funnorm_rand_models, 
+saveRDS(beta_funnorm_rand_models_1000, 
         file = paste0(results_folder, '/beta_funnorm_rand_models_1000.rda'))
 
 # save models for 2000
-saveRDS(beta_raw_rand_models, 
+saveRDS(beta_raw_rand_models_2000, 
         file = paste0(results_folder, '/beta_raw_rand_models_2000.rda'))
-saveRDS(beta_swan_rand_models, 
+saveRDS(beta_swan_rand_models_2000, 
         file = paste0(results_folder, '/beta_swan_rand_models_2000.rda'))
-saveRDS(beta_quan_rand_models, 
+saveRDS(beta_quan_rand_models_2000, 
         file = paste0(results_folder, '/beta_quan_rand_models_2000.rda'))
-saveRDS(beta_funnorm_rand_models, 
+saveRDS(beta_funnorm_rand_models_2000, 
         file = paste0(results_folder, '/beta_funnorm_rand_models_2000.rda'))
 
 # save models for 10000
-saveRDS(beta_raw_rand_models, 
+saveRDS(beta_raw_rand_models_10000, 
         file = paste0(results_folder, '/beta_raw_rand_models_10000.rda'))
-saveRDS(beta_swan_rand_models, 
+saveRDS(beta_swan_rand_models_10000, 
         file = paste0(results_folder, '/beta_swan_rand_models_10000.rda'))
-saveRDS(beta_quan_rand_models, 
+saveRDS(beta_quan_rand_models_10000, 
         file = paste0(results_folder, '/beta_quan_rand_models_10000.rda'))
-saveRDS(beta_funnorm_rand_models, 
+saveRDS(beta_funnorm_rand_models_10000, 
         file = paste0(results_folder, '/beta_funnorm_rand_models_10000.rda'))
 

@@ -32,10 +32,36 @@ beta_funnorm <- readRDS(paste0(results_folder, '/beta_funnorm_model_results.rda'
 beta_rand <- readRDS(paste0(results_folder, '/beta_rand_model_results.rda'))
 
 # load table results for random
-beta_raw_rand <- readRDS <- readRDS(paste0(results_folder, '/beta_raw_rand_models.rda'))
-beta_swan_rand <- readRDS(paste0(results_folder, '/beta_swan_rand_models.rda'))
-beta_quan_rand <- readRDS(paste0(results_folder, '/beta_quan_rand_models.rda'))
-beta_funnorm_rand <- readRDS(paste0(results_folder, '/beta_funnorm_rand_models.rda'))
+
+# 100
+beta_raw_rand_100 <- readRDS <- readRDS(paste0(results_folder, '/beta_raw_rand_models_100.rda'))
+beta_swan_rand_100 <- readRDS(paste0(results_folder, '/beta_swan_rand_models_100.rda'))
+beta_quan_rand_100 <- readRDS(paste0(results_folder, '/beta_quan_rand_models_100.rda'))
+beta_funnorm_rand_100 <- readRDS(paste0(results_folder, '/beta_funnorm_rand_models_100.rda'))
+
+# 500
+beta_raw_rand_500 <- readRDS <- readRDS(paste0(results_folder, '/beta_raw_rand_models_500.rda'))
+beta_swan_rand_500 <- readRDS(paste0(results_folder, '/beta_swan_rand_models_500.rda'))
+beta_quan_rand_500 <- readRDS(paste0(results_folder, '/beta_quan_rand_models_500.rda'))
+beta_funnorm_rand_500 <- readRDS(paste0(results_folder, '/beta_funnorm_rand_models_500.rda'))
+
+# 1000
+beta_raw_rand_1000 <- readRDS <- readRDS(paste0(results_folder, '/beta_raw_rand_models_1000.rda'))
+beta_swan_rand_1000 <- readRDS(paste0(results_folder, '/beta_swan_rand_models_1000.rda'))
+beta_quan_rand_1000 <- readRDS(paste0(results_folder, '/beta_quan_rand_models_1000.rda'))
+beta_funnorm_rand_1000 <- readRDS(paste0(results_folder, '/beta_funnorm_rand_models_1000.rda'))
+
+# 2000
+beta_raw_rand_2000 <- readRDS <- readRDS(paste0(results_folder, '/beta_raw_rand_models_2000.rda'))
+beta_swan_rand_2000 <- readRDS(paste0(results_folder, '/beta_swan_rand_models_2000.rda'))
+beta_quan_rand_2000 <- readRDS(paste0(results_folder, '/beta_quan_rand_models_2000.rda'))
+beta_funnorm_rand_2000 <- readRDS(paste0(results_folder, '/beta_funnorm_rand_models_2000.rda'))
+
+# 10000
+beta_raw_rand_10000 <- readRDS <- readRDS(paste0(results_folder, '/beta_raw_rand_models_10000.rda'))
+beta_swan_rand_10000 <- readRDS(paste0(results_folder, '/beta_swan_rand_models_10000.rda'))
+beta_quan_rand_10000 <- readRDS(paste0(results_folder, '/beta_quan_rand_models_10000.rda'))
+beta_funnorm_rand_10000 <- readRDS(paste0(results_folder, '/beta_funnorm_rand_models_10000.rda'))
 
 ##########
 # combine results
