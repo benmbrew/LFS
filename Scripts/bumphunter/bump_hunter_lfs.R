@@ -6,8 +6,6 @@
 ##########
 library(minfi)
 library(bumphunter)
-library(dplyr)
-library(MatchIt)
 
 ##########
 # Initialize folders
@@ -17,13 +15,11 @@ project_folder <- paste0(home_folder, '/LFS')
 data_folder <- paste0(project_folder, '/Data')
 model_data <- paste0(data_folder, '/model_data')
 
-
 ##########
 # load imputed methylation data and cg_locations csv
 ##########
 load(paste0(model_data, '/model_data_cases.RData'))
 cg_locations <- read.csv(paste0(model_data, '/cg_locations.csv'))
-
 
 #########
 # function that looks within cancer and sets WT as controls

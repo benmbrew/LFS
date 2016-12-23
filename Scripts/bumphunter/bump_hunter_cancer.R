@@ -6,7 +6,6 @@
 ##########
 library(minfi)
 library(bumphunter)
-library(dplyr)
 
 ##########
 # Initialize folders
