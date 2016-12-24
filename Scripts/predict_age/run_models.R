@@ -40,8 +40,42 @@ p53 <- c('Mut', 'WT')
 ##########
 # Read in cases and bumphunter features
 ##########
+# cases - raw, swan, quan, funnorm, and clin
 load(paste0(model_data, '/model_data_cases.RData'))
+# bh_features
 load(paste0(model_data, '/bh_features.RData'))
+
+##########
+##########
+# four betas 
+# each cancer or p53 is bal, bal_counts, or unbal
+# each beta is cancer or p53 bh
+# for each one of those either significant or not 
+# (that makes 4 sets of 12 betas = 48 regular features sets)
+
+# intersection
+# four betas
+# cancer or p53
+# for each one intersection and union
+# for each one significant and not
+# (that makes 4 sets of 8 betas = 32 intersection)
+# union
+
+# bal counts 
+# cancer or p53 
+# for each one intersection or union 
+# for each one sig or not
+# 8 total
+ 
+# cancer or p53
+# intersection or union
+# sig or not
+# 8 total
+
+# 96 total different features sets 
+# THIS SCRIPT NEEDS TO BE FIXED TO ACCOMADATE 96 DISTINCT FEATURE SETS
+##########
+##########
 
 ##########
 # Read in controls (if needed)

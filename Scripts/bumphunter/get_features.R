@@ -58,7 +58,7 @@ getIntersection <- function(vec1 = NULL,
     
   }
   combined_probes <- paste(probe_list, collapse = '|')
-  dat <- cg_locations[grepl(combined_probes, cg_locations$probe_rgSet),]
+  dat <- cg_locations[cg_locations$probe_rgSet %in% probe_list,]
   stopifnot(length(probe_list) == nrow(dat))
   return(dat)
 }
@@ -72,7 +72,6 @@ getUnion <- function(vec1 = NULL,
                      vec4 = NULL,
                      num_vecs) 
 {
-  
   if(num_vecs == 2) {
     probe_list <- Reduce(union, list(vec1,vec2))
     
@@ -87,8 +86,9 @@ getUnion <- function(vec1 = NULL,
     probe_list <- Reduce(union, list(vec1,vec2,vec3,vec4))
     
   }
+
   combined_probes <- paste(probe_list, collapse = '|')
-  dat <- cg_locations[grepl(combined_probes, cg_locations$probe_rgSet),]
+  dat <- cg_locations[cg_locations$probe_rgSet %in% probe_list,]
   stopifnot(length(probe_list) == nrow(dat))
   return(dat)
 }
@@ -196,9 +196,9 @@ beta_swan_bal_cancer_sig_features <- getProbe(beta_swan_bal_cancer)[[2]]
 beta_swan_unbal_cancer_sig_features <- getProbe(beta_swan_unbal_cancer)[[2]]
 
 # beta quan sig
-beta_quan_bal_counts_cancer_features <- getProbe(beta_quan_bal_counts_cancer)[[2]]
-beta_quan_bal_cancer_features <- getProbe(beta_quan_bal_cancer)[[2]]
-beta_quan_unbal_cancer_features <- getProbe(beta_quan_unbal_cancer)[[2]]
+beta_quan_bal_counts_cancer_sig_features <- getProbe(beta_quan_bal_counts_cancer)[[2]]
+beta_quan_bal_cancer_sig_features <- getProbe(beta_quan_bal_cancer)[[2]]
+beta_quan_unbal_cancer_sig_features <- getProbe(beta_quan_unbal_cancer)[[2]]
 
 # beta funnorm sig
 beta_funnorm_bal_counts_cancer_sig_features <- getProbe(beta_funnorm_bal_counts_cancer)[[2]]
@@ -240,18 +240,18 @@ beta_swan_bal_p53_sig_features <- getProbe(beta_swan_bal_p53)[[2]]
 beta_swan_unbal_p53_sig_features <- getProbe(beta_swan_unbal_p53)[[2]]
 
 # beta quan sig
-beta_quan_bal_counts_p53_features <- getProbe(beta_quan_bal_counts_p53)[[2]]
-beta_quan_bal_p53_features <- getProbe(beta_quan_bal_p53)[[2]]
-beta_quan_unbal_p53_features <- getProbe(beta_quan_unbal_p53)[[2]]
+beta_quan_bal_counts_p53_sig_features <- getProbe(beta_quan_bal_counts_p53)[[2]]
+beta_quan_bal_p53_sig_features <- getProbe(beta_quan_bal_p53)[[2]]
+beta_quan_unbal_p53_sig_features <- getProbe(beta_quan_unbal_p53)[[2]]
 
 # beta funnorm sig
 beta_funnorm_bal_counts_p53_sig_features <- getProbe(beta_funnorm_bal_counts_p53)[[2]]
 beta_funnorm_bal_p53_sig_features <- getProbe(beta_funnorm_bal_p53)[[2]]
 beta_funnorm_unbal_p53_sig_features <- getProbe(beta_funnorm_unbal_p53)[[2]]
-
-save.image('/home/benbrew/Desktop/temp_bh.RData')
-load('/home/benbrew/Desktop/temp_bh.RData')
-
+# 
+# save.image('/home/benbrew/Desktop/temp_bh.RData')
+# load('/home/benbrew/Desktop/temp_bh.RData')
+# 
 
 ###########################################################################################################################
 # this part of script will get intersection and unions of various sets of probe features
@@ -263,171 +263,169 @@ load('/home/benbrew/Desktop/temp_bh.RData')
 ##########
 
 # beta_raw_cancer_intersection
-raw_cancer_intersection  <- getIntersection(beta_raw_bal_counts_cancer_features$probe,
-                                            beta_raw_bal_cancer_features$probe,
-                                            beta_raw_unbal_cancer_features$probe,
-                                            num_vecs = 3)
+beta_raw_cancer_intersection_features  <- getIntersection(beta_raw_bal_counts_cancer_features$probe,
+                                                     beta_raw_bal_cancer_features$probe,
+                                                     beta_raw_unbal_cancer_features$probe,
+                                                     num_vecs = 3)
 
 # beta_swan_cancer_intersection
-swan_cancer_intersection  <- getIntersection(beta_swan_bal_counts_cancer_features$probe,
-                                             beta_swan_bal_cancer_features$probe,
-                                             beta_swan_unbal_cancer_features$probe,
-                                             num_vecs = 3)
+beta_swan_cancer_intersection_features  <- getIntersection(beta_swan_bal_counts_cancer_features$probe,
+                                                      beta_swan_bal_cancer_features$probe,
+                                                      beta_swan_unbal_cancer_features$probe,
+                                                      num_vecs = 3)
 
 # beta_quan_cancer_intersection
-quan_cancer_intersection  <- getIntersection(beta_quan_bal_counts_cancer_features$probe,
-                                      beta_quan_bal_cancer_features$probe,
-                                      beta_quan_unbal_cancer_features$probe,
-                                      num_vecs = 3)
+beta_quan_cancer_intersection_features  <- getIntersection(beta_quan_bal_counts_cancer_features$probe,
+                                                      beta_quan_bal_cancer_features$probe,
+                                                      beta_quan_unbal_cancer_features$probe,
+                                                      num_vecs = 3)
 
 # beta_funnorm_cancer_intersection
-funnorm_cancer_intersection  <- getIntersection(beta_funnorm_bal_counts_cancer_features$probe,
-                                                beta_funnorm_bal_cancer_features$probe,
-                                                beta_funnorm_unbal_cancer_features$probe,
-                                                num_vecs = 3)
+beta_funnorm_cancer_intersection_features  <- getIntersection(beta_funnorm_bal_counts_cancer_features$probe,
+                                                         beta_funnorm_bal_cancer_features$probe,
+                                                         beta_funnorm_unbal_cancer_features$probe,
+                                                         num_vecs = 3)
 
 # total cancer intersection
-cancer_intersection <- getIntersection(beta_cancer_intersection,
-                                  swan_cancer_intersection, 
-                                  quan_cancer_intersection,
-                                  funnorm_cancer_intersection,
-                                  num_vecs = 4)
+beta_cancer_intersection_features <- getIntersection(beta_raw_cancer_intersection_features$probe_rgSet,
+                                                beta_swan_cancer_intersection_features$probe_rgSet, 
+                                                beta_quan_cancer_intersection_features$probe_rgSet,
+                                                beta_funnorm_cancer_intersection_features$probe_rgSet,
+                                                num_vecs = 4)
 
 # beta_bal_counts_cancer_intersection
-bal_counts_cancer_intersection  <- getIntersection(beta_raw_bal_counts_cancer_features$probe,
-                                                   beta_swan_bal_counts_cancer_features$probe,
-                                                   beta_quan_bal_counts_cancer_features$probe,
-                                                   beta_funnorm_bal_counts_cancer_features$probe,
-                                                   num_vecs = 4)
-
+beta_bal_counts_cancer_intersection_features  <- getIntersection(beta_raw_bal_counts_cancer_features$probe,
+                                                            beta_swan_bal_counts_cancer_features$probe,
+                                                            beta_quan_bal_counts_cancer_features$probe,
+                                                            beta_funnorm_bal_counts_cancer_features$probe,
+                                                            num_vecs = 4)
 ##########
 # cancer intersection sig
 ##########
 
 # beta_raw_cancer_intersection
-raw_cancer_intersection_sig  <- getIntersection(beta_raw_bal_counts_cancer_sig_features$probe,
-                                            beta_raw_bal_cancer_sig_features$probe,
-                                            beta_raw_unbal_cancer_sig_features$probe,
-                                            num_vecs = 3)
+beta_raw_cancer_intersection_sig_features  <- getIntersection(beta_raw_bal_counts_cancer_sig_features$probe,
+                                                         beta_raw_bal_cancer_sig_features$probe,
+                                                         beta_raw_unbal_cancer_sig_features$probe,
+                                                         num_vecs = 3)
 
 # beta_swan_cancer_intersection
-swan_cancer_intersection_sig  <- getIntersection(beta_swan_bal_counts_cancer_sig_features$probe,
-                                             beta_swan_bal_cancer_sig_features$probe,
-                                             beta_swan_unbal_cancer_sig_features$probe,
-                                             num_vecs = 3)
+beta_swan_cancer_intersection_sig_features  <- getIntersection(beta_swan_bal_counts_cancer_sig_features$probe,
+                                                          beta_swan_bal_cancer_sig_features$probe,
+                                                          beta_swan_unbal_cancer_sig_features$probe,
+                                                          num_vecs = 3)
 
-# beta_quan_cancer_intersection
-quan_cancer_intersection_sig  <- getIntersection(beta_quan_bal_counts_cancer_sig_features$probe,
-                                      beta_quan_bal_cancer_sig_features$probe,
-                                      beta_quan_unbal_cancer_sig_features$probe,
-                                      num_vecs = 3)
+# beta_quan_cancer_intersection here error
+beta_quan_cancer_intersection_sig_features  <- getIntersection(beta_quan_bal_counts_cancer_sig_features$probe,
+                                                          beta_quan_bal_cancer_sig_features$probe,
+                                                          beta_quan_unbal_cancer_sig_features$probe,
+                                                          num_vecs = 3)
 
 # beta_funnorm_cancer_intersection
-funnorm_cancer_intersection_sig  <- getIntersection(beta_funnorm_bal_counts_cancer_sig_features$probe,
-                                                beta_funnorm_bal_cancer_sig_features$probe,
-                                                beta_funnorm_unbal_cancer_sig_features$probe,
-                                                num_vecs = 3)
+beta_funnorm_cancer_intersection_sig_features  <- getIntersection(beta_funnorm_bal_counts_cancer_sig_features$probe,
+                                                             beta_funnorm_bal_cancer_sig_features$probe,
+                                                             beta_funnorm_unbal_cancer_sig_features$probe,
+                                                             num_vecs = 3)
 
 # total cancer intersection
-cancer_intersection_sig <- getIntersection(beta_cancer_intersection_sig,
-                                  swan_cancer_intersection_sig, 
-                                  quan_cancer_intersection_sig,
-                                  funnorm_cancer_intersection_sig,
-                                  num_vecs = 4)
+beta_cancer_intersection_sig_features <- getIntersection(beta_raw_cancer_intersection_sig_features$probe_rgSet,
+                                                         beta_swan_cancer_intersection_sig_features$probe_rgSet, 
+                                                         beta_quan_cancer_intersection_sig_features$probe_rgSet,
+                                                         beta_funnorm_cancer_intersection_sig_features,
+                                                         num_vecs = 4)
 
 # beta_bal_counts_cancer_intersection
-bal_counts_cancer_intersection_sig  <- getIntersection(beta_raw_bal_counts_cancer_sig_features$probe,
-                                                   beta_swan_bal_counts_cancer_sig_features$probe,
-                                                   beta_quan_bal_counts_cancer_sig_features$probe,
-                                                   beta_funnorm_bal_counts_cancer_sig_features$probe,
-                                                   num_vecs = 4)
-
-
+beta_bal_counts_cancer_intersection_sig_features  <- getIntersection(beta_raw_bal_counts_cancer_sig_features$probe,
+                                                                beta_swan_bal_counts_cancer_sig_features$probe,
+                                                                beta_quan_bal_counts_cancer_sig_features$probe,
+                                                                beta_funnorm_bal_counts_cancer_sig_features$probe,
+                                                                num_vecs = 4)
 
 ##########
 # p53 intersection 
 ##########
 
 # beta_raw_p53_intersection
-raw_p53_intersection  <- getIntersection(beta_raw_bal_counts_p53_features$probe,
-                                            beta_raw_bal_p53_features$probe,
-                                            beta_raw_unbal_p53_features$probe,
-                                            num_vecs = 3)
+beta_raw_p53_intersection_features  <- getIntersection(beta_raw_bal_counts_p53_features$probe,
+                                                  beta_raw_bal_p53_features$probe,
+                                                  beta_raw_unbal_p53_features$probe,
+                                                  num_vecs = 3)
 
 # beta_swan_p53_intersection
-swan_p53_intersection  <- getIntersection(beta_swan_bal_counts_p53_features$probe,
-                                             beta_swan_bal_p53_features$probe,
-                                             beta_swan_unbal_p53_features$probe,
-                                             num_vecs = 3)
+beta_swan_p53_intersection_features  <- getIntersection(beta_swan_bal_counts_p53_features$probe,
+                                                   beta_swan_bal_p53_features$probe,
+                                                   beta_swan_unbal_p53_features$probe,
+                                                   num_vecs = 3)
 
 # beta_quan_p53_intersection
-quan_p53_intersection  <- getIntersection(beta_quan_bal_counts_p53_features$probe,
-                                             beta_quan_bal_p53_features$probe,
-                                             beta_quan_unbal_p53_features$probe,
-                                             num_vecs = 3)
+beta_quan_p53_intersection_features  <- getIntersection(beta_quan_bal_counts_p53_features$probe,
+                                                   beta_quan_bal_p53_features$probe,
+                                                   beta_quan_unbal_p53_features$probe,
+                                                   num_vecs = 3)
 
 # beta_funnorm_p53_intersection
-funnorm_p53_intersection  <- getIntersection(beta_funnorm_bal_counts_p53_features$probe,
-                                                beta_funnorm_bal_p53_features$probe,
-                                                beta_funnorm_unbal_p53_features$probe,
-                                                num_vecs = 3)
+beta_funnorm_p53_intersection_features  <- getIntersection(beta_funnorm_bal_counts_p53_features$probe,
+                                                      beta_funnorm_bal_p53_features$probe,
+                                                      beta_funnorm_unbal_p53_features$probe,
+                                                      num_vecs = 3)
 
 # total p53 intersection
-p53_intersection <- getIntersection(beta_p53_intersection,
-                                  swan_p53_intersection, 
-                                  quan_p53_intersection,
-                                  funnorm_p53_intersection,
-                                  num_vecs = 4)
+beta_p53_intersection_features <- getIntersection(beta_raw_p53_intersection_features$probe_rgSet,
+                                                  beta_swan_p53_intersection_features$probe_rgSet, 
+                                                  beta_quan_p53_intersection_features$probe_rgSet,
+                                                  beta_funnorm_p53_intersection_features$probe_rgSet,
+                                                  num_vecs = 4)
 
 # beta_bal_counts_p53_intersection
-bal_counts_p53_intersection  <- getIntersection(beta_raw_bal_counts_p53_features$probe,
-                                                   beta_swan_bal_counts_p53_features$probe,
-                                                   beta_quan_bal_counts_p53_features$probe,
-                                                   beta_funnorm_bal_counts_p53_features$probe,
-                                                   num_vecs = 4)
+beta_bal_counts_p53_intersection_features  <- getIntersection(beta_raw_bal_counts_p53_features$probe,
+                                                         beta_swan_bal_counts_p53_features$probe,
+                                                         beta_quan_bal_counts_p53_features$probe,
+                                                         beta_funnorm_bal_counts_p53_features$probe,
+                                                         num_vecs = 4)
 
 ##########
 # p53 intersection sig
 ##########
 
 # beta_raw_p53_intersection
-raw_p53_intersection_sig  <- getIntersection(beta_raw_bal_counts_p53_sig_features$probe,
-                                                beta_raw_bal_p53_sig_features$probe,
-                                                beta_raw_unbal_p53_sig_features$probe,
-                                                num_vecs = 3)
+beta_raw_p53_intersection_sig_features  <- getIntersection(beta_raw_bal_counts_p53_sig_features$probe,
+                                                      beta_raw_bal_p53_sig_features$probe,
+                                                      beta_raw_unbal_p53_sig_features$probe,
+                                                      num_vecs = 3)
 
 # beta_swan_p53_intersection
-swan_p53_intersection_sig  <- getIntersection(beta_swan_bal_counts_p53_sig_features$probe,
-                                                 beta_swan_bal_p53_sig_features$probe,
-                                                 beta_swan_unbal_p53_sig_features$probe,
-                                                 num_vecs = 3)
+beta_swan_p53_intersection_sig_features  <- getIntersection(beta_swan_bal_counts_p53_sig_features$probe,
+                                                       beta_swan_bal_p53_sig_features$probe,
+                                                       beta_swan_unbal_p53_sig_features$probe,
+                                                       num_vecs = 3)
 
 # beta_quan_p53_intersection
-quan_p53_intersection_sig  <- getIntersection(beta_quan_bal_counts_p53_sig_features$probe,
-                                                 beta_quan_bal_p53_sig_features$probe,
-                                                 beta_quan_unbal_p53_sig_features$probe,
-                                                 num_vecs = 3)
+beta_quan_p53_intersection_sig_features  <- getIntersection(beta_quan_bal_counts_p53_sig_features$probe,
+                                                       beta_quan_bal_p53_sig_features$probe,
+                                                       beta_quan_unbal_p53_sig_features$probe,
+                                                       num_vecs = 3)
 
 # beta_funnorm_p53_intersection
-funnorm_p53_intersection_sig  <- getIntersection(beta_funnorm_bal_counts_p53_sig_features$probe,
-                                                    beta_funnorm_bal_p53_sig_features$probe,
-                                                    beta_funnorm_unbal_p53_sig_features$probe,
-                                                    num_vecs = 3)
+beta_funnorm_p53_intersection_sig_features  <- getIntersection(beta_funnorm_bal_counts_p53_sig_features$probe,
+                                                          beta_funnorm_bal_p53_sig_features$probe,
+                                                          beta_funnorm_unbal_p53_sig_features$probe,
+                                                          num_vecs = 3)
 
 # total p53 intersection
-p53_intersection_sig <- getIntersection(beta_p53_intersection_sig,
-                                      swan_p53_intersection_sig, 
-                                      quan_p53_intersection_sig,
-                                      funnorm_p53_intersection_sig,
-                                      num_vecs = 4)
+beta_p53_intersection_sig_features <- getIntersection(beta_raw_p53_intersection_sig_features$probe_rgSet,
+                                                      beta_swan_p53_intersection_sig_features$probe_rgSet, 
+                                                      beta_quan_p53_intersection_sig_features$probe_rgSet,
+                                                      beta_funnorm_p53_intersection_sig_features$probe_rgSet,
+                                                      num_vecs = 4)
 
 # beta_bal_counts_p53_intersection
-bal_counts_p53_intersection_sig  <- getIntersection(beta_raw_bal_counts_p53_sig_features$probe,
-                                                       beta_swan_bal_counts_p53_sig_features$probe,
-                                                       beta_quan_bal_counts_p53_sig_features$probe,
-                                                       beta_funnorm_bal_counts_p53_sig_features$probe,
-                                                       num_vecs = 4)
+beta_bal_counts_p53_intersection_sig_features  <- getIntersection(beta_raw_bal_counts_p53_sig_features$probe,
+                                                             beta_swan_bal_counts_p53_sig_features$probe,
+                                                             beta_quan_bal_counts_p53_sig_features$probe,
+                                                             beta_funnorm_bal_counts_p53_sig_features$probe,
+                                                             num_vecs = 4)
 
+#############################################################################################################################
 # UNION
 
 ##########
@@ -435,185 +433,176 @@ bal_counts_p53_intersection_sig  <- getIntersection(beta_raw_bal_counts_p53_sig_
 ##########
 
 # beta_raw_cancer_union
-raw_cancer_union  <- getUnion(beta_raw_bal_counts_cancer_features$probe,
-                                            beta_raw_bal_cancer_features$probe,
-                                            beta_raw_unbal_cancer_features$probe,
-                                            num_vecs = 3)
+beta_raw_cancer_union_features  <- getUnion(beta_raw_bal_counts_cancer_features$probe,
+                                       beta_raw_bal_cancer_features$probe,
+                                       beta_raw_unbal_cancer_features$probe,
+                                       num_vecs = 3)
 
 # beta_swan_cancer_union
-swan_cancer_union  <- getUnion(beta_swan_bal_counts_cancer_features$probe,
-                                             beta_swan_bal_cancer_features$probe,
-                                             beta_swan_unbal_cancer_features$probe,
-                                             num_vecs = 3)
+beta_swan_cancer_union_features  <- getUnion(beta_swan_bal_counts_cancer_features$probe,
+                                        beta_swan_bal_cancer_features$probe,
+                                        beta_swan_unbal_cancer_features$probe,
+                                        num_vecs = 3)
 
 # beta_quan_cancer_union
-quan_cancer_union  <- getUnion(beta_quan_bal_counts_cancer_features$probe,
-                                             beta_quan_bal_cancer_features$probe,
-                                             beta_quan_unbal_cancer_features$probe,
-                                             num_vecs = 3)
+beta_quan_cancer_union_features  <- getUnion(beta_quan_bal_counts_cancer_features$probe,
+                                        beta_quan_bal_cancer_features$probe,
+                                        beta_quan_unbal_cancer_features$probe,
+                                        num_vecs = 3)
 
 # beta_funnorm_cancer_union
-funnorm_cancer_union  <- getUnion(beta_funnorm_bal_counts_cancer_features$probe,
-                                                beta_funnorm_bal_cancer_features$probe,
-                                                beta_funnorm_unbal_cancer_features$probe,
-                                                num_vecs = 3)
+beta_funnorm_cancer_union_features  <- getUnion(beta_funnorm_bal_counts_cancer_features$probe,
+                                           beta_funnorm_bal_cancer_features$probe,
+                                           beta_funnorm_unbal_cancer_features$probe,
+                                           num_vecs = 3)
 
 # total cancer union
-cancer_union <- getUnion(beta_cancer_union,
-                                  swan_cancer_union, 
-                                  quan_cancer_union,
-                                  funnorm_cancer_union,
-                                  num_vecs = 4)
+beta_cancer_union_features <- getUnion(beta_raw_cancer_union_features$probe_rgSet,
+                                       beta_swan_cancer_union_features$probe_rgSet, 
+                                       beta_quan_cancer_union_features$probe_rgSet,
+                                       beta_funnorm_cancer_union_features$probe_rgSet,
+                                       num_vecs = 4)
 
 # beta_bal_counts_cancer_union
-bal_counts_cancer_union  <- getUnion(beta_raw_bal_counts_cancer_features$probe,
-                                                   beta_swan_bal_counts_cancer_features$probe,
-                                                   beta_quan_bal_counts_cancer_features$probe,
-                                                   beta_funnorm_bal_counts_cancer_features$probe,
-                                                   num_vecs = 4)
+beta_bal_counts_cancer_union_features  <- getUnion(beta_raw_bal_counts_cancer_features$probe,
+                                              beta_swan_bal_counts_cancer_features$probe,
+                                              beta_quan_bal_counts_cancer_features$probe,
+                                              beta_funnorm_bal_counts_cancer_features$probe,
+                                              num_vecs = 4)
 
 ##########
 # cancer union sig
 ##########
 
 # beta_raw_cancer_union
-raw_cancer_union_sig  <- getUnion(beta_raw_bal_counts_cancer_sig_features$probe,
-                                                beta_raw_bal_cancer_sig_features$probe,
-                                                beta_raw_unbal_cancer_sig_features$probe,
-                                                num_vecs = 3)
+beta_raw_cancer_union_sig_features  <- getUnion(beta_raw_bal_counts_cancer_sig_features$probe,
+                                           beta_raw_bal_cancer_sig_features$probe,
+                                           beta_raw_unbal_cancer_sig_features$probe,
+                                           num_vecs = 3)
 
 # beta_swan_cancer_union
-swan_cancer_union_sig  <- getUnion(beta_swan_bal_counts_cancer_sig_features$probe,
-                                                 beta_swan_bal_cancer_sig_features$probe,
-                                                 beta_swan_unbal_cancer_sig_features$probe,
-                                                 num_vecs = 3)
+beta_swan_cancer_union_sig_features  <- getUnion(beta_swan_bal_counts_cancer_sig_features$probe,
+                                            beta_swan_bal_cancer_sig_features$probe,
+                                            beta_swan_unbal_cancer_sig_features$probe,
+                                            num_vecs = 3)
 
 # beta_quan_cancer_union
-quan_cancer_union_sig  <- getUnion(beta_quan_bal_counts_cancer_sig_features$probe,
-                                                 beta_quan_bal_cancer_sig_features$probe,
-                                                 beta_quan_unbal_cancer_sig_features$probe,
-                                                 num_vecs = 3)
+beta_quan_cancer_union_sig_features  <- getUnion(beta_quan_bal_counts_cancer_sig_features$probe,
+                                            beta_quan_bal_cancer_sig_features$probe,
+                                            beta_quan_unbal_cancer_sig_features$probe,
+                                            num_vecs = 3)
 
 # beta_funnorm_cancer_union
-funnorm_cancer_union_sig  <- getUnion(beta_funnorm_bal_counts_cancer_sig_features$probe,
-                                                    beta_funnorm_bal_cancer_sig_features$probe,
-                                                    beta_funnorm_unbal_cancer_sig_features$probe,
-                                                    num_vecs = 3)
+beta_funnorm_cancer_union_sig_features  <- getUnion(beta_funnorm_bal_counts_cancer_sig_features$probe,
+                                               beta_funnorm_bal_cancer_sig_features$probe,
+                                               beta_funnorm_unbal_cancer_sig_features$probe,
+                                               num_vecs = 3)
 
 # total cancer union
-cancer_union_sig <- getUnion(beta_cancer_union_sig,
-                             swan_cancer_union_sig, 
-                             quan_cancer_union_sig,
-                             funnorm_cancer_union_sig,
-                             num_vecs = 4)
+beta_cancer_union_sig_features <- getUnion(beta_raw_cancer_union_sig_features$probe_rgSet,
+                                           beta_swan_cancer_union_sig_features$probe_rgSet, 
+                                           beta_quan_cancer_union_sig_features$probe_rgSet,
+                                           beta_funnorm_cancer_union_sig_features$probe_rgSet,
+                                           num_vecs = 4)
 
 # beta_bal_counts_cancer_union
-bal_counts_cancer_union_sig  <- getUnion(beta_raw_bal_counts_cancer_sig_features$probe,
-                                         beta_swan_bal_counts_cancer_sig_features$probe,
-                                         beta_quan_bal_counts_cancer_sig_features$probe,
-                                         beta_funnorm_bal_counts_cancer_sig_features$probe,
-                                                       num_vecs = 4)
-
-
+beta_bal_counts_cancer_union_sig_features  <- getUnion(beta_raw_bal_counts_cancer_sig_features$probe,
+                                                  beta_swan_bal_counts_cancer_sig_features$probe,
+                                                  beta_quan_bal_counts_cancer_sig_features$probe,
+                                                  beta_funnorm_bal_counts_cancer_sig_features$probe,
+                                                  num_vecs = 4)
 
 ##########
 # p53 union 
 ##########
 
 # beta_raw_p53_union
-raw_p53_union  <- getUnion(beta_raw_bal_counts_p53_features$probe,
-                                         beta_raw_bal_p53_features$probe,
-                                         beta_raw_unbal_p53_features$probe,
-                                         num_vecs = 3)
+beta_raw_p53_union_features  <- getUnion(beta_raw_bal_counts_p53_features$probe,
+                                    beta_raw_bal_p53_features$probe,
+                                    beta_raw_unbal_p53_features$probe,
+                                    num_vecs = 3)
 
 # beta_swan_p53_union
-swan_p53_union  <- getUnion(beta_swan_bal_counts_p53_features$probe,
-                                          beta_swan_bal_p53_features$probe,
-                                          beta_swan_unbal_p53_features$probe,
-                                          num_vecs = 3)
+beta_swan_p53_union_features  <- getUnion(beta_swan_bal_counts_p53_features$probe,
+                                     beta_swan_bal_p53_features$probe,
+                                     beta_swan_unbal_p53_features$probe,
+                                     num_vecs = 3)
 
 # beta_quan_p53_union
-quan_p53_union  <- getUnion(beta_quan_bal_counts_p53_features$probe,
-                                          beta_quan_bal_p53_features$probe,
-                                          beta_quan_unbal_p53_features$probe,
-                                          num_vecs = 3)
+beta_quan_p53_union_features  <- getUnion(beta_quan_bal_counts_p53_features$probe,
+                                     beta_quan_bal_p53_features$probe,
+                                     beta_quan_unbal_p53_features$probe,
+                                     num_vecs = 3)
 
 # beta_funnorm_p53_union
-funnorm_p53_union  <- getUnion(beta_funnorm_bal_counts_p53_features$probe,
-                                             beta_funnorm_bal_p53_features$probe,
-                                             beta_funnorm_unbal_p53_features$probe,
-                                             num_vecs = 3)
+beta_funnorm_p53_union_features  <- getUnion(beta_funnorm_bal_counts_p53_features$probe,
+                                        beta_funnorm_bal_p53_features$probe,
+                                        beta_funnorm_unbal_p53_features$probe,
+                                        num_vecs = 3)
 
 # total p53 union
-p53_union <- getUnion(beta_p53_union,
-                               swan_p53_union, 
-                               quan_p53_union,
-                               funnorm_p53_union,
-                               num_vecs = 4)
+beta_p53_union_features <- getUnion(beta_raw_p53_union_features$probe_rgSet,
+                                    beta_swan_p53_union_features$probe_rgSet, 
+                                    beta_quan_p53_union_features$probe_rgSet,
+                                    beta_funnorm_p53_union_features$probe_rgSet,
+                                    num_vecs = 4)
 
 # beta_bal_counts_p53_union
-bal_counts_p53_union  <- getUnion(beta_raw_bal_counts_p53_features$probe,
-                                                beta_swan_bal_counts_p53_features$probe,
-                                                beta_quan_bal_counts_p53_features$probe,
-                                                beta_funnorm_bal_counts_p53_features$probe,
-                                                num_vecs = 4)
+beta_bal_counts_p53_union_features  <- getUnion(beta_raw_bal_counts_p53_features$probe,
+                                           beta_swan_bal_counts_p53_features$probe,
+                                           beta_quan_bal_counts_p53_features$probe,
+                                           beta_funnorm_bal_counts_p53_features$probe,
+                                           num_vecs = 4)
 
 ##########
 # p53 union sig
 ##########
 
 # beta_raw_p53_union
-raw_p53_union_sig  <- getUnion(beta_raw_bal_counts_p53_sig_features$probe,
-                                             beta_raw_bal_p53_sig_features$probe,
-                                             beta_raw_unbal_p53_sig_features$probe,
-                                             num_vecs = 3)
+beta_raw_p53_union_sig_features  <- getUnion(beta_raw_bal_counts_p53_sig_features$probe,
+                                        beta_raw_bal_p53_sig_features$probe,
+                                        beta_raw_unbal_p53_sig_features$probe,
+                                        num_vecs = 3)
 
 # beta_swan_p53_union
-swan_p53_union_sig  <- getUnion(beta_swan_bal_counts_p53_sig_features$probe,
-                                              beta_swan_bal_p53_sig_features$probe,
-                                              beta_swan_unbal_p53_sig_features$probe,
-                                              num_vecs = 3)
+beta_swan_p53_union_sig_features  <- getUnion(beta_swan_bal_counts_p53_sig_features$probe,
+                                         beta_swan_bal_p53_sig_features$probe,
+                                         beta_swan_unbal_p53_sig_features$probe,
+                                         num_vecs = 3)
 
 # beta_quan_p53_union
-quan_p53_union_sig  <- getUnion(beta_quan_bal_counts_p53_sig_features$probe,
-                                              beta_quan_bal_p53_sig_features$probe,
-                                              beta_quan_unbal_p53_sig_features$probe,
-                                              num_vecs = 3)
+beta_quan_p53_union_sig_features  <- getUnion(beta_quan_bal_counts_p53_sig_features$probe,
+                                         beta_quan_bal_p53_sig_features$probe,
+                                         beta_quan_unbal_p53_sig_features$probe,
+                                         num_vecs = 3)
 
 # beta_funnorm_p53_union
-funnorm_p53_union_sig  <- getUnion(beta_funnorm_bal_counts_p53_sig_features$probe,
-                                                 beta_funnorm_bal_p53_sig_features$probe,
-                                                 beta_funnorm_unbal_p53_sig_features$probe,
-                                                 num_vecs = 3)
+beta_funnorm_p53_union_sig_features  <- getUnion(beta_funnorm_bal_counts_p53_sig_features$probe,
+                                            beta_funnorm_bal_p53_sig_features$probe,
+                                            beta_funnorm_unbal_p53_sig_features$probe,
+                                            num_vecs = 3)
 
 # total p53 union
-p53_union_sig <- getUnion(beta_p53_union_sig,
-                                   swan_p53_union_sig, 
-                                   quan_p53_union_sig,
-                                   funnorm_p53_union_sig,
-                                   num_vecs = 4)
+beta_p53_union_sig_features <- getUnion(beta_raw_p53_union_sig_features$probe_rgSet,
+                                        beta_swan_p53_union_sig_features$probe_rgSet, 
+                                        beta_quan_p53_union_sig_features$probe_rgSet,
+                                        beta_funnorm_p53_union_sig_features$probe_rgSet,
+                                        num_vecs = 4)
 
 # beta_bal_counts_p53_union
-bal_counts_p53_union_sig  <- getUnion(beta_raw_bal_counts_p53_sig_features$probe,
-                                                    beta_swan_bal_counts_p53_sig_features$probe,
-                                                    beta_quan_bal_counts_p53_sig_features$probe,
-                                                    beta_funnorm_bal_counts_p53_sig_features$probe,
-                                                    num_vecs = 4)
-
+beta_bal_counts_p53_union_sig_features  <- getUnion(beta_raw_bal_counts_p53_sig_features$probe,
+                                               beta_swan_bal_counts_p53_sig_features$probe,
+                                               beta_quan_bal_counts_p53_sig_features$probe,
+                                               beta_funnorm_bal_counts_p53_sig_features$probe,
+                                               num_vecs = 4)
 
 ##########
 # remove unneeded objects
 ##########
+# keep only the objects that have features
+rm(list = ls()[!grepl("features", ls())])
 
-rm(beta_raw_bal_counts_p53, beta_raw_bal_p53, beta_raw_unbal_p53, 
-   beta_swan_bal_counts_p53, beta_swan_bal_p53, beta_swan_unbal_p53,
-   beta_quan_bal_counts_p53, beta_quan_bal_p53, beta_quan_unbal_p53,
-   beta_funnorm_bal_counts_p53, beta_funnorm_bal_p53, beta_funnorm_unbal_p53,
-   beta_raw_bal_counts_cancer, beta_raw_bal_cancer, beta_raw_unbal_cancer, 
-   beta_swan_bal_counts_cancer, beta_swan_bal_cancer, beta_swan_unbal_cancer,
-   beta_quan_bal_counts_cancer, beta_quan_bal_cancer, beta_quan_unbal_cancer,
-   beta_funnorm_bal_counts_cancer, beta_funnorm_bal_cancer, beta_funnorm_unbal_cancer,
-   cg_locations, cg_locations)
-
+# save feaures
 save.image(paste0(model_data, '/bh_features.RData'))
+
 
