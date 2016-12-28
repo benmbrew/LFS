@@ -1,18 +1,11 @@
-####### Script will combine methylation and clinical data
-# this is 4th step in pipeline
+####### Script will explore and visualize methylation data using PCA
+# original idat, and controls
 
 ##########
 # initialize libraries
 ##########
 library(dplyr)
-library(stringr)
-library(impute)
-library(data.table)
-library(impute)
-library(GenomicRanges)
-library(biovizBase)
-library(GEOquery)
-library(IlluminaHumanMethylation450kmanifest)
+library(PCA)
 
 ##########
 # Initialize folders
@@ -21,10 +14,6 @@ home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
 data_folder <- paste0(project_folder, '/Data')
 methyl_data <- paste0(data_folder, '/methyl_data')
-imputed_data <- paste0(data_folder, '/imputed_data')
-idat_data <- paste0(methyl_data, '/raw_files')
-model_data <- paste0(data_folder, '/model_data')
-bumphunter_data <- paste0(data_folder, '/bumphunter_data')
 clin_data <- paste0(data_folder, '/clin_data')
 
 ##########
@@ -41,13 +30,10 @@ clin <- read.csv(paste0(clin_data, '/clinical_two.csv'), stringsAsFactors = F)
 clin$id <-  gsub('A|B|_|-', '', clin$blood_dna_malkin_lab_)
 
 ##########
-# First use functions to prepare clinical and methylation data
-##########
-
-##########
 # function to clean id names and get methyl_indicator for clin
 ##########
-getMethylVar <- function(dat_cases, dat_controls) {
+getMethylVar <- function(dat_cases, dat_controls) 
+{
   
   # get ids from cases and controls
   cases_names <- as.character(dat_cases$id)
@@ -89,7 +75,8 @@ getMethylVar <- function(dat_cases, dat_controls) {
 # functions to clean and join data
 ##########
 # clean ids in each data set 
-cleanIDs <- function(data){
+cleanIDs <- function(data)
+{
   
   data$id <- gsub('A|B|_|-', '', data$id)
   data$id <- substr(data$id, 1,4) 
@@ -98,8 +85,8 @@ cleanIDs <- function(data){
 
 # get probe locations 
 
-getIDAT <- function(cg_locations) {
-  
+getIDAT <- function(cg_locations) 
+{
   #idat files
   idatFiles <- list.files("GSE68777/idat", pattern = "idat.gz$", full = TRUE)
   sapply(idatFiles, gunzip, overwrite = TRUE)
@@ -117,12 +104,12 @@ getIDAT <- function(cg_locations) {
 }
 
 # function that takes each methylation and merges with clinical - keep id, family, p53 status, age data
-joinData <- function(data, control) {
-  
+joinData <- function(data, control) 
+{
   # get intersection of clin ids and data ids
   intersected_ids <- intersect(data$id, clin$id)
   features <- colnames(data)[2:(length(colnames(data)))]
-
+  
   # loop to combine identifiers, without merging large table
   data$p53_germline <- NA
   data$age_diagnosis <- NA
@@ -167,8 +154,8 @@ joinData <- function(data, control) {
 }
 
 # take p53 germline column and relevel factors to get rid of NA level
-relevelFactor <- function (data) {
-  
+relevelFactor <- function (data) 
+{
   data$p53_germline <- factor(data$p53_germline, levels = c('Mut', 'WT'))
   return(data)
 }
@@ -182,8 +169,8 @@ relevelFactor <- function (data) {
 # }
 
 # test this with smaller data
-makeNumFast <- function(model_data) {
-  
+makeNumFast <- function(model_data) 
+{
   temp_list <- list()
   for (i in 6:ncol(model_data)) {
     temp.row <- model_data[,i]
@@ -199,7 +186,7 @@ makeNumFast <- function(model_data) {
                       cancer_diagnosis_diagnoses = model_data$cancer_diagnosis_diagnoses, 
                       age_sample_collection = model_data$age_sample_collection, num_features)
   names(model_data)[6:ncol(model_data)] <- feature_names
-
+  
   return(model_data)
 }
 
@@ -258,7 +245,5 @@ beta_raw_controls <- makeNumFast(beta_raw_controls)
 
 
 ##########
-# Save data images seperately
+# PCA of each data type and cases vs controls
 ##########
-save.image(paste0(model_data, '/model_data_cases.RData'))
-save.image(paste0(model_data, '/model_data_controls.RData'))
