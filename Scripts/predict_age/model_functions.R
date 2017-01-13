@@ -26,8 +26,8 @@ dataStats <- function(model_data)
   cancer_stats_mut_resid <- summary(model_data_resid_mut$cancer_diagnosis_diagnoses)
   age_stats_all_resid <- summary(model_data_resid_all$age_sample_collection)
   age_stats_mut_resid <- summary(model_data_resid_mut$age_sample_collection)
-
-
+  
+  
   return(list(cancer_stats_all, cancer_stats_mut, age_stats_all, age_stats_mut,
               cancer_stats_all_resid, cancer_stats_mut_resid, age_stats_all_resid, 
               age_stats_mut_resid))
@@ -35,17 +35,29 @@ dataStats <- function(model_data)
 
 
 # function that sunsets by age of diagnosis and mut
-subsetDat <- function(model_data) 
+subsetDat <- function(model_data,
+                      random = random,
+                      num_feat = num_feat,
+                      seed_num = seed_num) 
 {
   
   feature_names <- colnames(model_data)[5:ncol(model_data)]
   
   model_data_all <- model_data[!is.na(model_data$age_diagnosis),]
-
+  
   model_data_mut <- model_data_all[model_data_all$p53_germline == 'Mut',]
   
-  model_data_mut <- model_data_mut[, c('age_diagnosis', 'age_sample_collection', feature_names)]
-  model_data_all <- model_data_all[, c('age_diagnosis', 'age_sample_collection', feature_names)]
+  if (random) {
+    set.seed(seed_num)
+    keep_index <- sample(feature_names, num_feat)
+    model_data_all <- model_data_all[, c('age_diagnosis', 'age_sample_collection', keep_index) ]
+    model_data_mut <- model_data_mut[, c('age_diagnosis', 'age_sample_collection', keep_index) ]
+    
+  } else {
+    model_data_mut <- model_data_mut[, c('age_diagnosis', 'age_sample_collection', feature_names)]
+    model_data_all <- model_data_all[, c('age_diagnosis', 'age_sample_collection', feature_names)]
+    
+  }
   
   return(list(model_data_mut, model_data_all))
   
@@ -62,7 +74,7 @@ runControl <- function(model_data, bh_data)
   model_features <- colnames(model_data)
   bh_intersect <- intersect(bh_features, model_features)
   model_data_mut <- model_data[, c('age_sample_collection', bh_intersect)]
-
+  
   return(model_data)
 }
 
@@ -81,20 +93,6 @@ bhSubset <- function(model_data,
   return(list(model_data_mut, model_data_all))
 }
 
-# function that selects random features for model
-getRand <- function(model_data, num_features) 
-{
-  
-  set.seed(10)
-  feature_names <- colnames(model_data[[1]])[3:ncol(model_data[[1]])]
-  rand_features <- sample(feature_names, num_features, replace = F)
-  
-  model_data_mut <- model_data[[1]][, c('age_diagnosis', 'age_sample_collection', rand_features)]
-  model_data_all <- model_data[[2]][, c('age_diagnosis', 'age_sample_collection', rand_features)]
-  
-  return(list(model_data_mut, model_data_all))
-  
-}
 
 # Function that takes model model_data and obstains residual features based on regressin each gene/probe on age of sample collection
 
@@ -153,7 +151,7 @@ makeFac <- function(model_data,
     data_list[[data]] <- sub_data
     
   }
- 
+  
   return(data_list)
   
 }
@@ -274,11 +272,11 @@ rfPredictFac <- function(model_data,
       repeats = 1,
       allowParallel = TRUE,
       summaryFunction = twoClassSummary
-        
-      )
       
+    )
+    
     y = make.names(as.factor(model_data$age_diagnosis_fac[train_index]))
-      
+    
     # mtry: Number of variables randomly sampled as candidates at each split.
     # ntree: Number of trees to grow.
     
@@ -304,10 +302,10 @@ rfPredictFac <- function(model_data,
                                       , newdata = model_data[train_index, selected_features]
                                       ,type = "prob")
     
-  
-  
-  
-
+    
+    
+    
+    
     train.ground_truth[[i]] <- as.factor(make.names(model_data$age_diagnosis_fac[train_index]))
     test.ground_truth[[i]] <- as.factor(make.names(model_data$age_diagnosis_fac[-train_index]))
     train.sample_collection[[i]] = as.factor(make.names(model_data$age_sample_fac[train_index]))
@@ -335,7 +333,7 @@ rfPredictFac <- function(model_data,
     # subset to remove NAs
     test_stats_samp[[i]] <- confusionMatrix(levels(test.sample_collection[[i]])[apply(test.predictions[[i]], 1, which.is.max)], test.sample_collection[[i]])
     # print(rf.test_stats)
-   
+    
     
     
     print(i)
@@ -350,9 +348,9 @@ rfPredictFac <- function(model_data,
 # function that runs random forest as a regression
 
 rfPredictReg <- function(model_data,
-                        cutoff,
-                        features,
-                        iterations) 
+                         cutoff,
+                         features,
+                         iterations) 
 {
   
   model <- list()
@@ -381,14 +379,14 @@ rfPredictReg <- function(model_data,
     set.seed(i)
     
     train_index <- sample(nrow(model_data), nrow(model_data) *cutoff, replace = F)
-        
+    
     NFOLDS <- 2
-      fitControl <- trainControl( 
-        method = "repeatedcv",  # could train on boostrap resample, here use repeated cross validation.
-        number = min(10, NFOLDS),      
-        repeats = 1,
-        allowParallel = TRUE
-        )
+    fitControl <- trainControl( 
+      method = "repeatedcv",  # could train on boostrap resample, here use repeated cross validation.
+      number = min(10, NFOLDS),      
+      repeats = 1,
+      allowParallel = TRUE
+    )
     
     y <- model_data$age_diagnosis[train_index]
     
@@ -396,29 +394,29 @@ rfPredictReg <- function(model_data,
     # ntree: Number of trees to grow.
     mtry <- sqrt(ncol(model_data[train_index, selected_features]))
     tunegrid <- expand.grid(.mtry=mtry)
-      
+    
     model[[i]] <- train(x = model_data[train_index, selected_features]
-                          , y = y
-                          , method = "rf"
-                          , trControl = fitControl
-                          , tuneGrid = tunegrid
-                          , importance = T
-                          , verbose = FALSE)
-      
+                        , y = y
+                        , method = "rf"
+                        , trControl = fitControl
+                        , tuneGrid = tunegrid
+                        , importance = T
+                        , verbose = FALSE)
+    
     temp <- varImp(model[[i]])[[1]]
     importance[[i]] <- cbind(rownames(temp), temp$Overall)
-      
+    
     
     test.predictions[[i]] <- predict(model[[i]] 
-                                       , newdata = model_data[-train_index, selected_features])
-      
+                                     , newdata = model_data[-train_index, selected_features])
+    
     train.predictions[[i]] <- predict(model[[i]] 
-                                        , newdata = model_data[train_index, selected_features])
-      
-      
-      
-      
- 
+                                      , newdata = model_data[train_index, selected_features])
+    
+    
+    
+    
+    
     train.ground_truth[[i]] <- model_data$age_diagnosis[train_index]
     test.ground_truth[[i]] <- model_data$age_diagnosis[-train_index]
     train.sample_collection[[i]] = model_data$age_sample_collection[train_index]
@@ -427,7 +425,7 @@ rfPredictReg <- function(model_data,
     test.mse[[i]] <- rmse(unlist(test.predictions[[i]]), unlist(test.ground_truth[[i]]))
     
     
-      
+    
     
     print(i)
     
@@ -449,7 +447,7 @@ extractResults <- function (result_list,
     temp.1[[status]] <- result_list[[1]][[status]]
     reg_cor[[status]] <- round(cor(unlist(temp.1[[status]][[4]]), unlist(temp.1[[status]][[6]])), 2)
   }
-
+  
   reg_cor <- as.data.frame(do.call(rbind, reg_cor))
   colnames(reg_cor) <- 'score'
   reg_cor$p53_status <- p53
@@ -539,8 +537,8 @@ plotObject <- function (result_list, residual, p53_mut)
     }
     
   } else {
-   
-     if (p53_mut) {
+    
+    if (p53_mut) {
       plot_object <- result_list[[1]][[1]]
     } else {
       plot_object <- result_list[[1]][[2]]
