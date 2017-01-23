@@ -33,13 +33,16 @@ beta_funnorm_controls <- readRDS(paste0(methyl_data, '/beta_funnorm_controls.rda
 ########## 
 # PCA of each data type and cases vs controls
 ##########
-pca_data <- beta_swan
-column_name <- 'gender'
-name <- 'gender'
+
+# subset control data by features in normal data.
 
 # function needs to take a clinical column, remove others, and plot pcas
 getPCA <- function(pca_data, column_name, name) 
 {
+  # subet data so only p53 mut
+  pca_data <- pca_data[pca_data$p53_germline == 'Mut',]
+  
+  
   # get features sites
   cg_sites <- colnames(pca_data)[14:ncol(pca_data)]
   
@@ -97,20 +100,6 @@ plot_quan_gender <- getPCA(beta_quan, 'gender', 'PCA quan Gender')
 # funnorm
 plot_funnorm_gender <-getPCA(beta_funnorm, 'gender', 'PCA funnorm Gender')
 
-##########
-# use p53_germline
-##########
-# raw
-plot_raw_p53 <- getPCA(beta_raw, 'p53_germline', 'PCA raw p53_germline')
-
-# swan
-plot_swan_p53 <-getPCA(beta_swan, 'p53_germline', 'PCA swan p53_germline')
-
-# quan
-plot_quan_p53 <-getPCA(beta_quan, 'p53_germline', 'PCA quan p53_germline')
-
-# funnorm
-plot_funnorm_p53 <-getPCA(beta_funnorm, 'p53_germline', 'PCA funnorm p53_germline')
 
 ##########
 # use cancer diagnosis
@@ -175,59 +164,68 @@ getPCA(beta_quan, 'protein.codon.change', 'PCA quan protein.codon.change')
 # funnorm
 getPCA(beta_funnorm, 'protein.codon.change', 'PCA funnorm protein.codon.change')
 
-
-
 ##########
 # use protein.codon.num
 ##########
+# raw
+getPCA(beta_raw, 'protein.codon.num', 'PCA raw protein.codon.num')
+
+# swan
+getPCA(beta_swan, 'protein.codon.num', 'PCA swan protein.codon.num')
+
+# quan
+getPCA(beta_quan, 'protein.codon.num', 'PCA quan protein.codon.num')
+
+# funnorm
+getPCA(beta_funnorm, 'protein.codon.num', 'PCA funnorm protein.codon.num')
 
 
 ##########
 # use splice.delins.snv
 ##########
+# raw
+getPCA(beta_raw, 'splice.delins.snv', 'PCA raw splice.delins.snv')
+
+# swan
+getPCA(beta_swan, 'splice.delins.snv', 'PCA swan splice.delins.snv')
+
+# quan
+getPCA(beta_quan, 'splice.delins.snv', 'PCA quan splice.delins.snv')
+
+# funnorm
+getPCA(beta_funnorm, 'splice.delins.snv', 'PCA funnorm splice.delins.snv')
 
 
 ##########
 # use codon72.npro
 ##########
+# raw
+getPCA(beta_raw, 'codon72.npro', 'PCA raw codon72.npro')
+
+# swan
+getPCA(beta_swan, 'codon72.npro', 'PCA swan codon72.npro')
+
+# quan
+getPCA(beta_quan, 'codon72.npro', 'PCA quan codon72.npro')
+
+# funnorm
+getPCA(beta_funnorm, 'codon72.npro', 'PCA funnorm codon72.npro')
 
 
 ##########
 # use mdm2.nG
 ##########
+# raw
+getPCA(beta_raw, 'mdm2.nG', 'PCA raw mdm2.nG')
 
+# swan
+getPCA(beta_swan, 'mdm2.nG', 'PCA swan mdm2.nG')
 
-##########
-# function that takes pca object and plots based on given column_name
-##########
+# quan
+getPCA(beta_quan, 'mdm2.nG', 'PCA quan mdm2.nG')
 
-pcaPlot <- function(pca_data, pca_model, column_name, name) 
-
-  {
-  #fill in factors with colors 
-  col_vec <- c('red', 'green', 'blue', 'orange', 'black', 'orange')
-  colors <- col_vec[pca_data[, column_name]]
-  min_x <- min(pca_model$x[,1])
-  max_x <- max(pca_model$x[,1])
-  min_y <- min(pca_model$x[,2])
-  max_y <- max(pca_model$x[,2])
-  
-  max <- max(pca_model$x[, 2])
-  plot(pca$x[,1], 
-       pca$x[,2],
-       xlab = 'pca 1',
-       ylab = 'pca 2',
-       cex = 1,
-       main = name,
-       pch = 16,
-       xlim= c(min_x, max_x),
-       ylim = c(min_y, max_y),
-       col = adjustcolor(colors, alpha.f = 0.5)
-  )
-  abline(v = c(0,0),
-         h = c(0,0))
-  
-}
+# funnorm
+getPCA(beta_funnorm, 'mdm2.nG', 'PCA funnorm mdm2.nG')
 
 
 ##########
