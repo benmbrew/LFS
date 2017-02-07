@@ -18,9 +18,9 @@ library(dplyr)
 #################################################################################################
 # Read in clinical data and join by ids
 #################################################################################################
-# load(paste0(model_data, '/model_data.RData')) #check if age is in id column - may need to fix clean clin
+load(paste0(model_data, '/model_data_cases.RData')) #check if age is in id column - may need to fix clean clin
 # # ids are ok
-# rm(beta_funnorm, beta_illumina, beta_quan, beta_raw, beta_swan, cg_locations, rgSetList)
+rm(beta_funnorm, beta_illumina, beta_quan, beta_raw, beta_swan, cg_locations, rgSetList)
 # 
 # load(paste0(idat_data, '/imputed_idat_betas.RData')) # use this to get ids we have methylation data for
 # methyl <- as.data.frame(beta_raw[1:229, 1:10])
@@ -31,8 +31,8 @@ library(dplyr)
 #################################
 # Take only necessary data and save image
 #################################
-load(paste0(idat_data, '/find_validators_data.RData')) 
-
+# load(paste0(idat_data, '/find_validators_data.RData')) 
+methyl <- beta_funnorm
 # clean ids in each data set 
 cleanIDs <- function(data){
   
@@ -94,7 +94,7 @@ validators <- temp
 # subset validators to 48 and fit the population characteristics 
 # similar to model_data
 ###################################
-range <- 9
+range <- 36
 # add an indicator in validators columns to show it is a part of validators 
 colnames(validators) <- paste0(colnames(validators), '_', 'validators')
 
@@ -116,6 +116,16 @@ result <- result[!is.na(result$blood_dna_malkin_lab_),]
 # check distribution of validat
 hist(model_data$age_sample_collection)
 hist(result$age_sample_collection_validators)
+
+# check cancers
+summary(as.factor(model_data$cancer_diagnosis_diagnoses))
+summary(as.factor(result$cancer_diagnosis_diagnoses))
+
+# check genders
+summary(as.factor(model_data$gender))
+summary(as.factor(result$gender))
+
+write.csv(temp, '/home/benbrew/Desktop/validators.csv' )
 
 # ####################################
 # # now find other clinical variables 

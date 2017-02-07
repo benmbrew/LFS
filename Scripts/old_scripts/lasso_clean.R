@@ -64,7 +64,7 @@ resid_full$X <- NULL
 
 
 # Random Forest - this is training and testing on clinical data using k fold cross validation
-predictAll <- function(data,
+lassoPred <- function(data,
                        clin_only,
                        clin_methyl,
                        fac,
