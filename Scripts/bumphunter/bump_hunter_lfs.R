@@ -18,18 +18,21 @@ model_data <- paste0(data_folder, '/model_data')
 ##########
 # load imputed methylation data and cg_locations csv
 ##########
-load(paste0(model_data, '/model_data_cases.RData'))
+# load cases 
+raw_cases_batch <- readRDS(paste0(model_data, '/raw_cases_batch.rda'))
+swan_cases_batch <- readRDS(paste0(model_data, '/swan_cases_batch.rda'))
+quan_cases_batch <- readRDS(paste0(model_data, '/quan_cases_batch.rda'))
+funnorm_cases_batch <- readRDS(paste0(model_data, '/funnorm_cases_batch.rda'))
+
 cg_locations <- read.csv(paste0(model_data, '/cg_locations.csv'))
 
 #########
 # function that looks within cancer and sets WT as controls
 #########
+dat <- raw_cases_batch
 bumpHunterBalanced <- function(dat,
                                balanced,
                                even_counts) {
-  
-    # subset data so its just cancer patietns
-    dat <- dat[dat$cancer_diagnosis_diagnoses != 'Unaffected',]
   
   
   if (balanced) {

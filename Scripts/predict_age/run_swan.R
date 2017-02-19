@@ -13,388 +13,235 @@ scripts_folder <- paste0(project_folder, '/Scripts')
 ##########
 # source model_functions.R and run_models.R
 ##########
-source(paste0(scripts_folder, '/predict_age/model_functions.R'))
-source(paste0(scripts_folder, '/predict_age/run_models.R'))
+source(paste0(scripts_folder, '/predict_age/model_functions_short.R'))
+source(paste0(scripts_folder, '/predict_age/run_models_short.R'))
 
 ##########
 # remove raw, quan, and funnorm objects
 ##########
-rm(list = ls(pattern = "beta_raw_*"))
-rm(list = ls(pattern = "beta_quan_*"))
-rm(list = ls(pattern = "beta_funnorm_*"))
+rm(list = ls(pattern = "raw_*"))
+rm(list = ls(pattern = "quan_*"))
+rm(list = ls(pattern = "funnorm_*"))
 
 
 ###################################################################################################################################
 ## beta_swan
 
 ##########
-# cancer
+# threshold 0.07 - 0.15 normal
 ##########
 
-# bal cancer
-swan_bal_cancer_models <- runModels(beta_swan, 
-                                    bump_hunter = T, 
-                                    bump_hunter_data = beta_swan_bal_cancer_features)
+# swan 07 
+swan_result_07 <- runModels(swan_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = swan_bh_07)
 
-swan_bal_cancer_table <- extractResults(swan_bal_cancer_models, 
-                                        data_name = 'beta_swan_bal_cancer')
+swan_table_07 <- extractResults(swan_result_07, 
+                               data_name = 'swan_07')
 
-# bal cancer sig
-swan_bal_cancer_sig_models <- runModels(beta_swan, 
-                                        bump_hunter = T, 
-                                        bump_hunter_data = beta_swan_bal_cancer_sig_features)
+# swan 08
+swan_result_08 <- runModels(swan_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = swan_bh_08)
 
-swan_bal_cancer_sig_table <- extractResults(swan_bal_cancer_sig_models, 
-                                            data_name = 'swan_bal_cancer_sig')
+swan_table_08 <- extractResults(swan_result_08, 
+                               data_name = 'swan_08')
 
+# swan 09 
+swan_result_09 <- runModels(swan_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = swan_bh_09)
 
-# bal counts cancer
-swan_bal_counts_cancer_models <- runModels(beta_swan, 
-                                           bump_hunter = T, 
-                                           bump_hunter_data = beta_swan_bal_counts_cancer_features)
+swan_table_09 <- extractResults(swan_result_09, 
+                               data_name = 'swan_09')
 
-swan_bal_counts_cancer_table <- extractResults(swan_bal_counts_cancer_models, 
-                                              data_name = 'swan_bal_counts_cancer')
+# swan 10 
+swan_result_10 <- runModels(swan_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = swan_bh_10)
 
-# bal counts cancer sig
-swan_bal_counts_cancer_sig_models <- runModels(beta_swan, 
-                                              bump_hunter = T, 
-                                              bump_hunter_data =  beta_swan_bal_counts_cancer_sig_features)
+swan_table_10 <- extractResults(swan_result_10, 
+                               data_name = 'swan_10')
 
-swan_bal_counts_cancer_sig_table <- extractResults(swan_bal_counts_cancer_sig_models, 
-                                                  data_name = 'swan_bal_counts_cancer_sig')
+# swan 11
+swan_result_11 <- runModels(swan_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = swan_bh_11)
 
-# unbal cancer
-swan_unbal_cancer_models <- runModels(beta_swan, 
-                                     bump_hunter = T, 
-                                     bump_hunter_data = beta_swan_unbal_cancer_features)
+swan_table_11 <- extractResults(swan_result_11, 
+                               data_name = 'swan_11')
 
-swan_unbal_cancer_table <- extractResults(swan_unbal_cancer_models, 
-                                         data_name = 'swan_unbal_cancer')
+# swan 12
+swan_result_12 <- runModels(swan_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = swan_bh_12)
 
+swan_table_12 <- extractResults(swan_result_12, 
+                               data_name = 'swan_12')
 
-# unbal cancer sig
-swan_unbal_cancer_sig_models <- runModels(beta_swan, 
-                                         bump_hunter = T, 
-                                         bump_hunter_data = beta_swan_unbal_cancer_sig_features)
+# swan 13
+swan_result_13 <- runModels(swan_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = swan_bh_13)
 
-swan_unbal_cancer_sig_table <- extractResults(swan_unbal_cancer_sig_models, 
-                                             data_name = 'swan_unbal_cancer_sig')
+swan_table_13 <- extractResults(swan_result_13, 
+                               data_name = 'swan_13')
+
+# swan 14
+swan_result_14 <- runModels(swan_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = swan_bh_14)
+
+swan_table_14 <- extractResults(swan_result_14, 
+                               data_name = 'swan_14')
+
+# swan 15
+swan_result_15 <- runModels(swan_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = swan_bh_15)
+
+swan_table_15 <- extractResults(swan_result_15, 
+                               data_name = 'swan_15')
+
+# swan intersection
+swan_result_int <- runModels(swan_cases, 
+                            bump_hunter = T, 
+                            bump_hunter_data = swan_int_feat)
+
+swan_table_int <- extractResults(swan_result_int, 
+                                data_name = 'swan_int')
+
+# swan union
+swan_result_union <- runModels(swan_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = swan_union_feat)
+
+swan_table_union <- extractResults(swan_result_union, 
+                                   data_name = 'swan_union')
+
 
 ##########
-# p53
+# threshold 0.07 - 0.15 sig
 ##########
 
-# bal p53
-swan_bal_p53_models <- runModels(beta_swan, 
+# swan sig 07 
+swan_result_sig_07 <- runModels(swan_cases, 
                                 bump_hunter = T, 
-                                bump_hunter_data = beta_swan_bal_p53_features)
+                                bump_hunter_data = swan_bh_sig_07)
 
-swan_bal_p53_table <- extractResults(swan_bal_p53_models, 
-                                    data_name = 'swan_bal_p53')
+swan_table_sig_07 <- extractResults(swan_result_sig_07, 
+                                    data_name = 'swan_sig_07')
 
-# bal p53 sig
-swan_bal_p53_sig_models <- runModels(beta_swan, 
-                                    bump_hunter = T, 
-                                    bump_hunter_data = beta_swan_bal_p53_sig_features)
+# swan sig 08
+swan_result_sig_08 <- runModels(swan_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = swan_bh_sig_08)
 
-swan_bal_p53_sig_table <- extractResults(swan_bal_p53_sig_models, 
-                                        data_name = 'swan_bal_p53_sig')
+swan_table_sig_08 <- extractResults(swan_result_sig_08, 
+                                   data_name = 'swan_sig_08')
 
-# bal counts p53
-swan_bal_counts_p53_models <- runModels(beta_swan, 
-                                       bump_hunter = T, 
-                                       bump_hunter_data = beta_swan_bal_counts_p53_features)
+# swan sig 09 
+swan_result_sig_09 <- runModels(swan_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = swan_bh_sig_09)
 
-swan_bal_counts_p53_table <- extractResults(swan_bal_counts_p53_models, 
-                                           data_name = 'swan_bal_counts_p53')
+swan_table_sig_09 <- extractResults(swan_result_sig_09, 
+                                   data_name = 'swan_sig_09')
 
-# bal counts p53 sig
-swan_bal_counts_p53_sig_models <- runModels(beta_swan, 
-                                           bump_hunter = T, 
-                                           bump_hunter_data = beta_swan_bal_counts_p53_sig_features)
+# swan sig 10 
+swan_result_sig_10 <- runModels(swan_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = swan_bh_sig_10)
 
-swan_bal_counts_p53_sig_table <- extractResults(swan_bal_counts_p53_sig_models, 
-                                               data_name = 'swan_bal_counts_p53_sig')
+swan_table_sig_10 <- extractResults(swan_result_sig_10, 
+                                   data_name = 'swan_sig_10')
 
-# unbal p53
-swan_unbal_p53_models <- runModels(beta_swan, 
+# swan sig 11 
+swan_result_sig_11 <- runModels(swan_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = swan_bh_sig_11)
+
+swan_table_sig_11 <- extractResults(swan_result_sig_11, 
+                                   data_name = 'swan_sig_11')
+
+# swan sig 12 
+swan_result_sig_12 <- runModels(swan_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = swan_bh_sig_12)
+
+swan_table_sig_12 <- extractResults(swan_result_sig_12, 
+                                   data_name = 'swan_sig_12')
+
+# swan sig 13 
+swan_result_sig_13 <- runModels(swan_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = swan_bh_sig_13)
+
+swan_table_sig_13 <- extractResults(swan_result_sig_13, 
+                                   data_name = 'swan_sig_13')
+
+# swan sig 14 
+swan_result_sig_14 <- runModels(swan_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = swan_bh_sig_14)
+
+swan_table_sig_14 <- extractResults(swan_result_sig_14, 
+                                   data_name = 'swan_sig_14')
+
+# swan sig 15 
+swan_result_sig_15 <- runModels(swan_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = swan_bh_sig_15)
+
+swan_table_sig_15 <- extractResults(swan_result_sig_15, 
+                                   data_name = 'swan_sig_15')
+
+
+# swan intersection
+swan_result_sig_int <- runModels(swan_cases, 
+                                bump_hunter = T, 
+                                bump_hunter_data = swan_int_sig_feat)
+
+swan_table_sig_int <- extractResults(swan_result_sig_int, 
+                                    data_name = 'swan_sig_int')
+
+# swan union
+swan_result_sig_union <- runModels(swan_cases, 
                                   bump_hunter = T, 
-                                  bump_hunter_data = beta_swan_unbal_p53_features)
+                                  bump_hunter_data = swan_union_sig_feat)
 
-swan_unbal_p53_table <- extractResults(swan_unbal_p53_models, 
-                                      data_name = 'swan_unbal_p53')
+swan_table_sig_union <- extractResults(swan_result_sig_union, 
+                                      data_name = 'swan_sig_union')
 
-
-# unbal p53 sig
-swan_unbal_p53_sig_models <- runModels(beta_swan, 
-                                      bump_hunter = T, 
-                                      bump_hunter_data = beta_swan_unbal_p53_sig_features)
-
-swan_unbal_p53_sig_table <- extractResults(swan_unbal_p53_sig_models, 
-                                          data_name = 'swan_unbal_p53_sig')
-
-
-##########
-# cancer
-##########
-
-# cancer_intersection
-swan_cancer_intersection_models <- runModels(beta_swan, 
-                                            bump_hunter = T, 
-                                            bump_hunter_data = beta_swan_cancer_intersection_features)
-
-swan_cancer_intersection_table <- extractResults(swan_cancer_intersection_models, 
-                                                data_name = 'swan_cancer_intersection')
-
-# cancer_intersection sig
-swan_cancer_intersection_sig_models <- runModels(beta_swan, 
-                                                bump_hunter = T, 
-                                                bump_hunter_data = beta_swan_cancer_intersection_sig_features)
-
-swan_cancer_intersection_sig_table <- extractResults(swan_cancer_intersection_sig_models, 
-                                                    data_name = 'swan_cancer_intersection_sig')
-
-# cancer_union
-swan_cancer_union_models <- runModels(beta_swan, 
-                                     bump_hunter = T, 
-                                     bump_hunter_data = beta_swan_cancer_union_features)
-
-swan_cancer_union_table <- extractResults(swan_cancer_union_models, 
-                                         data_name = 'swan_cancer_union')
-
-# cancer_union sig
-swan_cancer_union_sig_models <- runModels(beta_swan, 
-                                         bump_hunter = T, 
-                                         bump_hunter_data = beta_swan_cancer_union_sig_features)
-
-swan_cancer_union_sig_table <- extractResults(swan_cancer_union_sig_models, 
-                                             data_name = 'swan_cancer_union_sig')
-##########
-# p53
-##########
-# p53_intersection
-swan_p53_intersection_models <- runModels(beta_swan, 
-                                         bump_hunter = T, 
-                                         bump_hunter_data = beta_swan_p53_intersection_features)
-
-swan_p53_intersection_table <- extractResults(swan_p53_intersection_models, 
-                                             data_name = 'swan_p53_intersection')
-
-# p53_intersection sig
-swan_p53_intersection_sig_models <- runModels(beta_swan, 
-                                             bump_hunter = T, 
-                                             bump_hunter_data = beta_swan_p53_intersection_sig_features)
-
-swan_p53_intersection_sig_table <- extractResults(swan_p53_intersection_sig_models, 
-                                                 data_name = 'swan_p53_intersection_sig')
-
-# p53_union
-swan_p53_union_models <- runModels(beta_swan, 
-                                  bump_hunter = T, 
-                                  bump_hunter_data = beta_swan_p53_union_features)
-
-swan_p53_union_table <- extractResults(swan_p53_union_models, 
-                                      data_name = 'swan_p53_union')
-
-# p53_union sig
-swan_p53_union_sig_models <- runModels(beta_swan, 
-                                      bump_hunter = T, 
-                                      bump_hunter_data = beta_swan_p53_union_sig_features)
-
-swan_p53_union_sig_table <- extractResults(swan_p53_union_sig_models, 
-                                          data_name = 'swan_p53_union_sig')
-
-
-##########
-# most balanced cancer 
-##########
-
-# intersection
-swan_bal_counts_cancer_intersection_models <- runModels(beta_swan, 
-                                                       bump_hunter = T, 
-                                                       bump_hunter_data = beta_bal_counts_cancer_intersection_features)
-
-swan_bal_counts_cancer_intersection_table <- extractResults(swan_bal_counts_cancer_intersection_models, 
-                                                           data_name = 'swan_bal_counts_cancer_intersection')
-
-
-swan_bal_counts_cancer_intersection_sig_models <- runModels(beta_swan, 
-                                                           bump_hunter = T, 
-                                                           bump_hunter_data = beta_bal_counts_cancer_intersection_sig_features)
-
-swan_bal_counts_cancer_intersection_sig_table <- extractResults(swan_bal_counts_cancer_intersection_sig_models, 
-                                                               data_name = 'swan_bal_counts_cancer_intersection_sig')
-
-# union
-swan_bal_counts_cancer_union_models <- runModels(beta_swan, 
-                                                bump_hunter = T, 
-                                                bump_hunter_data = beta_bal_counts_cancer_union_features)
-
-swan_bal_counts_cancer_union_table <- extractResults(swan_bal_counts_cancer_union_models, 
-                                                    data_name = 'swan_bal_counts_cancer_union')
-
-
-swan_bal_counts_cancer_union_sig_models <- runModels(beta_swan, 
-                                                    bump_hunter = T, 
-                                                    bump_hunter_data = beta_bal_counts_cancer_union_sig_features)
-
-swan_bal_counts_cancer_union_sig_table <- extractResults(swan_bal_counts_cancer_union_sig_models, 
-                                                        data_name = 'swan_bal_counts_cancer_union_sig')
-
-##########
-# most balanced p53 
-##########
-
-# intersection
-swan_bal_counts_p53_intersection_models <- runModels(beta_swan, 
-                                                    bump_hunter = T, 
-                                                    bump_hunter_data = beta_bal_counts_p53_intersection_features)
-
-swan_bal_counts_p53_intersection_table <- extractResults(swan_bal_counts_p53_intersection_models, 
-                                                        data_name = 'swan_bal_counts_p53_intersection')
-
-
-swan_bal_counts_p53_intersection_sig_models <- runModels(beta_swan, 
-                                                        bump_hunter = T, 
-                                                        bump_hunter_data = beta_bal_counts_p53_intersection_sig_features)
-
-swan_bal_counts_p53_intersection_sig_table <- extractResults(swan_bal_counts_p53_intersection_sig_models, 
-                                                            data_name = 'swan_bal_counts_p53_intersection_sig')
-
-
-# union
-swan_bal_counts_p53_union_models <- runModels(beta_swan, 
-                                             bump_hunter = T, 
-                                             bump_hunter_data = beta_bal_counts_p53_union_features)
-
-swan_bal_counts_p53_union_table <- extractResults(swan_bal_counts_p53_union_models, 
-                                                 data_name = 'swan_bal_counts_p53_union')
-
-
-swan_bal_counts_p53_union_sig_models <- runModels(beta_swan, 
-                                                 bump_hunter = T, 
-                                                 bump_hunter_data = beta_bal_counts_p53_union_sig_features)
-
-swan_bal_counts_p53_union_sig_table <- extractResults(swan_bal_counts_p53_union_sig_models, 
-                                                     data_name = 'swan_bal_counts_p53_union_sig')
-
-###########
-# complete cancer - intersection across each method intersection
-###########
-
-# complete cancer intersection
-swan_complete_cancer_intersection_models <- runModels(beta_swan, 
-                                                     bump_hunter = T, 
-                                                     bump_hunter_data = beta_cancer_intersection_features)
-
-# get table 
-swan_complete_cancer_intersection_table <- extractResults(swan_complete_cancer_intersection_models, 
-                                                         data_name = 'swan_complete_cancer_intersection')
-
-# empty features set
-# # complete cancer intersection sig
-# swan_complete_cancer_intersection_sig_models <- runModels(beta_swan, 
-#                                                          bump_hunter = T, 
-#                                                          bump_hunter_data = beta_cancer_intersection_sig_features)
-# 
-# # get table 
-# swan_complete_cancer_intersection_sig_table <- extractResults(swan_complete_cancer_intersection_sig_models, 
-#                                                              data_name = 'swan_complete_cancer_intersection_sig')
-
-
-# complete cancer union
-swan_complete_cancer_union_models <- runModels(beta_swan, 
-                                              bump_hunter = T, 
-                                              bump_hunter_data = beta_cancer_union_features)
-
-# get table 
-swan_complete_cancer_union_table <- extractResults(swan_complete_cancer_union_models, 
-                                                  data_name = 'swan_complete_cancer_union')
-
-# complete cancer union sig
-swan_complete_cancer_union_sig_models <- runModels(beta_swan, 
-                                                  bump_hunter = T, 
-                                                  bump_hunter_data = beta_cancer_union_sig_features)
-
-# get table 
-swan_complete_cancer_union_sig_table <- extractResults(swan_complete_cancer_union_sig_models, 
-                                                      data_name = 'swan_complete_cancer_union_sig')
-
-
-###########
-# complete p53 - intersection across each method intersection
-###########
-
-# complete p53 intersection
-swan_complete_p53_intersection_models <- runModels(beta_swan, 
-                                                  bump_hunter = T, 
-                                                  bump_hunter_data = beta_p53_intersection_features)
-
-# get table 
-swan_complete_p53_intersection_table <- extractResults(swan_complete_p53_intersection_models, 
-                                                      data_name = 'swan_complete_p53_intersection')
-
-# complete p53 intersection sig
-swan_complete_p53_intersection_sig_models <- runModels(beta_swan, 
-                                                      bump_hunter = T, 
-                                                      bump_hunter_data = beta_p53_intersection_sig_features)
-
-# get table 
-swan_complete_p53_intersection_sig_table <- extractResults(swan_complete_p53_intersection_sig_models, 
-                                                          data_name = 'swan_complete_p53_intersection_sig')
-
-
-# complete p53 union
-swan_complete_p53_union_models <- runModels(beta_swan, 
-                                           bump_hunter = T, 
-                                           bump_hunter_data = beta_p53_union_features)
-
-# get table 
-swan_complete_p53_union_table <- extractResults(swan_complete_p53_union_models, 
-                                               data_name = 'swan_complete_p53_union')
-
-# complete p53 union sig
-swan_complete_p53_union_sig_models <- runModels(beta_swan, 
-                                               bump_hunter = T, 
-                                               bump_hunter_data = beta_p53_union_sig_features)
-
-# get table 
-swan_complete_p53_union_sig_table <- extractResults(swan_complete_p53_union_sig_models, 
-                                                   data_name = 'swan_complete_p53_union_sig')
 
 
 ###########
 # rbind tables and save RDA file
 ###########
-swan_table <- rbind(swan_bal_cancer_table, swan_bal_cancer_sig_table, swan_bal_counts_cancer_table, swan_bal_counts_cancer_sig_table,
-                   swan_unbal_cancer_table, swan_unbal_cancer_sig_table, swan_bal_p53_table, swan_bal_p53_sig_table, swan_bal_counts_p53_table, 
-                   swan_bal_counts_p53_sig_table, swan_unbal_p53_table, swan_unbal_p53_sig_table, swan_cancer_intersection_table, 
-                   swan_cancer_intersection_sig_table, swan_cancer_union_table, swan_cancer_union_sig_table, swan_p53_intersection_table, 
-                   swan_p53_intersection_sig_table, swan_p53_union_table, swan_p53_union_sig_table,
-                   swan_bal_counts_cancer_intersection_table, swan_bal_counts_cancer_intersection_sig_table,
-                   swan_bal_counts_cancer_union_table, swan_bal_counts_cancer_union_sig_table,
-                   swan_bal_counts_p53_intersection_table, swan_bal_counts_p53_intersection_sig_table,
-                   swan_bal_counts_p53_union_table, swan_bal_counts_p53_union_sig_table,
-                   swan_complete_cancer_intersection_table,
-                   swan_complete_cancer_union_table, swan_complete_cancer_union_sig_table,
-                   swan_complete_p53_intersection_table, swan_complete_p53_intersection_sig_table,
-                   swan_complete_p53_union_table, swan_complete_p53_union_sig_table)
+swan_table <- rbind(swan_table_07, swan_table_sig_07,
+                   swan_table_08, swan_table_sig_08,
+                   swan_table_09, swan_table_sig_09,
+                   swan_table_10, swan_table_sig_10,
+                   swan_table_11, swan_table_sig_11,
+                   swan_table_12, swan_table_sig_12,
+                   swan_table_13, swan_table_sig_13,
+                   swan_table_14, swan_table_sig_14,
+                   swan_table_15, swan_table_sig_15,
+                   swan_table_int, swan_table_sig_int,
+                   swan_table_union, swan_table_sig_union)
 
 # remove data 
-rm(swan_bal_cancer_table, swan_bal_cancer_sig_table, swan_bal_counts_cancer_table, swan_bal_counts_cancer_sig_table,
-   swan_unbal_cancer_table, swan_unbal_cancer_sig_table, swan_bal_p53_table, swan_bal_p53_sig_table, swan_bal_counts_p53_table, 
-   swan_bal_counts_p53_sig_table, swan_unbal_p53_table, swan_unbal_p53_sig_table, swan_cancer_intersection_table, 
-   swan_cancer_intersection_sig_table, swan_cancer_union_table, swan_cancer_union_sig_table, swan_p53_intersection_table, 
-   swan_p53_intersection_sig_table, swan_p53_union_table, swan_p53_union_sig_table,
-   swan_bal_counts_cancer_intersection_table, swan_bal_counts_cancer_intersection_sig_table,
-   swan_bal_counts_cancer_union_table, swan_bal_counts_cancer_union_sig_table,
-   swan_bal_counts_p53_intersection_table, swan_bal_counts_p53_intersection_sig_table,
-   swan_bal_counts_p53_union_table, swan_bal_counts_p53_union_sig_table,
-   swan_complete_cancer_intersection_table, 
-   swan_complete_cancer_union_table, swan_complete_cancer_union_sig_table,
-   swan_complete_p53_intersection_table, swan_complete_p53_intersection_sig_table,
-   swan_complete_p53_union_table, swan_complete_p53_union_sig_table)
+rm(swan_table_07, swan_table_sig_07,
+   swan_table_08, swan_table_sig_08,
+   swan_table_09, swan_table_sig_09,
+   swan_table_10, swan_table_sig_10,
+   swan_table_11, swan_table_sig_11,
+   swan_table_12, swan_table_sig_12,
+   swan_table_13, swan_table_sig_13,
+   swan_table_14, swan_table_sig_14,
+   swan_table_15, swan_table_sig_15,
+   swan_table_int, swan_table_sig_int,
+   swan_table_union, swan_table_sig_union)
 
 
 #save table 
@@ -405,78 +252,59 @@ saveRDS(swan_table,
 ###########
 # save all model objects as RDA file
 ###########
-saveRDS(swan_bal_cancer_models, 
-        file = paste0(swan_folder, '/swan_bal_cancer_models.rda'))
-saveRDS(swan_bal_cancer_sig_models, 
-        file = paste0(swan_folder, '/swan_bal_cancer_sig_models.rda'))
-saveRDS(swan_bal_counts_cancer_models, 
-        file = paste0(swan_folder, '/swan_bal_counts_cancer_models.rda'))
-saveRDS(swan_bal_counts_cancer_sig_models, 
-        file = paste0(swan_folder, '/swan_bal_counts_cancer_sig_models.rda'))
-saveRDS(swan_unbal_cancer_models, 
-        file = paste0(swan_folder, '/swan_unbal_cancer_models.rda'))
-saveRDS(swan_unbal_cancer_sig_models, 
-        file = paste0(swan_folder, '/swan_unbal_cancer_sig_models.rda'))
-saveRDS(swan_bal_p53_models, 
-        file = paste0(swan_folder, '/swan_bal_p53_models.rda'))
-saveRDS(swan_bal_p53_sig_models, 
-        file = paste0(swan_folder, '/swan_bal_p53_sig_models.rda'))
-saveRDS(swan_bal_counts_p53_models, 
-        file = paste0(swan_folder, '/swan_bal_counts_p53_models.rda'))
-saveRDS(swan_bal_counts_p53_sig_models, 
-        file = paste0(swan_folder, '/swan_bal_counts_p53_sig_models.rda'))
-saveRDS(swan_unbal_p53_models, 
-        file = paste0(swan_folder, '/swan_unbal_p53_models.rda'))
-saveRDS(swan_unbal_p53_sig_models, 
-        file = paste0(swan_folder, '/swan_unbal_p53_sig_models.rda'))
-saveRDS(swan_cancer_intersection_models, 
-        file = paste0(swan_folder, '/swan_cancer_intersection_models.rda'))
-saveRDS(swan_cancer_intersection_sig_models, 
-        file = paste0(swan_folder, '/swan_cancer_intersection_sig_models.rda'))
-saveRDS(swan_cancer_union_models, 
-        file = paste0(swan_folder, '/swan_cancer_union_models.rda'))
-saveRDS(swan_cancer_union_sig_models, 
-        file = paste0(swan_folder, '/swan_cancer_union_sig_models.rda'))
-saveRDS(swan_p53_intersection_models, 
-        file = paste0(swan_folder, '/swan_p53_intersection_models.rda'))
-saveRDS(swan_p53_intersection_sig_models, 
-        file = paste0(swan_folder, '/swan_p53_intersection_sig_models.rda'))
-saveRDS(swan_p53_union_models, 
-        file = paste0(swan_folder, '/swan_p53_union_models.rda'))
-saveRDS(swan_p53_union_sig_models, 
-        file = paste0(swan_folder, '/swan_p53_union_sig_models.rda'))
-saveRDS(swan_bal_counts_cancer_intersection_models,
-        file = paste0(swan_folder, '/swan_bal_counts_cancer_intersection_models.rda'))
-saveRDS(swan_bal_counts_cancer_intersection_sig_models,
-        file = paste0(swan_folder, '/swan_bal_counts_cancer_intersection_sig_models.rda'))
-saveRDS(swan_bal_counts_cancer_union_models,
-        file = paste0(swan_folder, '/swan_bal_counts_cancer_union_models.rda'))
-saveRDS(swan_bal_counts_cancer_union_sig_models,
-        file = paste0(swan_folder, '/swan_bal_counts_cancer_union_sig_models.rda'))
-saveRDS(swan_bal_counts_p53_intersection_models,
-        file = paste0(swan_folder, '/swan_bal_counts_p53_intersection_models.rda'))
-saveRDS(swan_bal_counts_p53_intersection_sig_models,
-        file = paste0(swan_folder, '/swan_bal_counts_p53_intersection_sig_models.rda'))
-saveRDS(swan_bal_counts_p53_union_models,
-        file = paste0(swan_folder, '/swan_bal_counts_p53_union_models.rda'))
-saveRDS(swan_bal_counts_p53_union_sig_models,
-        file = paste0(swan_folder, '/swan_bal_counts_p53_union_sig_models.rda'))
-saveRDS(swan_complete_cancer_intersection_models,
-        file = paste0(swan_folder, '/swan_complete_cancer_intersection_models.rda'))
-# saveRDS(swan_complete_cancer_intersection_sig_models,
-#         file = paste0(swan_folder, '/swan_complete_cancer_intersection_sig_models.rda'))
-saveRDS(swan_complete_cancer_union_models,
-        file = paste0(swan_folder, '/swan_complete_cancer_union_models.rda'))
-saveRDS(swan_complete_cancer_union_sig_models,
-        file = paste0(swan_folder, '/swan_complete_cancer_union_sig_models.rda'))
-saveRDS(swan_complete_p53_intersection_models,
-        file = paste0(swan_folder, '/swan_complete_p53_intersection_models.rda'))
-saveRDS(swan_complete_p53_intersection_sig_models,
-        file = paste0(swan_folder, '/swan_complete_p53_intersection_sig_models.rda'))
-saveRDS(swan_complete_p53_union_models,
-        file = paste0(swan_folder, '/swan_complete_p53_union_models.rda'))
-saveRDS(swan_complete_p53_union_sig_models,
-        file = paste0(swan_folder, '/swan_complete_p53_union_sig_models.rda'))
+saveRDS(swan_result_07, 
+        file = paste0(swan_folder, '/swan_result_07.rda'))
+saveRDS(swan_result_sig_07, 
+        file = paste0(swan_folder, '/swan_result_sig_07.rda'))
 
+saveRDS(swan_result_08, 
+        file = paste0(swan_folder, '/swan_result_08.rda'))
+saveRDS(swan_result_sig_08, 
+        file = paste0(swan_folder, '/swan_result_sig_08.rda'))
+
+saveRDS(swan_result_09, 
+        file = paste0(swan_folder, '/swan_result_09.rda'))
+saveRDS(swan_result_sig_09, 
+        file = paste0(swan_folder, '/swan_result_sig_09.rda'))
+
+saveRDS(swan_result_10, 
+        file = paste0(swan_folder, '/swan_result_10.rda'))
+saveRDS(swan_result_sig_10, 
+        file = paste0(swan_folder, '/swan_result_sig_10.rda'))
+
+saveRDS(swan_result_11, 
+        file = paste0(swan_folder, '/swan_result_11.rda'))
+saveRDS(swan_result_sig_11, 
+        file = paste0(swan_folder, '/swan_result_sig_11.rda'))
+
+saveRDS(swan_result_12, 
+        file = paste0(swan_folder, '/swan_result_12.rda'))
+saveRDS(swan_result_sig_12, 
+        file = paste0(swan_folder, '/swan_result_sig_12.rda'))
+
+saveRDS(swan_result_13, 
+        file = paste0(swan_folder, '/swan_result_13.rda'))
+saveRDS(swan_result_sig_13, 
+        file = paste0(swan_folder, '/swan_result_sig_13.rda'))
+
+saveRDS(swan_result_14, 
+        file = paste0(swan_folder, '/swan_result_14.rda'))
+saveRDS(swan_result_sig_14, 
+        file = paste0(swan_folder, '/swan_result_sig_14.rda'))
+
+saveRDS(swan_result_15, 
+        file = paste0(swan_folder, '/swan_result_15.rda'))
+saveRDS(swan_result_sig_15, 
+        file = paste0(swan_folder, '/swan_result_sig_15.rda'))
+
+saveRDS(swan_result_int, 
+        file = paste0(swan_folder, '/swan_result_inr.rda'))
+saveRDS(swan_result_sig_int, 
+        file = paste0(swan_folder, '/swan_result_sig_int.rda'))
+
+saveRDS(swan_result_union, 
+        file = paste0(swan_folder, '/swan_result_union.rda'))
+saveRDS(swan_result_sig_union, 
+        file = paste0(swan_folder, '/swan_result_sig_union.rda'))
 
 

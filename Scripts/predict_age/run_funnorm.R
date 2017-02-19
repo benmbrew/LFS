@@ -13,388 +13,234 @@ scripts_folder <- paste0(project_folder, '/Scripts')
 ##########
 # source model_functions.R and run_models.R
 ##########
-source(paste0(scripts_folder, '/predict_age/model_functions.R'))
-source(paste0(scripts_folder, '/predict_age/run_models.R'))
+source(paste0(scripts_folder, '/predict_age/model_functions_short.R'))
+source(paste0(scripts_folder, '/predict_age/run_models_short.R'))
 
 ##########
 # remove raw, swan, and quan objects
 ##########
-rm(list = ls(pattern = "beta_raw_*"))
-rm(list = ls(pattern = "beta_swan_*"))
-rm(list = ls(pattern = "beta_quan_*"))
+rm(list = ls(pattern = "raw_*"))
+rm(list = ls(pattern = "swan_*"))
+rm(list = ls(pattern = "quan_*"))
 
 
 ###################################################################################################################################
 ## beta_funnorm
 
 ##########
-# cancer
+# threshold 0.07 - 0.15 normal
 ##########
 
-# bal cancer
-funnorm_bal_cancer_models <- runModels(beta_funnorm, 
-                                   bump_hunter = T, 
-                                   bump_hunter_data = beta_funnorm_bal_cancer_features)
+# funnorm 07 
+funnorm_result_07 <- runModels(funnorm_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = funnorm_bh_07)
 
-funnorm_bal_cancer_table <- extractResults(funnorm_bal_cancer_models, 
-                                           data_name = 'beta_funnorm_bal_cancer')
+funnorm_table_07 <- extractResults(funnorm_result_07, 
+                               data_name = 'funnorm_07')
 
-# bal cancer sig
-funnorm_bal_cancer_sig_models <- runModels(beta_funnorm, 
-                                           bump_hunter = T, 
-                                           bump_hunter_data = beta_funnorm_bal_cancer_sig_features)
+# funnorm 08
+funnorm_result_08 <- runModels(funnorm_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = funnorm_bh_08)
 
-funnorm_bal_cancer_sig_table <- extractResults(funnorm_bal_cancer_sig_models, 
-                                               data_name = 'funnorm_bal_cancer_sig')
+funnorm_table_08 <- extractResults(funnorm_result_08, 
+                               data_name = 'funnorm_08')
 
+# funnorm 09 
+funnorm_result_09 <- runModels(funnorm_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = funnorm_bh_09)
 
-# bal counts cancer
-funnorm_bal_counts_cancer_models <- runModels(beta_funnorm, 
-                                              bump_hunter = T, 
-                                              bump_hunter_data = beta_funnorm_bal_counts_cancer_features)
+funnorm_table_09 <- extractResults(funnorm_result_09, 
+                               data_name = 'funnorm_09')
 
-funnorm_bal_counts_cancer_table <- extractResults(funnorm_bal_counts_cancer_models, 
-                                              data_name = 'funnorm_bal_counts_cancer')
+# funnorm 10 
+funnorm_result_10 <- runModels(funnorm_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = funnorm_bh_10)
 
-# bal counts cancer sig
-funnorm_bal_counts_cancer_sig_models <- runModels(beta_funnorm, 
-                                                  bump_hunter = T, 
-                                                  bump_hunter_data =  beta_funnorm_bal_counts_cancer_sig_features)
+funnorm_table_10 <- extractResults(funnorm_result_10, 
+                               data_name = 'funnorm_10')
 
-funnorm_bal_counts_cancer_sig_table <- extractResults(funnorm_bal_counts_cancer_sig_models, 
-                                                      data_name = 'funnorm_bal_counts_cancer_sig')
+# funnorm 11
+funnorm_result_11 <- runModels(funnorm_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = funnorm_bh_11)
 
-# unbal cancer
-funnorm_unbal_cancer_models <- runModels(beta_funnorm, 
-                                     bump_hunter = T, 
-                                     bump_hunter_data = beta_funnorm_unbal_cancer_features)
+funnorm_table_11 <- extractResults(funnorm_result_11, 
+                               data_name = 'funnorm_11')
 
-funnorm_unbal_cancer_table <- extractResults(funnorm_unbal_cancer_models, 
-                                         data_name = 'funnorm_unbal_cancer')
+# funnorm 12
+funnorm_result_12 <- runModels(funnorm_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = funnorm_bh_12)
 
+funnorm_table_12 <- extractResults(funnorm_result_12, 
+                               data_name = 'funnorm_12')
 
-# unbal cancer sig
-funnorm_unbal_cancer_sig_models <- runModels(beta_funnorm, 
-                                         bump_hunter = T, 
-                                         bump_hunter_data = beta_funnorm_unbal_cancer_sig_features)
+# funnorm 13
+funnorm_result_13 <- runModels(funnorm_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = funnorm_bh_13)
 
-funnorm_unbal_cancer_sig_table <- extractResults(funnorm_unbal_cancer_sig_models, 
-                                             data_name = 'funnorm_unbal_cancer_sig')
+funnorm_table_13 <- extractResults(funnorm_result_13, 
+                               data_name = 'funnorm_13')
+
+# funnorm 14
+funnorm_result_14 <- runModels(funnorm_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = funnorm_bh_14)
+
+funnorm_table_14 <- extractResults(funnorm_result_14, 
+                               data_name = 'funnorm_14')
+
+# funnorm 15
+funnorm_result_15 <- runModels(funnorm_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = funnorm_bh_15)
+
+funnorm_table_15 <- extractResults(funnorm_result_15, 
+                               data_name = 'funnorm_15')
+
+# funnorm intersection
+funnorm_result_int <- runModels(funnorm_cases, 
+                            bump_hunter = T, 
+                            bump_hunter_data = funnorm_int_feat)
+
+funnorm_table_int <- extractResults(funnorm_result_int, 
+                                data_name = 'funnorm_int')
+
+# funnorm union
+funnorm_result_union <- runModels(funnorm_cases, 
+                              bump_hunter = T, 
+                              bump_hunter_data = funnorm_union_feat)
+
+funnorm_table_union <- extractResults(funnorm_result_union, 
+                                  data_name = 'funnorm_union')
+
 
 ##########
-# p53
+# threshold 0.07 - 0.15 sig
 ##########
 
-# bal p53
-funnorm_bal_p53_models <- runModels(beta_funnorm, 
+# funnorm sig 07 
+funnorm_result_sig_07 <- runModels(funnorm_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = funnorm_bh_sig_07)
+
+funnorm_table_sig_07 <- extractResults(funnorm_result_sig_07, 
+                                   data_name = 'funnorm_sig_07')
+
+# funnorm sig 08
+funnorm_result_sig_08 <- runModels(funnorm_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = funnorm_bh_sig_08)
+
+funnorm_table_sig_08 <- extractResults(funnorm_result_sig_08, 
+                                   data_name = 'funnorm_sig_08')
+
+# funnorm sig 09 
+funnorm_result_sig_09 <- runModels(funnorm_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = funnorm_bh_sig_09)
+
+funnorm_table_sig_09 <- extractResults(funnorm_result_sig_09, 
+                                   data_name = 'funnorm_sig_09')
+
+# funnorm sig 10 
+funnorm_result_sig_10 <- runModels(funnorm_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = funnorm_bh_sig_10)
+
+funnorm_table_sig_10 <- extractResults(funnorm_result_sig_10, 
+                                   data_name = 'funnorm_sig_10')
+
+# funnorm sig 11 
+funnorm_result_sig_11 <- runModels(funnorm_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = funnorm_bh_sig_11)
+
+funnorm_table_sig_11 <- extractResults(funnorm_result_sig_11, 
+                                   data_name = 'funnorm_sig_11')
+
+# funnorm sig 12 
+funnorm_result_sig_12 <- runModels(funnorm_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = funnorm_bh_sig_12)
+
+funnorm_table_sig_12 <- extractResults(funnorm_result_sig_12, 
+                                   data_name = 'funnorm_sig_12')
+
+# funnorm sig 13 
+funnorm_result_sig_13 <- runModels(funnorm_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = funnorm_bh_sig_13)
+
+funnorm_table_sig_13 <- extractResults(funnorm_result_sig_13, 
+                                   data_name = 'funnorm_sig_13')
+
+# funnorm sig 14 
+funnorm_result_sig_14 <- runModels(funnorm_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = funnorm_bh_sig_14)
+
+funnorm_table_sig_14 <- extractResults(funnorm_result_sig_14, 
+                                   data_name = 'funnorm_sig_14')
+
+# funnorm sig 15 
+funnorm_result_sig_15 <- runModels(funnorm_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = funnorm_bh_sig_15)
+
+funnorm_table_sig_15 <- extractResults(funnorm_result_sig_15, 
+                                   data_name = 'funnorm_sig_15')
+
+
+# funnorm intersection
+funnorm_result_sig_int <- runModels(funnorm_cases, 
                                 bump_hunter = T, 
-                                bump_hunter_data = beta_funnorm_bal_p53_features)
+                                bump_hunter_data = funnorm_int_sig_feat)
 
-funnorm_bal_p53_table <- extractResults(funnorm_bal_p53_models, 
-                                    data_name = 'funnorm_bal_p53')
+funnorm_table_sig_int <- extractResults(funnorm_result_sig_int, 
+                                    data_name = 'funnorm_sig_int')
 
-# bal p53 sig
-funnorm_bal_p53_sig_models <- runModels(beta_funnorm, 
-                                    bump_hunter = T, 
-                                    bump_hunter_data = beta_funnorm_bal_p53_sig_features)
-
-funnorm_bal_p53_sig_table <- extractResults(funnorm_bal_p53_sig_models, 
-                                        data_name = 'funnorm_bal_p53_sig')
-
-# bal counts p53
-funnorm_bal_counts_p53_models <- runModels(beta_funnorm, 
-                                       bump_hunter = T, 
-                                       bump_hunter_data = beta_funnorm_bal_counts_p53_features)
-
-funnorm_bal_counts_p53_table <- extractResults(funnorm_bal_counts_p53_models, 
-                                           data_name = 'funnorm_bal_counts_p53')
-
-# bal counts p53 sig
-funnorm_bal_counts_p53_sig_models <- runModels(beta_funnorm, 
-                                           bump_hunter = T, 
-                                           bump_hunter_data = beta_funnorm_bal_counts_p53_sig_features)
-
-funnorm_bal_counts_p53_sig_table <- extractResults(funnorm_bal_counts_p53_sig_models, 
-                                               data_name = 'funnorm_bal_counts_p53_sig')
-
-# unbal p53
-funnorm_unbal_p53_models <- runModels(beta_funnorm, 
+# funnorm union
+funnorm_result_sig_union <- runModels(funnorm_cases, 
                                   bump_hunter = T, 
-                                  bump_hunter_data = beta_funnorm_unbal_p53_features)
+                                  bump_hunter_data = funnorm_union_sig_feat)
 
-funnorm_unbal_p53_table <- extractResults(funnorm_unbal_p53_models, 
-                                      data_name = 'funnorm_unbal_p53')
-
-
-# unbal p53 sig
-funnorm_unbal_p53_sig_models <- runModels(beta_funnorm, 
-                                      bump_hunter = T, 
-                                      bump_hunter_data = beta_funnorm_unbal_p53_sig_features)
-
-funnorm_unbal_p53_sig_table <- extractResults(funnorm_unbal_p53_sig_models, 
-                                          data_name = 'funnorm_unbal_p53_sig')
-
-
-##########
-# cancer
-##########
-
-# cancer_intersection
-funnorm_cancer_intersection_models <- runModels(beta_funnorm, 
-                                            bump_hunter = T, 
-                                            bump_hunter_data = beta_funnorm_cancer_intersection_features)
-
-funnorm_cancer_intersection_table <- extractResults(funnorm_cancer_intersection_models, 
-                                                data_name = 'funnorm_cancer_intersection')
-
-# cancer_intersection sig
-funnorm_cancer_intersection_sig_models <- runModels(beta_funnorm, 
-                                                bump_hunter = T, 
-                                                bump_hunter_data = beta_funnorm_cancer_intersection_sig_features)
-
-funnorm_cancer_intersection_sig_table <- extractResults(funnorm_cancer_intersection_sig_models, 
-                                                    data_name = 'funnorm_cancer_intersection_sig')
-
-# cancer_union
-funnorm_cancer_union_models <- runModels(beta_funnorm, 
-                                     bump_hunter = T, 
-                                     bump_hunter_data = beta_funnorm_cancer_union_features)
-
-funnorm_cancer_union_table <- extractResults(funnorm_cancer_union_models, 
-                                         data_name = 'funnorm_cancer_union')
-
-# cancer_union sig
-funnorm_cancer_union_sig_models <- runModels(beta_funnorm, 
-                                         bump_hunter = T, 
-                                         bump_hunter_data = beta_funnorm_cancer_union_sig_features)
-
-funnorm_cancer_union_sig_table <- extractResults(funnorm_cancer_union_sig_models, 
-                                             data_name = 'funnorm_cancer_union_sig')
-##########
-# p53
-##########
-# p53_intersection
-funnorm_p53_intersection_models <- runModels(beta_funnorm, 
-                                         bump_hunter = T, 
-                                         bump_hunter_data = beta_funnorm_p53_intersection_features)
-
-funnorm_p53_intersection_table <- extractResults(funnorm_p53_intersection_models, 
-                                             data_name = 'funnorm_p53_intersection')
-
-# p53_intersection sig
-funnorm_p53_intersection_sig_models <- runModels(beta_funnorm, 
-                                             bump_hunter = T, 
-                                             bump_hunter_data = beta_funnorm_p53_intersection_sig_features)
-
-funnorm_p53_intersection_sig_table <- extractResults(funnorm_p53_intersection_sig_models, 
-                                                 data_name = 'funnorm_p53_intersection_sig')
-
-# p53_union
-funnorm_p53_union_models <- runModels(beta_funnorm, 
-                                  bump_hunter = T, 
-                                  bump_hunter_data = beta_funnorm_p53_union_features)
-
-funnorm_p53_union_table <- extractResults(funnorm_p53_union_models, 
-                                      data_name = 'funnorm_p53_union')
-
-# p53_union sig
-funnorm_p53_union_sig_models <- runModels(beta_funnorm, 
-                                      bump_hunter = T, 
-                                      bump_hunter_data = beta_funnorm_p53_union_sig_features)
-
-funnorm_p53_union_sig_table <- extractResults(funnorm_p53_union_sig_models, 
-                                          data_name = 'funnorm_p53_union_sig')
-
-
-##########
-# most balanced cancer 
-##########
-
-# intersection
-funnorm_bal_counts_cancer_intersection_models <- runModels(beta_funnorm, 
-                                                       bump_hunter = T, 
-                                                       bump_hunter_data = beta_bal_counts_cancer_intersection_features)
-
-funnorm_bal_counts_cancer_intersection_table <- extractResults(funnorm_bal_counts_cancer_intersection_models, 
-                                                           data_name = 'funnorm_bal_counts_cancer_intersection')
-
-
-funnorm_bal_counts_cancer_intersection_sig_models <- runModels(beta_funnorm, 
-                                                           bump_hunter = T, 
-                                                           bump_hunter_data = beta_bal_counts_cancer_intersection_sig_features)
-
-funnorm_bal_counts_cancer_intersection_sig_table <- extractResults(funnorm_bal_counts_cancer_intersection_sig_models, 
-                                                               data_name = 'funnorm_bal_counts_cancer_intersection_sig')
-
-# union
-funnorm_bal_counts_cancer_union_models <- runModels(beta_funnorm, 
-                                                bump_hunter = T, 
-                                                bump_hunter_data = beta_bal_counts_cancer_union_features)
-
-funnorm_bal_counts_cancer_union_table <- extractResults(funnorm_bal_counts_cancer_union_models, 
-                                                    data_name = 'funnorm_bal_counts_cancer_union')
-
-
-funnorm_bal_counts_cancer_union_sig_models <- runModels(beta_funnorm, 
-                                                    bump_hunter = T, 
-                                                    bump_hunter_data = beta_bal_counts_cancer_union_sig_features)
-
-funnorm_bal_counts_cancer_union_sig_table <- extractResults(funnorm_bal_counts_cancer_union_sig_models, 
-                                                        data_name = 'funnorm_bal_counts_cancer_union_sig')
-
-##########
-# most balanced p53 
-##########
-
-# intersection
-funnorm_bal_counts_p53_intersection_models <- runModels(beta_funnorm, 
-                                                    bump_hunter = T, 
-                                                    bump_hunter_data = beta_bal_counts_p53_intersection_features)
-
-funnorm_bal_counts_p53_intersection_table <- extractResults(funnorm_bal_counts_p53_intersection_models, 
-                                                        data_name = 'funnorm_bal_counts_p53_intersection')
-
-
-funnorm_bal_counts_p53_intersection_sig_models <- runModels(beta_funnorm, 
-                                                        bump_hunter = T, 
-                                                        bump_hunter_data = beta_bal_counts_p53_intersection_sig_features)
-
-funnorm_bal_counts_p53_intersection_sig_table <- extractResults(funnorm_bal_counts_p53_intersection_sig_models, 
-                                                            data_name = 'funnorm_bal_counts_p53_intersection_sig')
-
-
-# union
-funnorm_bal_counts_p53_union_models <- runModels(beta_funnorm, 
-                                             bump_hunter = T, 
-                                             bump_hunter_data = beta_bal_counts_p53_union_features)
-
-funnorm_bal_counts_p53_union_table <- extractResults(funnorm_bal_counts_p53_union_models, 
-                                                 data_name = 'funnorm_bal_counts_p53_union')
-
-
-funnorm_bal_counts_p53_union_sig_models <- runModels(beta_funnorm, 
-                                                 bump_hunter = T, 
-                                                 bump_hunter_data = beta_bal_counts_p53_union_sig_features)
-
-funnorm_bal_counts_p53_union_sig_table <- extractResults(funnorm_bal_counts_p53_union_sig_models, 
-                                                     data_name = 'funnorm_bal_counts_p53_union_sig')
-
-###########
-# complete cancer - intersection across each method intersection
-###########
-
-# complete cancer intersection
-funnorm_complete_cancer_intersection_models <- runModels(beta_funnorm, 
-                                                     bump_hunter = T, 
-                                                     bump_hunter_data = beta_cancer_intersection_features)
-
-# get table 
-funnorm_complete_cancer_intersection_table <- extractResults(funnorm_complete_cancer_intersection_models, 
-                                                         data_name = 'funnorm_complete_cancer_intersection')
-
-# empty features set
-# # complete cancer intersection sig
-# funnorm_complete_cancer_intersection_sig_models <- runModels(beta_funnorm, 
-#                                                          bump_hunter = T, 
-#                                                          bump_hunter_data = beta_cancer_intersection_sig_features)
-# 
-# # get table 
-# funnorm_complete_cancer_intersection_sig_table <- extractResults(funnorm_complete_cancer_intersection_sig_models, 
-#                                                              data_name = 'funnorm_complete_cancer_intersection_sig')
-
-
-# complete cancer union
-funnorm_complete_cancer_union_models <- runModels(beta_funnorm, 
-                                              bump_hunter = T, 
-                                              bump_hunter_data = beta_cancer_union_features)
-
-# get table 
-funnorm_complete_cancer_union_table <- extractResults(funnorm_complete_cancer_union_models, 
-                                                  data_name = 'funnorm_complete_cancer_union')
-
-# complete cancer union sig
-funnorm_complete_cancer_union_sig_models <- runModels(beta_funnorm, 
-                                                  bump_hunter = T, 
-                                                  bump_hunter_data = beta_cancer_union_sig_features)
-
-# get table 
-funnorm_complete_cancer_union_sig_table <- extractResults(funnorm_complete_cancer_union_sig_models, 
-                                                      data_name = 'funnorm_complete_cancer_union_sig')
-
-
-###########
-# complete p53 - intersection across each method intersection
-###########
-
-# complete p53 intersection
-funnorm_complete_p53_intersection_models <- runModels(beta_funnorm, 
-                                                  bump_hunter = T, 
-                                                  bump_hunter_data = beta_p53_intersection_features)
-
-# get table 
-funnorm_complete_p53_intersection_table <- extractResults(funnorm_complete_p53_intersection_models, 
-                                                      data_name = 'funnorm_complete_p53_intersection')
-
-# complete p53 intersection sig
-funnorm_complete_p53_intersection_sig_models <- runModels(beta_funnorm, 
-                                                      bump_hunter = T, 
-                                                      bump_hunter_data = beta_p53_intersection_sig_features)
-
-# get table 
-funnorm_complete_p53_intersection_sig_table <- extractResults(funnorm_complete_p53_intersection_sig_models, 
-                                                          data_name = 'funnorm_complete_p53_intersection_sig')
-
-
-# complete p53 union
-funnorm_complete_p53_union_models <- runModels(beta_funnorm, 
-                                           bump_hunter = T, 
-                                           bump_hunter_data = beta_p53_union_features)
-
-# get table 
-funnorm_complete_p53_union_table <- extractResults(funnorm_complete_p53_union_models, 
-                                               data_name = 'funnorm_complete_p53_union')
-
-# complete p53 union sig
-funnorm_complete_p53_union_sig_models <- runModels(beta_funnorm, 
-                                               bump_hunter = T, 
-                                               bump_hunter_data = beta_p53_union_sig_features)
-
-# get table 
-funnorm_complete_p53_union_sig_table <- extractResults(funnorm_complete_p53_union_sig_models, 
-                                                   data_name = 'funnorm_complete_p53_union_sig')
+funnorm_table_sig_union <- extractResults(funnorm_result_sig_union, 
+                                      data_name = 'funnorm_sig_union')
 
 
 ###########
 # rbind tables and save RDA file
 ###########
-funnorm_table <- rbind(funnorm_bal_cancer_table, funnorm_bal_cancer_sig_table, funnorm_bal_counts_cancer_table, funnorm_bal_counts_cancer_sig_table,
-                   funnorm_unbal_cancer_table, funnorm_unbal_cancer_sig_table, funnorm_bal_p53_table, funnorm_bal_p53_sig_table, funnorm_bal_counts_p53_table, 
-                   funnorm_bal_counts_p53_sig_table, funnorm_unbal_p53_table, funnorm_unbal_p53_sig_table, funnorm_cancer_intersection_table, 
-                   funnorm_cancer_intersection_sig_table, funnorm_cancer_union_table, funnorm_cancer_union_sig_table, funnorm_p53_intersection_table, 
-                   funnorm_p53_intersection_sig_table, funnorm_p53_union_table, funnorm_p53_union_sig_table,
-                   funnorm_bal_counts_cancer_intersection_table, funnorm_bal_counts_cancer_intersection_sig_table,
-                   funnorm_bal_counts_cancer_union_table, funnorm_bal_counts_cancer_union_sig_table,
-                   funnorm_bal_counts_p53_intersection_table, funnorm_bal_counts_p53_intersection_sig_table,
-                   funnorm_bal_counts_p53_union_table, funnorm_bal_counts_p53_union_sig_table,
-                   funnorm_complete_cancer_intersection_table, #funnorm_complete_cancer_intersection_sig_table,
-                   funnorm_complete_cancer_union_table, funnorm_complete_cancer_union_sig_table,
-                   funnorm_complete_p53_intersection_table, funnorm_complete_p53_intersection_sig_table,
-                   funnorm_complete_p53_union_table, funnorm_complete_p53_union_sig_table)
+funnorm_table <- rbind(funnorm_table_07, funnorm_table_sig_07,
+                   funnorm_table_08, funnorm_table_sig_08,
+                   funnorm_table_09, funnorm_table_sig_09,
+                   funnorm_table_10, funnorm_table_sig_10,
+                   funnorm_table_11, funnorm_table_sig_11,
+                   funnorm_table_12, funnorm_table_sig_12,
+                   funnorm_table_13, funnorm_table_sig_13,
+                   funnorm_table_14, funnorm_table_sig_14,
+                   funnorm_table_15, funnorm_table_sig_15,
+                   funnorm_table_int, funnorm_table_sig_int,
+                   funnorm_table_union, funnorm_table_sig_union)
 
 # remove data 
-rm(funnorm_bal_cancer_table, funnorm_bal_cancer_sig_table, funnorm_bal_counts_cancer_table, funnorm_bal_counts_cancer_sig_table,
-   funnorm_unbal_cancer_table, funnorm_unbal_cancer_sig_table, funnorm_bal_p53_table, funnorm_bal_p53_sig_table, funnorm_bal_counts_p53_table, 
-   funnorm_bal_counts_p53_sig_table, funnorm_unbal_p53_table, funnorm_unbal_p53_sig_table, funnorm_cancer_intersection_table, 
-   funnorm_cancer_intersection_sig_table, funnorm_cancer_union_table, funnorm_cancer_union_sig_table, funnorm_p53_intersection_table, 
-   funnorm_p53_intersection_sig_table, funnorm_p53_union_table, funnorm_p53_union_sig_table,
-   funnorm_bal_counts_cancer_intersection_table, funnorm_bal_counts_cancer_intersection_sig_table,
-   funnorm_bal_counts_cancer_union_table, funnorm_bal_counts_cancer_union_sig_table,
-   funnorm_bal_counts_p53_intersection_table, funnorm_bal_counts_p53_intersection_sig_table,
-   funnorm_bal_counts_p53_union_table, funnorm_bal_counts_p53_union_sig_table,
-   funnorm_complete_cancer_intersection_table, #funnorm_complete_cancer_intersection_sig_table,
-   funnorm_complete_cancer_union_table, funnorm_complete_cancer_union_sig_table,
-   funnorm_complete_p53_intersection_table, funnorm_complete_p53_intersection_sig_table,
-   funnorm_complete_p53_union_table, funnorm_complete_p53_union_sig_table)
+rm(funnorm_table_07, funnorm_table_sig_07,
+   funnorm_table_08, funnorm_table_sig_08,
+   funnorm_table_09, funnorm_table_sig_09,
+   funnorm_table_10, funnorm_table_sig_10,
+   funnorm_table_11, funnorm_table_sig_11,
+   funnorm_table_12, funnorm_table_sig_12,
+   funnorm_table_13, funnorm_table_sig_13,
+   funnorm_table_14, funnorm_table_sig_14,
+   funnorm_table_15, funnorm_table_sig_15,
+   funnorm_table_int, funnorm_table_sig_int,
+   funnorm_table_union, funnorm_table_sig_union)
 
 
 #save table 
@@ -405,78 +251,59 @@ saveRDS(funnorm_table,
 ###########
 # save all model objects as RDA file
 ###########
-saveRDS(funnorm_bal_cancer_models, 
-        file = paste0(funnorm_folder, '/funnorm_bal_cancer_models.rda'))
-saveRDS(funnorm_bal_cancer_sig_models, 
-        file = paste0(funnorm_folder, '/funnorm_bal_cancer_sig_models.rda'))
-saveRDS(funnorm_bal_counts_cancer_models, 
-        file = paste0(funnorm_folder, '/funnorm_bal_counts_cancer_models.rda'))
-saveRDS(funnorm_bal_counts_cancer_sig_models, 
-        file = paste0(funnorm_folder, '/funnorm_bal_counts_cancer_sig_models.rda'))
-saveRDS(funnorm_unbal_cancer_models, 
-        file = paste0(funnorm_folder, '/funnorm_unbal_cancer_models.rda'))
-saveRDS(funnorm_unbal_cancer_sig_models, 
-        file = paste0(funnorm_folder, '/funnorm_unbal_cancer_sig_models.rda'))
-saveRDS(funnorm_bal_p53_models, 
-        file = paste0(funnorm_folder, '/funnorm_bal_p53_models.rda'))
-saveRDS(funnorm_bal_p53_sig_models, 
-        file = paste0(funnorm_folder, '/funnorm_bal_p53_sig_models.rda'))
-saveRDS(funnorm_bal_counts_p53_models, 
-        file = paste0(funnorm_folder, '/funnorm_bal_counts_p53_models.rda'))
-saveRDS(funnorm_bal_counts_p53_sig_models, 
-        file = paste0(funnorm_folder, '/funnorm_bal_counts_p53_sig_models.rda'))
-saveRDS(funnorm_unbal_p53_models, 
-        file = paste0(funnorm_folder, '/funnorm_unbal_p53_models.rda'))
-saveRDS(funnorm_unbal_p53_sig_models, 
-        file = paste0(funnorm_folder, '/funnorm_unbal_p53_sig_models.rda'))
-saveRDS(funnorm_cancer_intersection_models, 
-        file = paste0(funnorm_folder, '/funnorm_cancer_intersection_models.rda'))
-saveRDS(funnorm_cancer_intersection_sig_models, 
-        file = paste0(funnorm_folder, '/funnorm_cancer_intersection_sig_models.rda'))
-saveRDS(funnorm_cancer_union_models, 
-        file = paste0(funnorm_folder, '/funnorm_cancer_union_models.rda'))
-saveRDS(funnorm_cancer_union_sig_models, 
-        file = paste0(funnorm_folder, '/funnorm_cancer_union_sig_models.rda'))
-saveRDS(funnorm_p53_intersection_models, 
-        file = paste0(funnorm_folder, '/funnorm_p53_intersection_models.rda'))
-saveRDS(funnorm_p53_intersection_sig_models, 
-        file = paste0(funnorm_folder, '/funnorm_p53_intersection_sig_models.rda'))
-saveRDS(funnorm_p53_union_models, 
-        file = paste0(funnorm_folder, '/funnorm_p53_union_models.rda'))
-saveRDS(funnorm_p53_union_sig_models, 
-        file = paste0(funnorm_folder, '/funnorm_p53_union_sig_models.rda'))
-saveRDS(funnorm_bal_counts_cancer_intersection_models,
-        file = paste0(funnorm_folder, '/funnorm_bal_counts_cancer_intersection_models.rda'))
-saveRDS(funnorm_bal_counts_cancer_intersection_sig_models,
-        file = paste0(funnorm_folder, '/funnorm_bal_counts_cancer_intersection_sig_models.rda'))
-saveRDS(funnorm_bal_counts_cancer_union_models,
-        file = paste0(funnorm_folder, '/funnorm_bal_counts_cancer_union_models.rda'))
-saveRDS(funnorm_bal_counts_cancer_union_sig_models,
-        file = paste0(funnorm_folder, '/funnorm_bal_counts_cancer_union_sig_models.rda'))
-saveRDS(funnorm_bal_counts_p53_intersection_models,
-        file = paste0(funnorm_folder, '/funnorm_bal_counts_p53_intersection_models.rda'))
-saveRDS(funnorm_bal_counts_p53_intersection_sig_models,
-        file = paste0(funnorm_folder, '/funnorm_bal_counts_p53_intersection_sig_models.rda'))
-saveRDS(funnorm_bal_counts_p53_union_models,
-        file = paste0(funnorm_folder, '/funnorm_bal_counts_p53_union_models.rda'))
-saveRDS(funnorm_bal_counts_p53_union_sig_models,
-        file = paste0(funnorm_folder, '/funnorm_bal_counts_p53_union_sig_models.rda'))
-saveRDS(funnorm_complete_cancer_intersection_models,
-        file = paste0(funnorm_folder, '/funnorm_complete_cancer_intersection_models.rda'))
-# saveRDS(funnorm_complete_cancer_intersection_sig_models,
-#         file = paste0(funnorm_folder, '/funnorm_complete_cancer_intersection_sig_models.rda'))
-saveRDS(funnorm_complete_cancer_union_models,
-        file = paste0(funnorm_folder, '/funnorm_complete_cancer_union_models.rda'))
-saveRDS(funnorm_complete_cancer_union_sig_models,
-        file = paste0(funnorm_folder, '/funnorm_complete_cancer_union_sig_models.rda'))
-saveRDS(funnorm_complete_p53_intersection_models,
-        file = paste0(funnorm_folder, '/funnorm_complete_p53_intersection_models.rda'))
-saveRDS(funnorm_complete_p53_intersection_sig_models,
-        file = paste0(funnorm_folder, '/funnorm_complete_p53_intersection_sig_models.rda'))
-saveRDS(funnorm_complete_p53_union_models,
-        file = paste0(funnorm_folder, '/funnorm_complete_p53_union_models.rda'))
-saveRDS(funnorm_complete_p53_union_sig_models,
-        file = paste0(funnorm_folder, '/funnorm_complete_p53_union_sig_models.rda'))
+saveRDS(funnorm_result_07, 
+        file = paste0(funnorm_folder, '/funnorm_result_07.rda'))
+saveRDS(funnorm_result_sig_07, 
+        file = paste0(funnorm_folder, '/funnorm_result_sig_07.rda'))
 
+saveRDS(funnorm_result_08, 
+        file = paste0(funnorm_folder, '/funnorm_result_08.rda'))
+saveRDS(funnorm_result_sig_08, 
+        file = paste0(funnorm_folder, '/funnorm_result_sig_08.rda'))
+
+saveRDS(funnorm_result_09, 
+        file = paste0(funnorm_folder, '/funnorm_result_09.rda'))
+saveRDS(funnorm_result_sig_09, 
+        file = paste0(funnorm_folder, '/funnorm_result_sig_09.rda'))
+
+saveRDS(funnorm_result_10, 
+        file = paste0(funnorm_folder, '/funnorm_result_10.rda'))
+saveRDS(funnorm_result_sig_10, 
+        file = paste0(funnorm_folder, '/funnorm_result_sig_10.rda'))
+
+saveRDS(funnorm_result_11, 
+        file = paste0(funnorm_folder, '/funnorm_result_11.rda'))
+saveRDS(funnorm_result_sig_11, 
+        file = paste0(funnorm_folder, '/funnorm_result_sig_11.rda'))
+
+saveRDS(funnorm_result_12, 
+        file = paste0(funnorm_folder, '/funnorm_result_12.rda'))
+saveRDS(funnorm_result_sig_12, 
+        file = paste0(funnorm_folder, '/funnorm_result_sig_12.rda'))
+
+saveRDS(funnorm_result_13, 
+        file = paste0(funnorm_folder, '/funnorm_result_13.rda'))
+saveRDS(funnorm_result_sig_13, 
+        file = paste0(funnorm_folder, '/funnorm_result_sig_13.rda'))
+
+saveRDS(funnorm_result_14, 
+        file = paste0(funnorm_folder, '/funnorm_result_14.rda'))
+saveRDS(funnorm_result_sig_14, 
+        file = paste0(funnorm_folder, '/funnorm_result_sig_14.rda'))
+
+saveRDS(funnorm_result_15, 
+        file = paste0(funnorm_folder, '/funnorm_result_15.rda'))
+saveRDS(funnorm_result_sig_15, 
+        file = paste0(funnorm_folder, '/funnorm_result_sig_15.rda'))
+
+saveRDS(funnorm_result_int, 
+        file = paste0(funnorm_folder, '/funnorm_result_int.rda'))
+saveRDS(funnorm_result_sig_int, 
+        file = paste0(funnorm_folder, '/funnorm_result_sig_int.rda'))
+
+saveRDS(funnorm_result_union, 
+        file = paste0(funnorm_folder, '/funnorm_result_union.rda'))
+saveRDS(funnorm_result_sig_union, 
+        file = paste0(funnorm_folder, '/funnorm_result_sig_union.rda'))
 
 

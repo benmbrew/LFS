@@ -5,7 +5,7 @@
 dataStats <- function(model_data) 
 {
   
-  feature_names <- colnames(model_data)[5:ncol(model_data)]
+  feature_names <- colnames(model_data)[8:ncol(model_data)]
   
   # for non resid models
   model_data_all <- model_data[!is.na(model_data$age_diagnosis),]
@@ -41,39 +41,34 @@ subsetDat <- function(model_data,
                       seed_num = seed_num) 
 {
   
-  feature_names <- colnames(model_data)[5:ncol(model_data)]
+  feature_names <- colnames(model_data)[8:ncol(model_data)]
   
-  model_data_all <- model_data[!is.na(model_data$age_diagnosis),]
-  
-  model_data_mut <- model_data_all[model_data_all$p53_germline == 'Mut',]
-  
+
   if (random) {
     set.seed(seed_num)
     keep_index <- sample(feature_names, num_feat)
-    model_data_all <- model_data_all[, c('age_diagnosis', 'age_sample_collection', keep_index) ]
-    model_data_mut <- model_data_mut[, c('age_diagnosis', 'age_sample_collection', keep_index) ]
+    model_data <- model_data[, c('age_diagnosis', 'age_sample_collection', keep_index) ]
     
   } else {
-    model_data_mut <- model_data_mut[, c('age_diagnosis', 'age_sample_collection', feature_names)]
-    model_data_all <- model_data_all[, c('age_diagnosis', 'age_sample_collection', feature_names)]
-    
+    model_data <- model_data[, c('age_diagnosis', 'age_sample_collection', feature_names)]
+
   }
   
-  return(list(model_data_mut, model_data_all))
+  return(model_data)
   
 }
 
 runControl <- function(model_data, bh_data) 
 {
   
-  feature_names <- colnames(model_data)[5:ncol(model_data)]
+  feature_names <- colnames(model_data)[8:ncol(model_data)]
   
   model_data <- model_data[, c('age_sample_collection', feature_names)]
   
-  bh_features <- bh_data$probe
+  bh_features <- bh_data
   model_features <- colnames(model_data)
   bh_intersect <- intersect(bh_features, model_features)
-  model_data_mut <- model_data[, c('age_sample_collection', bh_intersect)]
+  model_data <- model_data[, c('age_sample_collection', bh_intersect)]
   
   return(model_data)
 }
@@ -84,13 +79,12 @@ bhSubset <- function(model_data,
 {
   
   bh_features <- as.character(bh_data)
-  model_features <- colnames(model_data[[1]])
+  model_features <- colnames(model_data)
   bh_intersect <- intersect(bh_features, model_features)
-  model_data_mut <- model_data[[1]][, c('age_diagnosis', 'age_sample_collection', bh_intersect)]
-  model_data_all <- model_data[[2]][, c('age_diagnosis', 'age_sample_collection', bh_intersect)]
+  model_data <- model_data[, c('age_diagnosis', 'age_sample_collection', bh_intersect)]
+
   
-  
-  return(list(model_data_mut, model_data_all))
+  return(model_data)
 }
 
 
@@ -101,16 +95,14 @@ getResidual <- function(model_data)
   
   data_list <- list()
   
-  for (data in 1:length(model_data)) {
-    
-    sub_data <- model_data[[data]]
-    # subset by mut, and complete cases for age diagnosis and age sample collection
-    sub_data <- sub_data[complete.cases(sub_data),]
-    
-    feature_names <- colnames(sub_data)[3:ncol(sub_data)]
-    
-    resid <- list()
-    
+  sub_data <- model_data
+  # subset by mut, and complete cases for age diagnosis and age sample collection
+  sub_data <- sub_data[complete.cases(sub_data),]
+  
+  feature_names <- colnames(sub_data)[3:ncol(sub_data)]
+  
+  resid <- list()
+  
     for (i in 3:ncol(sub_data)) {
       
       temp_response <- sub_data[, i]
@@ -122,13 +114,12 @@ getResidual <- function(model_data)
       
     }
     
-    resid_data <- as.data.frame(do.call('cbind', resid))
-    sub_data <- cbind(sub_data$age_diagnosis, sub_data$age_sample_collection, resid_data)
-    colnames(sub_data) <- c('age_diagnosis', 'age_sample_collection', feature_names)
-    data_list[[data]] <- sub_data
-  }
+  resid_data <- as.data.frame(do.call('cbind', resid))
+  sub_data <- cbind(sub_data$age_diagnosis, sub_data$age_sample_collection, resid_data)
+  colnames(sub_data) <- c('age_diagnosis', 'age_sample_collection', feature_names)
+  model_data <- sub_data
   
-  return(data_list)
+  return(model_data)
 }
 
 # Function that creates factor for a given threshold
@@ -136,23 +127,20 @@ makeFac <- function(model_data,
                     threshold) 
 {
   
-  data_list <- list()
-  for(data in 1:length(model_data)) {
-    
-    sub_data <- model_data[[data]]
-    feature_names <- colnames(sub_data)[3:ncol(sub_data)]
-    
-    sub_data$age_diagnosis_fac <- as.integer(ifelse(sub_data$age_diagnosis <= threshold, 1, 2))
-    sub_data$age_sample_fac <- as.integer(ifelse(sub_data$age_sample_collection <= threshold, 1, 2))
-    
-    
-    sub_data <- sub_data[, c('age_diagnosis_fac', 'age_sample_fac', feature_names)]
-    
-    data_list[[data]] <- sub_data
-    
-  }
+
+  sub_data <- model_data
+  feature_names <- colnames(sub_data)[3:ncol(sub_data)]
   
-  return(data_list)
+  sub_data$age_diagnosis_fac <- as.integer(ifelse(sub_data$age_diagnosis <= threshold, 1, 2))
+  sub_data$age_sample_fac <- as.integer(ifelse(sub_data$age_sample_collection <= threshold, 1, 2))
+  
+  
+  sub_data <- sub_data[, c('age_diagnosis_fac', 'age_sample_fac', feature_names)]
+  
+  model_data <- sub_data
+    
+  
+  return(model_data)
   
 }
 
@@ -435,85 +423,59 @@ rfPredictReg <- function(model_data,
               test.sample_collection, test_acc, test_stats, test_acc_samp, test_stats_samp, model, importance, dims))
   
 }
-
 extractResults <- function (result_list,
                             data_name) 
 {
   
-  # extract regression normal, correlation for mut and all
-  temp.1 <- list()
-  reg_cor <- list()
-  for (status in 1:length(p53)) {
-    temp.1[[status]] <- result_list[[1]][[status]]
-    reg_cor[[status]] <- round(cor(unlist(temp.1[[status]][[4]]), unlist(temp.1[[status]][[6]])), 2)
-  }
+  # extract regression normal, correlation 
+  temp.1 <- result_list[[1]]
+  reg_cor <- round(cor(unlist(temp.1[[4]]), unlist(temp.1[[6]])), 2)
   
-  reg_cor <- as.data.frame(do.call(rbind, reg_cor))
+  
+  reg_cor <- as.data.frame(reg_cor)
   colnames(reg_cor) <- 'score'
-  reg_cor$p53_status <- p53
   reg_cor$age <- 'regression'
   reg_cor$type <- 'normal'
   reg_cor$data <- data_name
-  reg_cor$features <- features_mut <- c(paste0(result_list[[1]][[1]][[15]], collapse = ' '), paste0(result_list[[1]][[2]][[15]], collapse = ' '))
+  reg_cor$features <- paste0(result_list[[1]][[15]], collapse = '_')
   
-  # extract regression resid , resid_correlation for mut and all
-  temp.1 <- list()
-  reg_resid_cor <- list()
-  for (status in 1:length(p53)) {
-    temp.1[[status]] <- result_list[[2]][[status]]
-    reg_resid_cor[[status]] <- round(cor(unlist(temp.1[[status]][[4]]), unlist(temp.1[[status]][[6]])), 2)
-  }
+  # extract regression resid , resid_correlation 
   
-  reg_resid_cor <- as.data.frame(do.call(rbind, reg_resid_cor))
+  temp.1 <- result_list[[2]]
+  reg_resid_cor <- round(cor(unlist(temp.1[[4]]), unlist(temp.1[[6]])), 2)
+  
+  
+  reg_resid_cor <- as.data.frame(reg_resid_cor)
   colnames(reg_resid_cor) <- 'score'
-  reg_resid_cor$p53_status <- p53
   reg_resid_cor$age <- 'regression'
   reg_resid_cor$type <- 'resid'
   reg_resid_cor$data <- data_name
-  reg_resid_cor$features <- features_mut <- c(paste0(result_list[[1]][[1]][[15]], collapse = ' '), paste0(result_list[[1]][[2]][[15]], collapse = ' '))
-  
+  reg_resid_cor$features <- paste0(result_list[[1]][[15]], collapse = '_')
   
   # extract fac normal, acc for mut and all
-  temp.1 <- list()
-  temp.2 <- list()
-  fac_final <- list()
-  for (level in 1:length(data_thresholds)) {
-    temp.1[[level]] <- result_list[[3]][[level]]
-    for(status in 1:length(p53)) {
-      temp.2[[status]] <- round(mean(unlist(temp.1[[level]][[status]][[9]])), 2)
-    }
-    fac_final[[level]] <- temp.2
-  }
+  temp.1 <- result_list[[3]]
+  temp.2 <- round(mean(unlist(temp.1[[9]])), 2)
+    
+ 
   
-  fac_final <- as.data.frame(unlist(fac_final))
+  fac_final <- as.data.frame(temp.2)
   colnames(fac_final) <- 'score'
-  fac_final$p53_status <- rep(p53, length(data_thresholds))
-  fac_final$age <- c(48, 48, 60, 60, 72, 72, 84, 84)
+  fac_final$age <- 48
   fac_final$type <- 'normal'
   fac_final$data <- data_name
-  fac_final$features <- rep(c(result_list[[3]][[1]][[1]][13], result_list[[3]][[1]][[2]][13]), length(data_thresholds))
+  fac_final$features <- paste0(unlist(result_list[[3]][13]), collapse = '_')
   
   
-  # extract fac resid, acc for mut and all
-  temp.1 <- list()
-  temp.2 <- list()
-  fac_final_resid <- list()
-  for (level in 1:length(data_thresholds)) {
-    temp.1[[level]] <- result_list[[4]][[level]]
-    for(status in 1:length(p53)) {
-      temp.2[[status]] <- round(mean(unlist(temp.1[[level]][[status]][[9]])),2)
-    }
-    fac_final_resid[[level]] <- temp.2
-  }
   
+  temp.1 <- result_list[[4]]
+  temp.2 <- round(mean(unlist(temp.1[[9]])),2)
   
-  fac_final_resid <- as.data.frame(unlist(fac_final_resid))
+  fac_final_resid <- as.data.frame(unlist(temp.2))
   colnames(fac_final_resid) <- 'score'
-  fac_final_resid$p53_status <- rep(p53, length(data_thresholds))
-  fac_final_resid$age <- c(48, 48, 60, 60, 72, 72, 84, 84)
+  fac_final_resid$age <- 48
   fac_final_resid$type <- 'resid'
   fac_final_resid$data <- data_name
-  fac_final_resid$features <- rep(c(result_list[[3]][[1]][[1]][13], result_list[[3]][[1]][[2]][13]), length(data_thresholds))
+  fac_final_resid$features <-paste0(unlist(result_list[[3]][13]), collapse = '_')
   
   # combine all four result tables 
   

@@ -13,387 +13,233 @@ scripts_folder <- paste0(project_folder, '/Scripts')
 ##########
 # source model_functions.R and run_models.R
 ##########
-source(paste0(scripts_folder, '/predict_age/model_functions.R'))
-source(paste0(scripts_folder, '/predict_age/run_models.R'))
+source(paste0(scripts_folder, '/predict_age/model_functions_short.R'))
+source(paste0(scripts_folder, '/predict_age/run_models_short.R'))
 
 ##########
 # remove raw, swan, and funnorm objects
 ##########
-rm(list = ls(pattern = "beta_raw_*"))
-rm(list = ls(pattern = "beta_swan_*"))
-rm(list = ls(pattern = "beta_funnorm_*"))
+rm(list = ls(pattern = "raw_*"))
+rm(list = ls(pattern = "swan_*"))
+rm(list = ls(pattern = "funnorm_*"))
 
 ###################################################################################################################################
 ## beta_quan
 
 ##########
-# cancer
+# threshold 0.07 - 0.15 normal
 ##########
 
-# bal cancer
-quan_bal_cancer_models <- runModels(beta_quan, 
-                                    bump_hunter = T, 
-                                    bump_hunter_data = beta_quan_bal_cancer_features)
+# quan 07 
+quan_result_07 <- runModels(quan_cases, 
+                            bump_hunter = T, 
+                            bump_hunter_data = quan_bh_07)
 
-quan_bal_cancer_table <- extractResults(quan_bal_cancer_models, 
-                                        data_name = 'beta_quan_bal_cancer')
+quan_table_07 <- extractResults(quan_result_07, 
+                               data_name = 'quan_07')
 
-# bal cancer sig
-quan_bal_cancer_sig_models <- runModels(beta_quan, 
-                                        bump_hunter = T, 
-                                        bump_hunter_data = beta_quan_bal_cancer_sig_features)
+# quan 08
+quan_result_08 <- runModels(quan_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = quan_bh_08)
 
-quan_bal_cancer_sig_table <- extractResults(quan_bal_cancer_sig_models, 
-                                            data_name = 'quan_bal_cancer_sig')
+quan_table_08 <- extractResults(quan_result_08, 
+                               data_name = 'quan_08')
 
+# quan 09 
+quan_result_09 <- runModels(quan_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = quan_bh_09)
 
-# bal counts cancer
-quan_bal_counts_cancer_models <- runModels(beta_quan, 
-                                           bump_hunter = T, 
-                                           bump_hunter_data = beta_quan_bal_counts_cancer_features)
+quan_table_09 <- extractResults(quan_result_09, 
+                               data_name = 'quan_09')
 
-quan_bal_counts_cancer_table <- extractResults(quan_bal_counts_cancer_models, 
-                                               data_name = 'quan_bal_counts_cancer')
+# quan 10 
+quan_result_10 <- runModels(quan_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = quan_bh_10)
 
-# bal counts cancer sig
-quan_bal_counts_cancer_sig_models <- runModels(beta_quan, 
-                                               bump_hunter = T, 
-                                               bump_hunter_data =  beta_quan_bal_counts_cancer_sig_features)
+quan_table_10 <- extractResults(quan_result_10, 
+                               data_name = 'quan_10')
 
-quan_bal_counts_cancer_sig_table <- extractResults(quan_bal_counts_cancer_sig_models, 
-                                                   data_name = 'quan_bal_counts_cancer_sig')
+# quan 11
+quan_result_11 <- runModels(quan_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = quan_bh_11)
 
-# unbal cancer
-quan_unbal_cancer_models <- runModels(beta_quan, 
-                                      bump_hunter = T, 
-                                      bump_hunter_data = beta_quan_unbal_cancer_features)
+quan_table_11 <- extractResults(quan_result_11, 
+                               data_name = 'quan_11')
 
-quan_unbal_cancer_table <- extractResults(quan_unbal_cancer_models, 
-                                          data_name = 'quan_unbal_cancer')
+# quan 12
+quan_result_12 <- runModels(quan_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = quan_bh_12)
 
+quan_table_12 <- extractResults(quan_result_12, 
+                               data_name = 'quan_12')
 
-# unbal cancer sig
-quan_unbal_cancer_sig_models <- runModels(beta_quan, 
-                                          bump_hunter = T, 
-                                          bump_hunter_data = beta_quan_unbal_cancer_sig_features)
+# quan 13
+quan_result_13 <- runModels(quan_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = quan_bh_13)
 
-quan_unbal_cancer_sig_table <- extractResults(quan_unbal_cancer_sig_models, 
-                                              data_name = 'quan_unbal_cancer_sig')
+quan_table_13 <- extractResults(quan_result_13, 
+                               data_name = 'quan_13')
 
-##########
-# p53
-##########
+# quan 14
+quan_result_14 <- runModels(quan_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = quan_bh_14)
 
-# bal p53
-quan_bal_p53_models <- runModels(beta_quan, 
-                                 bump_hunter = T, 
-                                 bump_hunter_data = beta_quan_bal_p53_features)
+quan_table_14 <- extractResults(quan_result_14, 
+                               data_name = 'quan_14')
 
-quan_bal_p53_table <- extractResults(quan_bal_p53_models, 
-                                     data_name = 'quan_bal_p53')
+# quan 15
+quan_result_15 <- runModels(quan_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = quan_bh_15)
 
-# bal p53 sig
-quan_bal_p53_sig_models <- runModels(beta_quan, 
-                                     bump_hunter = T, 
-                                     bump_hunter_data = beta_quan_bal_p53_sig_features)
+quan_table_15 <- extractResults(quan_result_15, 
+                               data_name = 'quan_15')
 
-quan_bal_p53_sig_table <- extractResults(quan_bal_p53_sig_models, 
-                                         data_name = 'quan_bal_p53_sig')
+# quan intersection
+quan_result_int <- runModels(quan_cases, 
+                            bump_hunter = T, 
+                            bump_hunter_data = quan_int_feat)
 
-# bal counts p53
-quan_bal_counts_p53_models <- runModels(beta_quan, 
-                                        bump_hunter = T, 
-                                        bump_hunter_data = beta_quan_bal_counts_p53_features)
+quan_table_int <- extractResults(quan_result_int, 
+                                data_name = 'quan_int')
 
-quan_bal_counts_p53_table <- extractResults(quan_bal_counts_p53_models, 
-                                            data_name = 'quan_bal_counts_p53')
+# quan union
+quan_result_union <- runModels(quan_cases, 
+                              bump_hunter = T, 
+                              bump_hunter_data = quan_union_feat)
 
-# bal counts p53 sig
-quan_bal_counts_p53_sig_models <- runModels(beta_quan, 
-                                            bump_hunter = T, 
-                                            bump_hunter_data = beta_quan_bal_counts_p53_sig_features)
-
-quan_bal_counts_p53_sig_table <- extractResults(quan_bal_counts_p53_sig_models, 
-                                                data_name = 'quan_bal_counts_p53_sig')
-
-# unbal p53
-quan_unbal_p53_models <- runModels(beta_quan, 
-                                   bump_hunter = T, 
-                                   bump_hunter_data = beta_quan_unbal_p53_features)
-
-quan_unbal_p53_table <- extractResults(quan_unbal_p53_models, 
-                                       data_name = 'quan_unbal_p53')
-
-
-# unbal p53 sig
-quan_unbal_p53_sig_models <- runModels(beta_quan, 
-                                       bump_hunter = T, 
-                                       bump_hunter_data = beta_quan_unbal_p53_sig_features)
-
-quan_unbal_p53_sig_table <- extractResults(quan_unbal_p53_sig_models, 
-                                           data_name = 'quan_unbal_p53_sig')
+quan_table_union <- extractResults(quan_result_union, 
+                                  data_name = 'quan_union')
 
 
 ##########
-# cancer
+# threshold 0.07 - 0.15 sig
 ##########
 
-# cancer_intersection
-quan_cancer_intersection_models <- runModels(beta_quan, 
-                                             bump_hunter = T, 
-                                             bump_hunter_data = beta_quan_cancer_intersection_features)
+# quan sig 07 
+quan_result_sig_07 <- runModels(quan_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = quan_bh_sig_07)
 
-quan_cancer_intersection_table <- extractResults(quan_cancer_intersection_models, 
-                                                 data_name = 'quan_cancer_intersection')
+quan_table_sig_07 <- extractResults(quan_result_sig_07, 
+                                   data_name = 'quan_sig_07')
 
-# cancer_intersection sig
-quan_cancer_intersection_sig_models <- runModels(beta_quan, 
-                                                 bump_hunter = T, 
-                                                 bump_hunter_data = beta_quan_cancer_intersection_sig_features)
+# quan sig 08
+quan_result_sig_08 <- runModels(quan_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = quan_bh_sig_08)
 
-quan_cancer_intersection_sig_table <- extractResults(quan_cancer_intersection_sig_models, 
-                                                     data_name = 'quan_cancer_intersection_sig')
+quan_table_sig_08 <- extractResults(quan_result_sig_08, 
+                                   data_name = 'quan_sig_08')
 
-# cancer_union
-quan_cancer_union_models <- runModels(beta_quan, 
-                                      bump_hunter = T, 
-                                      bump_hunter_data = beta_quan_cancer_union_features)
+# quan sig 09 
+quan_result_sig_09 <- runModels(quan_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = quan_bh_sig_09)
 
-quan_cancer_union_table <- extractResults(quan_cancer_union_models, 
-                                          data_name = 'quan_cancer_union')
+quan_table_sig_09 <- extractResults(quan_result_sig_09, 
+                                   data_name = 'quan_sig_09')
 
-# cancer_union sig
-quan_cancer_union_sig_models <- runModels(beta_quan, 
-                                          bump_hunter = T, 
-                                          bump_hunter_data = beta_quan_cancer_union_sig_features)
+# quan sig 10 
+quan_result_sig_10 <- runModels(quan_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = quan_bh_sig_10)
 
-quan_cancer_union_sig_table <- extractResults(quan_cancer_union_sig_models, 
-                                              data_name = 'quan_cancer_union_sig')
-##########
-# p53
-##########
-# p53_intersection
-quan_p53_intersection_models <- runModels(beta_quan, 
-                                          bump_hunter = T, 
-                                          bump_hunter_data = beta_quan_p53_intersection_features)
+quan_table_sig_10 <- extractResults(quan_result_sig_10, 
+                                   data_name = 'quan_sig_10')
 
-quan_p53_intersection_table <- extractResults(quan_p53_intersection_models, 
-                                             data_name = 'quan_p53_intersection')
+# quan sig 11 
+quan_result_sig_11 <- runModels(quan_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = quan_bh_sig_11)
 
-# p53_intersection sig
-quan_p53_intersection_sig_models <- runModels(beta_quan, 
-                                              bump_hunter = T, 
-                                              bump_hunter_data = beta_quan_p53_intersection_sig_features)
+quan_table_sig_11 <- extractResults(quan_result_sig_11, 
+                                   data_name = 'quan_sig_11')
 
-quan_p53_intersection_sig_table <- extractResults(quan_p53_intersection_sig_models, 
-                                                  data_name = 'quan_p53_intersection_sig')
+# quan sig 12 
+quan_result_sig_12 <- runModels(quan_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = quan_bh_sig_12)
 
-# p53_union
-quan_p53_union_models <- runModels(beta_quan, 
-                                   bump_hunter = T, 
-                                   bump_hunter_data = beta_quan_p53_union_features)
+quan_table_sig_12 <- extractResults(quan_result_sig_12, 
+                                   data_name = 'quan_sig_12')
 
-quan_p53_union_table <- extractResults(quan_p53_union_models, 
-                                       data_name = 'quan_p53_union')
+# quan sig 13 
+quan_result_sig_13 <- runModels(quan_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = quan_bh_sig_13)
 
-# p53_union sig
-quan_p53_union_sig_models <- runModels(beta_quan, 
-                                       bump_hunter = T, 
-                                       bump_hunter_data = beta_quan_p53_union_sig_features)
- 
-quan_p53_union_sig_table <- extractResults(quan_p53_union_sig_models, 
-                                           data_name = 'quan_p53_union_sig')
+quan_table_sig_13 <- extractResults(quan_result_sig_13, 
+                                   data_name = 'quan_sig_13')
 
+# quan sig 14 
+quan_result_sig_14 <- runModels(quan_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = quan_bh_sig_14)
 
-##########
-# most balanced cancer 
-##########
+quan_table_sig_14 <- extractResults(quan_result_sig_14, 
+                                   data_name = 'quan_sig_14')
 
-# intersection
-quan_bal_counts_cancer_intersection_models <- runModels(beta_quan, 
-                                                        bump_hunter = T, 
-                                                        bump_hunter_data = beta_bal_counts_cancer_intersection_features)
+# quan sig 15 
+quan_result_sig_15 <- runModels(quan_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = quan_bh_sig_15)
 
-quan_bal_counts_cancer_intersection_table <- extractResults(quan_bal_counts_cancer_intersection_models, 
-                                                            data_name = 'quan_bal_counts_cancer_intersection')
+quan_table_sig_15 <- extractResults(quan_result_sig_15, 
+                                   data_name = 'quan_sig_15')
 
 
-quan_bal_counts_cancer_intersection_sig_models <- runModels(beta_quan, 
-                                                            bump_hunter = T, 
-                                                            bump_hunter_data = beta_bal_counts_cancer_intersection_sig_features)
+# quan intersection
+quan_result_sig_int <- runModels(quan_cases, 
+                                bump_hunter = T, 
+                                bump_hunter_data = quan_int_sig_feat)
 
-quan_bal_counts_cancer_intersection_sig_table <- extractResults(quan_bal_counts_cancer_intersection_sig_models, 
-                                                                data_name = 'quan_bal_counts_cancer_intersection_sig')
+quan_table_sig_int <- extractResults(quan_result_sig_int, 
+                                    data_name = 'quan_sig_int')
 
-# union
-quan_bal_counts_cancer_union_models <- runModels(beta_quan, 
-                                                 bump_hunter = T, 
-                                                 bump_hunter_data = beta_bal_counts_cancer_union_features)
+# quan union
+quan_result_sig_union <- runModels(quan_cases, 
+                                  bump_hunter = T, 
+                                  bump_hunter_data = quan_union_sig_feat)
 
-quan_bal_counts_cancer_union_table <- extractResults(quan_bal_counts_cancer_union_models, 
-                                                     data_name = 'quan_bal_counts_cancer_union')
-
-
-quan_bal_counts_cancer_union_sig_models <- runModels(beta_quan, 
-                                                     bump_hunter = T, 
-                                                     bump_hunter_data = beta_bal_counts_cancer_union_sig_features)
-
-quan_bal_counts_cancer_union_sig_table <- extractResults(quan_bal_counts_cancer_union_sig_models, 
-                                                         data_name = 'quan_bal_counts_cancer_union_sig')
-
-##########
-# most balanced p53 
-##########
-
-# intersection
-quan_bal_counts_p53_intersection_models <- runModels(beta_quan, 
-                                                     bump_hunter = T, 
-                                                     bump_hunter_data = beta_bal_counts_p53_intersection_features)
-
-quan_bal_counts_p53_intersection_table <- extractResults(quan_bal_counts_p53_intersection_models, 
-                                                         data_name = 'quan_bal_counts_p53_intersection')
-
-
-quan_bal_counts_p53_intersection_sig_models <- runModels(beta_quan, 
-                                                         bump_hunter = T, 
-                                                         bump_hunter_data = beta_bal_counts_p53_intersection_sig_features)
-
-quan_bal_counts_p53_intersection_sig_table <- extractResults(quan_bal_counts_p53_intersection_sig_models, 
-                                                             data_name = 'quan_bal_counts_p53_intersection_sig')
-
-
-# union
-quan_bal_counts_p53_union_models <- runModels(beta_quan, 
-                                              bump_hunter = T, 
-                                              bump_hunter_data = beta_bal_counts_p53_union_features)
-
-quan_bal_counts_p53_union_table <- extractResults(quan_bal_counts_p53_union_models, 
-                                                  data_name = 'quan_bal_counts_p53_union')
-
-
-quan_bal_counts_p53_union_sig_models <- runModels(beta_quan, 
-                                                  bump_hunter = T, 
-                                                  bump_hunter_data = beta_bal_counts_p53_union_sig_features)
-
-quan_bal_counts_p53_union_sig_table <- extractResults(quan_bal_counts_p53_union_sig_models, 
-                                                      data_name = 'quan_bal_counts_p53_union_sig')
-
-###########
-# complete cancer - intersection across each method intersection
-###########
-
-# complete cancer intersection
-quan_complete_cancer_intersection_models <- runModels(beta_quan, 
-                                                      bump_hunter = T, 
-                                                      bump_hunter_data = beta_cancer_intersection_features)
-
-# get table 
-quan_complete_cancer_intersection_table <- extractResults(quan_complete_cancer_intersection_models, 
-                                                          data_name = 'quan_complete_cancer_intersection')
-
-# empty features set
-# # complete cancer intersection sig
-# quan_complete_cancer_intersection_sig_models <- runModels(beta_quan, 
-#                                                           bump_hunter = T, 
-#                                                           bump_hunter_data = beta_cancer_intersection_sig_features)
-# 
-# # get table 
-# quan_complete_cancer_intersection_sig_table <- extractResults(quan_complete_cancer_intersection_sig_models, 
-#                                                               data_name = 'quan_complete_cancer_intersection_sig')
-
-
-# complete cancer union
-quan_complete_cancer_union_models <- runModels(beta_quan, 
-                                               bump_hunter = T, 
-                                               bump_hunter_data = beta_cancer_union_features)
-
-# get table 
-quan_complete_cancer_union_table <- extractResults(quan_complete_cancer_union_models, 
-                                                   data_name = 'quan_complete_cancer_union')
-
-# complete cancer union sig
-quan_complete_cancer_union_sig_models <- runModels(beta_quan, 
-                                                   bump_hunter = T, 
-                                                   bump_hunter_data = beta_cancer_union_sig_features)
-
-# get table 
-quan_complete_cancer_union_sig_table <- extractResults(quan_complete_cancer_union_sig_models, 
-                                                       data_name = 'quan_complete_cancer_union_sig')
-
-
-###########
-# complete p53 - intersection across each method intersection
-###########
-
-# complete p53 intersection
-quan_complete_p53_intersection_models <- runModels(beta_quan, 
-                                                   bump_hunter = T, 
-                                                   bump_hunter_data = beta_p53_intersection_features)
-
-# get table 
-quan_complete_p53_intersection_table <- extractResults(quan_complete_p53_intersection_models, 
-                                                       data_name = 'quan_complete_p53_intersection')
-
-# complete p53 intersection sig
-quan_complete_p53_intersection_sig_models <- runModels(beta_quan, 
-                                                       bump_hunter = T, 
-                                                       bump_hunter_data = beta_p53_intersection_sig_features)
-
-# get table 
-quan_complete_p53_intersection_sig_table <- extractResults(quan_complete_p53_intersection_sig_models, 
-                                                           data_name = 'quan_complete_p53_intersection_sig')
-
-
-# complete p53 union
-quan_complete_p53_union_models <- runModels(beta_quan, 
-                                            bump_hunter = T, 
-                                            bump_hunter_data = beta_p53_union_features)
-
-# get table 
-quan_complete_p53_union_table <- extractResults(quan_complete_p53_union_models, 
-                                                data_name = 'quan_complete_p53_union')
-
-# complete p53 union sig
-quan_complete_p53_union_sig_models <- runModels(beta_quan, 
-                                                bump_hunter = T, 
-                                                bump_hunter_data = beta_p53_union_sig_features)
-
-# get table 
-quan_complete_p53_union_sig_table <- extractResults(quan_complete_p53_union_sig_models, 
-                                                    data_name = 'quan_complete_p53_union_sig')
+quan_table_sig_union <- extractResults(quan_result_sig_union, 
+                                      data_name = 'quan_sig_union')
 
 
 ###########
 # rbind tables and save RDA file
 ###########
-quan_table <- rbind(quan_bal_cancer_table, quan_bal_cancer_sig_table, quan_bal_counts_cancer_table, quan_bal_counts_cancer_sig_table,
-                   quan_unbal_cancer_table, quan_unbal_cancer_sig_table, quan_bal_p53_table, quan_bal_p53_sig_table, quan_bal_counts_p53_table, 
-                   quan_bal_counts_p53_sig_table, quan_unbal_p53_table, quan_unbal_p53_sig_table, quan_cancer_intersection_table, 
-                   quan_cancer_intersection_sig_table, quan_cancer_union_table, quan_cancer_union_sig_table, quan_p53_intersection_table, 
-                   quan_p53_intersection_sig_table, quan_p53_union_table, quan_p53_union_sig_table,
-                   quan_bal_counts_cancer_intersection_table, quan_bal_counts_cancer_intersection_sig_table,
-                   quan_bal_counts_cancer_union_table, quan_bal_counts_cancer_union_sig_table,
-                   quan_bal_counts_p53_intersection_table, quan_bal_counts_p53_intersection_sig_table,
-                   quan_bal_counts_p53_union_table, quan_bal_counts_p53_union_sig_table,
-                   quan_complete_cancer_intersection_table, #quan_complete_cancer_intersection_sig_table,
-                   quan_complete_cancer_union_table, quan_complete_cancer_union_sig_table,
-                   quan_complete_p53_intersection_table, quan_complete_p53_intersection_sig_table,
-                   quan_complete_p53_union_table, quan_complete_p53_union_sig_table)
+quan_table <- rbind(quan_table_07, quan_table_sig_07,
+                   quan_table_08, quan_table_sig_08,
+                   quan_table_09, quan_table_sig_09,
+                   quan_table_10, quan_table_sig_10,
+                   quan_table_11, quan_table_sig_11,
+                   quan_table_12, quan_table_sig_12,
+                   quan_table_13, quan_table_sig_13,
+                   quan_table_14, quan_table_sig_14,
+                   quan_table_15, quan_table_sig_15,
+                   quan_table_int, quan_table_sig_int,
+                   quan_table_union, quan_table_union)
 
 # remove data 
-rm(quan_bal_cancer_table, quan_bal_cancer_sig_table, quan_bal_counts_cancer_table, quan_bal_counts_cancer_sig_table,
-   quan_unbal_cancer_table, quan_unbal_cancer_sig_table, quan_bal_p53_table, quan_bal_p53_sig_table, quan_bal_counts_p53_table, 
-   quan_bal_counts_p53_sig_table, quan_unbal_p53_table, quan_unbal_p53_sig_table, quan_cancer_intersection_table, 
-   quan_cancer_intersection_sig_table, quan_cancer_union_table, quan_cancer_union_sig_table, quan_p53_intersection_table, 
-   quan_p53_intersection_sig_table, quan_p53_union_table, quan_p53_union_sig_table,
-   quan_bal_counts_cancer_intersection_table, quan_bal_counts_cancer_intersection_sig_table,
-   quan_bal_counts_cancer_union_table, quan_bal_counts_cancer_union_sig_table,
-   quan_bal_counts_p53_intersection_table, quan_bal_counts_p53_intersection_sig_table,
-   quan_bal_counts_p53_union_table, quan_bal_counts_p53_union_sig_table,
-   quan_complete_cancer_intersection_table, #quan_complete_cancer_intersection_sig_table,
-   quan_complete_cancer_union_table, quan_complete_cancer_union_sig_table,
-   quan_complete_p53_intersection_table, quan_complete_p53_intersection_sig_table,
-   quan_complete_p53_union_table, quan_complete_p53_union_sig_table)
+rm(quan_table_07, quan_table_sig_07,
+   quan_table_08, quan_table_sig_08,
+   quan_table_09, quan_table_sig_09,
+   quan_table_10, quan_table_sig_10,
+   quan_table_11, quan_table_sig_11,
+   quan_table_12, quan_table_sig_12,
+   quan_table_13, quan_table_sig_13,
+   quan_table_14, quan_table_sig_14,
+   quan_table_15, quan_table_sig_15,
+   quan_table_int, quan_table_sig_int,
+   quan_table_union, quan_table_sig_union)
 
 
 #save table 
@@ -404,78 +250,59 @@ saveRDS(quan_table,
 ###########
 # save all model objects as RDA file
 ###########
-saveRDS(quan_bal_cancer_models, 
-        file = paste0(quan_folder, '/quan_bal_cancer_models.rda'))
-saveRDS(quan_bal_cancer_sig_models, 
-        file = paste0(quan_folder, '/quan_bal_cancer_sig_models.rda'))
-saveRDS(quan_bal_counts_cancer_models, 
-        file = paste0(quan_folder, '/quan_bal_counts_cancer_models.rda'))
-saveRDS(quan_bal_counts_cancer_sig_models, 
-        file = paste0(quan_folder, '/quan_bal_counts_cancer_sig_models.rda'))
-saveRDS(quan_unbal_cancer_models, 
-        file = paste0(quan_folder, '/quan_unbal_cancer_models.rda'))
-saveRDS(quan_unbal_cancer_sig_models, 
-        file = paste0(quan_folder, '/quan_unbal_cancer_sig_models.rda'))
-saveRDS(quan_bal_p53_models, 
-        file = paste0(quan_folder, '/quan_bal_p53_models.rda'))
-saveRDS(quan_bal_p53_sig_models, 
-        file = paste0(quan_folder, '/quan_bal_p53_sig_models.rda'))
-saveRDS(quan_bal_counts_p53_models, 
-        file = paste0(quan_folder, '/quan_bal_counts_p53_models.rda'))
-saveRDS(quan_bal_counts_p53_sig_models, 
-        file = paste0(quan_folder, '/quan_bal_counts_p53_sig_models.rda'))
-saveRDS(quan_unbal_p53_models, 
-        file = paste0(quan_folder, '/quan_unbal_p53_models.rda'))
-saveRDS(quan_unbal_p53_sig_models, 
-        file = paste0(quan_folder, '/quan_unbal_p53_sig_models.rda'))
-saveRDS(quan_cancer_intersection_models, 
-        file = paste0(quan_folder, '/quan_cancer_intersection_models.rda'))
-saveRDS(quan_cancer_intersection_sig_models, 
-        file = paste0(quan_folder, '/quan_cancer_intersection_sig_models.rda'))
-saveRDS(quan_cancer_union_models, 
-        file = paste0(quan_folder, '/quan_cancer_union_models.rda'))
-saveRDS(quan_cancer_union_sig_models, 
-        file = paste0(quan_folder, '/quan_cancer_union_sig_models.rda'))
-saveRDS(quan_p53_intersection_models, 
-        file = paste0(quan_folder, '/quan_p53_intersection_models.rda'))
-saveRDS(quan_p53_intersection_sig_models, 
-        file = paste0(quan_folder, '/quan_p53_intersection_sig_models.rda'))
-saveRDS(quan_p53_union_models, 
-        file = paste0(quan_folder, '/quan_p53_union_models.rda'))
-saveRDS(quan_p53_union_sig_models, 
-        file = paste0(quan_folder, '/quan_p53_union_sig_models.rda'))
-saveRDS(quan_bal_counts_cancer_intersection_models,
-        file = paste0(quan_folder, '/quan_bal_counts_cancer_intersection_models.rda'))
-saveRDS(quan_bal_counts_cancer_intersection_sig_models,
-        file = paste0(quan_folder, '/quan_bal_counts_cancer_intersection_sig_models.rda'))
-saveRDS(quan_bal_counts_cancer_union_models,
-        file = paste0(quan_folder, '/quan_bal_counts_cancer_union_models.rda'))
-saveRDS(quan_bal_counts_cancer_union_sig_models,
-        file = paste0(quan_folder, '/quan_bal_counts_cancer_union_sig_models.rda'))
-saveRDS(quan_bal_counts_p53_intersection_models,
-        file = paste0(quan_folder, '/quan_bal_counts_p53_intersection_models.rda'))
-saveRDS(quan_bal_counts_p53_intersection_sig_models,
-        file = paste0(quan_folder, '/quan_bal_counts_p53_intersection_sig_models.rda'))
-saveRDS(quan_bal_counts_p53_union_models,
-        file = paste0(quan_folder, '/quan_bal_counts_p53_union_models.rda'))
-saveRDS(quan_bal_counts_p53_union_sig_models,
-        file = paste0(quan_folder, '/quan_bal_counts_p53_union_sig_models.rda'))
-saveRDS(quan_complete_cancer_intersection_models,
-        file = paste0(quan_folder, '/quan_complete_cancer_intersection_models.rda'))
-# saveRDS(quan_complete_cancer_intersection_sig_models,
-#         file = paste0(quan_folder, '/quan_complete_cancer_intersection_sig_models.rda'))
-saveRDS(quan_complete_cancer_union_models,
-        file = paste0(quan_folder, '/quan_complete_cancer_union_models.rda'))
-saveRDS(quan_complete_cancer_union_sig_models,
-        file = paste0(quan_folder, '/quan_complete_cancer_union_sig_models.rda'))
-saveRDS(quan_complete_p53_intersection_models,
-        file = paste0(quan_folder, '/quan_complete_p53_intersection_models.rda'))
-saveRDS(quan_complete_p53_intersection_sig_models,
-        file = paste0(quan_folder, '/quan_complete_p53_intersection_sig_models.rda'))
-saveRDS(quan_complete_p53_union_models,
-        file = paste0(quan_folder, '/quan_complete_p53_union_models.rda'))
-saveRDS(quan_complete_p53_union_sig_models,
-        file = paste0(quan_folder, '/quan_complete_p53_union_sig_models.rda'))
+saveRDS(quan_result_07, 
+        file = paste0(quan_folder, '/quan_result_07.rda'))
+saveRDS(quan_result_sig_07, 
+        file = paste0(quan_folder, '/quan_result_sig_07.rda'))
 
+saveRDS(quan_result_08, 
+        file = paste0(quan_folder, '/quan_result_08.rda'))
+saveRDS(quan_result_sig_08, 
+        file = paste0(quan_folder, '/quan_result_sig_08.rda'))
+
+saveRDS(quan_result_09, 
+        file = paste0(quan_folder, '/quan_result_09.rda'))
+saveRDS(quan_result_sig_09, 
+        file = paste0(quan_folder, '/quan_result_sig_09.rda'))
+
+saveRDS(quan_result_10, 
+        file = paste0(quan_folder, '/quan_result_10.rda'))
+saveRDS(quan_result_sig_10, 
+        file = paste0(quan_folder, '/quan_result_sig_10.rda'))
+
+saveRDS(quan_result_11, 
+        file = paste0(quan_folder, '/quan_result_11.rda'))
+saveRDS(quan_result_sig_11, 
+        file = paste0(quan_folder, '/quan_result_sig_11.rda'))
+
+saveRDS(quan_result_12, 
+        file = paste0(quan_folder, '/quan_result_12.rda'))
+saveRDS(quan_result_sig_12, 
+        file = paste0(quan_folder, '/quan_result_sig_12.rda'))
+
+saveRDS(quan_result_13, 
+        file = paste0(quan_folder, '/quan_result_13.rda'))
+saveRDS(quan_result_sig_13, 
+        file = paste0(quan_folder, '/quan_result_sig_13.rda'))
+
+saveRDS(quan_result_14, 
+        file = paste0(quan_folder, '/quan_result_14.rda'))
+saveRDS(quan_result_sig_14, 
+        file = paste0(quan_folder, '/quan_result_sig_14.rda'))
+
+saveRDS(quan_result_15, 
+        file = paste0(quan_folder, '/quan_result_15.rda'))
+saveRDS(quan_result_sig_15, 
+        file = paste0(quan_folder, '/quan_result_sig_15.rda'))
+
+saveRDS(quan_result_int, 
+        file = paste0(quan_folder, '/quan_result_int.rda'))
+saveRDS(quan_result_sig_int, 
+        file = paste0(quan_folder, '/quan_result_sig_int.rda'))
+
+saveRDS(quan_result_union, 
+        file = paste0(quan_folder, '/quan_result_union.rda'))
+saveRDS(quan_result_sig_union, 
+        file = paste0(quan_folder, '/quan_result_sig_union.rda'))
 
 

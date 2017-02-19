@@ -1,5 +1,5 @@
 ####### Script will run bumphunter on p53 Mut and use non cancer (family members) as controls
-# this is 5th (part A) step in pipeline
+# this is 6th (part A) step in pipeline
 
 ##########
 # initialize libraries
@@ -19,57 +19,68 @@ model_data <- paste0(data_folder, '/model_data')
 #########
 # Load model data which contains all variations of methylation data and cg_locations csv
 #########
-load(paste0(model_data, '/model_data_cases.RData'))
-load(paste0(model_data, '/model_data_controls.RData'))
+# load cases 
+raw_cases_batch <- readRDS(paste0(model_data, '/raw_cases_batch.rda'))
+swan_cases_batch <- readRDS(paste0(model_data, '/swan_cases_batch.rda'))
+quan_cases_batch <- readRDS(paste0(model_data, '/quan_cases_batch.rda'))
+funnorm_cases_batch <- readRDS(paste0(model_data, '/funnorm_cases_batch.rda'))
+
+# load controls
+raw_controls_batch <- readRDS(paste0(model_data, '/raw_controls_batch.rda'))
+swan_controls_batch <- readRDS(paste0(model_data, '/swan_controls_batch.rda'))
+quan_controls_batch <- readRDS(paste0(model_data, '/quan_controls_batch.rda'))
+funnorm_controls_batch <- readRDS(paste0(model_data, '/funnorm_controls_batch.rda'))
 
 cg_locations <- read.csv(paste0(model_data, '/cg_locations.csv'))
 
 ##########
 # function to find overlapping probes and subset control and regular by those probes
 ##########
-findOverlap <- function(dat, dat_controls) {
-  control_probes <- colnames(dat_controls)[5:ncol(dat_controls)]
-  orig_probes <- colnames(dat)[6:ncol(dat)]
-  overlaps <- intersect(control_probes, orig_probes)
-  dat_controls <- dat_controls[,  c('id', 'p53_germline', 'cancer_diagnosis_diagnoses', 'age_sample_collection', overlaps)]
-  dat_controls$age_diagnosis <- NA
-  dat <- dat[,  c('id', 'p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses', 'age_sample_collection', overlaps)]
-  dat_full <- rbind(dat, dat_controls)
-  return(dat_full)
-}
-
-# get data
-beta_raw_full <- findOverlap(beta_raw, beta_raw_controls)
-beta_swan_full <- findOverlap(beta_swan, beta_swan_controls)
-beta_quan_full <- findOverlap(beta_quan, beta_quan_controls)
-beta_funnorm_full <- findOverlap(beta_funnorm, beta_funnorm_controls)
-
-# remove smaller object
-rm(beta_raw, beta_raw_controls, beta_swan, beta_swan_controls, beta_quan, beta_quan_controls, 
-   beta_funnorm, beta_funnorm_controls)
+# findOverlap <- function(dat, dat_controls) {
+#   control_probes <- colnames(dat_controls)[5:ncol(dat_controls)]
+#   orig_probes <- colnames(dat)[6:ncol(dat)]
+#   overlaps <- intersect(control_probes, orig_probes)
+#   dat_controls <- dat_controls[,  c('id', 'p53_germline', 'cancer_diagnosis_diagnoses', 'age_sample_collection', overlaps)]
+#   dat_controls$age_diagnosis <- NA
+#   dat <- dat[,  c('id', 'p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses', 'age_sample_collection', overlaps)]
+#   dat_full <- rbind(dat, dat_controls)
+#   return(dat_full)
+# }
+# 
+# # get data
+# beta_raw_full <- findOverlap(beta_raw, beta_raw_controls)
+# beta_swan_full <- findOverlap(beta_swan, beta_swan_controls)
+# beta_quan_full <- findOverlap(beta_quan, beta_quan_controls)
+# beta_funnorm_full <- findOverlap(beta_funnorm, beta_funnorm_controls)
+# 
+# # remove smaller object
+# rm(beta_raw, beta_raw_controls, beta_swan, beta_swan_controls, beta_quan, beta_quan_controls, 
+#    beta_funnorm, beta_funnorm_controls)
 
 ##########
 # function that takes LFS patients and run balanced and unbalanced bumphunter on cancer and controls
+# type is the indicator
 ##########
 # will return one unbalanced, one balanced by age, and balanced by age and counts
-
-bumpHunterBalanced <- function(dat,
+dat_cases <- raw_cases_batch
+dat_controls <- raw_controls_batch
+bumpHunterBalanced <- function(dat_cases,
+                               dat_controls,
                                balanced,
                                even_counts) {
   
-  # get p53 mutatnts
-  dat <- dat[dat$p53_germline == 'Mut',]
   
-  # create column for controls and cases
-  dat$indicator <- ifelse(dat$cancer_diagnosis_diagnoses != 'Unaffected', 'cases', 'controls')
+  # combine data
+  dat <- rbind(dat_cases, dat_controls)
   
   if (balanced) {
     # # balance age 
-    # hist(dat$age_sample_collection[dat$indicator == 'cases'])
-    # hist(dat$age_sample_collection[dat$indicator == 'controls'])
+    hist(dat$age_sample_collection[dat$type == 'cases'])
+    hist(dat$age_sample_collection[dat$type == 'controls'])
+    
     # remove a few from ranges 100-200, 300-400
     # randomly remove controls that have a less than 50 month age of diganosis to have balanced classes
-    remove_index <- which(dat$indicator == 'controls' & (dat$age_sample_collection >= 100 & dat$age_sample_collection <= 200) |
+    remove_index <- which(dat$type == 'controls' & (dat$age_sample_collection >= 100 & dat$age_sample_collection <= 200) |
                             (dat$age_sample_collection >= 300 & dat$age_sample_collection <= 400))
     
     remove_index <- sample(remove_index, 15, replace = F )
@@ -78,10 +89,10 @@ bumpHunterBalanced <- function(dat,
     if (even_counts) {
       
       # balance numbers
-      # nrow(dat[dat$indicator == 'cases',]) # 80
-      # nrow(dat[dat$indicator == 'controls',]) #50
-      remove_index <- which(dat$indicator == 'cases')
-      remove_index <- sample(remove_index, 30, replace = F )
+      nrow(dat[dat$type == 'cases',]) # 70
+      nrow(dat[dat$type == 'controls',]) #26
+      remove_index <- which(dat$type == 'cases')
+      remove_index <- sample(remove_index, 41, replace = F )
       dat <- dat[-remove_index,]
       
     } 
@@ -90,12 +101,12 @@ bumpHunterBalanced <- function(dat,
   ##########
   # get clinical dat 
   ##########
-  bump_clin <- dat[,1:5]
+  bump_clin <- dat[,1:8]
   
   ##########
   # get indicator and put into design matrix with intercept 1
   ##########
-  indicator_vector <- as.factor(dat$indicator)
+  indicator_vector <- as.factor(dat$type)
   designMatrix <- cbind(rep(1, nrow(dat)), indicator_vector)
   designMatrix <- as.matrix(designMatrix)
   
@@ -103,7 +114,7 @@ bumpHunterBalanced <- function(dat,
   # Get genetic locations
   ##########
   dat$p53_germline <- dat$age_diagnosis <- dat$cancer_diagnosis_diagnoses <-
-    dat$age_sample_collection <- dat$id <- NULL
+    dat$age_sample_collection <- dat$id <- dat$type <- dat$batch <-  NULL
   # transpose methylation to join with cg_locations to get genetic location vector.
   dat <- as.data.frame(t(dat), stringsAsFactors = F)
   
@@ -139,21 +150,29 @@ bumpHunterBalanced <- function(dat,
   stopifnot(dim(beta)[1] == length(pos))
   
   # set paramenters 
-  DELTA_BETA_THRESH = 0.10 # DNAm difference threshold
-  NUM_BOOTSTRAPS = 3     # number of randomizations
+  DELTA_BETA_THRESH = c(0.07, 0.08, 0.09,0.10, 0.11, 0.12, 0.13, 0.14, 0.15) # DNAm difference threshold
+  NUM_BOOTSTRAPS = 3    # number of randomizations
   
-  tab <- bumphunter(beta, 
-                    designMatrix, 
-                    chr = chr, 
-                    pos = pos,
-                    nullMethod = "bootstrap",
-                    cutoff = DELTA_BETA_THRESH,
-                    B = NUM_BOOTSTRAPS,
-                    type = "Beta")
+  # create tab list
+  tab <- list()
+  bump_hunter_results <- list()
+  for(i in 1:length(DELTA_BETA_THRESH)) {
+    tab[[i]] <- bumphunter(beta, 
+                           designMatrix, 
+                           chr = chr, 
+                           pos = pos,
+                           nullMethod = "bootstrap",
+                           cutoff = DELTA_BETA_THRESH[i],
+                           B = NUM_BOOTSTRAPS,
+                           type = "Beta")
+    
+    bump_hunter_results[[i]] <- tab[[i]]$table
+    bump_hunter_results[[i]]$run <- DELTA_BETA_THRESH[i]
+  }
   
-  bump_hunter_results <- tab$table
+  bh_results <- do.call(rbind, bump_hunter_results)
   
-  return(bump_hunter_results)
+  return(bh_results)
   
 }
 
@@ -161,49 +180,44 @@ bumpHunterBalanced <- function(dat,
 #########
 # Now Apply to Original IDAT data
 #########
+raw_bh <- bumpHunterBalanced(raw_cases_batch, raw_controls_batch, balanced = T, even_counts = T)
+quan_bh <- bumpHunterBalanced(quan_cases_batch, quan_controls_batch, balanced = T, even_counts = T)
+swan_bh <- bumpHunterBalanced(swan_cases_batch, swan_controls_batch, balanced = T, even_counts = T)
+funnorm_bh <- bumpHunterBalanced(funnorm_cases_batch, funnorm_controls_batch, balanced = T, even_counts = T)
 
-# beta raw
-beta_raw_bal_cancer <- bumpHunterBalanced(beta_raw_full, balanced = T, even_counts = F)
-beta_raw_bal_counts_cancer <- bumpHunterBalanced(beta_raw_full, balanced = T, even_counts = T)
-beta_raw_unbal_cancer <- bumpHunterBalanced(beta_raw_full, balanced = F, even_counts = F)
-
-# beta swan
-beta_swan_bal_cancer <- bumpHunterBalanced(beta_swan_full, balanced = T, even_counts = F)
-beta_swan_bal_counts_cancer <- bumpHunterBalanced(beta_swan_full, balanced = T, even_counts = T)
-beta_swan_unbal_cancer <- bumpHunterBalanced(beta_swan_full, balanced = F, even_counts = F)
-
-# beta quan
-beta_quan_bal_cancer <- bumpHunterBalanced(beta_quan_full, balanced = T, even_counts = F)
-beta_quan_bal_counts_cancer <- bumpHunterBalanced(beta_quan_full, balanced = T, even_counts = T)
-beta_quan_unbal_cancer <- bumpHunterBalanced(beta_quan_full, balanced = F, even_counts = F)
-
-# beta funnorm
-beta_funnorm_bal_cancer <- bumpHunterBalanced(beta_funnorm_full, balanced = T, even_counts = F)
-beta_funnorm_bal_counts_cancer <- bumpHunterBalanced(beta_funnorm_full, balanced = T, even_counts = T)
-beta_funnorm_unbal_cancer <- bumpHunterBalanced(beta_funnorm_full, balanced = F, even_counts = F)
-
-# remove larger objects
-rm(beta_raw_full, beta_swan_full, beta_quan_full, beta_funnorm_full, clin)
-
-load(paste0(model_data, '/beta_cancer_bh.RData'))
-
-##########
-# check region distance
-##########
-checkDis <- function(dat) {
-  dist <- dat$end - dat$start
-  counts <- length(which(dist != 0))
-}
-
-##########
-# intersection of cancer features
-##########
-
-##########
-# union of cancer features
-##########
+# save new bh 
+saveRDS(raw_bh, paste0(model_data, '/raw_bh.rda'))
+saveRDS(quan_bh, paste0(model_data, '/quan_bh.rda'))
+saveRDS(swan_bh, paste0(model_data, '/swan_bh.rda'))
+saveRDS(funnorm_bh, paste0(model_data, '/funnorm_bh.rda'))
 
 
+
+
+# # beta raw
+# beta_raw_bal_cancer <- bumpHunterBalanced(beta_raw_full, balanced = T, even_counts = F)
+# beta_raw_bal_counts_cancer <- bumpHunterBalanced(beta_raw_full, balanced = T, even_counts = T)
+# beta_raw_unbal_cancer <- bumpHunterBalanced(beta_raw_full, balanced = F, even_counts = F)
+# 
+# # beta swan
+# beta_swan_bal_cancer <- bumpHunterBalanced(beta_swan_full, balanced = T, even_counts = F)
+# beta_swan_bal_counts_cancer <- bumpHunterBalanced(beta_swan_full, balanced = T, even_counts = T)
+# beta_swan_unbal_cancer <- bumpHunterBalanced(beta_swan_full, balanced = F, even_counts = F)
+# 
+# # beta quan
+# beta_quan_bal_cancer <- bumpHunterBalanced(beta_quan_full, balanced = T, even_counts = F)
+# beta_quan_bal_counts_cancer <- bumpHunterBalanced(beta_quan_full, balanced = T, even_counts = T)
+# beta_quan_unbal_cancer <- bumpHunterBalanced(beta_quan_full, balanced = F, even_counts = F)
+# 
+# # beta funnorm
+# beta_funnorm_bal_cancer <- bumpHunterBalanced(beta_funnorm_full, balanced = T, even_counts = F)
+# beta_funnorm_bal_counts_cancer <- bumpHunterBalanced(beta_funnorm_full, balanced = T, even_counts = T)
+# beta_funnorm_unbal_cancer <- bumpHunterBalanced(beta_funnorm_full, balanced = F, even_counts = F)
+# 
+# # remove larger objects
+# rm(beta_raw_full, beta_swan_full, beta_quan_full, beta_funnorm_full, clin)
+# 
+# load(paste0(model_data, '/beta_cancer_bh.RData'))
 
 
 

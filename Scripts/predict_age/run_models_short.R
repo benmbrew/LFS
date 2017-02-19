@@ -35,13 +35,12 @@ scripts_folder <- paste0(project_folder, '/Scripts')
 ##########
 # source model_functions to get functions to run models 
 ##########
-source(paste0(scripts_folder, '/predict_age/model_functions.R'))
+source(paste0(scripts_folder, '/predict_age/model_functions_short.R'))
 
 ##########
 # set parameters 
 ##########
-data_thresholds <- c(48, 60, 72, 84)
-p53 <- c('Mut', 'WT')
+data_thresholds <- 48
 
 ##########
 # Read in cases and bumphunter features
@@ -77,6 +76,7 @@ runModels <- function(data,
   
   # get differenct variations of data
   if (random) {
+    
     data <- subsetDat(data, 
                       random = T, 
                       num_feat,
@@ -88,6 +88,10 @@ runModels <- function(data,
                       num_feat = NULL)
   }
   
+  #########
+  # get regression data and run regression
+  #########
+  # get data
   if (bump_hunter) {
     
     data <- bhSubset(data, bh_data = bump_hunter_data)
@@ -96,54 +100,17 @@ runModels <- function(data,
   
   data_resid <- getResidual(data)
   
-  data_fac <- list()
-  data_resid_fac <- list()
+  data_result <- rfPredictReg(data, cutoff = .7, iterations = 5)
+  data_resid_result <- rfPredictReg(data_resid, cutoff = .7, iterations = 5)
   
-  for (thresh in 1:length(data_thresholds)) {
-    
-    data_fac[[thresh]] <- makeFac(data, threshold = data_thresholds[thresh])
-    data_resid_fac[[thresh]] <- makeFac(data_resid, threshold = data_thresholds[thresh])
-    
-  }
-  
-  # run regressions
-  data_result <- list()
-  data_resid_result <- list()
-  
-  for (dat in 1:length(data)) {
-    
-    sub_dat <- data[[dat]]
-    sub_data_resid <- data_resid[[dat]]
-    data_result[[dat]] <- rfPredictReg(sub_dat, cutoff = .7, iterations = 5)
-    data_resid_result[[dat]] <- rfPredictReg(sub_data_resid, cutoff = .7, iterations = 5)
-  }
-  
-  # run classification
-  data_fac_result <- list()
-  data_resid_fac_result <- list()
-  
-  for (dat in 1:length(data_fac)) {
-    
-    sub_dat_fac <- data_fac[[dat]]
-    sub_dat_resid_fac <- data_resid_fac[[dat]]
-    
-    temp.data_fac_result <- list()
-    temp.data_resid_fac_result <- list()
-    
-    for (sub_dat in 1:length(sub_dat_fac)) {
-      
-      temp.sub_dat_fac <- sub_dat_fac[[sub_dat]]
-      temp.sub_dat_resid_fac <- sub_dat_resid_fac[[sub_dat]]
-      
-      temp.data_fac_result[[sub_dat]] <- rfPredictFac(temp.sub_dat_fac, cutoff = .7, iterations = 5)
-      temp.data_resid_fac_result[[sub_dat]] <- rfPredictFac(temp.sub_dat_resid_fac, cutoff = .7, iterations = 5)
-      
-    }
-    
-    data_fac_result[[dat]] <- temp.data_fac_result
-    data_resid_fac_result[[dat]] <- temp.data_resid_fac_result
-    
-  }
+  #########
+  # get classification data and run classifier
+  #########
+  data_fac <- makeFac(data, threshold = 48)
+  data_resid_fac <- makeFac(data_resid, threshold = 48)
+
+  data_fac_result  <- rfPredictFac(data_fac, cutoff = .7, iterations = 5)
+  data_resid_fac_result <- rfPredictFac(data_resid_fac, cutoff = .7, iterations = 5)
   
   return (list(data_result, 
                data_resid_result, 

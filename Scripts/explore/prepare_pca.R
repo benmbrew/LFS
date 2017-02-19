@@ -1,5 +1,5 @@
-####### Script will prepare data for pca
-# original idat, and controls
+####### Script will prepare data for pca 
+# This is 5th step (A)
 
 ##########
 # initialize libraries
@@ -18,7 +18,8 @@ clin_data <- paste0(data_folder, '/clin_data')
 ##########
 # load beta values
 ##########
-load(paste0(methyl_data, '/imputed_betas.RData'))
+load(paste0(model_data, '/model_data_cases.RData'))
+load(paste0(model_data, '/model_data_controls.RData'))
 
 ##########
 # read in clinical data

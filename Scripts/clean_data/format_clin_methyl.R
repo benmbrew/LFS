@@ -41,10 +41,6 @@ clin <- read.csv(paste0(clin_data, '/clinical_two.csv'), stringsAsFactors = F)
 clin$id <-  gsub('A|B|_|-', '', clin$blood_dna_malkin_lab_)
 
 ##########
-# First use functions to prepare clinical and methylation data
-##########
-
-##########
 # function to clean id names and get methyl_indicator for clin
 ##########
 getMethylVar <- function(dat_cases, dat_controls) {
@@ -122,13 +118,14 @@ joinData <- function(data, control) {
   # get intersection of clin ids and data ids
   intersected_ids <- intersect(data$id, clin$id)
   features <- colnames(data)[2:(length(colnames(data)))]
-
+  
   # loop to combine identifiers, without merging large table
   data$p53_germline <- NA
   data$age_diagnosis <- NA
   data$cancer_diagnosis_diagnoses <- NA
   data$age_sample_collection <- NA
   data$tm_donor_ <- NA
+  data$gender
   
   if (!control) {
     
@@ -139,13 +136,16 @@ joinData <- function(data, control) {
       data$cancer_diagnosis_diagnoses[data$id == i] <- clin$cancer_diagnosis_diagnoses[which(clin$id == i)]
       data$age_sample_collection[data$id == i] <- clin$age_sample_collection[which(clin$id == i)]
       data$tm_donor_[data$id == i] <- clin$tm_donor_[which(clin$id == i)]
+      data$gender[data$id == i] <- clin$gender[which(clin$id == i)]
+      
       
       print(i)
     } 
     data <- data[!is.na(data$p53_germline),]
     data <- data[!duplicated(data$id),]
     data <- data[!duplicated(data$tm_donor_),]
-    data <- data[, c('id', 'p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses','age_sample_collection', features)]
+    data <- data[, c('id', 'p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses',
+                     'age_sample_collection', 'gender', features)]
   } else {
     
     for (i in intersected_ids) {
@@ -154,13 +154,16 @@ joinData <- function(data, control) {
       data$cancer_diagnosis_diagnoses[data$id == i] <- clin$cancer_diagnosis_diagnoses[which(clin$id == i)]
       data$age_sample_collection[data$id == i] <- clin$age_sample_collection[which(clin$id == i)]
       data$tm_donor_[data$id == i] <- clin$tm_donor_[which(clin$id == i)]
+      data$gender[data$id == i] <- clin$gender[which(clin$id == i)]
+      
       
       print(i)
     } 
     data <- data[!is.na(data$p53_germline),]
     data <- data[!duplicated(data$id),]
     # data <- data[!duplicated(data$tm_donor_),]
-    data <- data[, c('id', 'p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses','age_sample_collection', features)]
+    data <- data[, c('id', 'p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses',
+                     'age_sample_collection', 'gender', features)]
   }
   
   return(data)
@@ -185,7 +188,7 @@ relevelFactor <- function (data) {
 makeNumFast <- function(model_data) {
   
   temp_list <- list()
-  for (i in 6:ncol(model_data)) {
+  for (i in 7:ncol(model_data)) {
     temp.row <- model_data[,i]
     temp.row <-   as.numeric(levels(temp.row))[temp.row]
     temp_list[[i]] <- temp.row
@@ -194,12 +197,17 @@ makeNumFast <- function(model_data) {
   }
   
   num_features <- as.data.frame(do.call(cbind, temp_list))
-  feature_names <- names(model_data)[6:ncol(model_data)]
-  model_data <- cbind(id = model_data$id, p53_germline = model_data$p53_germline, age_diagnosis = model_data$age_diagnosis,
+  feature_names <- names(model_data)[7:ncol(model_data)]
+  model_data <- cbind(id = model_data$id, 
+                      p53_germline = model_data$p53_germline, 
+                      age_diagnosis = model_data$age_diagnosis,
                       cancer_diagnosis_diagnoses = model_data$cancer_diagnosis_diagnoses, 
-                      age_sample_collection = model_data$age_sample_collection, num_features)
-  names(model_data)[6:ncol(model_data)] <- feature_names
-
+                      age_sample_collection = model_data$age_sample_collection, 
+                      gender = model_data$gender, 
+                      
+                      num_features)
+  names(model_data)[7:ncol(model_data)] <- feature_names
+  
   return(model_data)
 }
 
@@ -229,6 +237,9 @@ beta_quan <- joinData(beta_quan, control = F)
 beta_swan <- joinData(beta_swan, control = F)
 beta_funnorm <- joinData(beta_funnorm, control = F)
 
+save.image('/home/benbrew/Desktop/temp_cases.RData')
+save.image('/home/benbrew/Desktop/temp_cases.RData')
+
 # thrid relevel factors
 beta_raw <- relevelFactor(beta_raw)
 beta_quan <- relevelFactor(beta_quan)
@@ -255,7 +266,6 @@ beta_funnorm_controls <- joinData(beta_funnorm_controls, control = T)
 
 # 4th make numeric - only beta_raw, since that was imputed on and made into a factor
 beta_raw_controls <- makeNumFast(beta_raw_controls)
-
 
 ##########
 # Save data images seperately

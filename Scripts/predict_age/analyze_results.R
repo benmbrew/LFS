@@ -77,10 +77,26 @@ rm(raw_rand_table,
 #####################################################################################################################
 
 ##########
+# recode features variable to have number of features (strsplit)
+##########
+result_table$features_num <- gsub(')', '', unlist(lapply(strsplit(as.character(result_table$features), 
+                                     ' |:'), function(x) x[2])), fixed = T)
+
+result_table_rand$features_num <- gsub(')', '', unlist(lapply(strsplit(as.character(result_table_rand$data), 
+                                                                  '_'), function(x) x[3])), fixed = T)
+
+##########
+# recode data type to grab normalization method
+##########
+result_table$norm <- unlist(lapply(strsplit(as.character(result_table$data), '_'), function(x) x[1]))
+result_table_rand$norm <- unlist(lapply(strsplit(as.character(result_table_rand$data), '_'), function(x) x[1]))
+
+
+##########
 # order the score column and get top performers
 ##########
 result_table <- result_table[order(result_table$score, decreasing = T),]
-result_table_rand <- result_table_rand[order(result_table_rand$mean_score, decreasing = T),]
+result_table_rand <- result_table_rand[order(result_table_rand$score, decreasing = T),]
 
 ##########
 # find the ones that score high on regression -> then link to categorical.
@@ -96,12 +112,76 @@ result_mut <- result_mut[order(result_mut$score, decreasing = T),]
 result_mut_rand <- result_table_rand %>% 
   filter(p53_status == 'Mut') 
 
-result_mut_rand <- result_mut_rand[order(result_mut_rand$mean_score, decreasing = T),]
+result_mut_rand <- result_mut_rand[order(result_mut_rand$score, decreasing = T),]
+
+##########
+# seperate by regression or classification
+##########
+# normal
+result_mut_reg <- result_mut[result_mut$age == 'regression',]
+result_mut_cat <-result_mut[result_mut$age != 'regression',]
+
+# random
+result_mut_rand_reg <- result_mut_rand[result_mut_rand$age == 'regression',]
+result_mut_rand_cat <-result_mut_rand[result_mut_rand$age != 'regression',]
+
+##########
+# combine random and nromal
+##########
+
+# add random or not column to both data sets
+result_mut_reg$feature_type <- 'bh'
+result_mut_cat$feature_type <- 'bh'
+
+result_mut_rand_reg$feature_type <- 'random'
+result_mut_rand_cat$feature_type <- 'random'
+
+# recode both columns to match
+result_mut_rand_reg$features <- 'random_features'
+
+result_mut_rand_cat$features <- 'random_features'
+
+# change into data frame
+result_mut_reg  <- as.data.frame(result_mut_reg)
+result_mut_cat  <- as.data.frame(result_mut_cat)
+
+result_mut_rand_reg  <- as.data.frame(result_mut_rand_reg)
+result_mut_rand_cat  <- as.data.frame(result_mut_rand_cat)
+
+# combine reg
+result_reg <- rbind(result_mut_reg, result_mut_rand_reg)
+
+result_cat<- rbind(result_mut_cat, result_mut_rand_cat)
 
 
+##########
+# histograms for regression
+##########
+# histrogram of normal, regression scores for both bh and random
+ggplot(result_reg, aes(score)) + 
+  geom_histogram(data = subset(result_reg, type == 'normal' & feature_type == 'bh'), fill = 'green', alpha = 0.8) +
+  geom_histogram(data = subset(result_reg, type == 'normal' & feature_type == 'random'), fill = 'black', alpha = 0.8)
 
+# histrogram of residual, regression scores for both bh and random
+ggplot(result_reg, aes(score)) + 
+  geom_histogram(data = subset(result_reg, type == 'resid' & feature_type == 'bh'), fill = 'green', alpha = 0.8) +
+  geom_histogram(data = subset(result_reg, type == 'resid' & feature_type == 'random'), fill = 'black', alpha = 0.8)
 
+# historgram by preprocessing mehtod 
+ggplot(result_reg, aes(score)) + 
+  geom_histogram(data = subset(result_reg, type == 'resid' & norm == 'raw'), fill = 'green', alpha = 0.8) +
+  geom_histogram(data = subset(result_reg, type == 'resid' & norm == 'quan'), fill = 'black', alpha = 0.8) +
+  geom_histogram(data = subset(result_reg, type == 'resid' & norm == 'swan'), fill = 'red', alpha = 0.8) +
+  geom_histogram(data = subset(result_reg, type == 'resid' & norm == 'funnorm'), fill = 'lightblue', alpha = 0.8)
+  
+# histrogram of funnorm, residual, regression scores for both bh and random
+ggplot(result_reg, aes(score)) + 
+  geom_histogram(data = subset(result_reg, norm == 'funnorm' & type == 'resid' & feature_type == 'bh'), fill = 'green', alpha = 0.8) +
+  geom_histogram(data = subset(result_reg, norm == 'funnorm' & type == 'resid' & feature_type == 'random'), fill = 'black', alpha = 0.8)
 
+##########
+# look at histogram for each number of features between random and normal
+##########
 
 
 

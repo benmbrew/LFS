@@ -13,388 +13,234 @@ scripts_folder <- paste0(project_folder, '/Scripts')
 ##########
 # source model_functions.R and run_models.R
 ##########
-source(paste0(scripts_folder, '/predict_age/model_functions.R'))
-source(paste0(scripts_folder, '/predict_age/run_models.R'))
+source(paste0(scripts_folder, '/predict_age/model_functions_short.R'))
+source(paste0(scripts_folder, '/predict_age/run_models_short.R'))
 
 ##########
 # remove quan, swan, and funnorm objects
 ##########
-rm(list = ls(pattern = "beta_quan_*"))
-rm(list = ls(pattern = "beta_swan_*"))
-rm(list = ls(pattern = "beta_funnorm_*"))
+rm(list = ls(pattern = "quan_*"))
+rm(list = ls(pattern = "swan_*"))
+rm(list = ls(pattern = "funnorm_*"))
 
 
 ###################################################################################################################################
 ## beta_raw
 
 ##########
-# cancer
+# threshold 0.07 - 0.15 normal
 ##########
 
-# bal cancer
-raw_bal_cancer_models <- runModels(beta_raw, 
-                                   bump_hunter = T, 
-                                   bump_hunter_data = beta_raw_bal_cancer_features)
+# raw 07 
+raw_result_07 <- runModels(raw_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = raw_bh_07)
 
-raw_bal_cancer_table <- extractResults(raw_bal_cancer_models, 
-                                       data_name = 'beta_raw_bal_cancer')
+raw_table_07 <- extractResults(raw_result_07, 
+                               data_name = 'raw_07')
 
-# bal cancer sig
-raw_bal_cancer_sig_models <- runModels(beta_raw, 
-                                       bump_hunter = T, 
-                                       bump_hunter_data = beta_raw_bal_cancer_sig_features)
+# raw 08
+raw_result_08 <- runModels(raw_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = raw_bh_08)
 
-raw_bal_cancer_sig_table <- extractResults(raw_bal_cancer_sig_models, 
-                                           data_name = 'raw_bal_cancer_sig')
+raw_table_08 <- extractResults(raw_result_08, 
+                               data_name = 'raw_08')
 
+# raw 09 
+raw_result_09 <- runModels(raw_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = raw_bh_09)
 
-# bal counts cancer
-raw_bal_counts_cancer_models <- runModels(beta_raw, 
-                                          bump_hunter = T, 
-                                          bump_hunter_data = beta_raw_bal_counts_cancer_features)
+raw_table_09 <- extractResults(raw_result_09, 
+                               data_name = 'raw_09')
 
-raw_bal_counts_cancer_table <- extractResults(raw_bal_counts_cancer_models, 
-                                              data_name = 'raw_bal_counts_cancer')
+# raw 10 
+raw_result_10 <- runModels(raw_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = raw_bh_10)
 
-# bal counts cancer sig
-raw_bal_counts_cancer_sig_models <- runModels(beta_raw, 
-                                              bump_hunter = T, 
-                                              bump_hunter_data =  beta_raw_bal_counts_cancer_sig_features)
+raw_table_10 <- extractResults(raw_result_10, 
+                               data_name = 'raw_10')
 
-raw_bal_counts_cancer_sig_table <- extractResults(raw_bal_counts_cancer_sig_models, 
-                                                  data_name = 'raw_bal_counts_cancer_sig')
+# raw 11
+raw_result_11 <- runModels(raw_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = raw_bh_11)
 
-# unbal cancer
-raw_unbal_cancer_models <- runModels(beta_raw, 
-                                     bump_hunter = T, 
-                                     bump_hunter_data = beta_raw_unbal_cancer_features)
+raw_table_11 <- extractResults(raw_result_11, 
+                               data_name = 'raw_11')
 
-raw_unbal_cancer_table <- extractResults(raw_unbal_cancer_models, 
-                                         data_name = 'raw_unbal_cancer')
+# raw 12
+raw_result_12 <- runModels(raw_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = raw_bh_12)
 
+raw_table_12 <- extractResults(raw_result_12, 
+                               data_name = 'raw_12')
 
-# unbal cancer sig
-raw_unbal_cancer_sig_models <- runModels(beta_raw, 
-                                         bump_hunter = T, 
-                                         bump_hunter_data = beta_raw_unbal_cancer_sig_features)
+# raw 13
+raw_result_13 <- runModels(raw_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = raw_bh_13)
 
-raw_unbal_cancer_sig_table <- extractResults(raw_unbal_cancer_sig_models, 
-                                             data_name = 'raw_unbal_cancer_sig')
+raw_table_13 <- extractResults(raw_result_13, 
+                               data_name = 'raw_13')
+
+# raw 14
+raw_result_14 <- runModels(raw_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = raw_bh_14)
+
+raw_table_14 <- extractResults(raw_result_14, 
+                               data_name = 'raw_14')
+
+# raw 15
+raw_result_15 <- runModels(raw_cases, 
+                           bump_hunter = T, 
+                           bump_hunter_data = raw_bh_15)
+
+raw_table_15 <- extractResults(raw_result_15, 
+                               data_name = 'raw_15')
+
+# raw intersection
+raw_result_int <- runModels(raw_cases, 
+                            bump_hunter = T, 
+                            bump_hunter_data = raw_int_feat)
+
+raw_table_int <- extractResults(raw_result_int, 
+                                data_name = 'raw_int')
+
+# raw union
+raw_result_union <- runModels(raw_cases, 
+                              bump_hunter = T, 
+                              bump_hunter_data = raw_union_feat)
+
+raw_table_union <- extractResults(raw_result_union, 
+                                  data_name = 'raw_union')
+
 
 ##########
-# p53
+# threshold 0.07 - 0.15 sig
 ##########
 
-# bal p53
-raw_bal_p53_models <- runModels(beta_raw, 
+# raw sig 07 
+raw_result_sig_07 <- runModels(raw_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = raw_bh_sig_07)
+
+raw_table_sig_07 <- extractResults(raw_result_sig_07, 
+                                   data_name = 'raw_sig_07')
+
+# raw sig 08
+raw_result_sig_08 <- runModels(raw_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = raw_bh_sig_08)
+
+raw_table_sig_08 <- extractResults(raw_result_sig_08, 
+                                   data_name = 'raw_sig_08')
+
+# raw sig 09 
+raw_result_sig_09 <- runModels(raw_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = raw_bh_sig_09)
+
+raw_table_sig_09 <- extractResults(raw_result_sig_09, 
+                                   data_name = 'raw_sig_09')
+
+# raw sig 10 
+raw_result_sig_10 <- runModels(raw_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = raw_bh_sig_10)
+
+raw_table_sig_10 <- extractResults(raw_result_sig_10, 
+                                   data_name = 'raw_sig_10')
+
+# raw sig 11 
+raw_result_sig_11 <- runModels(raw_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = raw_bh_sig_11)
+
+raw_table_sig_11 <- extractResults(raw_result_sig_11, 
+                                   data_name = 'raw_sig_11')
+
+# raw sig 12 
+raw_result_sig_12 <- runModels(raw_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = raw_bh_sig_12)
+
+raw_table_sig_12 <- extractResults(raw_result_sig_12, 
+                                   data_name = 'raw_sig_12')
+
+# raw sig 13 
+raw_result_sig_13 <- runModels(raw_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = raw_bh_sig_13)
+
+raw_table_sig_13 <- extractResults(raw_result_sig_13, 
+                                   data_name = 'raw_sig_13')
+
+# raw sig 14 
+raw_result_sig_14 <- runModels(raw_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = raw_bh_sig_14)
+
+raw_table_sig_14 <- extractResults(raw_result_sig_14, 
+                                   data_name = 'raw_sig_14')
+
+# raw sig 15 
+raw_result_sig_15 <- runModels(raw_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = raw_bh_sig_15)
+
+raw_table_sig_15 <- extractResults(raw_result_sig_15, 
+                                   data_name = 'raw_sig_15')
+
+
+# raw intersection
+raw_result_sig_int <- runModels(raw_cases, 
                                 bump_hunter = T, 
-                                bump_hunter_data = beta_raw_bal_p53_features)
+                                bump_hunter_data = raw_int_sig_feat)
 
-raw_bal_p53_table <- extractResults(raw_bal_p53_models, 
-                                    data_name = 'raw_bal_p53')
+raw_table_sig_int <- extractResults(raw_result_sig_int, 
+                                    data_name = 'raw_sig_int')
 
-# bal p53 sig
-raw_bal_p53_sig_models <- runModels(beta_raw, 
-                                    bump_hunter = T, 
-                                    bump_hunter_data = beta_raw_bal_p53_sig_features)
-
-raw_bal_p53_sig_table <- extractResults(raw_bal_p53_sig_models, 
-                                        data_name = 'raw_bal_p53_sig')
-
-# bal counts p53
-raw_bal_counts_p53_models <- runModels(beta_raw, 
-                                       bump_hunter = T, 
-                                       bump_hunter_data = beta_raw_bal_counts_p53_features)
-
-raw_bal_counts_p53_table <- extractResults(raw_bal_counts_p53_models, 
-                                           data_name = 'raw_bal_counts_p53')
-
-# bal counts p53 sig
-raw_bal_counts_p53_sig_models <- runModels(beta_raw, 
-                                           bump_hunter = T, 
-                                           bump_hunter_data = beta_raw_bal_counts_p53_sig_features)
-
-raw_bal_counts_p53_sig_table <- extractResults(raw_bal_counts_p53_sig_models, 
-                                               data_name = 'raw_bal_counts_p53_sig')
-
-# unbal p53
-raw_unbal_p53_models <- runModels(beta_raw, 
+# raw union
+raw_result_sig_union <- runModels(raw_cases, 
                                   bump_hunter = T, 
-                                  bump_hunter_data = beta_raw_unbal_p53_features)
+                                  bump_hunter_data = raw_union_sig_feat)
 
-raw_unbal_p53_table <- extractResults(raw_unbal_p53_models, 
-                                      data_name = 'raw_unbal_p53')
-
-
-# unbal p53 sig
-raw_unbal_p53_sig_models <- runModels(beta_raw, 
-                                      bump_hunter = T, 
-                                      bump_hunter_data = beta_raw_unbal_p53_sig_features)
-
-raw_unbal_p53_sig_table <- extractResults(raw_unbal_p53_sig_models, 
-                                          data_name = 'raw_unbal_p53_sig')
-
-
-##########
-# cancer
-##########
-
-# cancer_intersection
-raw_cancer_intersection_models <- runModels(beta_raw, 
-                                            bump_hunter = T, 
-                                            bump_hunter_data = beta_raw_cancer_intersection_features)
-
-raw_cancer_intersection_table <- extractResults(raw_cancer_intersection_models, 
-                                                data_name = 'raw_cancer_intersection')
-
-# cancer_intersection sig
-raw_cancer_intersection_sig_models <- runModels(beta_raw, 
-                                                bump_hunter = T, 
-                                                bump_hunter_data = beta_raw_cancer_intersection_sig_features)
-
-raw_cancer_intersection_sig_table <- extractResults(raw_cancer_intersection_sig_models, 
-                                                    data_name = 'raw_cancer_intersection_sig')
-
-# cancer_union
-raw_cancer_union_models <- runModels(beta_raw, 
-                                     bump_hunter = T, 
-                                     bump_hunter_data = beta_raw_cancer_union_features)
-
-raw_cancer_union_table <- extractResults(raw_cancer_union_models, 
-                                         data_name = 'raw_cancer_union')
-
-# cancer_union sig
-raw_cancer_union_sig_models <- runModels(beta_raw, 
-                                         bump_hunter = T, 
-                                         bump_hunter_data = beta_raw_cancer_union_sig_features)
-
-raw_cancer_union_sig_table <- extractResults(raw_cancer_union_sig_models, 
-                                             data_name = 'raw_cancer_union_sig')
-##########
-# p53
-##########
-# p53_intersection
-raw_p53_intersection_models <- runModels(beta_raw, 
-                                         bump_hunter = T, 
-                                         bump_hunter_data = beta_raw_p53_intersection_features)
-
-raw_p53_intersection_table <- extractResults(raw_p53_intersection_models, 
-                                             data_name = 'raw_p53_intersection')
-
-# p53_intersection sig
-raw_p53_intersection_sig_models <- runModels(beta_raw, 
-                                             bump_hunter = T, 
-                                             bump_hunter_data = beta_raw_p53_intersection_sig_features)
-
-raw_p53_intersection_sig_table <- extractResults(raw_p53_intersection_sig_models, 
-                                                 data_name = 'raw_p53_intersection_sig')
-
-# p53_union
-raw_p53_union_models <- runModels(beta_raw, 
-                                  bump_hunter = T, 
-                                  bump_hunter_data = beta_raw_p53_union_features)
-
-raw_p53_union_table <- extractResults(raw_p53_union_models, 
-                                      data_name = 'raw_p53_union')
-
-# p53_union sig
-raw_p53_union_sig_models <- runModels(beta_raw, 
-                                      bump_hunter = T, 
-                                      bump_hunter_data = beta_raw_p53_union_sig_features)
-
-raw_p53_union_sig_table <- extractResults(raw_p53_union_sig_models, 
-                                          data_name = 'raw_p53_union_sig')
-
-
-##########
-# most balanced cancer 
-##########
-
-# intersection
-raw_bal_counts_cancer_intersection_models <- runModels(beta_raw, 
-                                                       bump_hunter = T, 
-                                                       bump_hunter_data = beta_bal_counts_cancer_intersection_features)
-
-raw_bal_counts_cancer_intersection_table <- extractResults(raw_bal_counts_cancer_intersection_models, 
-                                                           data_name = 'raw_bal_counts_cancer_intersection')
-
-
-raw_bal_counts_cancer_intersection_sig_models <- runModels(beta_raw, 
-                                                           bump_hunter = T, 
-                                                           bump_hunter_data = beta_bal_counts_cancer_intersection_sig_features)
-
-raw_bal_counts_cancer_intersection_sig_table <- extractResults(raw_bal_counts_cancer_intersection_sig_models, 
-                                                               data_name = 'raw_bal_counts_cancer_intersection_sig')
-
-# union
-raw_bal_counts_cancer_union_models <- runModels(beta_raw, 
-                                                bump_hunter = T, 
-                                                bump_hunter_data = beta_bal_counts_cancer_union_features)
-
-raw_bal_counts_cancer_union_table <- extractResults(raw_bal_counts_cancer_union_models, 
-                                                    data_name = 'raw_bal_counts_cancer_union')
-
-
-raw_bal_counts_cancer_union_sig_models <- runModels(beta_raw, 
-                                                    bump_hunter = T, 
-                                                    bump_hunter_data = beta_bal_counts_cancer_union_sig_features)
-
-raw_bal_counts_cancer_union_sig_table <- extractResults(raw_bal_counts_cancer_union_sig_models, 
-                                                        data_name = 'raw_bal_counts_cancer_union_sig')
-
-##########
-# most balanced p53 
-##########
-
-# intersection
-raw_bal_counts_p53_intersection_models <- runModels(beta_raw, 
-                                                    bump_hunter = T, 
-                                                    bump_hunter_data = beta_bal_counts_p53_intersection_features)
-
-raw_bal_counts_p53_intersection_table <- extractResults(raw_bal_counts_p53_intersection_models, 
-                                                        data_name = 'raw_bal_counts_p53_intersection')
-
-
-raw_bal_counts_p53_intersection_sig_models <- runModels(beta_raw, 
-                                                        bump_hunter = T, 
-                                                        bump_hunter_data = beta_bal_counts_p53_intersection_sig_features)
-
-raw_bal_counts_p53_intersection_sig_table <- extractResults(raw_bal_counts_p53_intersection_sig_models, 
-                                                            data_name = 'raw_bal_counts_p53_intersection_sig')
-
-
-# union
-raw_bal_counts_p53_union_models <- runModels(beta_raw, 
-                                             bump_hunter = T, 
-                                             bump_hunter_data = beta_bal_counts_p53_union_features)
-
-raw_bal_counts_p53_union_table <- extractResults(raw_bal_counts_p53_union_models, 
-                                                 data_name = 'raw_bal_counts_p53_union')
-
-
-raw_bal_counts_p53_union_sig_models <- runModels(beta_raw, 
-                                                 bump_hunter = T, 
-                                                 bump_hunter_data = beta_bal_counts_p53_union_sig_features)
-
-raw_bal_counts_p53_union_sig_table <- extractResults(raw_bal_counts_p53_union_sig_models, 
-                                                     data_name = 'raw_bal_counts_p53_union_sig')
-
-###########
-# complete cancer - intersection across each method intersection
-###########
-
-# complete cancer intersection
-raw_complete_cancer_intersection_models <- runModels(beta_raw, 
-                                                     bump_hunter = T, 
-                                                     bump_hunter_data = beta_cancer_intersection_features)
-
-# get table 
-raw_complete_cancer_intersection_table <- extractResults(raw_complete_cancer_intersection_models, 
-                                                         data_name = 'raw_complete_cancer_intersection')
-
-# empty features set
-# # complete cancer intersection sig
-# raw_complete_cancer_intersection_sig_models <- runModels(beta_raw, 
-#                                                          bump_hunter = T, 
-#                                                          bump_hunter_data = beta_cancer_intersection_sig_features)
-# 
-# # get table 
-# raw_complete_cancer_intersection_sig_table <- extractResults(raw_complete_cancer_intersection_sig_models, 
-#                                                              data_name = 'raw_complete_cancer_intersection_sig')
-
-
-# complete cancer union
-raw_complete_cancer_union_models <- runModels(beta_raw, 
-                                              bump_hunter = T, 
-                                              bump_hunter_data = beta_cancer_union_features)
-
-# get table 
-raw_complete_cancer_union_table <- extractResults(raw_complete_cancer_union_models, 
-                                                  data_name = 'raw_complete_cancer_union')
-
-# complete cancer union sig
-raw_complete_cancer_union_sig_models <- runModels(beta_raw, 
-                                                  bump_hunter = T, 
-                                                  bump_hunter_data = beta_cancer_union_sig_features)
-
-# get table 
-raw_complete_cancer_union_sig_table <- extractResults(raw_complete_cancer_union_sig_models, 
-                                                      data_name = 'raw_complete_cancer_union_sig')
-
-
-###########
-# complete p53 - intersection across each method intersection
-###########
-
-# complete p53 intersection
-raw_complete_p53_intersection_models <- runModels(beta_raw, 
-                                                  bump_hunter = T, 
-                                                  bump_hunter_data = beta_p53_intersection_features)
-
-# get table 
-raw_complete_p53_intersection_table <- extractResults(raw_complete_p53_intersection_models, 
-                                                      data_name = 'raw_complete_p53_intersection')
-
-# complete p53 intersection sig
-raw_complete_p53_intersection_sig_models <- runModels(beta_raw, 
-                                                      bump_hunter = T, 
-                                                      bump_hunter_data = beta_p53_intersection_sig_features)
-
-# get table 
-raw_complete_p53_intersection_sig_table <- extractResults(raw_complete_p53_intersection_sig_models, 
-                                                          data_name = 'raw_complete_p53_intersection_sig')
-
-
-# complete p53 union
-raw_complete_p53_union_models <- runModels(beta_raw, 
-                                           bump_hunter = T, 
-                                           bump_hunter_data = beta_p53_union_features)
-
-# get table 
-raw_complete_p53_union_table <- extractResults(raw_complete_p53_union_models, 
-                                               data_name = 'raw_complete_p53_union')
-
-# complete p53 union sig
-raw_complete_p53_union_sig_models <- runModels(beta_raw, 
-                                               bump_hunter = T, 
-                                               bump_hunter_data = beta_p53_union_sig_features)
-
-# get table 
-raw_complete_p53_union_sig_table <- extractResults(raw_complete_p53_union_sig_models, 
-                                                   data_name = 'raw_complete_p53_union_sig')
+raw_table_sig_union <- extractResults(raw_result_sig_union, 
+                                      data_name = 'raw_sig_union')
 
 
 ###########
 # rbind tables and save RDA file
 ###########
-raw_table <- rbind(raw_bal_cancer_table, raw_bal_cancer_sig_table, raw_bal_counts_cancer_table, raw_bal_counts_cancer_sig_table,
-                   raw_unbal_cancer_table, raw_unbal_cancer_sig_table, raw_bal_p53_table, raw_bal_p53_sig_table, raw_bal_counts_p53_table, 
-                   raw_bal_counts_p53_sig_table, raw_unbal_p53_table, raw_unbal_p53_sig_table, raw_cancer_intersection_table, 
-                   raw_cancer_intersection_sig_table, raw_cancer_union_table, raw_cancer_union_sig_table, raw_p53_intersection_table, 
-                   raw_p53_intersection_sig_table, raw_p53_union_table, raw_p53_union_sig_table,
-                   raw_bal_counts_cancer_intersection_table, raw_bal_counts_cancer_intersection_sig_table,
-                   raw_bal_counts_cancer_union_table, raw_bal_counts_cancer_union_sig_table,
-                   raw_bal_counts_p53_intersection_table, raw_bal_counts_p53_intersection_sig_table,
-                   raw_bal_counts_p53_union_table, raw_bal_counts_p53_union_sig_table,
-                   raw_complete_cancer_intersection_table, raw_complete_cancer_intersection_sig_table,
-                   raw_complete_cancer_union_table, raw_complete_cancer_union_sig_table,
-                   raw_complete_p53_intersection_table, raw_complete_p53_intersection_sig_table,
-                   raw_complete_p53_union_table, raw_complete_p53_union_sig_table)
+raw_table <- rbind(raw_table_07, raw_table_sig_07,
+                   raw_table_08, raw_table_sig_08,
+                   raw_table_09, raw_table_sig_09,
+                   raw_table_10, raw_table_sig_10,
+                   raw_table_11, raw_table_sig_11,
+                   raw_table_12, raw_table_sig_12,
+                   raw_table_13, raw_table_sig_13,
+                   raw_table_14, raw_table_sig_14,
+                   raw_table_15, raw_table_sig_15,
+                   raw_table_int, raw_table_sig_int,
+                   raw_table_union, raw_table_sig_union)
 
 # remove data 
-rm(raw_bal_cancer_table, raw_bal_cancer_sig_table, raw_bal_counts_cancer_table, raw_bal_counts_cancer_sig_table,
-   raw_unbal_cancer_table, raw_unbal_cancer_sig_table, raw_bal_p53_table, raw_bal_p53_sig_table, raw_bal_counts_p53_table, 
-   raw_bal_counts_p53_sig_table, raw_unbal_p53_table, raw_unbal_p53_sig_table, raw_cancer_intersection_table, 
-   raw_cancer_intersection_sig_table, raw_cancer_union_table, raw_cancer_union_sig_table, raw_p53_intersection_table, 
-   raw_p53_intersection_sig_table, raw_p53_union_table, raw_p53_union_sig_table,
-   raw_bal_counts_cancer_intersection_table, raw_bal_counts_cancer_intersection_sig_table,
-   raw_bal_counts_cancer_union_table, raw_bal_counts_cancer_union_sig_table,
-   raw_bal_counts_p53_intersection_table, raw_bal_counts_p53_intersection_sig_table,
-   raw_bal_counts_p53_union_table, raw_bal_counts_p53_union_sig_table,
-   raw_complete_cancer_intersection_table, raw_complete_cancer_intersection_sig_table,
-   raw_complete_cancer_union_table, raw_complete_cancer_union_sig_table,
-   raw_complete_p53_intersection_table, raw_complete_p53_intersection_sig_table,
-   raw_complete_p53_union_table, raw_complete_p53_union_sig_table)
+rm(raw_table_07, raw_table_sig_07,
+   raw_table_08, raw_table_sig_08,
+   raw_table_09, raw_table_sig_09,
+   raw_table_10, raw_table_sig_10,
+   raw_table_11, raw_table_sig_11,
+   raw_table_12, raw_table_sig_12,
+   raw_table_13, raw_table_sig_13,
+   raw_table_14, raw_table_sig_14,
+   raw_table_15, raw_table_sig_15,
+   raw_table_int, raw_table_sig_int,
+   raw_table_union, raw_table_sig_union)
 
 
 #save table 
@@ -405,78 +251,59 @@ saveRDS(raw_table,
 ###########
 # save all model objects as RDA file
 ###########
-saveRDS(raw_bal_cancer_models, 
-        file = paste0(raw_folder, '/raw_bal_cancer_models.rda'))
-saveRDS(raw_bal_cancer_sig_models, 
-        file = paste0(raw_folder, '/raw_bal_cancer_sig_models.rda'))
-saveRDS(raw_bal_counts_cancer_models, 
-        file = paste0(raw_folder, '/raw_bal_counts_cancer_models.rda'))
-saveRDS(raw_bal_counts_cancer_sig_models, 
-        file = paste0(raw_folder, '/raw_bal_counts_cancer_sig_models.rda'))
-saveRDS(raw_unbal_cancer_models, 
-        file = paste0(raw_folder, '/raw_unbal_cancer_models.rda'))
-saveRDS(raw_unbal_cancer_sig_models, 
-        file = paste0(raw_folder, '/raw_unbal_cancer_sig_models.rda'))
-saveRDS(raw_bal_p53_models, 
-        file = paste0(raw_folder, '/raw_bal_p53_models.rda'))
-saveRDS(raw_bal_p53_sig_models, 
-        file = paste0(raw_folder, '/raw_bal_p53_sig_models.rda'))
-saveRDS(raw_bal_counts_p53_models, 
-        file = paste0(raw_folder, '/raw_bal_counts_p53_models.rda'))
-saveRDS(raw_bal_counts_p53_sig_models, 
-        file = paste0(raw_folder, '/raw_bal_counts_p53_sig_models.rda'))
-saveRDS(raw_unbal_p53_models, 
-        file = paste0(raw_folder, '/raw_unbal_p53_models.rda'))
-saveRDS(raw_unbal_p53_sig_models, 
-        file = paste0(raw_folder, '/raw_unbal_p53_sig_models.rda'))
-saveRDS(raw_cancer_intersection_models, 
-        file = paste0(raw_folder, '/raw_cancer_intersection_models.rda'))
-saveRDS(raw_cancer_intersection_sig_models, 
-        file = paste0(raw_folder, '/raw_cancer_intersection_sig_models.rda'))
-saveRDS(raw_cancer_union_models, 
-        file = paste0(raw_folder, '/raw_cancer_union_models.rda'))
-saveRDS(raw_cancer_union_sig_models, 
-        file = paste0(raw_folder, '/raw_cancer_union_sig_models.rda'))
-saveRDS(raw_p53_intersection_models, 
-        file = paste0(raw_folder, '/raw_p53_intersection_models.rda'))
-saveRDS(raw_p53_intersection_sig_models, 
-        file = paste0(raw_folder, '/raw_p53_intersection_sig_models.rda'))
-saveRDS(raw_p53_union_models, 
-        file = paste0(raw_folder, '/raw_p53_union_models.rda'))
-saveRDS(raw_p53_union_sig_models, 
-        file = paste0(raw_folder, '/raw_p53_union_sig_models.rda'))
-saveRDS(raw_bal_counts_cancer_intersection_models,
-        file = paste0(raw_folder, '/raw_bal_counts_cancer_intersection_models.rda'))
-saveRDS(raw_bal_counts_cancer_intersection_sig_models,
-        file = paste0(raw_folder, '/raw_bal_counts_cancer_intersection_sig_models.rda'))
-saveRDS(raw_bal_counts_cancer_union_models,
-        file = paste0(raw_folder, '/raw_bal_counts_cancer_union_models.rda'))
-saveRDS(raw_bal_counts_cancer_union_sig_models,
-        file = paste0(raw_folder, '/raw_bal_counts_cancer_union_sig_models.rda'))
-saveRDS(raw_bal_counts_p53_intersection_models,
-        file = paste0(raw_folder, '/raw_bal_counts_p53_intersection_models.rda'))
-saveRDS(raw_bal_counts_p53_intersection_sig_models,
-        file = paste0(raw_folder, '/raw_bal_counts_p53_intersection_sig_models.rda'))
-saveRDS(raw_bal_counts_p53_union_models,
-        file = paste0(raw_folder, '/raw_bal_counts_p53_union_models.rda'))
-saveRDS(raw_bal_counts_p53_union_sig_models,
-        file = paste0(raw_folder, '/raw_bal_counts_p53_union_sig_models.rda'))
-saveRDS(raw_complete_cancer_intersection_models,
-        file = paste0(raw_folder, '/raw_complete_cancer_intersection_models.rda'))
-# saveRDS(raw_complete_cancer_intersection_sig_models,
-#         file = paste0(raw_folder, '/raw_complete_cancer_intersection_sig_models.rda'))
-saveRDS(raw_complete_cancer_union_models,
-        file = paste0(raw_folder, '/raw_complete_cancer_union_models.rda'))
-saveRDS(raw_complete_cancer_union_sig_models,
-        file = paste0(raw_folder, '/raw_complete_cancer_union_sig_models.rda'))
-saveRDS(raw_complete_p53_intersection_models,
-        file = paste0(raw_folder, '/raw_complete_p53_intersection_models.rda'))
-saveRDS(raw_complete_p53_intersection_sig_models,
-        file = paste0(raw_folder, '/raw_complete_p53_intersection_sig_models.rda'))
-saveRDS(raw_complete_p53_union_models,
-        file = paste0(raw_folder, '/raw_complete_p53_union_models.rda'))
-saveRDS(raw_complete_p53_union_sig_models,
-        file = paste0(raw_folder, '/raw_complete_p53_union_sig_models.rda'))
+saveRDS(raw_result_07, 
+        file = paste0(raw_folder, '/raw_result_07.rda'))
+saveRDS(raw_result_sig_07, 
+        file = paste0(raw_folder, '/raw_result_sig_07.rda'))
 
+saveRDS(raw_result_08, 
+        file = paste0(raw_folder, '/raw_result_08.rda'))
+saveRDS(raw_result_sig_08, 
+        file = paste0(raw_folder, '/raw_result_sig_08.rda'))
+
+saveRDS(raw_result_09, 
+        file = paste0(raw_folder, '/raw_result_09.rda'))
+saveRDS(raw_result_sig_09, 
+        file = paste0(raw_folder, '/raw_result_sig_09.rda'))
+
+saveRDS(raw_result_10, 
+        file = paste0(raw_folder, '/raw_result_10.rda'))
+saveRDS(raw_result_sig_10, 
+        file = paste0(raw_folder, '/raw_result_sig_10.rda'))
+
+saveRDS(raw_result_11, 
+        file = paste0(raw_folder, '/raw_result_11.rda'))
+saveRDS(raw_result_sig_11, 
+        file = paste0(raw_folder, '/raw_result_sig_11.rda'))
+
+saveRDS(raw_result_12, 
+        file = paste0(raw_folder, '/raw_result_12.rda'))
+saveRDS(raw_result_sig_12, 
+        file = paste0(raw_folder, '/raw_result_sig_12.rda'))
+
+saveRDS(raw_result_13, 
+        file = paste0(raw_folder, '/raw_result_13.rda'))
+saveRDS(raw_result_sig_13, 
+        file = paste0(raw_folder, '/raw_result_sig_13.rda'))
+
+saveRDS(raw_result_14, 
+        file = paste0(raw_folder, '/raw_result_14.rda'))
+saveRDS(raw_result_sig_14, 
+        file = paste0(raw_folder, '/raw_result_sig_14.rda'))
+
+saveRDS(raw_result_15, 
+        file = paste0(raw_folder, '/raw_result_15.rda'))
+saveRDS(raw_result_sig_15, 
+        file = paste0(raw_folder, '/raw_result_sig_15.rda'))
+
+saveRDS(raw_result_int, 
+        file = paste0(raw_folder, '/raw_result_inr.rda'))
+saveRDS(raw_result_sig_int, 
+        file = paste0(raw_folder, '/raw_result_sig_int.rda'))
+
+saveRDS(raw_result_union, 
+        file = paste0(raw_folder, '/raw_result_union.rda'))
+saveRDS(raw_result_sig_union, 
+        file = paste0(raw_folder, '/raw_result_sig_union.rda'))
 
 
