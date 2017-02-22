@@ -7,6 +7,7 @@
 library(dplyr)
 library(ggplot2)
 library(ggthemes)
+library(plotly)
 
 ##########
 # Initialize folders
@@ -76,14 +77,21 @@ rm(raw_rand_table,
 
 #####################################################################################################################
 
-##########
-# recode features variable to have number of features (strsplit)
-##########
-result_table$features_num <- gsub(')', '', unlist(lapply(strsplit(as.character(result_table$features), 
-                                     ' |:'), function(x) x[2])), fixed = T)
+# ##########
+# # recode features variable to have number of features (strsplit)
+# ##########
+# result_table$features_num <- gsub(')', '', unlist(lapply(strsplit(as.character(result_table$features), 
+#                                      ' |:'), function(x) x[2])), fixed = T)
+# 
+# result_table_rand$features_num <- gsub(')', '', unlist(lapply(strsplit(as.character(result_table_rand$data), 
+#                                                                   '_'), function(x) x[3])), fixed = T)
 
-result_table_rand$features_num <- gsub(')', '', unlist(lapply(strsplit(as.character(result_table_rand$data), 
-                                                                  '_'), function(x) x[3])), fixed = T)
+##########
+# group by age, type, data, features to get rand like normal
+##########
+result_table_rand<- result_table_rand %>%
+  group_by(age, type, data, features) %>%
+  summarise(score = mean(score))
 
 ##########
 # recode data type to grab normalization method
@@ -98,99 +106,114 @@ result_table_rand$norm <- unlist(lapply(strsplit(as.character(result_table_rand$
 result_table <- result_table[order(result_table$score, decreasing = T),]
 result_table_rand <- result_table_rand[order(result_table_rand$score, decreasing = T),]
 
-##########
-# find the ones that score high on regression -> then link to categorical.
-##########
-
-# regular
-result_mut <- result_table %>% 
-  filter(p53_status == 'Mut') 
-
-result_mut <- result_mut[order(result_mut$score, decreasing = T),]
-
-# random
-result_mut_rand <- result_table_rand %>% 
-  filter(p53_status == 'Mut') 
-
-result_mut_rand <- result_mut_rand[order(result_mut_rand$score, decreasing = T),]
 
 ##########
 # seperate by regression or classification
 ##########
 # normal
-result_mut_reg <- result_mut[result_mut$age == 'regression',]
-result_mut_cat <-result_mut[result_mut$age != 'regression',]
+result_table <- result_table[result_table$age == 'regression',]
 
 # random
-result_mut_rand_reg <- result_mut_rand[result_mut_rand$age == 'regression',]
-result_mut_rand_cat <-result_mut_rand[result_mut_rand$age != 'regression',]
+result_table_rand <- result_table_rand[result_table_rand$age == 'regression',]
 
 ##########
 # combine random and nromal
 ##########
 
 # add random or not column to both data sets
-result_mut_reg$feature_type <- 'bh'
-result_mut_cat$feature_type <- 'bh'
-
-result_mut_rand_reg$feature_type <- 'random'
-result_mut_rand_cat$feature_type <- 'random'
-
-# recode both columns to match
-result_mut_rand_reg$features <- 'random_features'
-
-result_mut_rand_cat$features <- 'random_features'
+result_table$feature_type <- 'bh'
+result_table_rand$feature_type <- 'random'
 
 # change into data frame
-result_mut_reg  <- as.data.frame(result_mut_reg)
-result_mut_cat  <- as.data.frame(result_mut_cat)
+result_table <- as.data.frame(result_table)
+result_table_rand <- as.data.frame(result_table_rand)
 
-result_mut_rand_reg  <- as.data.frame(result_mut_rand_reg)
-result_mut_rand_cat  <- as.data.frame(result_mut_rand_cat)
+# get feature number
+result_table$feature_num <- as.numeric(unlist(lapply(strsplit(as.character(result_table$features), '_'), 
+                                                     function(x) x[2])))
+result_table_rand$feature_num<- as.numeric(unlist(lapply(strsplit(as.character(result_table_rand$features), '_'), 
+                                              function(x) x[2])))
+
 
 # combine reg
-result_reg <- rbind(result_mut_reg, result_mut_rand_reg)
+result <- rbind(result_table, result_table_rand)
 
-result_cat<- rbind(result_mut_cat, result_mut_rand_cat)
-
+# drop union features 
+result <- result[!grepl('union|07|08|09|10', result$data),]
 
 ##########
 # histograms for regression
 ##########
-# histrogram of normal, regression scores for both bh and random
-ggplot(result_reg, aes(score)) + 
-  geom_histogram(data = subset(result_reg, type == 'normal' & feature_type == 'bh'), fill = 'green', alpha = 0.8) +
-  geom_histogram(data = subset(result_reg, type == 'normal' & feature_type == 'random'), fill = 'black', alpha = 0.8)
+
+# histrogram of regression scores for both bh and random
+ggplot(result, aes(score)) + 
+  geom_histogram(data = subset(result, type == 'normal' & feature_type == 'bh'), fill = 'green', alpha = 0.8) +
+  geom_histogram(data = subset(result, type == 'normal' & feature_type == 'random'), fill = 'black', alpha = 0.8)
 
 # histrogram of residual, regression scores for both bh and random
-ggplot(result_reg, aes(score)) + 
-  geom_histogram(data = subset(result_reg, type == 'resid' & feature_type == 'bh'), fill = 'green', alpha = 0.8) +
-  geom_histogram(data = subset(result_reg, type == 'resid' & feature_type == 'random'), fill = 'black', alpha = 0.8)
+ggplot(result, aes(score)) + 
+  geom_histogram(data = subset(result, type == 'resid' & feature_type == 'bh'), fill = 'green', alpha = 0.8) +
+  geom_histogram(data = subset(result, type == 'resid' & feature_type == 'random'), fill = 'black', alpha = 0.8)
 
 # historgram by preprocessing mehtod 
-ggplot(result_reg, aes(score)) + 
-  geom_histogram(data = subset(result_reg, type == 'resid' & norm == 'raw'), fill = 'green', alpha = 0.8) +
-  geom_histogram(data = subset(result_reg, type == 'resid' & norm == 'quan'), fill = 'black', alpha = 0.8) +
-  geom_histogram(data = subset(result_reg, type == 'resid' & norm == 'swan'), fill = 'red', alpha = 0.8) +
-  geom_histogram(data = subset(result_reg, type == 'resid' & norm == 'funnorm'), fill = 'lightblue', alpha = 0.8)
+ggplot(result, aes(score)) + 
+  geom_histogram(data = subset(result, type == 'normal' & norm == 'raw'), fill = 'green', alpha = 0.8) +
+  geom_histogram(data = subset(result, type == 'normal' & norm == 'quan'), fill = 'black', alpha = 0.8) +
+  geom_histogram(data = subset(result, type == 'normal' & norm == 'swan'), fill = 'red', alpha = 0.8) +
+  geom_histogram(data = subset(result, type == 'normal' & norm == 'funnorm'), fill = 'lightblue', alpha = 0.8)
   
 # histrogram of funnorm, residual, regression scores for both bh and random
-ggplot(result_reg, aes(score)) + 
-  geom_histogram(data = subset(result_reg, norm == 'funnorm' & type == 'resid' & feature_type == 'bh'), fill = 'green', alpha = 0.8) +
-  geom_histogram(data = subset(result_reg, norm == 'funnorm' & type == 'resid' & feature_type == 'random'), fill = 'black', alpha = 0.8)
+ggplot(result, aes(score)) + 
+  geom_histogram(data = subset(result, norm == 'swan' & type == 'normal' & feature_type == 'bh'), fill = 'green', alpha = 0.8) +
+  geom_histogram(data = subset(result, norm == 'swan' & type == 'normal' & feature_type == 'random'), fill = 'black', alpha = 0.8)
+
+# subset result so that its normal and not resid
+result <- result[result$type == 'normal',]
+result <- result[result$norm == 'swan',]
 
 ##########
-# look at histogram for each number of features between random and normal
+# recode feature_num to cateogries 
+##########
+hist(result$feature_num, breaks= 20)
+summary(result$feature_num)
+
+# create splits at 500 - 1000, 1001 - 3000, 
+result$feature_cat <- ifelse(result$feature_num > 0 & result$feature_num <= 1600, '0_1600',
+                             ifelse(result$feature_num > 1600 & result$feature_num <= 4000, '1600_4k',
+                                    ifelse(result$feature_num > 4000 & result$feature_num <= 7000, '4k-7k',
+                                           ifelse(result$feature_num > 7000 & result$feature_num <= 15000, '7k-15k',
+                                                  ifelse(result$feature_num > 15000 & result$feature_num <= 35000,'15k-35k', '30k-80k')))))
+
+result_group <- result %>%
+  group_by(feature_cat,feature_type) %>%
+  summarise(mean_score = max(score))
+
+
+##########
+# barplot with feature_cat as x and score as y
+##########
+ggplot(result_group, aes(feature_cat, mean_score, group = feature_type, fill = feature_type)) + 
+  geom_bar(stat = 'identity', position = 'dodge') 
+
++ ylim(0.5, 1) 
+
+
+
+##########
+# read in a random model and see if top features are in union_features
 ##########
 
 
+##########
+# barplot of for bh and random, where the x axis is ordered by number of features and y axis is score.
+##########
+bh <- result[result$feature_type == 'bh',]
+rand <- result[result$feature_type == 'random',]
 
-
-
-
-
-
-
+plot_ly(x = ~bh$feature_num, y = ~bh$score, type = 'scatter', mode = 'lines', name = 'BumpHunter Feat', fill = 'tozeroy') %>%
+  add_trace(x = ~rand$feature_num, y = ~rand$score, name = 'Random Feat', fill = 'tozeroy') %>%
+  layout(xaxis = list(title = 'Features'),
+         yaxis = list(title = 'Score'))
 
 
 # ##########

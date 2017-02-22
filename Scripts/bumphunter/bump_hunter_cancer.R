@@ -61,9 +61,9 @@ cg_locations <- read.csv(paste0(model_data, '/cg_locations.csv'))
 # function that takes LFS patients and run balanced and unbalanced bumphunter on cancer and controls
 # type is the indicator
 ##########
+# dat_cases <- raw_cases_batch
+# dat_controls <- raw_controls_batch
 # will return one unbalanced, one balanced by age, and balanced by age and counts
-dat_cases <- raw_cases_batch
-dat_controls <- raw_controls_batch
 bumpHunterBalanced <- function(dat_cases,
                                dat_controls,
                                balanced,
@@ -150,7 +150,7 @@ bumpHunterBalanced <- function(dat_cases,
   stopifnot(dim(beta)[1] == length(pos))
   
   # set paramenters 
-  DELTA_BETA_THRESH = c(0.07, 0.08, 0.09,0.10, 0.11, 0.12, 0.13, 0.14, 0.15) # DNAm difference threshold
+  DELTA_BETA_THRESH = c(0.10, 0.15, 0.20) # DNAm difference threshold
   NUM_BOOTSTRAPS = 3    # number of randomizations
   
   # create tab list
@@ -180,16 +180,32 @@ bumpHunterBalanced <- function(dat_cases,
 #########
 # Now Apply to Original IDAT data
 #########
+
+# bal, even
 raw_bh <- bumpHunterBalanced(raw_cases_batch, raw_controls_batch, balanced = T, even_counts = T)
 quan_bh <- bumpHunterBalanced(quan_cases_batch, quan_controls_batch, balanced = T, even_counts = T)
 swan_bh <- bumpHunterBalanced(swan_cases_batch, swan_controls_batch, balanced = T, even_counts = T)
 funnorm_bh <- bumpHunterBalanced(funnorm_cases_batch, funnorm_controls_batch, balanced = T, even_counts = T)
+
+# unbal, uneven
+raw_unbal_bh <- bumpHunterBalanced(raw_cases_batch, raw_controls_batch, balanced = F, even_counts = F)
+quan_unbal_bh <- bumpHunterBalanced(quan_cases_batch, quan_controls_batch, balanced = F, even_counts = F)
+swan_unbal_bh <- bumpHunterBalanced(swan_cases_batch, swan_controls_batch, balanced = F, even_counts = F)
+funnorm_unbal_bh <- bumpHunterBalanced(funnorm_cases_batch, funnorm_controls_batch, balanced = F, even_counts = F)
+
 
 # save new bh 
 saveRDS(raw_bh, paste0(model_data, '/raw_bh.rda'))
 saveRDS(quan_bh, paste0(model_data, '/quan_bh.rda'))
 saveRDS(swan_bh, paste0(model_data, '/swan_bh.rda'))
 saveRDS(funnorm_bh, paste0(model_data, '/funnorm_bh.rda'))
+
+# save new bh  unbal
+saveRDS(raw_unbal_bh, paste0(model_data, '/raw_unbal_bh.rda'))
+saveRDS(quan_unbal_bh, paste0(model_data, '/quan_unbal_bh.rda'))
+saveRDS(swan_unbal_bh, paste0(model_data, '/swan_unbal_bh.rda'))
+saveRDS(funnorm_unbal_bh, paste0(model_data, '/funnorm_unbal_bh.rda'))
+
 
 
 

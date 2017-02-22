@@ -77,45 +77,26 @@ rgSetList <- readIDAT(idat_data)
 
 
 ##########
-# function that Loops through list, preprocesses, and convert to beta, m, and cn values 
+# get raw data
 ##########
-preprocessMethod <- function(data, preprocess) {
-  
+getRaw <- function(data)
+{
   Mset <- list()
   ratioSet <- list()
   gset <- list()
   beta <- list()
-  m <- list()
-  cn <- list()
   
   for (dat in 1:length(data)) {
     
-    if (preprocess == 'raw') {
-      Mset[[dat]] <-preprocessRaw(data[[dat]])
-      ratioSet[[dat]] <- ratioConvert(Mset[[dat]], what = 'both', keepCN = T)
-    } else if (preprocess == 'illumina') {
-      Mset[[dat]] <-preprocessIllumina(data[[dat]])
-      ratioSet[[dat]] <- ratioConvert(Mset[[dat]], what = 'both', keepCN = T)
-    } else if (preprocess == 'swan') {
-      Mset[[dat]] <-preprocessSWAN(data[[dat]])
-      ratioSet[[dat]] <- ratioConvert(Mset[[dat]], what = 'both', keepCN = T)
-    } else if (preprocess == 'funnorm') {
-      ratioSet[[dat]] <-preprocessFunnorm(data[[dat]])
-    } else if (preprocess == 'quantile') {
-      ratioSet[[dat]] <- preprocessQuantile(data[[dat]], fixOutliers = TRUE,
-                                            removeBadSamples = TRUE, badSampleCutoff = 10.5,
-                                            quantileNormalize = TRUE, stratified = TRUE,
-                                            mergeManifest = FALSE, sex = NULL)
-    }
-    gset[[dat]] <- mapToGenome(ratioSet[[dat]]) 
+    Mset[[dat]] <-preprocessRaw(data[[dat]])
+    ratioSet[[dat]] <- ratioConvert(Mset[[dat]], what = 'both', keepCN = T)
+    gset[[dat]] <- mapToGenome(ratioSet[[dat]])
     beta[[dat]] <- getBeta(gset[[dat]])
-    m[[dat]] <- getM(gset[[dat]])
-    cn[[dat]] <- getCN(gset[[dat]])
-    print(dat)
   }
-  return(list(beta, m, cn))
+  
+  return(beta)
+  
 }
-
 
 ##########
 # Function that combines elements of a list into a data frame
@@ -172,15 +153,13 @@ getIdName <- function(data) {
 ##########
 # Main function that specifies a preprocessing method and get beta
 ##########
-getMethyl <- function(data_list, method, control) {
+getMethyl <- function(data, control) {
   
-  processed_list <- list()
-  processed_list <-preprocessMethod(data_list, preprocess = method)
+  raw_data <-getRaw(data)
   
   # combinelist
-  beta_methyl <- combineList(processed_list[[1]])
-  # m_methyl <- combineList(processed_list[[2]])
-  # cn_methyl <- combineList(processed_list[[3]])
+  beta_methyl <- combineList(raw_data)
+  
   
   if (!control) {
     
@@ -203,63 +182,9 @@ getMethyl <- function(data_list, method, control) {
   
 }
 
-##########
-# apply functions to get both cases and controls data
-##########
-
-# raw
-beta_raw <- getMethyl(rgSetList, method = 'raw', control = F)
-beta_raw_controls <- getMethyl(rgSetListControls, method = 'raw', control = T)
-
-# beta_raw <- raw[[1]]
-# m_raw <- raw[[2]]
-# cn_raw <- raw[[3]]
-save.image(paste0(methyl_data, '/raw.RData'))
-rm(beta_raw, beta_raw_controls)
-
-# illum <- getMethyl(rgSetList, method = 'illumina', control = T)
-# beta_illumina <- illum[[1]]
-# m_illumina <- illum[[2]]
-# cn_illumina <- illum[[3]]
-# rm(illum)
-# save.image(paste0(methyl_data, '/illum.RData'))
-# rm(m_illumina, beta_illumina, cn_illumina)
-
-# swan
-beta_swan <- getMethyl(rgSetList, method = 'swan', control = F)
-beta_swan_controls <- getMethyl(rgSetListControls, method = 'swan', control = T)
-
-# beta_swan <- swan[[1]]
-# m_swan <- swan[[2]]
-# cn_swan <- swan[[3]]
-save.image(paste0(methyl_data, '/swan.RData'))
-rm(beta_swan, beta_swan_controls)
-
-# quan
-beta_quan <- getMethyl(rgSetList, method = 'quantile', control = F)
-beta_quan_controls <- getMethyl(rgSetListControls, method = 'quantile', control = T)
-# beta_quan <- quan[[1]]
-# m_quan <- quan[[2]]
-# cn_quan <- quan[[3]]
-save.image(paste0(methyl_data, '/quan.RData'))
-rm(beta_quan, beta_quan_controls)
-
-# funnorm
-beta_funnorm <- getMethyl(rgSetList, method = 'funnorm', control = F)
-beta_funnorm_controls <- getMethyl(rgSetListControls, method = 'funnorm', control = T)
-
-# beta_funnorm <- funnorm[[1]]
-# m_funnorm <- funnorm[[2]]
-# cn_funnorm <- funnorm[[3]]
-save.image(paste0(methyl_data, '/funnorm.RData'))
-rm(beta_funnorm, beta_funnorm_controls)
-
-
-
-
-
-
-
-
-
+#########
+# get raw data
+#########
+beta_raw <- getMethyl(rgSetList, control = F)
+beta_raw_controls <- getMethyl(rgSetListControls, control = T)
 

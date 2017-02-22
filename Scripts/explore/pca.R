@@ -104,9 +104,7 @@ funnorm <- getFeatInt(beta_funnorm, beta_funnorm_controls)
 ########## 
 # PCA of each data type and cases vs controls
 ##########
-pca_data <- funnorm_cases_batch
-column_name <- 'batch'
-gene_start <- 4
+
 # functionp needs to take a clinical column, remove others, and plot pcas
 getPCA <- function(pca_data, column_name, name, gene_start, controls, cases) 
 {

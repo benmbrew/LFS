@@ -17,9 +17,9 @@ source(paste0(scripts_folder, '/predict_age/model_functions_short.R'))
 source(paste0(scripts_folder, '/predict_age/run_models_short.R'))
 
 ##########
-# remove raw, swan, and funnorm objects
+# remove quan, swan, and funnorm objects
 ##########
-rm(list = ls(pattern = "raw_*"))
+rm(list = ls(pattern = "quan_*"))
 rm(list = ls(pattern = "swan_*"))
 rm(list = ls(pattern = "funnorm_*"))
 
@@ -27,33 +27,10 @@ rm(list = ls(pattern = "funnorm_*"))
 ## beta_quan
 
 ##########
-# threshold 0.07 - 0.15 normal
+# threshold 0.10, 0.15, 0.20, 0.30
 ##########
 
-# quan 07 
-quan_result_07 <- runModels(quan_cases, 
-                            bump_hunter = T, 
-                            bump_hunter_data = quan_bh_07)
-
-quan_table_07 <- extractResults(quan_result_07, 
-                               data_name = 'quan_07')
-
-# quan 08
-quan_result_08 <- runModels(quan_cases, 
-                           bump_hunter = T, 
-                           bump_hunter_data = quan_bh_08)
-
-quan_table_08 <- extractResults(quan_result_08, 
-                               data_name = 'quan_08')
-
-# quan 09 
-quan_result_09 <- runModels(quan_cases, 
-                           bump_hunter = T, 
-                           bump_hunter_data = quan_bh_09)
-
-quan_table_09 <- extractResults(quan_result_09, 
-                               data_name = 'quan_09')
-
+#NORMAL
 # quan 10 
 quan_result_10 <- runModels(quan_cases, 
                            bump_hunter = T, 
@@ -62,37 +39,6 @@ quan_result_10 <- runModels(quan_cases,
 quan_table_10 <- extractResults(quan_result_10, 
                                data_name = 'quan_10')
 
-# quan 11
-quan_result_11 <- runModels(quan_cases, 
-                           bump_hunter = T, 
-                           bump_hunter_data = quan_bh_11)
-
-quan_table_11 <- extractResults(quan_result_11, 
-                               data_name = 'quan_11')
-
-# quan 12
-quan_result_12 <- runModels(quan_cases, 
-                           bump_hunter = T, 
-                           bump_hunter_data = quan_bh_12)
-
-quan_table_12 <- extractResults(quan_result_12, 
-                               data_name = 'quan_12')
-
-# quan 13
-quan_result_13 <- runModels(quan_cases, 
-                           bump_hunter = T, 
-                           bump_hunter_data = quan_bh_13)
-
-quan_table_13 <- extractResults(quan_result_13, 
-                               data_name = 'quan_13')
-
-# quan 14
-quan_result_14 <- runModels(quan_cases, 
-                           bump_hunter = T, 
-                           bump_hunter_data = quan_bh_14)
-
-quan_table_14 <- extractResults(quan_result_14, 
-                               data_name = 'quan_14')
 
 # quan 15
 quan_result_15 <- runModels(quan_cases, 
@@ -102,6 +48,41 @@ quan_result_15 <- runModels(quan_cases,
 quan_table_15 <- extractResults(quan_result_15, 
                                data_name = 'quan_15')
 
+# quan 20
+quan_result_20 <- runModels(quan_cases, 
+                            bump_hunter = T, 
+                            bump_hunter_data = quan_bh_20)
+
+quan_table_20 <- extractResults(quan_result_20, 
+                                data_name = 'quan_20')
+
+
+#UNBAL
+# quan 10 
+quan_result_unbal_10 <- runModels(quan_cases, 
+                            bump_hunter = T, 
+                            bump_hunter_data = quan_unbal_bh_10)
+
+quan_table_unbal_10 <- extractResults(quan_result_unbal_10, 
+                                data_name = 'quan_unbal_10')
+
+
+# quan 15
+quan_result_unbal_15 <- runModels(quan_cases, 
+                            bump_hunter = T, 
+                            bump_hunter_data = quan_unbal_bh_15)
+
+quan_table_unbal_15 <- extractResults(quan_result_unbal_15, 
+                                data_name = 'quan_unbal_15')
+
+# quan 20
+quan_result_unbal_20 <- runModels(quan_cases, 
+                            bump_hunter = T, 
+                            bump_hunter_data = quan_unbal_bh_20)
+
+quan_table_unbal_20 <- extractResults(quan_result_unbal_20, 
+                                data_name = 'quan_unbal_20')
+
 # quan intersection
 quan_result_int <- runModels(quan_cases, 
                             bump_hunter = T, 
@@ -110,137 +91,116 @@ quan_result_int <- runModels(quan_cases,
 quan_table_int <- extractResults(quan_result_int, 
                                 data_name = 'quan_int')
 
-# quan union
-quan_result_union <- runModels(quan_cases, 
-                              bump_hunter = T, 
-                              bump_hunter_data = quan_union_feat)
-
-quan_table_union <- extractResults(quan_result_union, 
-                                  data_name = 'quan_union')
-
 
 ##########
 # threshold 0.07 - 0.15 sig
 ##########
 
-# quan sig 07 
-quan_result_sig_07 <- runModels(quan_cases, 
-                               bump_hunter = T, 
-                               bump_hunter_data = quan_bh_sig_07)
-
-quan_table_sig_07 <- extractResults(quan_result_sig_07, 
-                                   data_name = 'quan_sig_07')
-
-# quan sig 08
-quan_result_sig_08 <- runModels(quan_cases, 
-                               bump_hunter = T, 
-                               bump_hunter_data = quan_bh_sig_08)
-
-quan_table_sig_08 <- extractResults(quan_result_sig_08, 
-                                   data_name = 'quan_sig_08')
-
-# quan sig 09 
-quan_result_sig_09 <- runModels(quan_cases, 
-                               bump_hunter = T, 
-                               bump_hunter_data = quan_bh_sig_09)
-
-quan_table_sig_09 <- extractResults(quan_result_sig_09, 
-                                   data_name = 'quan_sig_09')
-
-# quan sig 10 
-quan_result_sig_10 <- runModels(quan_cases, 
+#NORMAL
+# quan 10 
+quan_sig_result_10 <- runModels(quan_cases, 
                                bump_hunter = T, 
                                bump_hunter_data = quan_bh_sig_10)
 
-quan_table_sig_10 <- extractResults(quan_result_sig_10, 
+quan_sig_table_10 <- extractResults(quan_sig_result_10, 
                                    data_name = 'quan_sig_10')
 
-# quan sig 11 
-quan_result_sig_11 <- runModels(quan_cases, 
-                               bump_hunter = T, 
-                               bump_hunter_data = quan_bh_sig_11)
 
-quan_table_sig_11 <- extractResults(quan_result_sig_11, 
-                                   data_name = 'quan_sig_11')
-
-# quan sig 12 
-quan_result_sig_12 <- runModels(quan_cases, 
-                               bump_hunter = T, 
-                               bump_hunter_data = quan_bh_sig_12)
-
-quan_table_sig_12 <- extractResults(quan_result_sig_12, 
-                                   data_name = 'quan_sig_12')
-
-# quan sig 13 
-quan_result_sig_13 <- runModels(quan_cases, 
-                               bump_hunter = T, 
-                               bump_hunter_data = quan_bh_sig_13)
-
-quan_table_sig_13 <- extractResults(quan_result_sig_13, 
-                                   data_name = 'quan_sig_13')
-
-# quan sig 14 
-quan_result_sig_14 <- runModels(quan_cases, 
-                               bump_hunter = T, 
-                               bump_hunter_data = quan_bh_sig_14)
-
-quan_table_sig_14 <- extractResults(quan_result_sig_14, 
-                                   data_name = 'quan_sig_14')
-
-# quan sig 15 
-quan_result_sig_15 <- runModels(quan_cases, 
+# quan 15
+quan_sig_result_15 <- runModels(quan_cases, 
                                bump_hunter = T, 
                                bump_hunter_data = quan_bh_sig_15)
 
-quan_table_sig_15 <- extractResults(quan_result_sig_15, 
+quan_sig_table_15 <- extractResults(quan_sig_result_15, 
                                    data_name = 'quan_sig_15')
+
+# quan 20
+quan_sig_result_20 <- runModels(quan_cases, 
+                               bump_hunter = T, 
+                               bump_hunter_data = quan_bh_sig_20)
+
+quan_sig_table_20 <- extractResults(quan_sig_result_20, 
+                                   data_name = 'quan_sig_20')
+
 
 
 # quan intersection
-quan_result_sig_int <- runModels(quan_cases, 
+quan_sig_result_int <- runModels(quan_cases, 
                                 bump_hunter = T, 
                                 bump_hunter_data = quan_int_sig_feat)
 
-quan_table_sig_int <- extractResults(quan_result_sig_int, 
+quan_sig_table_int <- extractResults(quan_sig_result_int, 
                                     data_name = 'quan_sig_int')
 
-# quan union
-quan_result_sig_union <- runModels(quan_cases, 
-                                  bump_hunter = T, 
-                                  bump_hunter_data = quan_union_sig_feat)
 
-quan_table_sig_union <- extractResults(quan_result_sig_union, 
-                                      data_name = 'quan_sig_union')
+
+#UNBAL
+# quan 10 
+quan_sig_result_unbal_10 <- runModels(quan_cases, 
+                                     bump_hunter = T, 
+                                     bump_hunter_data = quan_unbal_bh_sig_10)
+
+quan_sig_table_unbal_10 <- extractResults(quan_sig_result_unbal_10, 
+                                         data_name = 'quan_unbal_sig_10')
+
+
+# quan 15
+quan_sig_result_unbal_15 <- runModels(quan_cases, 
+                                     bump_hunter = T, 
+                                     bump_hunter_data = quan_unbal_bh_sig_15)
+
+quan_sig_table_unbal_15 <- extractResults(quan_sig_result_unbal_15, 
+                                         data_name = 'quan_unbal_sig_15')
+
+# # quan 20
+# quan_sig_result_unbal_20 <- runModels(quan_cases, 
+#                                      bump_hunter = T, 
+#                                      bump_hunter_data = quan_unbal_bh_sig_20)
+# 
+# quan_sig_table_unbal_20 <- extractResults(quan_sig_result_unbal_20, 
+#                                          data_name = 'quan_unbal_sig_20')
+# 
+
+# # # quan intersection
+# quan_sig_result_unbal_int <- runModels(quan_cases,
+#                                       bump_hunter = T,
+#                                       bump_hunter_data = quan_unbal_int_sig_feat)
+# #
+# quan_sig_table_unbal_int <- extractResults(quan_sig_result_unbal_int,
+#                                           data_name = 'quan_unbal_sig_int')
+# 
+
 
 
 ###########
 # rbind tables and save RDA file
 ###########
-quan_table <- rbind(quan_table_07, quan_table_sig_07,
-                   quan_table_08, quan_table_sig_08,
-                   quan_table_09, quan_table_sig_09,
-                   quan_table_10, quan_table_sig_10,
-                   quan_table_11, quan_table_sig_11,
-                   quan_table_12, quan_table_sig_12,
-                   quan_table_13, quan_table_sig_13,
-                   quan_table_14, quan_table_sig_14,
-                   quan_table_15, quan_table_sig_15,
-                   quan_table_int, quan_table_sig_int,
-                   quan_table_union, quan_table_union)
+quan_table <- rbind(quan_table_10, quan_table_15,
+                   quan_table_20,
+                   quan_sig_table_10, quan_sig_table_15,
+                   quan_sig_table_20,
+                   quan_table_int, quan_sig_table_int,
+                   quan_table_unbal_10, quan_table_unbal_15,
+                   quan_table_unbal_20, 
+                   quan_sig_table_unbal_10, quan_sig_table_unbal_15
+                   #quan_sig_table_unbal_20, 
+                   #quan_table_unbal_int, 
+                   #quan_sig_table_unbal_int)
+)
 
-# remove data 
-rm(quan_table_07, quan_table_sig_07,
-   quan_table_08, quan_table_sig_08,
-   quan_table_09, quan_table_sig_09,
-   quan_table_10, quan_table_sig_10,
-   quan_table_11, quan_table_sig_11,
-   quan_table_12, quan_table_sig_12,
-   quan_table_13, quan_table_sig_13,
-   quan_table_14, quan_table_sig_14,
-   quan_table_15, quan_table_sig_15,
-   quan_table_int, quan_table_sig_int,
-   quan_table_union, quan_table_sig_union)
 
+# # remove data 
+rm(quan_table_10, quan_table_15,
+   quan_table_20,
+   quan_sig_table_10, quan_sig_table_15,
+   quan_sig_table_20,
+   quan_table_int, quan_sig_table_int,
+   quan_table_unbal_10, quan_table_unbal_15,
+   quan_table_unbal_20, 
+   quan_sig_table_unbal_10, quan_sig_table_unbal_15)
+   #quan_sig_table_unbal_20, 
+   #quan_table_unbal_int, 
+   #quan_sig_table_unbal_int)
 
 #save table 
 saveRDS(quan_table, 
@@ -250,59 +210,20 @@ saveRDS(quan_table,
 ###########
 # save all model objects as RDA file
 ###########
-saveRDS(quan_result_07, 
-        file = paste0(quan_folder, '/quan_result_07.rda'))
-saveRDS(quan_result_sig_07, 
-        file = paste0(quan_folder, '/quan_result_sig_07.rda'))
-
-saveRDS(quan_result_08, 
-        file = paste0(quan_folder, '/quan_result_08.rda'))
-saveRDS(quan_result_sig_08, 
-        file = paste0(quan_folder, '/quan_result_sig_08.rda'))
-
-saveRDS(quan_result_09, 
-        file = paste0(quan_folder, '/quan_result_09.rda'))
-saveRDS(quan_result_sig_09, 
-        file = paste0(quan_folder, '/quan_result_sig_09.rda'))
-
 saveRDS(quan_result_10, 
         file = paste0(quan_folder, '/quan_result_10.rda'))
-saveRDS(quan_result_sig_10, 
-        file = paste0(quan_folder, '/quan_result_sig_10.rda'))
-
-saveRDS(quan_result_11, 
-        file = paste0(quan_folder, '/quan_result_11.rda'))
-saveRDS(quan_result_sig_11, 
-        file = paste0(quan_folder, '/quan_result_sig_11.rda'))
-
-saveRDS(quan_result_12, 
-        file = paste0(quan_folder, '/quan_result_12.rda'))
-saveRDS(quan_result_sig_12, 
-        file = paste0(quan_folder, '/quan_result_sig_12.rda'))
-
-saveRDS(quan_result_13, 
-        file = paste0(quan_folder, '/quan_result_13.rda'))
-saveRDS(quan_result_sig_13, 
-        file = paste0(quan_folder, '/quan_result_sig_13.rda'))
-
-saveRDS(quan_result_14, 
-        file = paste0(quan_folder, '/quan_result_14.rda'))
-saveRDS(quan_result_sig_14, 
-        file = paste0(quan_folder, '/quan_result_sig_14.rda'))
 
 saveRDS(quan_result_15, 
         file = paste0(quan_folder, '/quan_result_15.rda'))
-saveRDS(quan_result_sig_15, 
-        file = paste0(quan_folder, '/quan_result_sig_15.rda'))
 
-saveRDS(quan_result_int, 
-        file = paste0(quan_folder, '/quan_result_int.rda'))
-saveRDS(quan_result_sig_int, 
-        file = paste0(quan_folder, '/quan_result_sig_int.rda'))
+saveRDS(quan_result_20, 
+        file = paste0(quan_folder, '/quan_result_20.rda'))
 
-saveRDS(quan_result_union, 
-        file = paste0(quan_folder, '/quan_result_union.rda'))
-saveRDS(quan_result_sig_union, 
-        file = paste0(quan_folder, '/quan_result_sig_union.rda'))
+saveRDS(quan_result_unbal_10, 
+        file = paste0(quan_folder, '/quan_result_unbal_10.rda'))
 
+saveRDS(quan_result_unbal_15, 
+        file = paste0(quan_folder, '/quan_result_unbal_15.rda'))
 
+saveRDS(quan_result_unbal_20, 
+        file = paste0(quan_folder, '/quan_result_unbal_20.rda'))

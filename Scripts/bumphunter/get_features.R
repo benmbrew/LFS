@@ -21,11 +21,19 @@ model_data <- paste0(data_folder, '/model_data')
 ##########
 # load bump_hunter_lfs
 ##########
-# save new bh 
+# load new bh 
 raw_bh <- readRDS(paste0(model_data, '/raw_bh.rda'))
 quan_bh <- readRDS(paste0(model_data, '/quan_bh.rda'))
 swan_bh <- readRDS(paste0(model_data, '/swan_bh.rda'))
 funnorm_bh <- readRDS(paste0(model_data, '/funnorm_bh.rda'))
+
+# load new bh unbal 
+raw_unbal_bh <- readRDS(paste0(model_data, '/raw_unbal_bh.rda'))
+quan_unbal_bh <- readRDS(paste0(model_data, '/quan_unbal_bh.rda'))
+swan_unbal_bh <- readRDS(paste0(model_data, '/swan_unbal_bh.rda'))
+funnorm_unbal_bh <- readRDS(paste0(model_data, '/funnorm_unbal_bh.rda'))
+
+# load gene locations
 cg_locations <- read.csv(paste0(model_data, '/cg_locations.csv'))
 
 # load(paste0(model_data, '/beta_p53_bh.RData'))
@@ -188,7 +196,6 @@ raw <- getProbe(raw_bh)
 raw_bh <- raw[[1]]
 raw_bh_sig <- raw[[2]]
 
-
 #quan
 quan <- getProbe(quan_bh)
 quan_bh <- quan[[1]]
@@ -204,6 +211,26 @@ funnorm <- getProbe(funnorm_bh)
 funnorm_bh <- funnorm[[1]]
 funnorm_bh_sig <- funnorm[[2]]
 
+#raw_unbal_bh
+raw_unbal <- getProbe(raw_unbal_bh)
+raw_unbal_bh <- raw_unbal[[1]]
+raw_unbal_bh_sig <- raw_unbal[[2]]
+
+#quan_unbal_bh
+quan_unbal <- getProbe(quan_unbal_bh)
+quan_unbal_bh <- quan_unbal[[1]]
+quan_unbal_bh_sig <- quan_unbal[[2]]
+
+#swan_unbal_bh
+swan_unbal <- getProbe(swan_unbal_bh)
+swan_unbal_bh <- swan_unbal[[1]]
+swan_unbal_bh_sig <- swan_unbal[[2]]
+
+#funnorm_unbal_bh
+funnorm_unbal <- getProbe(funnorm_unbal_bh)
+funnorm_unbal_bh <- funnorm_unbal[[1]]
+funnorm_unbal_bh_sig <- funnorm_unbal[[2]]
+
 ##########
 # get intersection/union for each preprocessing method
 ##########
@@ -212,7 +239,7 @@ getSet <- function(data, set)
   
 {
   # get threshold to loop through
-  DELTA_BETA_THRESH = c(0.07, 0.08, 0.09,0.10, 0.11, 0.12, 0.13, 0.14, 0.15) # DNAm difference threshold
+  DELTA_BETA_THRESH = c(0.10, 0.15, 0.20) # DNAm difference threshold
   
   # get list 
   feature_list <- list()
@@ -226,10 +253,7 @@ getSet <- function(data, set)
     }
     
     feat <- Reduce(intersect, list(feature_list[[1]], feature_list[[2]], 
-                                   feature_list[[3]], feature_list[[4]],
-                                   feature_list[[5]], feature_list[[6]],
-                                   feature_list[[7]], feature_list[[8]],
-                                                      feature_list[[9]]))
+                                   feature_list[[3]]))
     
   }
   
@@ -242,15 +266,13 @@ getSet <- function(data, set)
     
     }
     feat <- Reduce(union, list(feature_list[[1]], feature_list[[2]], 
-                               feature_list[[3]], feature_list[[4]],
-                               feature_list[[5]], feature_list[[6]],
-                               feature_list[[7]], feature_list[[8]],
-                               feature_list[[9]]))
+                               feature_list[[3]]))
   }
   
   return(feat)
 }
 
+# Balanced Data
 ##########
 # raw
 ##########
@@ -295,6 +317,51 @@ funnorm_int_sig_feat <- getSet(funnorm_bh_sig, set = 'intersection')
 funnorm_union_feat <- getSet(funnorm_bh, set = 'union')
 funnorm_union_sig_feat <- getSet(funnorm_bh_sig, set = 'union')
 
+# unbalanced Data
+##########
+# raw
+##########
+#intersection
+raw_unbal_int_feat <- getSet(raw_unbal_bh, set = 'intersection')
+raw_unbal_int_sig_feat <- getSet(raw_unbal_bh_sig, set = 'intersection')
+
+#union
+raw_unbal_union_feat <- getSet(raw_unbal_bh, set = 'union')
+raw_unbal_union_sig_feat <- getSet(raw_unbal_bh_sig, set = 'union')
+
+##########
+# quan
+##########
+#intersection
+quan_unbal_int_feat <- getSet(quan_unbal_bh, set = 'intersection')
+quan_unbal_int_sig_feat <- getSet(quan_unbal_bh_sig, set = 'intersection')
+
+#union
+quan_unbal_union_feat <- getSet(quan_unbal_bh, set = 'union')
+quan_unbal_union_sig_feat <- getSet(quan_unbal_bh_sig, set = 'union')
+
+##########
+# swan
+##########
+#intersection
+swan_unbal_int_feat <- getSet(swan_unbal_bh, set = 'intersection')
+swan_unbal_int_sig_feat <- getSet(swan_unbal_bh_sig, set = 'intersection')
+
+#union
+swan_unbal_union_feat <- getSet(swan_unbal_bh, set = 'union')
+swan_unbal_union_sig_feat <- getSet(swan_unbal_bh_sig, set = 'union')
+
+##########
+# funnorm
+##########
+#intersection
+funnorm_unbal_int_feat <- getSet(funnorm_unbal_bh, set = 'intersection')
+funnorm_unbal_int_sig_feat <- getSet(funnorm_unbal_bh_sig, set = 'intersection')
+
+#union
+funnorm_unbal_union_feat <- getSet(funnorm_unbal_bh, set = 'union')
+funnorm_unbal_union_sig_feat <- getSet(funnorm_unbal_bh_sig, set = 'union')
+
 ##########
 # get each run
 ##########
@@ -310,160 +377,127 @@ getRun <- function(data, run_num)
 ##########
 # raw
 ##########
-# 0.07
-raw_bh_07 <- getRun(raw_bh, run_num = 0.07)
-raw_bh_sig_07 <- getRun(raw_bh_sig, run_num = 0.07)
-
-# 0.08
-raw_bh_08 <- getRun(raw_bh, run_num = 0.08)
-raw_bh_sig_08 <- getRun(raw_bh_sig, run_num = 0.08)
-
-# 0.09
-raw_bh_09 <- getRun(raw_bh, run_num = 0.09)
-raw_bh_sig_09 <- getRun(raw_bh_sig, run_num = 0.09)
-
 # 0.10
 raw_bh_10 <- getRun(raw_bh, run_num = 0.10)
 raw_bh_sig_10 <- getRun(raw_bh_sig, run_num = 0.10)
-
-# 0.11
-raw_bh_11 <- getRun(raw_bh, run_num = 0.11)
-raw_bh_sig_11 <- getRun(raw_bh_sig, run_num = 0.11)
-
-# 0.12
-raw_bh_12 <- getRun(raw_bh, run_num = 0.12)
-raw_bh_sig_12 <- getRun(raw_bh_sig, run_num = 0.12)
-
-# 0.13
-raw_bh_13 <- getRun(raw_bh, run_num = 0.13)
-raw_bh_sig_13 <- getRun(raw_bh_sig, run_num = 0.13)
-
-# 0.14
-raw_bh_14 <- getRun(raw_bh, run_num = 0.14)
-raw_bh_sig_14 <- getRun(raw_bh_sig, run_num = 0.14)
 
 # 0.15
 raw_bh_15 <- getRun(raw_bh, run_num = 0.15)
 raw_bh_sig_15 <- getRun(raw_bh_sig, run_num = 0.15)
 
+# 0.20
+raw_bh_20 <- getRun(raw_bh, run_num = 0.20)
+raw_bh_sig_20 <- getRun(raw_bh_sig, run_num = 0.20)
+
+
+##########
+# raw_unbal
+##########
+# 0.10
+raw_unbal_bh_10 <- getRun(raw_unbal_bh, run_num = 0.10)
+raw_unbal_bh_sig_10 <- getRun(raw_unbal_bh_sig, run_num = 0.10)
+
+# 0.15
+raw_unbal_bh_15 <- getRun(raw_unbal_bh, run_num = 0.15)
+raw_unbal_bh_sig_15 <- getRun(raw_unbal_bh_sig, run_num = 0.15)
+
+# 0.20
+raw_unbal_bh_20 <- getRun(raw_unbal_bh, run_num = 0.20)
+raw_unbal_bh_sig_20 <- getRun(raw_unbal_bh_sig, run_num = 0.20)
+
 ##########
 # quan
 ##########
-# 0.07
-quan_bh_07 <- getRun(quan_bh, run_num = 0.07)
-quan_bh_sig_07 <- getRun(quan_bh_sig, run_num = 0.07)
-
-# 0.08
-quan_bh_08 <- getRun(quan_bh, run_num = 0.08)
-quan_bh_sig_08 <- getRun(quan_bh_sig, run_num = 0.08)
-
-# 0.09
-quan_bh_09 <- getRun(quan_bh, run_num = 0.09)
-quan_bh_sig_09 <- getRun(quan_bh_sig, run_num = 0.09)
-
 # 0.10
 quan_bh_10 <- getRun(quan_bh, run_num = 0.10)
 quan_bh_sig_10 <- getRun(quan_bh_sig, run_num = 0.10)
-
-# 0.11
-quan_bh_11 <- getRun(quan_bh, run_num = 0.11)
-quan_bh_sig_11 <- getRun(quan_bh_sig, run_num = 0.11)
-
-# 0.12
-quan_bh_12 <- getRun(quan_bh, run_num = 0.12)
-quan_bh_sig_12 <- getRun(quan_bh_sig, run_num = 0.12)
-
-# 0.13
-quan_bh_13 <- getRun(quan_bh, run_num = 0.13)
-quan_bh_sig_13 <- getRun(quan_bh_sig, run_num = 0.13)
-
-# 0.14
-quan_bh_14 <- getRun(quan_bh, run_num = 0.14)
-quan_bh_sig_14 <- getRun(quan_bh_sig, run_num = 0.14)
 
 # 0.15
 quan_bh_15 <- getRun(quan_bh, run_num = 0.15)
 quan_bh_sig_15 <- getRun(quan_bh_sig, run_num = 0.15)
 
+# 0.20
+quan_bh_20 <- getRun(quan_bh, run_num = 0.20)
+quan_bh_sig_20 <- getRun(quan_bh_sig, run_num = 0.20)
+
+##########
+# quan_unbal
+##########
+# 0.10
+quan_unbal_bh_10 <- getRun(quan_unbal_bh, run_num = 0.10)
+quan_unbal_bh_sig_10 <- getRun(quan_unbal_bh_sig, run_num = 0.10)
+
+# 0.15
+quan_unbal_bh_15 <- getRun(quan_unbal_bh, run_num = 0.15)
+quan_unbal_bh_sig_15 <- getRun(quan_unbal_bh_sig, run_num = 0.15)
+
+# 0.20
+quan_unbal_bh_20 <- getRun(quan_unbal_bh, run_num = 0.20)
+quan_unbal_bh_sig_20 <- getRun(quan_unbal_bh_sig, run_num = 0.20)
+
 
 ##########
 # swan
 ##########
-# 0.07
-swan_bh_07 <- getRun(swan_bh, run_num = 0.07)
-swan_bh_sig_07 <- getRun(swan_bh_sig, run_num = 0.07)
-
-# 0.08
-swan_bh_08 <- getRun(swan_bh, run_num = 0.08)
-swan_bh_sig_08 <- getRun(swan_bh_sig, run_num = 0.08)
-
-# 0.09
-swan_bh_09 <- getRun(swan_bh, run_num = 0.09)
-swan_bh_sig_09 <- getRun(swan_bh_sig, run_num = 0.09)
-
 # 0.10
 swan_bh_10 <- getRun(swan_bh, run_num = 0.10)
 swan_bh_sig_10 <- getRun(swan_bh_sig, run_num = 0.10)
-
-# 0.11
-swan_bh_11 <- getRun(swan_bh, run_num = 0.11)
-swan_bh_sig_11 <- getRun(swan_bh_sig, run_num = 0.11)
-
-# 0.12
-swan_bh_12 <- getRun(swan_bh, run_num = 0.12)
-swan_bh_sig_12 <- getRun(swan_bh_sig, run_num = 0.12)
-
-# 0.13
-swan_bh_13 <- getRun(swan_bh, run_num = 0.13)
-swan_bh_sig_13 <- getRun(swan_bh_sig, run_num = 0.13)
-
-# 0.14
-swan_bh_14 <- getRun(swan_bh, run_num = 0.14)
-swan_bh_sig_14 <- getRun(swan_bh_sig, run_num = 0.14)
 
 # 0.15
 swan_bh_15 <- getRun(swan_bh, run_num = 0.15)
 swan_bh_sig_15 <- getRun(swan_bh_sig, run_num = 0.15)
 
+# 0.20
+swan_bh_20 <- getRun(swan_bh, run_num = 0.20)
+swan_bh_sig_20 <- getRun(swan_bh_sig, run_num = 0.20)
+
+
+##########
+# swan_unbal
+##########
+# 0.10
+swan_unbal_bh_10 <- getRun(swan_unbal_bh, run_num = 0.10)
+swan_unbal_bh_sig_10 <- getRun(swan_unbal_bh_sig, run_num = 0.10)
+
+# 0.15
+swan_unbal_bh_15 <- getRun(swan_unbal_bh, run_num = 0.15)
+swan_unbal_bh_sig_15 <- getRun(swan_unbal_bh_sig, run_num = 0.15)
+
+# 0.20
+swan_unbal_bh_20 <- getRun(swan_unbal_bh, run_num = 0.20)
+swan_unbal_bh_sig_20 <- getRun(swan_unbal_bh_sig, run_num = 0.20)
 
 ##########
 # funnorm
 ##########
-# 0.07
-funnorm_bh_07 <- getRun(funnorm_bh, run_num = 0.07)
-funnorm_bh_sig_07 <- getRun(funnorm_bh_sig, run_num = 0.07)
-
-# 0.08
-funnorm_bh_08 <- getRun(funnorm_bh, run_num = 0.08)
-funnorm_bh_sig_08 <- getRun(funnorm_bh_sig, run_num = 0.08)
-
-# 0.09
-funnorm_bh_09 <- getRun(funnorm_bh, run_num = 0.09)
-funnorm_bh_sig_09 <- getRun(funnorm_bh_sig, run_num = 0.09)
-
 # 0.10
 funnorm_bh_10 <- getRun(funnorm_bh, run_num = 0.10)
 funnorm_bh_sig_10 <- getRun(funnorm_bh_sig, run_num = 0.10)
 
-# 0.11
-funnorm_bh_11 <- getRun(funnorm_bh, run_num = 0.11)
-funnorm_bh_sig_11 <- getRun(funnorm_bh_sig, run_num = 0.11)
-
-# 0.12
-funnorm_bh_12 <- getRun(funnorm_bh, run_num = 0.12)
-funnorm_bh_sig_12 <- getRun(funnorm_bh_sig, run_num = 0.12)
-
-# 0.13
-funnorm_bh_13 <- getRun(funnorm_bh, run_num = 0.13)
-funnorm_bh_sig_13 <- getRun(funnorm_bh_sig, run_num = 0.13)
-
-# 0.14
-funnorm_bh_14 <- getRun(funnorm_bh, run_num = 0.14)
-funnorm_bh_sig_14 <- getRun(funnorm_bh_sig, run_num = 0.14)
-
 # 0.15
 funnorm_bh_15 <- getRun(funnorm_bh, run_num = 0.15)
 funnorm_bh_sig_15 <- getRun(funnorm_bh_sig, run_num = 0.15)
+
+# 0.20
+funnorm_bh_20 <- getRun(funnorm_bh, run_num = 0.20)
+funnorm_bh_sig_20 <- getRun(funnorm_bh_sig, run_num = 0.20)
+
+
+##########
+# funnorm_unbal
+##########
+# 0.10
+funnorm_unbal_bh_10 <- getRun(funnorm_unbal_bh, run_num = 0.10)
+funnorm_unbal_bh_sig_10 <- getRun(funnorm_unbal_bh_sig, run_num = 0.10)
+
+# 0.15
+funnorm_unbal_bh_15 <- getRun(funnorm_unbal_bh, run_num = 0.15)
+funnorm_unbal_bh_sig_15 <- getRun(funnorm_unbal_bh_sig, run_num = 0.15)
+
+# 0.20
+funnorm_unbal_bh_20 <- getRun(funnorm_unbal_bh, run_num = 0.20)
+funnorm_unbal_bh_sig_20 <- getRun(funnorm_unbal_bh_sig, run_num = 0.20)
+
 
 
 ##########
@@ -474,10 +508,14 @@ rm(cg_locations,
    funnorm_bh, funnorm_bh_sig,
    quan_bh, quan_bh_sig,
    swan_bh, swan_bh_sig,
-   raw_bh, raw_bh_sig)
+   raw_bh, raw_bh_sig,
+   funnorm_unbal_bh, funnorm_unbal_bh_sig,
+   quan_unbal_bh, quan_unbal_bh_sig,
+   swan_unbal_bh, swan_unbal_bh_sig,
+   raw_unbal_bh, raw_unbal_bh_sig)
 
 
-# save.image(paste0(model_data, 'bh_feat_new.RData'))
+save.image(paste0(model_data, 'bh_feat_new.RData'))
 # load('/home/benbrew/Desktop/get_feat_temp.RData')
 
 # # beta raw all

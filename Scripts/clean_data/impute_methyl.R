@@ -1,5 +1,5 @@
 ####### Script will load 4 preprocessing methods for cases and controls and impute with knn
-# this is 3nd step in pipeline
+# this is 3rd step in pipeline
 
 ##########
 # initialize libraries

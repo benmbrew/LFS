@@ -17,10 +17,8 @@ scripts_folder <- paste0(project_folder, '/Scripts')
 source(paste0(scripts_folder, '/predict_age/model_functions_short.R'))
 source(paste0(scripts_folder, '/predict_age/run_models_short.R'))
 
-
-
 #########################################################################################################################
-# Random features - 100, 200, 500, 1000, 2000
+# Random features - same number as each bh feature subset
 
 ###########
 # function for random
@@ -30,7 +28,7 @@ source(paste0(scripts_folder, '/predict_age/run_models_short.R'))
 # num_feat <- 100
 # data_name <- 'raw_rand_100'
 # exlcude <- T
-# union_features <-  beta_raw_union_features
+# union_features <-  union_features
 getRand <- function(data, rand_num, num_feat, exclude, union_features, data_name) 
 {
   
@@ -75,221 +73,166 @@ union_features <- Reduce(union, list(raw_union_feat,
 # raw
 ###########
 
-# raw 07 features
-raw_rand_07_table <- getRand(raw_cases, 
-                             rand_num = 5, 
-                             num_feat = length(raw_bh_07), 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "raw_rand_07")
-
-# raw 08 features
-raw_rand_08_table <- getRand(raw_cases, 
-                             rand_num = 5, 
-                             num_feat = length(raw_bh_08), 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "raw_rand_08")
-
-# raw 09 features
-raw_rand_09_table <- getRand(raw_cases, 
-                             rand_num = 5, 
-                             num_feat = length(raw_bh_09), 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "raw_rand_09")
-
-
+# NORMAL
 # raw 10 features
 raw_rand_10_table <- getRand(raw_cases, 
                              rand_num = 5, 
                              num_feat = length(raw_bh_10), 
                              exclude = T,
-                             union_features = union_features,
+                             union_features = raw_union_feat,
                              data_name = "raw_rand_10")
 
-# raw 11 features
-raw_rand_11_table <- getRand(raw_cases, 
-                             rand_num = 5, 
-                             num_feat = length(raw_bh_11), 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "raw_rand_11")
-
-# raw 12 features
-raw_rand_12_table <- getRand(raw_cases, 
-                             rand_num = 5, 
-                             num_feat = length(raw_bh_12), 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "raw_rand_12")
-
-# raw 13 features
-raw_rand_13_table <- getRand(raw_cases, 
-                             rand_num = 5, 
-                             num_feat = length(raw_bh_13), 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "raw_rand_13")
-
-# raw 14 features
-raw_rand_14_table <- getRand(raw_cases, 
-                             rand_num = 5, 
-                             num_feat = length(raw_bh_14), 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "raw_rand_14")
 
 # raw 15 features
 raw_rand_15_table <- getRand(raw_cases, 
                              rand_num = 5, 
                              num_feat = length(raw_bh_15), 
                              exclude = T,
-                             union_features = union_features,
+                             union_features = raw_union_feat,
                              data_name = "raw_rand_15")
+
+# raw 20 features
+raw_rand_20_table <- getRand(raw_cases, 
+                             rand_num = 5, 
+                             num_feat = length(raw_bh_20), 
+                             exclude = T,
+                             union_features = raw_union_feat,
+                             data_name = "raw_rand_20")
+
+# UNBALL
+# raw 10 features
+raw_rand_unbal_10_table <- getRand(raw_cases, 
+                             rand_num = 5, 
+                             num_feat = length(raw_unbal_bh_10), 
+                             exclude = T,
+                             union_features = raw_union_feat,
+                             data_name = "raw_rand_unbal_10")
+
+
+# raw 15 features
+raw_rand_unbal_15_table <- getRand(raw_cases, 
+                             rand_num = 5, 
+                             num_feat = length(raw_unbal_bh_15), 
+                             exclude = T,
+                             union_features = raw_union_feat,
+                             data_name = "raw_rand_unbal_15")
+
+# raw 20 features
+raw_rand_unbal_20_table <- getRand(raw_cases, 
+                             rand_num = 5, 
+                             num_feat = length(raw_unbal_bh_20), 
+                             exclude = T,
+                             union_features = raw_union_feat,
+                             data_name = "raw_rand_unbal_20")
+
+raw_rand_int_table <-getRand(raw_cases, 
+                             rand_num = 5, 
+                             num_feat = length(raw_int_feat), 
+                             exclude = T,
+                             union_features = raw_union_features,
+                             data_name = "raw_rand_int")
+
+raw_rand_unbal_int_table <-getRand(raw_cases, 
+                             rand_num = 5, 
+                             num_feat = length(raw_unbal_int_feat), 
+                             exclude = T,
+                             union_features = raw_union_feat,
+                             data_name = "raw_rand_unbal_int")
+
 
 ###########
 # raw sig
 ###########
-
-# raw 07 features
-raw_rand_07_sig_table <- getRand(raw_cases, 
-                                 rand_num = 5, 
-                                 num_feat = length(raw_bh_sig_07), 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "raw_rand_sig_07")
-
-# raw 08 features
-raw_rand_08_sig_table <- getRand(raw_cases, 
-                                 rand_num = 5, 
-                                 num_feat = length(raw_bh_sig_08), 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "raw_rand_sig_08")
-
-# raw 09 features
-raw_rand_09_sig_table <- getRand(raw_cases, 
-                                 rand_num = 5, 
-                                 num_feat = length(raw_bh_sig_09), 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "raw_rand_sig_09")
-
-
+# NORMAL
 # raw 10 features
-raw_rand_10_sig_table <- getRand(raw_cases, 
-                                 rand_num = 5, 
-                                 num_feat = length(raw_bh_sig_10), 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "raw_rand_sig_10")
+raw_rand_sig_10_table <- getRand(raw_cases, 
+                             rand_num = 5, 
+                             num_feat = length(raw_bh_sig_10), 
+                             exclude = T,
+                             union_features = raw_union_feat,
+                             data_name = "raw_rand_sig_10")
 
-# raw 11 features
-raw_rand_11_sig_table <- getRand(raw_cases, 
-                                 rand_num = 5, 
-                                 num_feat = length(raw_bh_sig_11), 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "raw_rand_sig_11")
-
-# raw 12 features
-raw_rand_12_sig_table <- getRand(raw_cases, 
-                                 rand_num = 5, 
-                                 num_feat = length(raw_bh_sig_12), 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "raw_rand_sig_12")
-
-# raw 13 features
-raw_rand_13_sig_table <- getRand(raw_cases, 
-                                 rand_num = 5, 
-                                 num_feat = length(raw_bh_sig_13), 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "raw_rand_sig_13")
-
-# raw 14 features
-raw_rand_14_sig_table <- getRand(raw_cases, 
-                                 rand_num = 5, 
-                                 num_feat = length(raw_bh_sig_14), 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "raw_rand_sig_14")
 
 # raw 15 features
-raw_rand_15_sig_table <- getRand(raw_cases, 
-                                 rand_num = 5, 
-                                 num_feat = length(raw_bh_sig_15), 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "raw_rand_sig_15")
+raw_rand_sig_15_table <- getRand(raw_cases, 
+                             rand_num = 5, 
+                             num_feat = length(raw_bh_sig_15), 
+                             exclude = T,
+                             union_features = raw_union_feat,
+                             data_name = "raw_rand_sig_15")
 
-##########
-# intersection and union
-##########
+# raw 20 features
+raw_rand_sig_20_table <- getRand(raw_cases, 
+                             rand_num = 5, 
+                             num_feat = length(raw_bh_sig_20), 
+                             exclude = T,
+                             union_features = raw_union_feat,
+                             data_name = "raw_rand_sig_20")
 
-# raw int features
-raw_rand_int_table <- getRand(raw_cases, 
-                              rand_num = 5, 
-                              num_feat = length(raw_int_feat), 
-                              exclude = T,
-                              union_features = union_features,
-                              data_name = "raw_rand_int")
+# UNBALL
+# raw 10 features
+raw_rand_unbal_sig_10_table <- getRand(raw_cases, 
+                                   rand_num = 5, 
+                                   num_feat = length(raw_unbal_bh_sig_10), 
+                                   exclude = T,
+                                   union_features = raw_union_feat,
+                                   data_name = "raw_rand_unbal_sig_10")
 
-# raw int sig features
-raw_rand_int_sig_table <- getRand(raw_cases, 
-                                  rand_num = 5, 
-                                  num_feat = length(raw_int_sig_feat), 
-                                  exclude = T,
-                                  union_features = union_features,
-                                  data_name = "raw_rand_int_sig")
 
-# raw union features
-raw_rand_union_table <- getRand(raw_cases, 
-                                rand_num = 5, 
-                                num_feat = length(raw_union_feat), 
-                                exclude = T,
-                                union_features = union_features,
-                                data_name = "raw_rand_union")
+# raw 15 features
+raw_rand_unbal_sig_15_table <- getRand(raw_cases, 
+                                   rand_num = 5, 
+                                   num_feat = length(raw_unbal_bh_sig_15), 
+                                   exclude = T,
+                                   union_features = raw_union_feat,
+                                   data_name = "raw_rand_unbal_sig_15")
 
-# raw union sig features
-raw_rand_union_sig_table <- getRand(raw_cases, 
-                                    rand_num = 5, 
-                                    num_feat = length(raw_union_sig_feat), 
-                                    exclude = T,
-                                    union_features = union_features,
-                                    data_name = "raw_rand_union_sig")
+# raw 20 features
+raw_rand_unbal_sig_20_table <- getRand(raw_cases, 
+                                   rand_num = 5, 
+                                   num_feat = length(raw_unbal_bh_20), 
+                                   exclude = T,
+                                   union_features = raw_union_feat,
+                                   data_name = "raw_rand_unbal_20")
+
+raw_rand_sig_int_table <-getRand(raw_cases, 
+                             rand_num = 5, 
+                             num_feat = length(raw_int_sig_feat), 
+                             exclude = T,
+                             union_features = raw_union_feat,
+                             data_name = "raw_rand_sig_int")
+
+raw_rand_unbal_sig_int_table <-getRand(raw_cases, 
+                                   rand_num = 5, 
+                                   num_feat = length(raw_unbal_int_sig_feat), 
+                                   exclude = T,
+                                   union_features = raw_union_feat,
+                                   data_name = "raw_rand_unbal_int_sig")
+
 
 
 
 ###########
 # rbind tables and save RDA file
 ###########
-raw_rand_table <- rbind(raw_rand_07_table, raw_rand_07_sig_table,
-                        raw_rand_08_table, raw_rand_08_sig_table,
-                        raw_rand_09_table, raw_rand_09_sig_table,
-                        raw_rand_10_table, raw_rand_10_sig_table,
-                        raw_rand_11_table, raw_rand_11_sig_table,
-                        raw_rand_12_table, raw_rand_12_sig_table,
-                        raw_rand_13_table, raw_rand_13_sig_table,
-                        raw_rand_14_table, raw_rand_14_sig_table,
-                        raw_rand_15_table, raw_rand_15_sig_table,
-                        raw_rand_int_table, raw_rand_int_sig_table,
-                        raw_rand_union_table, raw_rand_union_sig_table)
+raw_rand_table <- rbind(raw_rand_10_table, raw_rand_15_table, 
+                        raw_rand_20_table,  raw_rand_unbal_10_table, 
+                        raw_rand_unbal_15_table, raw_rand_unbal_20_table,
+                        raw_rand_unbal_int_table, raw_rand_int_table,
+                        raw_rand_sig_10_table, raw_rand_sig_15_table, 
+                        raw_rand_sig_20_table,  raw_rand_unbal_sig_10_table, 
+                        raw_rand_unbal_sig_15_table, raw_rand_unbal_sig_20_table,
+                        raw_rand_unbal_sig_int_table, raw_rand_sig_int_table)
 
 # remove data 
-rm(raw_rand_07_table, raw_rand_07_sig_table,
-   raw_rand_08_table, raw_rand_08_sig_table,
-   raw_rand_09_table, raw_rand_09_sig_table,
-   raw_rand_10_table, raw_rand_10_sig_table,
-   raw_rand_11_table, raw_rand_11_sig_table,
-   raw_rand_12_table, raw_rand_12_sig_table,
-   raw_rand_13_table, raw_rand_13_sig_table,
-   raw_rand_14_table, raw_rand_14_sig_table,
-   raw_rand_15_table, raw_rand_15_sig_table,
-   raw_rand_int_table, raw_rand_int_sig_table,
-   raw_rand_union_table, raw_rand_union_sig_table)
+rm(raw_rand_10_table, raw_rand_15_table, 
+   raw_rand_20_table,  raw_rand_unbal_10_table, 
+   raw_rand_unbal_15_table, raw_rand_unbal_20_table,
+   raw_rand_unbal_int_table, raw_rand_int_table,
+   raw_rand_sig_10_table, raw_rand_sig_15_table, 
+   raw_rand_sig_20_table,  raw_rand_unbal_sig_10_table, 
+   raw_rand_unbal_sig_15_table, raw_rand_unbal_sig_20_table,
+   raw_rand_unbal_sig_int_table, raw_rand_sig_int_table)
 
 
 #save table 
@@ -304,221 +247,166 @@ rm(list = ls(pattern = "raw_*"))
 # quan
 ###########
 
-# quan 07 features
-quan_rand_07_table <- getRand(quan_cases, 
-                             rand_num = 5, 
-                             num_feat = length(quan_bh_07), 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "quan_rand_07")
-
-# quan 08 features
-quan_rand_08_table <- getRand(quan_cases, 
-                             rand_num = 5, 
-                             num_feat = length(quan_bh_08), 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "quan_rand_08")
-
-# quan 09 features
-quan_rand_09_table <- getRand(quan_cases, 
-                             rand_num = 5, 
-                             num_feat = length(quan_bh_09), 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "quan_rand_09")
-
-
+# NORMAL
 # quan 10 features
 quan_rand_10_table <- getRand(quan_cases, 
                              rand_num = 5, 
                              num_feat = length(quan_bh_10), 
                              exclude = T,
-                             union_features = union_features,
+                             union_features = quan_union_feat,
                              data_name = "quan_rand_10")
 
-# quan 11 features
-quan_rand_11_table <- getRand(quan_cases, 
-                             rand_num = 5, 
-                             num_feat = length(quan_bh_11), 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "quan_rand_11")
-
-# quan 12 features
-quan_rand_12_table <- getRand(quan_cases, 
-                             rand_num = 5, 
-                             num_feat = length(quan_bh_12), 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "quan_rand_12")
-
-# quan 13 features
-quan_rand_13_table <- getRand(quan_cases, 
-                             rand_num = 5, 
-                             num_feat = length(quan_bh_13), 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "quan_rand_13")
-
-# quan 14 features
-quan_rand_14_table <- getRand(quan_cases, 
-                             rand_num = 5, 
-                             num_feat = length(quan_bh_14), 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "quan_rand_14")
 
 # quan 15 features
 quan_rand_15_table <- getRand(quan_cases, 
                              rand_num = 5, 
                              num_feat = length(quan_bh_15), 
                              exclude = T,
-                             union_features = union_features,
+                             union_features = quan_union_feat,
                              data_name = "quan_rand_15")
+
+# quan 20 features
+quan_rand_20_table <- getRand(quan_cases, 
+                             rand_num = 5, 
+                             num_feat = length(quan_bh_20), 
+                             exclude = T,
+                             union_features = quan_union_feat,
+                             data_name = "quan_rand_20")
+
+# UNBALL
+# quan 10 features
+quan_rand_unbal_10_table <- getRand(quan_cases, 
+                                   rand_num = 5, 
+                                   num_feat = length(quan_unbal_bh_10), 
+                                   exclude = T,
+                                   union_features = quan_union_feat,
+                                   data_name = "quan_rand_unbal_10")
+
+
+# quan 15 features
+quan_rand_unbal_15_table <- getRand(quan_cases, 
+                                   rand_num = 5, 
+                                   num_feat = length(quan_unbal_bh_15), 
+                                   exclude = T,
+                                   union_features = quan_union_feat,
+                                   data_name = "quan_rand_unbal_15")
+
+# quan 20 features
+quan_rand_unbal_20_table <- getRand(quan_cases, 
+                                   rand_num = 5, 
+                                   num_feat = length(quan_unbal_bh_20), 
+                                   exclude = T,
+                                   union_features = quan_union_feat,
+                                   data_name = "quan_rand_unbal_20")
+
+quan_rand_int_table <-getRand(quan_cases, 
+                             rand_num = 5, 
+                             num_feat = length(quan_int_feat), 
+                             exclude = T,
+                             union_features = quan_union_features,
+                             data_name = "quan_rand_int")
+
+quan_rand_unbal_int_table <-getRand(quan_cases, 
+                                   rand_num = 5, 
+                                   num_feat = length(quan_unbal_int_feat), 
+                                   exclude = T,
+                                   union_features = quan_union_feat,
+                                   data_name = "quan_rand_unbal_int")
+
 
 ###########
 # quan sig
 ###########
-
-# quan 07 features
-quan_rand_07_sig_table <- getRand(quan_cases, 
-                                 rand_num = 5, 
-                                 num_feat = length(quan_bh_sig_07), 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "quan_rand_sig_07")
-
-# quan 08 features
-quan_rand_08_sig_table <- getRand(quan_cases, 
-                                 rand_num = 5, 
-                                 num_feat = length(quan_bh_sig_08), 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "quan_rand_sig_08")
-
-# quan 09 features
-quan_rand_09_sig_table <- getRand(quan_cases, 
-                                 rand_num = 5, 
-                                 num_feat = length(quan_bh_sig_09), 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "quan_rand_sig_09")
-
-
+# NORMAL
 # quan 10 features
-quan_rand_10_sig_table <- getRand(quan_cases, 
+quan_rand_sig_10_table <- getRand(quan_cases, 
                                  rand_num = 5, 
                                  num_feat = length(quan_bh_sig_10), 
                                  exclude = T,
-                                 union_features = union_features,
+                                 union_features = quan_union_feat,
                                  data_name = "quan_rand_sig_10")
 
-# quan 11 features
-quan_rand_11_sig_table <- getRand(quan_cases, 
-                                 rand_num = 5, 
-                                 num_feat = length(quan_bh_sig_11), 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "quan_rand_sig_11")
-
-# quan 12 features
-quan_rand_12_sig_table <- getRand(quan_cases, 
-                                 rand_num = 5, 
-                                 num_feat = length(quan_bh_sig_12), 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "quan_rand_sig_12")
-
-# quan 13 features
-quan_rand_13_sig_table <- getRand(quan_cases, 
-                                 rand_num = 5, 
-                                 num_feat = length(quan_bh_sig_13), 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "quan_rand_sig_13")
-
-# quan 14 features
-quan_rand_14_sig_table <- getRand(quan_cases, 
-                                 rand_num = 5, 
-                                 num_feat = length(quan_bh_sig_14), 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "quan_rand_sig_14")
 
 # quan 15 features
-quan_rand_15_sig_table <- getRand(quan_cases, 
+quan_rand_sig_15_table <- getRand(quan_cases, 
                                  rand_num = 5, 
                                  num_feat = length(quan_bh_sig_15), 
                                  exclude = T,
-                                 union_features = union_features,
+                                 union_features = quan_union_feat,
                                  data_name = "quan_rand_sig_15")
 
-##########
-# intersection and union
-##########
+# quan 20 features
+quan_rand_sig_20_table <- getRand(quan_cases, 
+                                 rand_num = 5, 
+                                 num_feat = length(quan_bh_sig_20), 
+                                 exclude = T,
+                                 union_features = quan_union_feat,
+                                 data_name = "quan_rand_sig_20")
 
-# quan int features
-quan_rand_int_table <- getRand(quan_cases, 
-                              rand_num = 5, 
-                              num_feat = length(quan_int_feat), 
-                              exclude = T,
-                              union_features = union_features,
-                              data_name = "quan_rand_int")
+# UNBALL
+# quan 10 features
+quan_rand_unbal_sig_10_table <- getRand(quan_cases, 
+                                       rand_num = 5, 
+                                       num_feat = length(quan_unbal_bh_sig_10), 
+                                       exclude = T,
+                                       union_features = quan_union_feat,
+                                       data_name = "quan_rand_unbal_sig_10")
 
-# quan int sig features
-quan_rand_int_sig_table <- getRand(quan_cases, 
-                                  rand_num = 5, 
-                                  num_feat = length(quan_int_sig_feat), 
-                                  exclude = T,
-                                  union_features = union_features,
-                                  data_name = "quan_rand_int_sig")
 
-# quan union features
-quan_rand_union_table <- getRand(quan_cases, 
-                                rand_num = 5, 
-                                num_feat = length(quan_union_feat), 
-                                exclude = T,
-                                union_features = union_features,
-                                data_name = "quan_rand_union")
+# quan 15 features
+quan_rand_unbal_sig_15_table <- getRand(quan_cases, 
+                                       rand_num = 5, 
+                                       num_feat = length(quan_unbal_bh_sig_15), 
+                                       exclude = T,
+                                       union_features = quan_union_feat,
+                                       data_name = "quan_rand_unbal_sig_15")
 
-# quan union sig features
-quan_rand_union_sig_table <- getRand(quan_cases, 
-                                    rand_num = 5, 
-                                    num_feat = length(quan_union_sig_feat), 
-                                    exclude = T,
-                                    union_features = union_features,
-                                    data_name = "quan_rand_union_sig")
+# quan 20 features
+quan_rand_unbal_sig_20_table <- getRand(quan_cases, 
+                                       rand_num = 5, 
+                                       num_feat = length(quan_unbal_bh_20), 
+                                       exclude = T,
+                                       union_features = quan_union_feat,
+                                       data_name = "quan_rand_unbal_20")
+
+quan_rand_sig_int_table <-getRand(quan_cases, 
+                                 rand_num = 5, 
+                                 num_feat = length(quan_int_sig_feat), 
+                                 exclude = T,
+                                 union_features = quan_union_feat,
+                                 data_name = "quan_rand_sig_int")
+
+quan_rand_unbal_sig_int_table <-getRand(quan_cases, 
+                                       rand_num = 5, 
+                                       num_feat = length(quan_unbal_int_sig_feat), 
+                                       exclude = T,
+                                       union_features = quan_union_feat,
+                                       data_name = "quan_rand_unbal_int_sig")
+
 
 
 
 ###########
 # rbind tables and save RDA file
 ###########
-quan_rand_table <- rbind(quan_rand_07_table, quan_rand_07_sig_table,
-                        quan_rand_08_table, quan_rand_08_sig_table,
-                        quan_rand_09_table, quan_rand_09_sig_table,
-                        quan_rand_10_table, quan_rand_10_sig_table,
-                        quan_rand_11_table, quan_rand_11_sig_table,
-                        quan_rand_12_table, quan_rand_12_sig_table,
-                        quan_rand_13_table, quan_rand_13_sig_table,
-                        quan_rand_14_table, quan_rand_14_sig_table,
-                        quan_rand_15_table, quan_rand_15_sig_table,
-                        quan_rand_int_table, quan_rand_int_sig_table,
-                        quan_rand_union_table, quan_rand_union_sig_table)
+quan_rand_table <- rbind(quan_rand_10_table, quan_rand_15_table, 
+                        quan_rand_20_table,  quan_rand_unbal_10_table, 
+                        quan_rand_unbal_15_table, quan_rand_unbal_20_table,
+                        quan_rand_unbal_int_table, quan_rand_int_table,
+                        quan_rand_sig_10_table, quan_rand_sig_15_table, 
+                        quan_rand_sig_20_table,  quan_rand_unbal_sig_10_table, 
+                        quan_rand_unbal_sig_15_table, quan_rand_unbal_sig_20_table,
+                        quan_rand_unbal_sig_int_table, quan_rand_sig_int_table)
 
 # remove data 
-rm(quan_rand_07_table, quan_rand_07_sig_table,
-   quan_rand_08_table, quan_rand_08_sig_table,
-   quan_rand_09_table, quan_rand_09_sig_table,
-   quan_rand_10_table, quan_rand_10_sig_table,
-   quan_rand_11_table, quan_rand_11_sig_table,
-   quan_rand_12_table, quan_rand_12_sig_table,
-   quan_rand_13_table, quan_rand_13_sig_table,
-   quan_rand_14_table, quan_rand_14_sig_table,
-   quan_rand_15_table, quan_rand_15_sig_table,
-   quan_rand_int_table, quan_rand_int_sig_table,
-   quan_rand_union_table, quan_rand_union_sig_table)
+rm(quan_rand_10_table, quan_rand_15_table, 
+   quan_rand_20_table,  quan_rand_unbal_10_table, 
+   quan_rand_unbal_15_table, quan_rand_unbal_20_table,
+   quan_rand_unbal_int_table, quan_rand_int_table,
+   quan_rand_sig_10_table, quan_rand_sig_15_table, 
+   quan_rand_sig_20_table,  quan_rand_unbal_sig_10_table, 
+   quan_rand_unbal_sig_15_table, quan_rand_unbal_sig_20_table,
+   quan_rand_unbal_sig_int_table, quan_rand_sig_int_table)
 
 
 #save table 
@@ -528,226 +416,170 @@ saveRDS(quan_rand_table,
 rm(list = ls(pattern = "quan_*"))
 
 
-#############################################################################################################
 ###########
 # swan
 ###########
 
-# swan 07 features
-swan_rand_07_table <- getRand(swan_cases, 
-                             rand_num = 5, 
-                             num_feat = length(swan_bh_07), 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "swan_rand_07")
-
-# swan 08 features
-swan_rand_08_table <- getRand(swan_cases, 
-                             rand_num = 5, 
-                             num_feat = length(swan_bh_08), 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "swan_rand_08")
-
-# swan 09 features
-swan_rand_09_table <- getRand(swan_cases, 
-                             rand_num = 5, 
-                             num_feat = length(swan_bh_09), 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "swan_rand_09")
-
-
+# NORMAL
 # swan 10 features
 swan_rand_10_table <- getRand(swan_cases, 
                              rand_num = 5, 
                              num_feat = length(swan_bh_10), 
                              exclude = T,
-                             union_features = union_features,
+                             union_features = swan_union_feat,
                              data_name = "swan_rand_10")
 
-# swan 11 features
-swan_rand_11_table <- getRand(swan_cases, 
-                             rand_num = 5, 
-                             num_feat = length(swan_bh_11), 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "swan_rand_11")
-
-# swan 12 features
-swan_rand_12_table <- getRand(swan_cases, 
-                             rand_num = 5, 
-                             num_feat = length(swan_bh_12), 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "swan_rand_12")
-
-# swan 13 features
-swan_rand_13_table <- getRand(swan_cases, 
-                             rand_num = 5, 
-                             num_feat = length(swan_bh_13), 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "swan_rand_13")
-
-# swan 14 features
-swan_rand_14_table <- getRand(swan_cases, 
-                             rand_num = 5, 
-                             num_feat = length(swan_bh_14), 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "swan_rand_14")
 
 # swan 15 features
 swan_rand_15_table <- getRand(swan_cases, 
                              rand_num = 5, 
                              num_feat = length(swan_bh_15), 
                              exclude = T,
-                             union_features = union_features,
+                             union_features = swan_union_feat,
                              data_name = "swan_rand_15")
+
+# swan 20 features
+swan_rand_20_table <- getRand(swan_cases, 
+                             rand_num = 5, 
+                             num_feat = length(swan_bh_20), 
+                             exclude = T,
+                             union_features = swan_union_feat,
+                             data_name = "swan_rand_20")
+
+# UNBALL
+# swan 10 features
+swan_rand_unbal_10_table <- getRand(swan_cases, 
+                                   rand_num = 5, 
+                                   num_feat = length(swan_unbal_bh_10), 
+                                   exclude = T,
+                                   union_features = swan_union_feat,
+                                   data_name = "swan_rand_unbal_10")
+
+
+# swan 15 features
+swan_rand_unbal_15_table <- getRand(swan_cases, 
+                                   rand_num = 5, 
+                                   num_feat = length(swan_unbal_bh_15), 
+                                   exclude = T,
+                                   union_features = swan_union_feat,
+                                   data_name = "swan_rand_unbal_15")
+
+# swan 20 features
+swan_rand_unbal_20_table <- getRand(swan_cases, 
+                                   rand_num = 5, 
+                                   num_feat = length(swan_unbal_bh_20), 
+                                   exclude = T,
+                                   union_features = swan_union_feat,
+                                   data_name = "swan_rand_unbal_20")
+
+swan_rand_int_table <-getRand(swan_cases, 
+                             rand_num = 5, 
+                             num_feat = length(swan_int_feat), 
+                             exclude = T,
+                             union_features = swan_union_features,
+                             data_name = "swan_rand_int")
+
+swan_rand_unbal_int_table <-getRand(swan_cases, 
+                                   rand_num = 5, 
+                                   num_feat = length(swan_unbal_int_feat), 
+                                   exclude = T,
+                                   union_features = swan_union_feat,
+                                   data_name = "swan_rand_unbal_int")
+
 
 ###########
 # swan sig
 ###########
-
-# swan 07 features
-swan_rand_07_sig_table <- getRand(swan_cases, 
-                                 rand_num = 5, 
-                                 num_feat = length(swan_bh_sig_07), 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "swan_rand_sig_07")
-
-# swan 08 features
-swan_rand_08_sig_table <- getRand(swan_cases, 
-                                 rand_num = 5, 
-                                 num_feat = length(swan_bh_sig_08), 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "swan_rand_sig_08")
-
-# swan 09 features
-swan_rand_09_sig_table <- getRand(swan_cases, 
-                                 rand_num = 5, 
-                                 num_feat = length(swan_bh_sig_09), 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "swan_rand_sig_09")
-
-
+# NORMAL
 # swan 10 features
-swan_rand_10_sig_table <- getRand(swan_cases, 
+swan_rand_sig_10_table <- getRand(swan_cases, 
                                  rand_num = 5, 
                                  num_feat = length(swan_bh_sig_10), 
                                  exclude = T,
-                                 union_features = union_features,
+                                 union_features = swan_union_feat,
                                  data_name = "swan_rand_sig_10")
 
-# swan 11 features
-swan_rand_11_sig_table <- getRand(swan_cases, 
-                                 rand_num = 5, 
-                                 num_feat = length(swan_bh_sig_11), 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "swan_rand_sig_11")
-
-# swan 12 features
-swan_rand_12_sig_table <- getRand(swan_cases, 
-                                 rand_num = 5, 
-                                 num_feat = length(swan_bh_sig_12), 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "swan_rand_sig_12")
-
-# swan 13 features
-swan_rand_13_sig_table <- getRand(swan_cases, 
-                                 rand_num = 5, 
-                                 num_feat = length(swan_bh_sig_13), 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "swan_rand_sig_13")
-
-# swan 14 features
-swan_rand_14_sig_table <- getRand(swan_cases, 
-                                 rand_num = 5, 
-                                 num_feat = length(swan_bh_sig_14), 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "swan_rand_sig_14")
 
 # swan 15 features
-swan_rand_15_sig_table <- getRand(swan_cases, 
+swan_rand_sig_15_table <- getRand(swan_cases, 
                                  rand_num = 5, 
                                  num_feat = length(swan_bh_sig_15), 
                                  exclude = T,
-                                 union_features = union_features,
+                                 union_features = swan_union_feat,
                                  data_name = "swan_rand_sig_15")
 
-##########
-# intersection and union
-##########
+# swan 20 features
+swan_rand_sig_20_table <- getRand(swan_cases, 
+                                 rand_num = 5, 
+                                 num_feat = length(swan_bh_sig_20), 
+                                 exclude = T,
+                                 union_features = swan_union_feat,
+                                 data_name = "swan_rand_sig_20")
 
-# swan int features
-swan_rand_int_table <- getRand(swan_cases, 
-                              rand_num = 5, 
-                              num_feat = length(swan_int_feat), 
-                              exclude = T,
-                              union_features = union_features,
-                              data_name = "swan_rand_int")
+# UNBALL
+# swan 10 features
+swan_rand_unbal_sig_10_table <- getRand(swan_cases, 
+                                       rand_num = 5, 
+                                       num_feat = length(swan_unbal_bh_sig_10), 
+                                       exclude = T,
+                                       union_features = swan_union_feat,
+                                       data_name = "swan_rand_unbal_sig_10")
 
-# swan int sig features
-swan_rand_int_sig_table <- getRand(swan_cases, 
-                                  rand_num = 5, 
-                                  num_feat = length(swan_int_sig_feat), 
-                                  exclude = T,
-                                  union_features = union_features,
-                                  data_name = "swan_rand_int_sig")
 
-# swan union features
-swan_rand_union_table <- getRand(swan_cases, 
-                                rand_num = 5, 
-                                num_feat = length(swan_union_feat), 
-                                exclude = T,
-                                union_features = union_features,
-                                data_name = "swan_rand_union")
+# swan 15 features
+swan_rand_unbal_sig_15_table <- getRand(swan_cases, 
+                                       rand_num = 5, 
+                                       num_feat = length(swan_unbal_bh_sig_15), 
+                                       exclude = T,
+                                       union_features = swan_union_feat,
+                                       data_name = "swan_rand_unbal_sig_15")
 
-# swan union sig features
-swan_rand_union_sig_table <- getRand(swan_cases, 
-                                    rand_num = 5, 
-                                    num_feat = length(swan_union_sig_feat), 
-                                    exclude = T,
-                                    union_features = union_features,
-                                    data_name = "swan_rand_union_sig")
+# swan 20 features
+swan_rand_unbal_sig_20_table <- getRand(swan_cases, 
+                                       rand_num = 5, 
+                                       num_feat = length(swan_unbal_bh_20), 
+                                       exclude = T,
+                                       union_features = swan_union_feat,
+                                       data_name = "swan_rand_unbal_20")
+
+swan_rand_sig_int_table <-getRand(swan_cases, 
+                                 rand_num = 5, 
+                                 num_feat = length(swan_int_sig_feat), 
+                                 exclude = T,
+                                 union_features = swan_union_feat,
+                                 data_name = "swan_rand_sig_int")
+
+swan_rand_unbal_sig_int_table <-getRand(swan_cases, 
+                                       rand_num = 5, 
+                                       num_feat = length(swan_unbal_int_sig_feat), 
+                                       exclude = T,
+                                       union_features = swan_union_feat,
+                                       data_name = "swan_rand_unbal_int_sig")
+
 
 
 
 ###########
 # rbind tables and save RDA file
 ###########
-swan_rand_table <- rbind(swan_rand_07_table, swan_rand_07_sig_table,
-                        swan_rand_08_table, swan_rand_08_sig_table,
-                        swan_rand_09_table, swan_rand_09_sig_table,
-                        swan_rand_10_table, swan_rand_10_sig_table,
-                        swan_rand_11_table, swan_rand_11_sig_table,
-                        swan_rand_12_table, swan_rand_12_sig_table,
-                        swan_rand_13_table, swan_rand_13_sig_table,
-                        swan_rand_14_table, swan_rand_14_sig_table,
-                        swan_rand_15_table, swan_rand_15_sig_table,
-                        swan_rand_int_table, swan_rand_int_sig_table,
-                        swan_rand_union_table, swan_rand_union_sig_table)
+swan_rand_table <- rbind(swan_rand_10_table, swan_rand_15_table, 
+                        swan_rand_20_table,  swan_rand_unbal_10_table, 
+                        swan_rand_unbal_15_table, swan_rand_unbal_20_table,
+                        swan_rand_unbal_int_table, swan_rand_int_table,
+                        swan_rand_sig_10_table, swan_rand_sig_15_table, 
+                        swan_rand_sig_20_table,  swan_rand_unbal_sig_10_table, 
+                        swan_rand_unbal_sig_15_table, swan_rand_unbal_sig_20_table,
+                        swan_rand_unbal_sig_int_table, swan_rand_sig_int_table)
 
 # remove data 
-rm(swan_rand_07_table, swan_rand_07_sig_table,
-   swan_rand_08_table, swan_rand_08_sig_table,
-   swan_rand_09_table, swan_rand_09_sig_table,
-   swan_rand_10_table, swan_rand_10_sig_table,
-   swan_rand_11_table, swan_rand_11_sig_table,
-   swan_rand_12_table, swan_rand_12_sig_table,
-   swan_rand_13_table, swan_rand_13_sig_table,
-   swan_rand_14_table, swan_rand_14_sig_table,
-   swan_rand_15_table, swan_rand_15_sig_table,
-   swan_rand_int_table, swan_rand_int_sig_table,
-   swan_rand_union_table, swan_rand_union_sig_table)
+rm(swan_rand_10_table, swan_rand_15_table, 
+   swan_rand_20_table,  swan_rand_unbal_10_table, 
+   swan_rand_unbal_15_table, swan_rand_unbal_20_table,
+   swan_rand_unbal_int_table, swan_rand_int_table,
+   swan_rand_sig_10_table, swan_rand_sig_15_table, 
+   swan_rand_sig_20_table,  swan_rand_unbal_sig_10_table, 
+   swan_rand_unbal_sig_15_table, swan_rand_unbal_sig_20_table,
+   swan_rand_unbal_sig_int_table, swan_rand_sig_int_table)
 
 
 #save table 
@@ -756,228 +588,170 @@ saveRDS(swan_rand_table,
 
 rm(list = ls(pattern = "swan_*"))
 
-
-
-#############################################################################################################
 ###########
 # funnorm
 ###########
 
-# funnorm 07 features
-funnorm_rand_07_table <- getRand(funnorm_cases, 
-                             rand_num = 5, 
-                             num_feat = length(funnorm_bh_07), 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "funnorm_rand_07")
-
-# funnorm 08 features
-funnorm_rand_08_table <- getRand(funnorm_cases, 
-                             rand_num = 5, 
-                             num_feat = length(funnorm_bh_08), 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "funnorm_rand_08")
-
-# funnorm 09 features
-funnorm_rand_09_table <- getRand(funnorm_cases, 
-                             rand_num = 5, 
-                             num_feat = length(funnorm_bh_09), 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "funnorm_rand_09")
-
-
+# NORMAL
 # funnorm 10 features
 funnorm_rand_10_table <- getRand(funnorm_cases, 
                              rand_num = 5, 
                              num_feat = length(funnorm_bh_10), 
                              exclude = T,
-                             union_features = union_features,
+                             union_features = funnorm_union_feat,
                              data_name = "funnorm_rand_10")
 
-# funnorm 11 features
-funnorm_rand_11_table <- getRand(funnorm_cases, 
-                             rand_num = 5, 
-                             num_feat = length(funnorm_bh_11), 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "funnorm_rand_11")
-
-# funnorm 12 features
-funnorm_rand_12_table <- getRand(funnorm_cases, 
-                             rand_num = 5, 
-                             num_feat = length(funnorm_bh_12), 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "funnorm_rand_12")
-
-# funnorm 13 features
-funnorm_rand_13_table <- getRand(funnorm_cases, 
-                             rand_num = 5, 
-                             num_feat = length(funnorm_bh_13), 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "funnorm_rand_13")
-
-# funnorm 14 features
-funnorm_rand_14_table <- getRand(funnorm_cases, 
-                             rand_num = 5, 
-                             num_feat = length(funnorm_bh_14), 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "funnorm_rand_14")
 
 # funnorm 15 features
 funnorm_rand_15_table <- getRand(funnorm_cases, 
                              rand_num = 5, 
                              num_feat = length(funnorm_bh_15), 
                              exclude = T,
-                             union_features = union_features,
+                             union_features = funnorm_union_feat,
                              data_name = "funnorm_rand_15")
+
+# funnorm 20 features
+funnorm_rand_20_table <- getRand(funnorm_cases, 
+                             rand_num = 5, 
+                             num_feat = length(funnorm_bh_20), 
+                             exclude = T,
+                             union_features = funnorm_union_feat,
+                             data_name = "funnorm_rand_20")
+
+# UNBALL
+# funnorm 10 features
+funnorm_rand_unbal_10_table <- getRand(funnorm_cases, 
+                                   rand_num = 5, 
+                                   num_feat = length(funnorm_unbal_bh_10), 
+                                   exclude = T,
+                                   union_features = funnorm_union_feat,
+                                   data_name = "funnorm_rand_unbal_10")
+
+
+# funnorm 15 features
+funnorm_rand_unbal_15_table <- getRand(funnorm_cases, 
+                                   rand_num = 5, 
+                                   num_feat = length(funnorm_unbal_bh_15), 
+                                   exclude = T,
+                                   union_features = funnorm_union_feat,
+                                   data_name = "funnorm_rand_unbal_15")
+
+# funnorm 20 features
+funnorm_rand_unbal_20_table <- getRand(funnorm_cases, 
+                                   rand_num = 5, 
+                                   num_feat = length(funnorm_unbal_bh_20), 
+                                   exclude = T,
+                                   union_features = funnorm_union_feat,
+                                   data_name = "funnorm_rand_unbal_20")
+
+funnorm_rand_int_table <-getRand(funnorm_cases, 
+                             rand_num = 5, 
+                             num_feat = length(funnorm_int_feat), 
+                             exclude = T,
+                             union_features = funnorm_union_features,
+                             data_name = "funnorm_rand_int")
+
+funnorm_rand_unbal_int_table <-getRand(funnorm_cases, 
+                                   rand_num = 5, 
+                                   num_feat = length(funnorm_unbal_int_feat), 
+                                   exclude = T,
+                                   union_features = funnorm_union_feat,
+                                   data_name = "funnorm_rand_unbal_int")
+
 
 ###########
 # funnorm sig
 ###########
-
-# funnorm 07 features
-funnorm_rand_07_sig_table <- getRand(funnorm_cases, 
-                                 rand_num = 5, 
-                                 num_feat = length(funnorm_bh_sig_07), 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "funnorm_rand_sig_07")
-
-# funnorm 08 features
-funnorm_rand_08_sig_table <- getRand(funnorm_cases, 
-                                 rand_num = 5, 
-                                 num_feat = length(funnorm_bh_sig_08), 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "funnorm_rand_sig_08")
-
-# funnorm 09 features
-funnorm_rand_09_sig_table <- getRand(funnorm_cases, 
-                                 rand_num = 5, 
-                                 num_feat = length(funnorm_bh_sig_09), 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "funnorm_rand_sig_09")
-
-
+# NORMAL
 # funnorm 10 features
-funnorm_rand_10_sig_table <- getRand(funnorm_cases, 
+funnorm_rand_sig_10_table <- getRand(funnorm_cases, 
                                  rand_num = 5, 
                                  num_feat = length(funnorm_bh_sig_10), 
                                  exclude = T,
-                                 union_features = union_features,
+                                 union_features = funnorm_union_feat,
                                  data_name = "funnorm_rand_sig_10")
 
-# funnorm 11 features
-funnorm_rand_11_sig_table <- getRand(funnorm_cases, 
-                                 rand_num = 5, 
-                                 num_feat = length(funnorm_bh_sig_11), 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "funnorm_rand_sig_11")
-
-# funnorm 12 features
-funnorm_rand_12_sig_table <- getRand(funnorm_cases, 
-                                 rand_num = 5, 
-                                 num_feat = length(funnorm_bh_sig_12), 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "funnorm_rand_sig_12")
-
-# funnorm 13 features
-funnorm_rand_13_sig_table <- getRand(funnorm_cases, 
-                                 rand_num = 5, 
-                                 num_feat = length(funnorm_bh_sig_13), 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "funnorm_rand_sig_13")
-
-# funnorm 14 features
-funnorm_rand_14_sig_table <- getRand(funnorm_cases, 
-                                 rand_num = 5, 
-                                 num_feat = length(funnorm_bh_sig_14), 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "funnorm_rand_sig_14")
 
 # funnorm 15 features
-funnorm_rand_15_sig_table <- getRand(funnorm_cases, 
+funnorm_rand_sig_15_table <- getRand(funnorm_cases, 
                                  rand_num = 5, 
                                  num_feat = length(funnorm_bh_sig_15), 
                                  exclude = T,
-                                 union_features = union_features,
+                                 union_features = funnorm_union_feat,
                                  data_name = "funnorm_rand_sig_15")
 
-##########
-# intersection and union
-##########
+# funnorm 20 features
+funnorm_rand_sig_20_table <- getRand(funnorm_cases, 
+                                 rand_num = 5, 
+                                 num_feat = length(funnorm_bh_sig_20), 
+                                 exclude = T,
+                                 union_features = funnorm_union_feat,
+                                 data_name = "funnorm_rand_sig_20")
 
-# funnorm int features
-funnorm_rand_int_table <- getRand(funnorm_cases, 
-                              rand_num = 5, 
-                              num_feat = length(funnorm_int_feat), 
-                              exclude = T,
-                              union_features = union_features,
-                              data_name = "funnorm_rand_int")
+# UNBALL
+# funnorm 10 features
+funnorm_rand_unbal_sig_10_table <- getRand(funnorm_cases, 
+                                       rand_num = 5, 
+                                       num_feat = length(funnorm_unbal_bh_sig_10), 
+                                       exclude = T,
+                                       union_features = funnorm_union_feat,
+                                       data_name = "funnorm_rand_unbal_sig_10")
 
-# funnorm int sig features
-funnorm_rand_int_sig_table <- getRand(funnorm_cases, 
-                                  rand_num = 5, 
-                                  num_feat = length(funnorm_int_sig_feat), 
-                                  exclude = T,
-                                  union_features = union_features,
-                                  data_name = "funnorm_rand_int_sig")
 
-# funnorm union features
-funnorm_rand_union_table <- getRand(funnorm_cases, 
-                                rand_num = 5, 
-                                num_feat = length(funnorm_union_feat), 
-                                exclude = T,
-                                union_features = union_features,
-                                data_name = "funnorm_rand_union")
+# funnorm 15 features
+funnorm_rand_unbal_sig_15_table <- getRand(funnorm_cases, 
+                                       rand_num = 5, 
+                                       num_feat = length(funnorm_unbal_bh_sig_15), 
+                                       exclude = T,
+                                       union_features = funnorm_union_feat,
+                                       data_name = "funnorm_rand_unbal_sig_15")
 
-# funnorm union sig features
-funnorm_rand_union_sig_table <- getRand(funnorm_cases, 
-                                    rand_num = 5, 
-                                    num_feat = length(funnorm_union_sig_feat), 
-                                    exclude = T,
-                                    union_features = union_features,
-                                    data_name = "funnorm_rand_union_sig")
+# funnorm 20 features
+funnorm_rand_unbal_sig_20_table <- getRand(funnorm_cases, 
+                                       rand_num = 5, 
+                                       num_feat = length(funnorm_unbal_bh_20), 
+                                       exclude = T,
+                                       union_features = funnorm_union_feat,
+                                       data_name = "funnorm_rand_unbal_20")
+
+funnorm_rand_sig_int_table <-getRand(funnorm_cases, 
+                                 rand_num = 5, 
+                                 num_feat = length(funnorm_int_sig_feat), 
+                                 exclude = T,
+                                 union_features = funnorm_union_feat,
+                                 data_name = "funnorm_rand_sig_int")
+
+funnorm_rand_unbal_sig_int_table <-getRand(funnorm_cases, 
+                                       rand_num = 5, 
+                                       num_feat = length(funnorm_unbal_int_sig_feat), 
+                                       exclude = T,
+                                       union_features = funnorm_union_feat,
+                                       data_name = "funnorm_rand_unbal_int_sig")
+
 
 
 
 ###########
 # rbind tables and save RDA file
 ###########
-funnorm_rand_table <- rbind(funnorm_rand_07_table, funnorm_rand_07_sig_table,
-                        funnorm_rand_08_table, funnorm_rand_08_sig_table,
-                        funnorm_rand_09_table, funnorm_rand_09_sig_table,
-                        funnorm_rand_10_table, funnorm_rand_10_sig_table,
-                        funnorm_rand_11_table, funnorm_rand_11_sig_table,
-                        funnorm_rand_12_table, funnorm_rand_12_sig_table,
-                        funnorm_rand_13_table, funnorm_rand_13_sig_table,
-                        funnorm_rand_14_table, funnorm_rand_14_sig_table,
-                        funnorm_rand_15_table, funnorm_rand_15_sig_table,
-                        funnorm_rand_int_table, funnorm_rand_int_sig_table,
-                        funnorm_rand_union_table, funnorm_rand_union_sig_table)
+funnorm_rand_table <- rbind(funnorm_rand_10_table, funnorm_rand_15_table, 
+                        funnorm_rand_20_table,  funnorm_rand_unbal_10_table, 
+                        funnorm_rand_unbal_15_table, funnorm_rand_unbal_20_table,
+                        funnorm_rand_unbal_int_table, funnorm_rand_int_table,
+                        funnorm_rand_sig_10_table, funnorm_rand_sig_15_table, 
+                        funnorm_rand_sig_20_table,  funnorm_rand_unbal_sig_10_table, 
+                        funnorm_rand_unbal_sig_15_table, funnorm_rand_unbal_sig_20_table,
+                        funnorm_rand_unbal_sig_int_table, funnorm_rand_sig_int_table)
 
 # remove data 
-rm(funnorm_rand_07_table, funnorm_rand_07_sig_table,
-   funnorm_rand_08_table, funnorm_rand_08_sig_table,
-   funnorm_rand_09_table, funnorm_rand_09_sig_table,
-   funnorm_rand_10_table, funnorm_rand_10_sig_table,
-   funnorm_rand_11_table, funnorm_rand_11_sig_table,
-   funnorm_rand_12_table, funnorm_rand_12_sig_table,
-   funnorm_rand_13_table, funnorm_rand_13_sig_table,
-   funnorm_rand_14_table, funnorm_rand_14_sig_table,
-   funnorm_rand_15_table, funnorm_rand_15_sig_table,
-   funnorm_rand_int_table, funnorm_rand_int_sig_table,
-   funnorm_rand_union_table, funnorm_rand_union_sig_table)
+rm(funnorm_rand_10_table, funnorm_rand_15_table, 
+   funnorm_rand_20_table,  funnorm_rand_unbal_10_table, 
+   funnorm_rand_unbal_15_table, funnorm_rand_unbal_20_table,
+   funnorm_rand_unbal_int_table, funnorm_rand_int_table,
+   funnorm_rand_sig_10_table, funnorm_rand_sig_15_table, 
+   funnorm_rand_sig_20_table,  funnorm_rand_unbal_sig_10_table, 
+   funnorm_rand_unbal_sig_15_table, funnorm_rand_unbal_sig_20_table,
+   funnorm_rand_unbal_sig_int_table, funnorm_rand_sig_int_table)
 
 
 #save table 
