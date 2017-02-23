@@ -13,6 +13,7 @@ library(GenomicRanges)
 library(biovizBase)
 library(GEOquery)
 library(IlluminaHumanMethylation450kmanifest)
+library(preprocessCore)
 
 ##########
 # Initialize folders
@@ -28,9 +29,17 @@ bumphunter_data <- paste0(data_folder, '/bumphunter_data')
 clin_data <- paste0(data_folder, '/clin_data')
 
 ##########
-# load beta values
+# Read in methylation probe and gene
 ##########
-load(paste0(methyl_data, '/imputed_betas.RData'))
+beta_raw <- readRDS(paste0(methyl_data, '/beta_raw.rda'))
+beta_raw_controls <- readRDS(paste0(methyl_data, '/beta_raw_controls.rda'))
+
+##########
+# make data frames
+##########
+beta_raw <- as.data.frame(beta_raw)
+beta_raw_controls <- as.data.frame(beta_raw_controls)
+
 
 ##########
 # read in clinical data
@@ -184,32 +193,6 @@ relevelFactor <- function (data) {
 #   return(model_data)
 # }
 
-# test this with smaller data
-makeNumFast <- function(model_data) {
-  
-  temp_list <- list()
-  for (i in 7:ncol(model_data)) {
-    temp.row <- model_data[,i]
-    temp.row <-   as.numeric(levels(temp.row))[temp.row]
-    temp_list[[i]] <- temp.row
-    print(i)
-    
-  }
-  
-  num_features <- as.data.frame(do.call(cbind, temp_list))
-  feature_names <- names(model_data)[7:ncol(model_data)]
-  model_data <- cbind(id = model_data$id, 
-                      p53_germline = model_data$p53_germline, 
-                      age_diagnosis = model_data$age_diagnosis,
-                      cancer_diagnosis_diagnoses = model_data$cancer_diagnosis_diagnoses, 
-                      age_sample_collection = model_data$age_sample_collection, 
-                      gender = model_data$gender, 
-                      
-                      num_features)
-  names(model_data)[7:ncol(model_data)] <- feature_names
-  
-  return(model_data)
-}
 
 ##########
 # apply functions to idat data - cases and controls and save to model_data folder
@@ -227,48 +210,25 @@ cg_locations <- getIDAT()
 ##########
 # first clean ids
 beta_raw <- cleanIDs(beta_raw)
-beta_quan <- cleanIDs(beta_quan)
-beta_swan <- cleanIDs(beta_swan)
-beta_funnorm <- cleanIDs(beta_funnorm)
 
 # second join data
 beta_raw <- joinData(beta_raw, control = F)
-beta_quan <- joinData(beta_quan, control = F)
-beta_swan <- joinData(beta_swan, control = F)
-beta_funnorm <- joinData(beta_funnorm, control = F)
-
-save.image('/home/benbrew/Desktop/temp_cases.RData')
-save.image('/home/benbrew/Desktop/temp_cases.RData')
 
 # thrid relevel factors
 beta_raw <- relevelFactor(beta_raw)
-beta_quan <- relevelFactor(beta_quan)
-beta_swan <- relevelFactor(beta_swan)
-beta_funnorm <- relevelFactor(beta_funnorm)
-
-# 4th make numeric - only beta_raw, since that was imputed on and made into a factor
-beta_raw <- makeNumFast(beta_raw)
 
 ##########
 # 2nd do controls
 ##########
 # first clean ids
 beta_raw_controls <- cleanIDs(beta_raw_controls)
-beta_quan_controls <- cleanIDs(beta_quan_controls)
-beta_swan_controls <- cleanIDs(beta_swan_controls)
-beta_funnorm_controls <- cleanIDs(beta_funnorm_controls)
 
 # second join data
 beta_raw_controls <- joinData(beta_raw_controls, control = T)
-beta_quan_controls <- joinData(beta_quan_controls, control = T)
-beta_swan_controls <- joinData(beta_swan_controls, control = T)
-beta_funnorm_controls <- joinData(beta_funnorm_controls, control = T)
 
-# 4th make numeric - only beta_raw, since that was imputed on and made into a factor
-beta_raw_controls <- makeNumFast(beta_raw_controls)
+#########
+# save data
+#########
+saveRDS(beta_raw, paste0(methyl_data, '/beta_raw.rda'))
 
-##########
-# Save data images seperately
-##########
-save.image(paste0(model_data, '/model_data_cases.RData'))
-save.image(paste0(model_data, '/model_data_controls.RData'))
+saveRDS(beta_raw_controls, paste0(methyl_data, '/beta_raw_controls.rda'))

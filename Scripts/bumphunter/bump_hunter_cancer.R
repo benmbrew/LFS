@@ -17,45 +17,13 @@ model_data <- paste0(data_folder, '/model_data')
 
 
 #########
-# Load model data which contains all variations of methylation data and cg_locations csv
+# Load model data batch, non batch, raw, quan, cases, controls
 #########
-# load cases 
-raw_cases_batch <- readRDS(paste0(model_data, '/raw_cases_batch.rda'))
-swan_cases_batch <- readRDS(paste0(model_data, '/swan_cases_batch.rda'))
-quan_cases_batch <- readRDS(paste0(model_data, '/quan_cases_batch.rda'))
-funnorm_cases_batch <- readRDS(paste0(model_data, '/funnorm_cases_batch.rda'))
+# load image
+load(paste0(model_data, '/model_data.RData'))
 
-# load controls
-raw_controls_batch <- readRDS(paste0(model_data, '/raw_controls_batch.rda'))
-swan_controls_batch <- readRDS(paste0(model_data, '/swan_controls_batch.rda'))
-quan_controls_batch <- readRDS(paste0(model_data, '/quan_controls_batch.rda'))
-funnorm_controls_batch <- readRDS(paste0(model_data, '/funnorm_controls_batch.rda'))
-
+# ge cg_locations
 cg_locations <- read.csv(paste0(model_data, '/cg_locations.csv'))
-
-##########
-# function to find overlapping probes and subset control and regular by those probes
-##########
-# findOverlap <- function(dat, dat_controls) {
-#   control_probes <- colnames(dat_controls)[5:ncol(dat_controls)]
-#   orig_probes <- colnames(dat)[6:ncol(dat)]
-#   overlaps <- intersect(control_probes, orig_probes)
-#   dat_controls <- dat_controls[,  c('id', 'p53_germline', 'cancer_diagnosis_diagnoses', 'age_sample_collection', overlaps)]
-#   dat_controls$age_diagnosis <- NA
-#   dat <- dat[,  c('id', 'p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses', 'age_sample_collection', overlaps)]
-#   dat_full <- rbind(dat, dat_controls)
-#   return(dat_full)
-# }
-# 
-# # get data
-# beta_raw_full <- findOverlap(beta_raw, beta_raw_controls)
-# beta_swan_full <- findOverlap(beta_swan, beta_swan_controls)
-# beta_quan_full <- findOverlap(beta_quan, beta_quan_controls)
-# beta_funnorm_full <- findOverlap(beta_funnorm, beta_funnorm_controls)
-# 
-# # remove smaller object
-# rm(beta_raw, beta_raw_controls, beta_swan, beta_swan_controls, beta_quan, beta_quan_controls, 
-#    beta_funnorm, beta_funnorm_controls)
 
 ##########
 # function that takes LFS patients and run balanced and unbalanced bumphunter on cancer and controls

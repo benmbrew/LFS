@@ -7,6 +7,7 @@
 library(minfi)
 library(dplyr)
 
+
 # Use this https://www.bioconductor.org/help/course-materials/2014/BioC2014/minfi_BioC2014.pdf
 
 ##########
@@ -58,12 +59,12 @@ id_map_control <- cleanIdMap(id_map_control)
 rgSetList <- list()
 rgSetListControls <- list()
 
-readIDAT <- function(path) {
+readIDAT <- function (path) {
   
   rgSet <- list()
   directory <- dir(path)
   
-  for (folder in directory){
+  for (folder in directory) {
     # read into rgSet
     rgSet[[folder]] <- read.metharray.exp(paste(path, folder, sep = '/'))
   }
@@ -187,4 +188,11 @@ getMethyl <- function(data, control) {
 #########
 beta_raw <- getMethyl(rgSetList, control = F)
 beta_raw_controls <- getMethyl(rgSetListControls, control = T)
+
+#########
+# save data
+#########
+saveRDS(beta_raw, paste0(methyl_data, '/beta_raw.rda'))
+
+saveRDS(beta_raw_controls, paste0(methyl_data, '/beta_raw_controls.rda'))
 
