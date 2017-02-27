@@ -1,5 +1,5 @@
 ####### Script will combine methylation and clinical data
-# this is 4th step in pipeline
+# this is 3th step in pipeline
 
 ##########
 # initialize libraries
@@ -31,14 +31,14 @@ clin_data <- paste0(data_folder, '/clin_data')
 ##########
 # Read in methylation probe and gene
 ##########
-beta_raw <- readRDS(paste0(methyl_data, '/beta_raw.rda'))
-beta_raw_controls <- readRDS(paste0(methyl_data, '/beta_raw_controls.rda'))
+beta_quan <- readRDS(paste0(methyl_data, '/beta_quan.rda'))
+beta_quan_controls <- readRDS(paste0(methyl_data, '/beta_quan_controls.rda'))
 
 ##########
 # make data frames
 ##########
-beta_raw <- as.data.frame(beta_raw)
-beta_raw_controls <- as.data.frame(beta_raw_controls)
+beta_quan <- as.data.frame(beta_quan)
+beta_quan_controls <- as.data.frame(beta_quan_controls)
 
 
 ##########
@@ -121,6 +121,7 @@ getIDAT <- function(cg_locations) {
   return(cg_locations)
 }
 
+
 # function that takes each methylation and merges with clinical - keep id, family, p53 status, age data
 joinData <- function(data, control) {
   
@@ -134,7 +135,7 @@ joinData <- function(data, control) {
   data$cancer_diagnosis_diagnoses <- NA
   data$age_sample_collection <- NA
   data$tm_donor_ <- NA
-  data$gender
+  data$gender <- NA
   
   if (!control) {
     
@@ -198,37 +199,37 @@ relevelFactor <- function (data) {
 # apply functions to idat data - cases and controls and save to model_data folder
 ##########
 # get clinical methylation indicator
-clin <- getMethylVar(beta_raw, beta_raw_controls)
+clin <- getMethylVar(beta_quan, beta_quan_controls)
 
 # get cg locations
 cg_locations <- getIDAT()
-
+# 
 # write.csv(cg_locations, paste0(model_data, '/cg_locations.csv'))
 # write.csv(clin, paste0(clin_data, '/clinical_two.csv'))
 ##########
 # First do cases
 ##########
 # first clean ids
-beta_raw <- cleanIDs(beta_raw)
+beta_quan <- cleanIDs(beta_quan)
 
 # second join data
-beta_raw <- joinData(beta_raw, control = F)
+beta_quan <- joinData(beta_quan, control = F)
 
 # thrid relevel factors
-beta_raw <- relevelFactor(beta_raw)
+beta_quan <- relevelFactor(beta_quan)
 
 ##########
 # 2nd do controls
 ##########
 # first clean ids
-beta_raw_controls <- cleanIDs(beta_raw_controls)
+beta_quan_controls <- cleanIDs(beta_quan_controls)
 
 # second join data
-beta_raw_controls <- joinData(beta_raw_controls, control = T)
+beta_quan_controls <- joinData(beta_quan_controls, control = T)
 
 #########
 # save data
 #########
-saveRDS(beta_raw, paste0(methyl_data, '/beta_raw.rda'))
+saveRDS(beta_quan, paste0(methyl_data, '/beta_quan.rda'))
 
-saveRDS(beta_raw_controls, paste0(methyl_data, '/beta_raw_controls.rda'))
+saveRDS(beta_quan_controls, paste0(methyl_data, '/beta_quan_controls.rda'))

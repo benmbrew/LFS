@@ -1,5 +1,5 @@
 ####### Script will map regions to probes and save the final bh features for both cancer and lfs
-# this is 7th step in pipeline
+# this is 8th step in pipeline
 
 ##########
 # initialize libraries
@@ -8,6 +8,13 @@ library(minfi)
 library(dplyr)
 library(GenomicRanges)
 library(sqldf)
+
+# # IMPORTANT
+# The ‘p.value’ is the percent of candidate regions obtained from the permutations that are as extreme as
+# the observed region. These p-values should be interpreted with care as the theoretical proporties
+# are not well understood. The ‘fwer’ is the proportion of permutations that had at least one region as
+# extreme as the observed region. We compute p.values and FWER for the area of the regions 
+# (as opposed to length and value as a pair) as well.
 
 
 ##########
@@ -19,29 +26,13 @@ data_folder <- paste0(project_folder, '/Data')
 model_data <- paste0(data_folder, '/model_data')
 
 ##########
-# load bump_hunter_lfs
+# load features and cg_locations
 ##########
-# load new bh 
-raw_bh <- readRDS(paste0(model_data, '/raw_bh.rda'))
-quan_bh <- readRDS(paste0(model_data, '/quan_bh.rda'))
-swan_bh <- readRDS(paste0(model_data, '/swan_bh.rda'))
-funnorm_bh <- readRDS(paste0(model_data, '/funnorm_bh.rda'))
-
-# load new bh unbal 
-raw_unbal_bh <- readRDS(paste0(model_data, '/raw_unbal_bh.rda'))
-quan_unbal_bh <- readRDS(paste0(model_data, '/quan_unbal_bh.rda'))
-swan_unbal_bh <- readRDS(paste0(model_data, '/swan_unbal_bh.rda'))
-funnorm_unbal_bh <- readRDS(paste0(model_data, '/funnorm_unbal_bh.rda'))
+# load features
+load(paste0(model_data, '/modal_feat.RData'))
 
 # load gene locations
 cg_locations <- read.csv(paste0(model_data, '/cg_locations.csv'))
-
-# load(paste0(model_data, '/beta_p53_bh.RData'))
-
-##########
-# load bump_hunter_cancer data
-##########
-# load(paste0(model_data, '/beta_cancer_bh.RData'))
 
 ##########
 # change column names of cg_locations for merging
@@ -49,72 +40,12 @@ cg_locations <- read.csv(paste0(model_data, '/cg_locations.csv'))
 cg_locations$X <- NULL
 colnames(cg_locations) <- paste0(colnames(cg_locations), '_', 'rgSet')
 
-
-# ##########
-# # get intersections
-# ##########
-# 
-# getIntersection <- function(vec1 = NULL, 
-#                             vec2 = NULL, 
-#                             vec3 = NULL, 
-#                             vec4 = NULL,
-#                             num_vecs) 
-# {
-#   if(num_vecs == 2) {
-#     probe_list <- Reduce(intersect, list(vec1,vec2))
-#     
-#   } 
-#   
-#   if(num_vecs == 3) {
-#     probe_list <- Reduce(intersect, list(vec1,vec2,vec3))
-#     
-#   } 
-#   
-#   if (num_vecs == 4) {
-#     probe_list <- Reduce(intersect, list(vec1,vec2,vec3,vec4))
-#     
-#   }
-#   combined_probes <- paste(probe_list, collapse = '|')
-#   dat <- cg_locations[cg_locations$probe_rgSet %in% probe_list,]
-#   stopifnot(length(probe_list) == nrow(dat))
-#   return(dat)
-# }
-# 
-# ##########
-# # get union
-# ##########
-# getUnion <- function(vec1 = NULL, 
-#                      vec2 = NULL, 
-#                      vec3 = NULL, 
-#                      vec4 = NULL,
-#                      num_vecs) 
-# {
-#   if(num_vecs == 2) {
-#     probe_list <- Reduce(union, list(vec1,vec2))
-#     
-#   } 
-#   
-#   if(num_vecs == 3) {
-#     probe_list <- Reduce(union, list(vec1,vec2,vec3))
-#     
-#   } 
-#   
-#   if (num_vecs == 4) {
-#     probe_list <- Reduce(union, list(vec1,vec2,vec3,vec4))
-#     
-#   }
-#   
-#   combined_probes <- paste(probe_list, collapse = '|')
-#   dat <- cg_locations[cg_locations$probe_rgSet %in% probe_list,]
-#   stopifnot(length(probe_list) == nrow(dat))
-#   return(dat)
-# }
-
 ##########
 # create function that grabs probe site and gene name for results from bumphunter
 ##########
 # all bh features have some data with region length > 0. 
 # cg_locations have no retions with length > 0.
+
 getProbe <- function(data) {
   
   results <- list()
@@ -129,833 +60,364 @@ getProbe <- function(data) {
                  inner join data
                  on cg_locations.start_rgSet between data.start and data.end")
   
-  # # loop through chromosomes and match then loop through locations and match
-  # for (i in unique(data$chr)) {
-  # 
-  #   sub_data <- data[data$chr == i,] # some region length >0
-  #   sub_rg <- cg_locations[cg_locations$seqnames_rgSet == i, ] # no region length >0
-  # 
-  #   for (j in 1:nrow(sub_data)) {
-  # 
-  #     chr_data <- sub_data[j,]
-  # 
-  #     if (any(sub_rg$start_rgSet >= chr_data$start & sub_rg$start_rgSet <= chr_data$end)) {
-  # 
-  #       results[[j]] <- cbind(sub_rg[sub_rg$start_rgSet >= chr_data$start & sub_rg$start_rgSet <= chr_data$end,], chr_data)
-  # 
-  #     }
-  # 
-  #   }
-  #   
-  #   results_data[[i]] <- do.call('rbind', results)
-  #   
-  #   print(i)
-  # }
-  # 
-  # combine into data frame 
-  # dat_cg <- as.data.frame(do.call('rbind', results_data))
-  # 
-  # # clean up rownames and create column for cg site 
-  # dat_cg$probe_rgSet <- as.character(dat_cg$probe_rgSet)
-  # rownames(dat_cg) <- NULL
-  
-  # # remove chromosome info from probe colum
-  # dat_cg$probe_rgSet <- substr(dat_cg$probe_rgSet, nchar(dat_cg$probe_rgSet) - 9, nchar(dat_cg$probe))
-  # 
-  # # for those that have an extra 1 at the end and missing a c, paste a c back on and remove 1 
-  # dat_cg$probe_rgSet <- ifelse(!grepl('c', dat_cg$probe_rgSet), paste0('c', dat_cg$probe_rgSet), dat_cg$probe_rgSet)
-  # dat_cg$probe_rgSet <- ifelse(nchar(dat_cg$probe_rgSet) == 11, substr(dat_cg$probe_rgSet, 1, 10), dat_cg$probe_rgSet)
-  # 
-  # # remove duplicates from dat_cg
-  # dat_cg <- dat_cg[!duplicated(dat_cg$probe_rgSet),]
-  # 
-  # # keep only necessary columns
-  # dat_cg <- dat_cg[, c('chr' , 'start_rgSet','end_rgSet', 'probe_rgSet', 'p.value', 'fwer')]
-  # 
-  # # rename
-  # colnames(dat_cg) <- c('chr', 'start', 'end', 'probe', 'p.value', 'fwer')
-  # 
-  # dat_cg_sig <- dat_cg[dat_cg$p.value < 0.05,]
-  
   # keep only necessary columns
   result <- result[, c('chr' , 'start_rgSet','end_rgSet', 'probe_rgSet', 'p.value', 'fwer', 'run')]
   
-  # rename
+  # rename cols
   colnames(result) <- c('chr', 'start', 'end', 'probe', 'p.value', 'fwer', 'run')
+  
+  # get sig results
   result_sig <- result[result$p.value < 0.05,]
   
-  return(list(result, result_sig))
+  # get fwer results
+  result_fwer <- result[result$fwer == 0,]
+  
+  return(list(result, result_sig, result_fwer))
   
 }
 
 ##########
-# apply function to cancer bh for both sig and all on cancer
+# apply raw/quan, even/uneven, batch/unbatch
 ##########
-#raw
-raw <- getProbe(raw_bh)
-raw_bh <- raw[[1]]
-raw_bh_sig <- raw[[2]]
+##RAW
+#raw even
+raw_even <- getProbe(raw_even)
+raw_even_bh <- raw_even[[1]]
+raw_even_bh_sig <- raw_even[[2]]
+raw_even_bh_fwer <- raw_even[[3]]
 
-#quan
-quan <- getProbe(quan_bh)
-quan_bh <- quan[[1]]
-quan_bh_sig <- quan[[2]]
+#raw uneven
+raw_uneven <- getProbe(raw_uneven)
+raw_uneven_bh <- raw_uneven[[1]]
+raw_uneven_bh_sig <- raw_uneven[[2]]
+raw_uneven_bh_fwer <- raw_uneven[[3]]
 
-#raw
-swan <- getProbe(swan_bh)
-swan_bh <- swan[[1]]
-swan_bh_sig <- swan[[2]]
+#raw even batch
+raw_batch_even <- getProbe(raw_batch_even)
+raw_batch_even_bh <- raw_batch_even[[1]]
+raw_batch_even_bh_sig <- raw_batch_even[[2]] 
+raw_batch_even_bh_fwer <- raw_batch_even[[3]]
 
-#funnorm
-funnorm <- getProbe(funnorm_bh)
-funnorm_bh <- funnorm[[1]]
-funnorm_bh_sig <- funnorm[[2]]
+#raw uneven
+raw_batch_uneven <- getProbe(raw_batch_uneven)
+raw_batch_uneven_bh <- raw_batch_uneven[[1]]
+raw_batch_uneven_bh_sig <- raw_batch_uneven[[2]]
+raw_batch_uneven_bh_fwer <- raw_batch_uneven[[3]]
 
-#raw_unbal_bh
-raw_unbal <- getProbe(raw_unbal_bh)
-raw_unbal_bh <- raw_unbal[[1]]
-raw_unbal_bh_sig <- raw_unbal[[2]]
+rm(raw_even, raw_uneven, raw_batch_even, raw_batch_uneven)
+##quan
+#quan even
+quan_even <- getProbe(quan_even)
+quan_even_bh <- quan_even[[1]]
+quan_even_bh_sig <- quan_even[[2]]
+quan_even_bh_fwer <- quan_even[[3]]
 
-#quan_unbal_bh
-quan_unbal <- getProbe(quan_unbal_bh)
-quan_unbal_bh <- quan_unbal[[1]]
-quan_unbal_bh_sig <- quan_unbal[[2]]
+#quan uneven
+quan_uneven <- getProbe(quan_uneven)
+quan_uneven_bh <- quan_uneven[[1]]
+quan_uneven_bh_sig <- quan_uneven[[2]]
+quan_uneven_bh_fwer <- quan_uneven[[3]]
 
-#swan_unbal_bh
-swan_unbal <- getProbe(swan_unbal_bh)
-swan_unbal_bh <- swan_unbal[[1]]
-swan_unbal_bh_sig <- swan_unbal[[2]]
+#quan even batch
+quan_batch_even <- getProbe(quan_batch_even)
+quan_batch_even_bh <- quan_batch_even[[1]]
+quan_batch_even_bh_sig <- quan_batch_even[[2]] 
+quan_batch_even_bh_fwer <- quan_batch_even[[3]]
 
-#funnorm_unbal_bh
-funnorm_unbal <- getProbe(funnorm_unbal_bh)
-funnorm_unbal_bh <- funnorm_unbal[[1]]
-funnorm_unbal_bh_sig <- funnorm_unbal[[2]]
+#quan uneven
+quan_batch_uneven <- getProbe(quan_batch_uneven)
+quan_batch_uneven_bh <- quan_batch_uneven[[1]]
+quan_batch_uneven_bh_sig <- quan_batch_uneven[[2]]
+quan_batch_uneven_bh_fwer <- quan_batch_uneven[[3]]
 
-##########
-# get intersection/union for each preprocessing method
-##########
-
-getSet <- function(data, set)
-  
-{
-  # get threshold to loop through
-  DELTA_BETA_THRESH = c(0.10, 0.15, 0.20) # DNAm difference threshold
-  
-  # get list 
-  feature_list <- list()
-  
-  if (set == 'intersection') {
-    
-    for (i in 1:length(DELTA_BETA_THRESH)) {
-      result <- data[data$run == DELTA_BETA_THRESH[i],]
-      result <- result[!duplicated(result$probe),]
-      feature_list[[i]] <- as.character(result$probe)
-    }
-    
-    feat <- Reduce(intersect, list(feature_list[[1]], feature_list[[2]], 
-                                   feature_list[[3]]))
-    
-  }
-  
-  if (set == 'union') {
-    
-    for (i in 1:length(DELTA_BETA_THRESH)) {
-      result <- data[data$run == DELTA_BETA_THRESH[i],]
-      result <- result[!duplicated(result$probe),]
-      feature_list[[i]] <- as.character(result$probe)
-    
-    }
-    feat <- Reduce(union, list(feature_list[[1]], feature_list[[2]], 
-                               feature_list[[3]]))
-  }
-  
-  return(feat)
-}
-
-# Balanced Data
-##########
-# raw
-##########
-#intersection
-raw_int_feat <- getSet(raw_bh, set = 'intersection')
-raw_int_sig_feat <- getSet(raw_bh_sig, set = 'intersection')
-
-#union
-raw_union_feat <- getSet(raw_bh, set = 'union')
-raw_union_sig_feat <- getSet(raw_bh_sig, set = 'union')
+rm(quan_even, quan_uneven, quan_batch_even, quan_batch_uneven, cg_locations)
 
 ##########
-# quan
-##########
-#intersection
-quan_int_feat <- getSet(quan_bh, set = 'intersection')
-quan_int_sig_feat <- getSet(quan_bh_sig, set = 'intersection')
-
-#union
-quan_union_feat <- getSet(quan_bh, set = 'union')
-quan_union_sig_feat <- getSet(quan_bh_sig, set = 'union')
-
-##########
-# swan
-##########
-#intersection
-swan_int_feat <- getSet(swan_bh, set = 'intersection')
-swan_int_sig_feat <- getSet(swan_bh_sig, set = 'intersection')
-
-#union
-swan_union_feat <- getSet(swan_bh, set = 'union')
-swan_union_sig_feat <- getSet(swan_bh_sig, set = 'union')
-
-##########
-# funnorm
-##########
-#intersection
-funnorm_int_feat <- getSet(funnorm_bh, set = 'intersection')
-funnorm_int_sig_feat <- getSet(funnorm_bh_sig, set = 'intersection')
-
-#union
-funnorm_union_feat <- getSet(funnorm_bh, set = 'union')
-funnorm_union_sig_feat <- getSet(funnorm_bh_sig, set = 'union')
-
-# unbalanced Data
-##########
-# raw
-##########
-#intersection
-raw_unbal_int_feat <- getSet(raw_unbal_bh, set = 'intersection')
-raw_unbal_int_sig_feat <- getSet(raw_unbal_bh_sig, set = 'intersection')
-
-#union
-raw_unbal_union_feat <- getSet(raw_unbal_bh, set = 'union')
-raw_unbal_union_sig_feat <- getSet(raw_unbal_bh_sig, set = 'union')
-
-##########
-# quan
-##########
-#intersection
-quan_unbal_int_feat <- getSet(quan_unbal_bh, set = 'intersection')
-quan_unbal_int_sig_feat <- getSet(quan_unbal_bh_sig, set = 'intersection')
-
-#union
-quan_unbal_union_feat <- getSet(quan_unbal_bh, set = 'union')
-quan_unbal_union_sig_feat <- getSet(quan_unbal_bh_sig, set = 'union')
-
-##########
-# swan
-##########
-#intersection
-swan_unbal_int_feat <- getSet(swan_unbal_bh, set = 'intersection')
-swan_unbal_int_sig_feat <- getSet(swan_unbal_bh_sig, set = 'intersection')
-
-#union
-swan_unbal_union_feat <- getSet(swan_unbal_bh, set = 'union')
-swan_unbal_union_sig_feat <- getSet(swan_unbal_bh_sig, set = 'union')
-
-##########
-# funnorm
-##########
-#intersection
-funnorm_unbal_int_feat <- getSet(funnorm_unbal_bh, set = 'intersection')
-funnorm_unbal_int_sig_feat <- getSet(funnorm_unbal_bh_sig, set = 'intersection')
-
-#union
-funnorm_unbal_union_feat <- getSet(funnorm_unbal_bh, set = 'union')
-funnorm_unbal_union_sig_feat <- getSet(funnorm_unbal_bh_sig, set = 'union')
-
-##########
-# get each run
+# get run from each dataset
 ##########
 
 getRun <- function(data, run_num)
 {
   data <- data[data$run == run_num,]
   data <- data[!duplicated(data$probe),]
-  data_feat <- as.character(data$probe)
+  data_feat <- as.data.frame(as.character(data$probe))
   return(data_feat)
 }
 
 ##########
-# raw
+# raw 10
 ##########
-# 0.10
-raw_bh_10 <- getRun(raw_bh, run_num = 0.10)
-raw_bh_sig_10 <- getRun(raw_bh_sig, run_num = 0.10)
+#NOT BATCH
+# even
+raw_even_10 <- getRun(raw_even_bh, run_num = 0.10)
+raw_even_sig_10 <- getRun(raw_even_bh_sig, run_num = 0.10)
+raw_even_fwer_10 <- getRun(raw_even_bh_fwer, run_num = 0.10)
 
-# 0.15
-raw_bh_15 <- getRun(raw_bh, run_num = 0.15)
-raw_bh_sig_15 <- getRun(raw_bh_sig, run_num = 0.15)
+# uneven
+raw_uneven_10 <- getRun(raw_uneven_bh, run_num = 0.10)
+raw_uneven_sig_10 <- getRun(raw_uneven_bh_sig, run_num = 0.10)
+raw_uneven_fwer_10 <- getRun(raw_uneven_bh_fwer, run_num = 0.10)
 
-# 0.20
-raw_bh_20 <- getRun(raw_bh, run_num = 0.20)
-raw_bh_sig_20 <- getRun(raw_bh_sig, run_num = 0.20)
+#BATCH
+# even
+raw_batch_even_batch_10 <- getRun(raw_batch_even_bh, run_num = 0.10)
+raw_batch_even_batch_sig_10 <- getRun(raw_batch_even_bh_sig, run_num = 0.10)
+raw_batch_even_batch_fwer_10 <- getRun(raw_batch_even_bh_fwer, run_num = 0.10)
 
-
-##########
-# raw_unbal
-##########
-# 0.10
-raw_unbal_bh_10 <- getRun(raw_unbal_bh, run_num = 0.10)
-raw_unbal_bh_sig_10 <- getRun(raw_unbal_bh_sig, run_num = 0.10)
-
-# 0.15
-raw_unbal_bh_15 <- getRun(raw_unbal_bh, run_num = 0.15)
-raw_unbal_bh_sig_15 <- getRun(raw_unbal_bh_sig, run_num = 0.15)
-
-# 0.20
-raw_unbal_bh_20 <- getRun(raw_unbal_bh, run_num = 0.20)
-raw_unbal_bh_sig_20 <- getRun(raw_unbal_bh_sig, run_num = 0.20)
+# uneven
+raw_batch_uneven_10 <- getRun(raw_batch_uneven_bh, run_num = 0.10)
+raw_batch_uneven_sig_10 <- getRun(raw_batch_uneven_bh_sig, run_num = 0.10)
+raw_batch_uneven_fwer_10 <- getRun(raw_batch_uneven_bh_fwer, run_num = 0.10)
 
 ##########
-# quan
+# raw 20
 ##########
-# 0.10
-quan_bh_10 <- getRun(quan_bh, run_num = 0.10)
-quan_bh_sig_10 <- getRun(quan_bh_sig, run_num = 0.10)
+#NOT BATCH
+# even
+raw_even_20 <- getRun(raw_even_bh, run_num = 0.20)
+raw_even_sig_20 <- getRun(raw_even_bh_sig, run_num = 0.20)
+raw_even_fwer_20 <- getRun(raw_even_bh_fwer, run_num = 0.20)
 
-# 0.15
-quan_bh_15 <- getRun(quan_bh, run_num = 0.15)
-quan_bh_sig_15 <- getRun(quan_bh_sig, run_num = 0.15)
+# uneven
+raw_uneven_20 <- getRun(raw_uneven_bh, run_num = 0.20)
+raw_uneven_sig_20 <- getRun(raw_uneven_bh_sig, run_num = 0.20)
+raw_uneven_fwer_20 <- getRun(raw_uneven_bh_fwer, run_num = 0.20)
 
-# 0.20
-quan_bh_20 <- getRun(quan_bh, run_num = 0.20)
-quan_bh_sig_20 <- getRun(quan_bh_sig, run_num = 0.20)
+#BATCH
+# even
+raw_batch_even_batch_20 <- getRun(raw_batch_even_bh, run_num = 0.20)
+raw_batch_even_batch_sig_20 <- getRun(raw_batch_even_bh_sig, run_num = 0.20)
+raw_batch_even_batch_fwer_20 <- getRun(raw_batch_even_bh_fwer, run_num = 0.20)
 
-##########
-# quan_unbal
-##########
-# 0.10
-quan_unbal_bh_10 <- getRun(quan_unbal_bh, run_num = 0.10)
-quan_unbal_bh_sig_10 <- getRun(quan_unbal_bh_sig, run_num = 0.10)
-
-# 0.15
-quan_unbal_bh_15 <- getRun(quan_unbal_bh, run_num = 0.15)
-quan_unbal_bh_sig_15 <- getRun(quan_unbal_bh_sig, run_num = 0.15)
-
-# 0.20
-quan_unbal_bh_20 <- getRun(quan_unbal_bh, run_num = 0.20)
-quan_unbal_bh_sig_20 <- getRun(quan_unbal_bh_sig, run_num = 0.20)
-
+# uneven
+raw_batch_uneven_20 <- getRun(raw_batch_uneven_bh, run_num = 0.20)
+raw_batch_uneven_sig_20 <- getRun(raw_batch_uneven_bh_sig, run_num = 0.20)
+raw_batch_uneven_fwer_20 <- getRun(raw_batch_uneven_bh_fwer, run_num = 0.20)
 
 ##########
-# swan
+# raw 30
 ##########
-# 0.10
-swan_bh_10 <- getRun(swan_bh, run_num = 0.10)
-swan_bh_sig_10 <- getRun(swan_bh_sig, run_num = 0.10)
+#NOT BATCH
+# even
+raw_even_30 <- getRun(raw_even_bh, run_num = 0.30)
+raw_even_sig_30 <- getRun(raw_even_bh_sig, run_num = 0.30)
+raw_even_fwer_30 <- getRun(raw_even_bh_fwer, run_num = 0.30)
 
-# 0.15
-swan_bh_15 <- getRun(swan_bh, run_num = 0.15)
-swan_bh_sig_15 <- getRun(swan_bh_sig, run_num = 0.15)
+# uneven
+raw_uneven_30 <- getRun(raw_uneven_bh, run_num = 0.30)
+raw_uneven_sig_30 <- getRun(raw_uneven_bh_sig, run_num = 0.30)
+raw_uneven_fwer_30 <- getRun(raw_uneven_bh_fwer, run_num = 0.30)
 
-# 0.20
-swan_bh_20 <- getRun(swan_bh, run_num = 0.20)
-swan_bh_sig_20 <- getRun(swan_bh_sig, run_num = 0.20)
+#BATCH
+# even
+raw_batch_even_batch_30 <- getRun(raw_batch_even_bh, run_num = 0.30)
+raw_batch_even_batch_sig_30 <- getRun(raw_batch_even_bh_sig, run_num = 0.30)
+raw_batch_even_batch_fwer_30 <- getRun(raw_batch_even_bh_fwer, run_num = 0.30)
 
-
-##########
-# swan_unbal
-##########
-# 0.10
-swan_unbal_bh_10 <- getRun(swan_unbal_bh, run_num = 0.10)
-swan_unbal_bh_sig_10 <- getRun(swan_unbal_bh_sig, run_num = 0.10)
-
-# 0.15
-swan_unbal_bh_15 <- getRun(swan_unbal_bh, run_num = 0.15)
-swan_unbal_bh_sig_15 <- getRun(swan_unbal_bh_sig, run_num = 0.15)
-
-# 0.20
-swan_unbal_bh_20 <- getRun(swan_unbal_bh, run_num = 0.20)
-swan_unbal_bh_sig_20 <- getRun(swan_unbal_bh_sig, run_num = 0.20)
+# uneven
+raw_batch_uneven_30 <- getRun(raw_batch_uneven_bh, run_num = 0.30)
+raw_batch_uneven_sig_30 <- getRun(raw_batch_uneven_bh_sig, run_num = 0.30)
+raw_batch_uneven_fwer_30 <- getRun(raw_batch_uneven_bh_fwer, run_num = 0.30)
 
 ##########
-# funnorm
+# raw 40
 ##########
-# 0.10
-funnorm_bh_10 <- getRun(funnorm_bh, run_num = 0.10)
-funnorm_bh_sig_10 <- getRun(funnorm_bh_sig, run_num = 0.10)
+#NOT BATCH
+# even
+raw_even_40 <- getRun(raw_even_bh, run_num = 0.40)
+raw_even_sig_40 <- getRun(raw_even_bh_sig, run_num = 0.40)
+raw_even_fwer_40 <- getRun(raw_even_bh_fwer, run_num = 0.40)
 
-# 0.15
-funnorm_bh_15 <- getRun(funnorm_bh, run_num = 0.15)
-funnorm_bh_sig_15 <- getRun(funnorm_bh_sig, run_num = 0.15)
+# uneven
+raw_uneven_40 <- getRun(raw_uneven_bh, run_num = 0.40)
+raw_uneven_sig_40 <- getRun(raw_uneven_bh_sig, run_num = 0.40)
+raw_uneven_fwer_40 <- getRun(raw_uneven_bh_fwer, run_num = 0.40)
 
-# 0.20
-funnorm_bh_20 <- getRun(funnorm_bh, run_num = 0.20)
-funnorm_bh_sig_20 <- getRun(funnorm_bh_sig, run_num = 0.20)
+#BATCH
+# even
+raw_batch_even_batch_40 <- getRun(raw_batch_even_bh, run_num = 0.40)
+raw_batch_even_batch_sig_40 <- getRun(raw_batch_even_bh_sig, run_num = 0.40)
+raw_batch_even_batch_fwer_40 <- getRun(raw_batch_even_bh_fwer, run_num = 0.40)
+
+# uneven
+raw_batch_uneven_40 <- getRun(raw_batch_uneven_bh, run_num = 0.40)
+raw_batch_uneven_sig_40 <- getRun(raw_batch_uneven_bh_sig, run_num = 0.40)
+raw_batch_uneven_fwer_40 <- getRun(raw_batch_uneven_bh_fwer, run_num = 0.40)
+
+##########
+# raw 50
+##########
+#NOT BATCH
+# even
+raw_even_50 <- getRun(raw_even_bh, run_num = 0.50)
+raw_even_sig_50 <- getRun(raw_even_bh_sig, run_num = 0.50)
+raw_even_fwer_50 <- getRun(raw_even_bh_fwer, run_num = 0.50)
+
+# uneven
+raw_uneven_50 <- getRun(raw_uneven_bh, run_num = 0.50)
+raw_uneven_sig_50 <- getRun(raw_uneven_bh_sig, run_num = 0.50)
+raw_uneven_fwer_50 <- getRun(raw_uneven_bh_fwer, run_num = 0.50)
+
+#BATCH
+# even
+raw_batch_even_batch_50 <- getRun(raw_batch_even_bh, run_num = 0.50)
+raw_batch_even_batch_sig_50 <- getRun(raw_batch_even_bh_sig, run_num = 0.50)
+raw_batch_even_batch_fwer_50 <- getRun(raw_batch_even_bh_fwer, run_num = 0.50)
+
+# uneven
+raw_batch_uneven_50 <- getRun(raw_batch_uneven_bh, run_num = 0.50)
+raw_batch_uneven_sig_50 <- getRun(raw_batch_uneven_bh_sig, run_num = 0.50)
+raw_batch_uneven_fwer_50 <- getRun(raw_batch_uneven_bh_fwer, run_num = 0.50)
 
 
 ##########
-# funnorm_unbal
+# quan 10
 ##########
-# 0.10
-funnorm_unbal_bh_10 <- getRun(funnorm_unbal_bh, run_num = 0.10)
-funnorm_unbal_bh_sig_10 <- getRun(funnorm_unbal_bh_sig, run_num = 0.10)
+#NOT BATCH
+# even
+quan_even_10 <- getRun(quan_even_bh, run_num = 0.10)
+quan_even_sig_10 <- getRun(quan_even_bh_sig, run_num = 0.10)
+quan_even_fwer_10 <- getRun(quan_even_bh_fwer, run_num = 0.10)
 
-# 0.15
-funnorm_unbal_bh_15 <- getRun(funnorm_unbal_bh, run_num = 0.15)
-funnorm_unbal_bh_sig_15 <- getRun(funnorm_unbal_bh_sig, run_num = 0.15)
+# uneven
+quan_uneven_10 <- getRun(quan_uneven_bh, run_num = 0.10)
+quan_uneven_sig_10 <- getRun(quan_uneven_bh_sig, run_num = 0.10)
+quan_uneven_fwer_10 <- getRun(quan_uneven_bh_fwer, run_num = 0.10)
 
-# 0.20
-funnorm_unbal_bh_20 <- getRun(funnorm_unbal_bh, run_num = 0.20)
-funnorm_unbal_bh_sig_20 <- getRun(funnorm_unbal_bh_sig, run_num = 0.20)
+#BATCH
+# even
+quan_batch_even_batch_10 <- getRun(quan_batch_even_bh, run_num = 0.10)
+quan_batch_even_batch_sig_10 <- getRun(quan_batch_even_bh_sig, run_num = 0.10)
+quan_batch_even_batch_fwer_10 <- getRun(quan_batch_even_bh_fwer, run_num = 0.10)
+
+# uneven
+quan_batch_uneven_10 <- getRun(quan_batch_uneven_bh, run_num = 0.10)
+quan_batch_uneven_sig_10 <- getRun(quan_batch_uneven_bh_sig, run_num = 0.10)
+quan_batch_uneven_fwer_10 <- getRun(quan_batch_uneven_bh_fwer, run_num = 0.10)
 
 
+##########
+# quan 20
+##########
+#NOT BATCH
+# even
+quan_even_20 <- getRun(quan_even_bh, run_num = 0.20)
+quan_even_sig_20 <- getRun(quan_even_bh_sig, run_num = 0.20)
+quan_even_fwer_20 <- getRun(quan_even_bh_fwer, run_num = 0.20)
+
+# uneven
+quan_uneven_20 <- getRun(quan_uneven_bh, run_num = 0.20)
+quan_uneven_sig_20 <- getRun(quan_uneven_bh_sig, run_num = 0.20)
+quan_uneven_fwer_20 <- getRun(quan_uneven_bh_fwer, run_num = 0.20)
+
+#BATCH
+# even
+quan_batch_even_batch_20 <- getRun(quan_batch_even_bh, run_num = 0.20)
+quan_batch_even_batch_sig_20 <- getRun(quan_batch_even_bh_sig, run_num = 0.20)
+quan_batch_even_batch_fwer_20 <- getRun(quan_batch_even_bh_fwer, run_num = 0.20)
+
+# uneven
+quan_batch_uneven_20 <- getRun(quan_batch_uneven_bh, run_num = 0.20)
+quan_batch_uneven_sig_20 <- getRun(quan_batch_uneven_bh_sig, run_num = 0.20)
+quan_batch_uneven_fwer_20 <- getRun(quan_batch_uneven_bh_fwer, run_num = 0.20)
+
+##########
+# quan 30
+##########
+#NOT BATCH
+# even
+quan_even_30 <- getRun(quan_even_bh, run_num = 0.30)
+quan_even_sig_30 <- getRun(quan_even_bh_sig, run_num = 0.30)
+quan_even_fwer_30 <- getRun(quan_even_bh_fwer, run_num = 0.30)
+
+# uneven
+quan_uneven_30 <- getRun(quan_uneven_bh, run_num = 0.30)
+quan_uneven_sig_30 <- getRun(quan_uneven_bh_sig, run_num = 0.30)
+quan_uneven_fwer_30 <- getRun(quan_uneven_bh_fwer, run_num = 0.30)
+
+#BATCH
+# even
+quan_batch_even_batch_30 <- getRun(quan_batch_even_bh, run_num = 0.30)
+quan_batch_even_batch_sig_30 <- getRun(quan_batch_even_bh_sig, run_num = 0.30)
+quan_batch_even_batch_fwer_30 <- getRun(quan_batch_even_bh_fwer, run_num = 0.30)
+
+# uneven
+quan_batch_uneven_30 <- getRun(quan_batch_uneven_bh, run_num = 0.30)
+quan_batch_uneven_sig_30 <- getRun(quan_batch_uneven_bh_sig, run_num = 0.30)
+quan_batch_uneven_fwer_30 <- getRun(quan_batch_uneven_bh_fwer, run_num = 0.30)
+
+##########
+# quan 40
+##########
+#NOT BATCH
+# even
+quan_even_40 <- getRun(quan_even_bh, run_num = 0.40)
+quan_even_sig_40 <- getRun(quan_even_bh_sig, run_num = 0.40)
+quan_even_fwer_40 <- getRun(quan_even_bh_fwer, run_num = 0.40)
+
+# uneven
+quan_uneven_40 <- getRun(quan_uneven_bh, run_num = 0.40)
+quan_uneven_sig_40 <- getRun(quan_uneven_bh_sig, run_num = 0.40)
+quan_uneven_fwer_40 <- getRun(quan_uneven_bh_fwer, run_num = 0.40)
+
+#BATCH
+# even
+quan_batch_even_batch_40 <- getRun(quan_batch_even_bh, run_num = 0.40)
+quan_batch_even_batch_sig_40 <- getRun(quan_batch_even_bh_sig, run_num = 0.40)
+quan_batch_even_batch_fwer_40 <- getRun(quan_batch_even_bh_fwer, run_num = 0.40)
+
+# uneven
+quan_batch_uneven_40 <- getRun(quan_batch_uneven_bh, run_num = 0.40)
+quan_batch_uneven_sig_40 <- getRun(quan_batch_uneven_bh_sig, run_num = 0.40)
+quan_batch_uneven_fwer_40 <- getRun(quan_batch_uneven_bh_fwer, run_num = 0.40)
+
+##########
+# quan 50
+##########
+#NOT BATCH
+# even
+quan_even_50 <- getRun(quan_even_bh, run_num = 0.50)
+quan_even_sig_50 <- getRun(quan_even_bh_sig, run_num = 0.50)
+quan_even_fwer_50 <- getRun(quan_even_bh_fwer, run_num = 0.50)
+
+# uneven
+quan_uneven_50 <- getRun(quan_uneven_bh, run_num = 0.50)
+quan_uneven_sig_50 <- getRun(quan_uneven_bh_sig, run_num = 0.50)
+quan_uneven_fwer_50 <- getRun(quan_uneven_bh_fwer, run_num = 0.50)
+
+#BATCH
+# even
+quan_batch_even_batch_50 <- getRun(quan_batch_even_bh, run_num = 0.50)
+quan_batch_even_batch_sig_50 <- getRun(quan_batch_even_bh_sig, run_num = 0.50)
+quan_batch_even_batch_fwer_50 <- getRun(quan_batch_even_bh_fwer, run_num = 0.50)
+
+# uneven
+quan_batch_uneven_50 <- getRun(quan_batch_uneven_bh, run_num = 0.50)
+quan_batch_uneven_sig_50 <- getRun(quan_batch_uneven_bh_sig, run_num = 0.50)
+quan_batch_uneven_fwer_50 <- getRun(quan_batch_uneven_bh_fwer, run_num = 0.50)
 
 ##########
 # remove unneccssary objects
 ##########
-rm(cg_locations, 
-   raw, quan, swan, funnorm,
-   funnorm_bh, funnorm_bh_sig,
-   quan_bh, quan_bh_sig,
-   swan_bh, swan_bh_sig,
-   raw_bh, raw_bh_sig,
-   funnorm_unbal_bh, funnorm_unbal_bh_sig,
-   quan_unbal_bh, quan_unbal_bh_sig,
-   swan_unbal_bh, swan_unbal_bh_sig,
-   raw_unbal_bh, raw_unbal_bh_sig)
+rm(list=ls(pattern="bh"))
+rm(bumpHunterBalanced, getProbe, getRun)
 
-
-save.image(paste0(model_data, 'bh_feat_new.RData'))
-# load('/home/benbrew/Desktop/get_feat_temp.RData')
-
-# # beta raw all
-# beta_raw_bal_counts_cancer_features <- getProbe(beta_raw_bal_counts_cancer)[[1]]
-# beta_raw_bal_cancer_features <- getProbe(beta_raw_bal_cancer)[[1]]
-# beta_raw_unbal_cancer_features <- getProbe(beta_raw_unbal_cancer)[[1]]
-# 
-# # beta swan all
-# beta_swan_bal_counts_cancer_features <- getProbe(beta_swan_bal_counts_cancer)[[1]]
-# beta_swan_bal_cancer_features <- getProbe(beta_swan_bal_cancer)[[1]]
-# beta_swan_unbal_cancer_features <- getProbe(beta_swan_unbal_cancer)[[1]]
-# 
-# # beta quan all
-# beta_quan_bal_counts_cancer_features <- getProbe(beta_quan_bal_counts_cancer)[[1]]
-# beta_quan_bal_cancer_features <- getProbe(beta_quan_bal_cancer)[[1]]
-# beta_quan_unbal_cancer_features <- getProbe(beta_quan_unbal_cancer)[[1]]
-# 
-# # beta funnorm all
-# beta_funnorm_bal_counts_cancer_features <- getProbe(beta_funnorm_bal_counts_cancer)[[1]]
-# beta_funnorm_bal_cancer_features <- getProbe(beta_funnorm_bal_cancer)[[1]]
-# beta_funnorm_unbal_cancer_features <- getProbe(beta_funnorm_unbal_cancer)[[1]]
-# 
-# # beta raw sig
-# beta_raw_bal_counts_cancer_sig_features <- getProbe(beta_raw_bal_counts_cancer)[[2]]
-# beta_raw_bal_cancer_sig_features <- getProbe(beta_raw_bal_cancer)[[2]]
-# beta_raw_unbal_cancer_sig_features <- getProbe(beta_raw_unbal_cancer)[[2]]
-# 
-# # beta swan sig
-# beta_swan_bal_counts_cancer_sig_features <- getProbe(beta_swan_bal_counts_cancer)[[2]]
-# beta_swan_bal_cancer_sig_features <- getProbe(beta_swan_bal_cancer)[[2]]
-# beta_swan_unbal_cancer_sig_features <- getProbe(beta_swan_unbal_cancer)[[2]]
-# 
-# # beta quan sig
-# beta_quan_bal_counts_cancer_sig_features <- getProbe(beta_quan_bal_counts_cancer)[[2]]
-# beta_quan_bal_cancer_sig_features <- getProbe(beta_quan_bal_cancer)[[2]]
-# beta_quan_unbal_cancer_sig_features <- getProbe(beta_quan_unbal_cancer)[[2]]
-# 
-# # beta funnorm sig
-# beta_funnorm_bal_counts_cancer_sig_features <- getProbe(beta_funnorm_bal_counts_cancer)[[2]]
-# beta_funnorm_bal_cancer_sig_features <- getProbe(beta_funnorm_bal_cancer)[[2]]
-# beta_funnorm_unbal_cancer_sig_features <- getProbe(beta_funnorm_unbal_cancer)[[2]]
-# 
-# ##########
-# # apply function to p53 bh for both sig and all on p53
-# ##########
-# 
-# # beta raw all
-# beta_raw_bal_counts_p53_features <- getProbe(beta_raw_bal_counts_p53)[[1]]
-# beta_raw_bal_p53_features <- getProbe(beta_raw_bal_p53)[[1]]
-# beta_raw_unbal_p53_features <- getProbe(beta_raw_unbal_p53)[[1]]
-# 
-# # beta swan all
-# beta_swan_bal_counts_p53_features <- getProbe(beta_swan_bal_counts_p53)[[1]]
-# beta_swan_bal_p53_features <- getProbe(beta_swan_bal_p53)[[1]]
-# beta_swan_unbal_p53_features <- getProbe(beta_swan_unbal_p53)[[1]]
-# 
-# # beta quan all
-# beta_quan_bal_counts_p53_features <- getProbe(beta_quan_bal_counts_p53)[[1]]
-# beta_quan_bal_p53_features <- getProbe(beta_quan_bal_p53)[[1]]
-# beta_quan_unbal_p53_features <- getProbe(beta_quan_unbal_p53)[[1]]
-# 
-# # beta funnorm all
-# beta_funnorm_bal_counts_p53_features <- getProbe(beta_funnorm_bal_counts_p53)[[1]]
-# beta_funnorm_bal_p53_features <- getProbe(beta_funnorm_bal_p53)[[1]]
-# beta_funnorm_unbal_p53_features <- getProbe(beta_funnorm_unbal_p53)[[1]]
-# 
-# # beta raw sig
-# beta_raw_bal_counts_p53_sig_features <- getProbe(beta_raw_bal_counts_p53)[[2]]
-# beta_raw_bal_p53_sig_features <- getProbe(beta_raw_bal_p53)[[2]]
-# beta_raw_unbal_p53_sig_features <- getProbe(beta_raw_unbal_p53)[[2]]
-# 
-# # beta swan sig
-# beta_swan_bal_counts_p53_sig_features <- getProbe(beta_swan_bal_counts_p53)[[2]]
-# beta_swan_bal_p53_sig_features <- getProbe(beta_swan_bal_p53)[[2]]
-# beta_swan_unbal_p53_sig_features <- getProbe(beta_swan_unbal_p53)[[2]]
-# 
-# # beta quan sig
-# beta_quan_bal_counts_p53_sig_features <- getProbe(beta_quan_bal_counts_p53)[[2]]
-# beta_quan_bal_p53_sig_features <- getProbe(beta_quan_bal_p53)[[2]]
-# beta_quan_unbal_p53_sig_features <- getProbe(beta_quan_unbal_p53)[[2]]
-# 
-# # beta funnorm sig
-# beta_funnorm_bal_counts_p53_sig_features <- getProbe(beta_funnorm_bal_counts_p53)[[2]]
-# beta_funnorm_bal_p53_sig_features <- getProbe(beta_funnorm_bal_p53)[[2]]
-# beta_funnorm_unbal_p53_sig_features <- getProbe(beta_funnorm_unbal_p53)[[2]]
-# # 
-# # save.image('/home/benbrew/Desktop/temp_bh.RData')
-# # load('/home/benbrew/Desktop/temp_bh.RData')
-# # 
-
-###########################################################################################################################
-# this part of script will get intersection and unions of various sets of probe features
-
-# INTERSECTION
 
 ##########
-# cancer intersection 
+# remove any object filled with NAs
 ##########
+rm(quan_batch_even_batch_sig_30, quan_batch_even_batch_sig_40, 
+   quan_batch_even_batch_sig_50 , quan_batch_uneven_sig_20, 
+   quan_batch_uneven_sig_30,quan_batch_uneven_sig_40,
+   quan_batch_uneven_sig_50, quan_even_sig_20, 
+   quan_even_sig_30, quan_even_sig_40, quan_even_sig_50,
+   quan_uneven_sig_30, quan_uneven_sig_40, quan_uneven_sig_50,
+   raw_batch_even_batch_sig_30, raw_batch_even_batch_sig_40, 
+   raw_batch_even_batch_sig_50, raw_batch_uneven_sig_20, 
+   raw_batch_uneven_sig_30,raw_batch_uneven_sig_40,
+   raw_batch_uneven_sig_50,  raw_even_sig_20, 
+   raw_even_sig_30, raw_even_sig_40, raw_even_sig_50,
+   raw_uneven_sig_30, raw_uneven_sig_40, i)
 
-# beta_raw_cancer_intersection
-beta_raw_cancer_intersection_features  <- getIntersection(beta_raw_bal_counts_cancer_features$probe,
-                                                          beta_raw_bal_cancer_features$probe,
-                                                          beta_raw_unbal_cancer_features$probe,
-                                                          num_vecs = 3)
-
-# beta_swan_cancer_intersection
-beta_swan_cancer_intersection_features  <- getIntersection(beta_swan_bal_counts_cancer_features$probe,
-                                                           beta_swan_bal_cancer_features$probe,
-                                                           beta_swan_unbal_cancer_features$probe,
-                                                           num_vecs = 3)
-
-# beta_quan_cancer_intersection
-beta_quan_cancer_intersection_features  <- getIntersection(beta_quan_bal_counts_cancer_features$probe,
-                                                           beta_quan_bal_cancer_features$probe,
-                                                           beta_quan_unbal_cancer_features$probe,
-                                                           num_vecs = 3)
-
-# beta_funnorm_cancer_intersection
-beta_funnorm_cancer_intersection_features  <- getIntersection(beta_funnorm_bal_counts_cancer_features$probe,
-                                                              beta_funnorm_bal_cancer_features$probe,
-                                                              beta_funnorm_unbal_cancer_features$probe,
-                                                              num_vecs = 3)
-
-# total cancer intersection
-beta_cancer_intersection_features <- getIntersection(beta_raw_cancer_intersection_features$probe_rgSet,
-                                                     beta_swan_cancer_intersection_features$probe_rgSet, 
-                                                     beta_quan_cancer_intersection_features$probe_rgSet,
-                                                     beta_funnorm_cancer_intersection_features$probe_rgSet,
-                                                     num_vecs = 4)
-
-# beta_bal_counts_cancer_intersection
-beta_bal_counts_cancer_intersection_features  <- getIntersection(beta_raw_bal_counts_cancer_features$probe,
-                                                                 beta_swan_bal_counts_cancer_features$probe,
-                                                                 beta_quan_bal_counts_cancer_features$probe,
-                                                                 beta_funnorm_bal_counts_cancer_features$probe,
-                                                                 num_vecs = 4)
-##########
-# cancer intersection sig
-##########
-
-# beta_raw_cancer_intersection
-beta_raw_cancer_intersection_sig_features  <- getIntersection(beta_raw_bal_counts_cancer_sig_features$probe,
-                                                              beta_raw_bal_cancer_sig_features$probe,
-                                                              beta_raw_unbal_cancer_sig_features$probe,
-                                                              num_vecs = 3)
-
-# beta_swan_cancer_intersection
-beta_swan_cancer_intersection_sig_features  <- getIntersection(beta_swan_bal_counts_cancer_sig_features$probe,
-                                                               beta_swan_bal_cancer_sig_features$probe,
-                                                               beta_swan_unbal_cancer_sig_features$probe,
-                                                               num_vecs = 3)
-
-# beta_quan_cancer_intersection here error
-beta_quan_cancer_intersection_sig_features  <- getIntersection(beta_quan_bal_counts_cancer_sig_features$probe,
-                                                               beta_quan_bal_cancer_sig_features$probe,
-                                                               beta_quan_unbal_cancer_sig_features$probe,
-                                                               num_vecs = 3)
-
-# beta_funnorm_cancer_intersection
-beta_funnorm_cancer_intersection_sig_features  <- getIntersection(beta_funnorm_bal_counts_cancer_sig_features$probe,
-                                                                  beta_funnorm_bal_cancer_sig_features$probe,
-                                                                  beta_funnorm_unbal_cancer_sig_features$probe,
-                                                                  num_vecs = 3)
-
-# total cancer intersection
-beta_cancer_intersection_sig_features <- getIntersection(beta_raw_cancer_intersection_sig_features$probe_rgSet,
-                                                         beta_swan_cancer_intersection_sig_features$probe_rgSet, 
-                                                         beta_quan_cancer_intersection_sig_features$probe_rgSet,
-                                                         beta_funnorm_cancer_intersection_sig_features,
-                                                         num_vecs = 4)
-
-# beta_bal_counts_cancer_intersection
-beta_bal_counts_cancer_intersection_sig_features  <- getIntersection(beta_raw_bal_counts_cancer_sig_features$probe,
-                                                                     beta_swan_bal_counts_cancer_sig_features$probe,
-                                                                     beta_quan_bal_counts_cancer_sig_features$probe,
-                                                                     beta_funnorm_bal_counts_cancer_sig_features$probe,
-                                                                     num_vecs = 4)
-
-##########
-# p53 intersection 
-##########
-
-# beta_raw_p53_intersection
-beta_raw_p53_intersection_features  <- getIntersection(beta_raw_bal_counts_p53_features$probe,
-                                                       beta_raw_bal_p53_features$probe,
-                                                       beta_raw_unbal_p53_features$probe,
-                                                       num_vecs = 3)
-
-# beta_swan_p53_intersection
-beta_swan_p53_intersection_features  <- getIntersection(beta_swan_bal_counts_p53_features$probe,
-                                                        beta_swan_bal_p53_features$probe,
-                                                        beta_swan_unbal_p53_features$probe,
-                                                        num_vecs = 3)
-
-# beta_quan_p53_intersection
-beta_quan_p53_intersection_features  <- getIntersection(beta_quan_bal_counts_p53_features$probe,
-                                                        beta_quan_bal_p53_features$probe,
-                                                        beta_quan_unbal_p53_features$probe,
-                                                        num_vecs = 3)
-
-# beta_funnorm_p53_intersection
-beta_funnorm_p53_intersection_features  <- getIntersection(beta_funnorm_bal_counts_p53_features$probe,
-                                                           beta_funnorm_bal_p53_features$probe,
-                                                           beta_funnorm_unbal_p53_features$probe,
-                                                           num_vecs = 3)
-
-# total p53 intersection
-beta_p53_intersection_features <- getIntersection(beta_raw_p53_intersection_features$probe_rgSet,
-                                                  beta_swan_p53_intersection_features$probe_rgSet, 
-                                                  beta_quan_p53_intersection_features$probe_rgSet,
-                                                  beta_funnorm_p53_intersection_features$probe_rgSet,
-                                                  num_vecs = 4)
-
-# beta_bal_counts_p53_intersection
-beta_bal_counts_p53_intersection_features  <- getIntersection(beta_raw_bal_counts_p53_features$probe,
-                                                              beta_swan_bal_counts_p53_features$probe,
-                                                              beta_quan_bal_counts_p53_features$probe,
-                                                              beta_funnorm_bal_counts_p53_features$probe,
-                                                              num_vecs = 4)
-
-##########
-# p53 intersection sig
-##########
-
-# beta_raw_p53_intersection
-beta_raw_p53_intersection_sig_features  <- getIntersection(beta_raw_bal_counts_p53_sig_features$probe,
-                                                           beta_raw_bal_p53_sig_features$probe,
-                                                           beta_raw_unbal_p53_sig_features$probe,
-                                                           num_vecs = 3)
-
-# beta_swan_p53_intersection
-beta_swan_p53_intersection_sig_features  <- getIntersection(beta_swan_bal_counts_p53_sig_features$probe,
-                                                            beta_swan_bal_p53_sig_features$probe,
-                                                            beta_swan_unbal_p53_sig_features$probe,
-                                                            num_vecs = 3)
-
-# beta_quan_p53_intersection
-beta_quan_p53_intersection_sig_features  <- getIntersection(beta_quan_bal_counts_p53_sig_features$probe,
-                                                            beta_quan_bal_p53_sig_features$probe,
-                                                            beta_quan_unbal_p53_sig_features$probe,
-                                                            num_vecs = 3)
-
-# beta_funnorm_p53_intersection
-beta_funnorm_p53_intersection_sig_features  <- getIntersection(beta_funnorm_bal_counts_p53_sig_features$probe,
-                                                               beta_funnorm_bal_p53_sig_features$probe,
-                                                               beta_funnorm_unbal_p53_sig_features$probe,
-                                                               num_vecs = 3)
-
-# total p53 intersection
-beta_p53_intersection_sig_features <- getIntersection(beta_raw_p53_intersection_sig_features$probe_rgSet,
-                                                      beta_swan_p53_intersection_sig_features$probe_rgSet, 
-                                                      beta_quan_p53_intersection_sig_features$probe_rgSet,
-                                                      beta_funnorm_p53_intersection_sig_features$probe_rgSet,
-                                                      num_vecs = 4)
-
-# beta_bal_counts_p53_intersection
-beta_bal_counts_p53_intersection_sig_features  <- getIntersection(beta_raw_bal_counts_p53_sig_features$probe,
-                                                                  beta_swan_bal_counts_p53_sig_features$probe,
-                                                                  beta_quan_bal_counts_p53_sig_features$probe,
-                                                                  beta_funnorm_bal_counts_p53_sig_features$probe,
-                                                                  num_vecs = 4)
-
-#############################################################################################################################
-# UNION
-
-##########
-# cancer union 
-##########
-
-# beta_raw_cancer_union
-beta_raw_cancer_union_features  <- getUnion(beta_raw_bal_counts_cancer_features$probe,
-                                            beta_raw_bal_cancer_features$probe,
-                                            beta_raw_unbal_cancer_features$probe,
-                                            num_vecs = 3)
-
-# beta_swan_cancer_union
-beta_swan_cancer_union_features  <- getUnion(beta_swan_bal_counts_cancer_features$probe,
-                                             beta_swan_bal_cancer_features$probe,
-                                             beta_swan_unbal_cancer_features$probe,
-                                             num_vecs = 3)
-
-# beta_quan_cancer_union
-beta_quan_cancer_union_features  <- getUnion(beta_quan_bal_counts_cancer_features$probe,
-                                             beta_quan_bal_cancer_features$probe,
-                                             beta_quan_unbal_cancer_features$probe,
-                                             num_vecs = 3)
-
-# beta_funnorm_cancer_union
-beta_funnorm_cancer_union_features  <- getUnion(beta_funnorm_bal_counts_cancer_features$probe,
-                                                beta_funnorm_bal_cancer_features$probe,
-                                                beta_funnorm_unbal_cancer_features$probe,
-                                                num_vecs = 3)
-
-# total cancer union
-beta_cancer_union_features <- getUnion(beta_raw_cancer_union_features$probe_rgSet,
-                                       beta_swan_cancer_union_features$probe_rgSet, 
-                                       beta_quan_cancer_union_features$probe_rgSet,
-                                       beta_funnorm_cancer_union_features$probe_rgSet,
-                                       num_vecs = 4)
-
-# beta_bal_counts_cancer_union
-beta_bal_counts_cancer_union_features  <- getUnion(beta_raw_bal_counts_cancer_features$probe,
-                                                   beta_swan_bal_counts_cancer_features$probe,
-                                                   beta_quan_bal_counts_cancer_features$probe,
-                                                   beta_funnorm_bal_counts_cancer_features$probe,
-                                                   num_vecs = 4)
-
-##########
-# cancer union sig
-##########
-
-# beta_raw_cancer_union
-beta_raw_cancer_union_sig_features  <- getUnion(beta_raw_bal_counts_cancer_sig_features$probe,
-                                                beta_raw_bal_cancer_sig_features$probe,
-                                                beta_raw_unbal_cancer_sig_features$probe,
-                                                num_vecs = 3)
-
-# beta_swan_cancer_union
-beta_swan_cancer_union_sig_features  <- getUnion(beta_swan_bal_counts_cancer_sig_features$probe,
-                                                 beta_swan_bal_cancer_sig_features$probe,
-                                                 beta_swan_unbal_cancer_sig_features$probe,
-                                                 num_vecs = 3)
-
-# beta_quan_cancer_union
-beta_quan_cancer_union_sig_features  <- getUnion(beta_quan_bal_counts_cancer_sig_features$probe,
-                                                 beta_quan_bal_cancer_sig_features$probe,
-                                                 beta_quan_unbal_cancer_sig_features$probe,
-                                                 num_vecs = 3)
-
-# beta_funnorm_cancer_union
-beta_funnorm_cancer_union_sig_features  <- getUnion(beta_funnorm_bal_counts_cancer_sig_features$probe,
-                                                    beta_funnorm_bal_cancer_sig_features$probe,
-                                                    beta_funnorm_unbal_cancer_sig_features$probe,
-                                                    num_vecs = 3)
-
-# total cancer union
-beta_cancer_union_sig_features <- getUnion(beta_raw_cancer_union_sig_features$probe_rgSet,
-                                           beta_swan_cancer_union_sig_features$probe_rgSet, 
-                                           beta_quan_cancer_union_sig_features$probe_rgSet,
-                                           beta_funnorm_cancer_union_sig_features$probe_rgSet,
-                                           num_vecs = 4)
-
-# beta_bal_counts_cancer_union
-beta_bal_counts_cancer_union_sig_features  <- getUnion(beta_raw_bal_counts_cancer_sig_features$probe,
-                                                       beta_swan_bal_counts_cancer_sig_features$probe,
-                                                       beta_quan_bal_counts_cancer_sig_features$probe,
-                                                       beta_funnorm_bal_counts_cancer_sig_features$probe,
-                                                       num_vecs = 4)
-
-##########
-# p53 union 
-##########
-
-# beta_raw_p53_union
-beta_raw_p53_union_features  <- getUnion(beta_raw_bal_counts_p53_features$probe,
-                                         beta_raw_bal_p53_features$probe,
-                                         beta_raw_unbal_p53_features$probe,
-                                         num_vecs = 3)
-
-# beta_swan_p53_union
-beta_swan_p53_union_features  <- getUnion(beta_swan_bal_counts_p53_features$probe,
-                                          beta_swan_bal_p53_features$probe,
-                                          beta_swan_unbal_p53_features$probe,
-                                          num_vecs = 3)
-
-# beta_quan_p53_union
-beta_quan_p53_union_features  <- getUnion(beta_quan_bal_counts_p53_features$probe,
-                                          beta_quan_bal_p53_features$probe,
-                                          beta_quan_unbal_p53_features$probe,
-                                          num_vecs = 3)
-
-# beta_funnorm_p53_union
-beta_funnorm_p53_union_features  <- getUnion(beta_funnorm_bal_counts_p53_features$probe,
-                                             beta_funnorm_bal_p53_features$probe,
-                                             beta_funnorm_unbal_p53_features$probe,
-                                             num_vecs = 3)
-
-# total p53 union
-beta_p53_union_features <- getUnion(beta_raw_p53_union_features$probe_rgSet,
-                                    beta_swan_p53_union_features$probe_rgSet, 
-                                    beta_quan_p53_union_features$probe_rgSet,
-                                    beta_funnorm_p53_union_features$probe_rgSet,
-                                    num_vecs = 4)
-
-# beta_bal_counts_p53_union
-beta_bal_counts_p53_union_features  <- getUnion(beta_raw_bal_counts_p53_features$probe,
-                                                beta_swan_bal_counts_p53_features$probe,
-                                                beta_quan_bal_counts_p53_features$probe,
-                                                beta_funnorm_bal_counts_p53_features$probe,
-                                                num_vecs = 4)
-
-##########
-# p53 union sig
-##########
-
-# beta_raw_p53_union
-beta_raw_p53_union_sig_features  <- getUnion(beta_raw_bal_counts_p53_sig_features$probe,
-                                             beta_raw_bal_p53_sig_features$probe,
-                                             beta_raw_unbal_p53_sig_features$probe,
-                                             num_vecs = 3)
-
-# beta_swan_p53_union
-beta_swan_p53_union_sig_features  <- getUnion(beta_swan_bal_counts_p53_sig_features$probe,
-                                              beta_swan_bal_p53_sig_features$probe,
-                                              beta_swan_unbal_p53_sig_features$probe,
-                                              num_vecs = 3)
-
-# beta_quan_p53_union
-beta_quan_p53_union_sig_features  <- getUnion(beta_quan_bal_counts_p53_sig_features$probe,
-                                              beta_quan_bal_p53_sig_features$probe,
-                                              beta_quan_unbal_p53_sig_features$probe,
-                                              num_vecs = 3)
-
-# beta_funnorm_p53_union
-beta_funnorm_p53_union_sig_features  <- getUnion(beta_funnorm_bal_counts_p53_sig_features$probe,
-                                                 beta_funnorm_bal_p53_sig_features$probe,
-                                                 beta_funnorm_unbal_p53_sig_features$probe,
-                                                 num_vecs = 3)
-
-# total p53 union
-beta_p53_union_sig_features <- getUnion(beta_raw_p53_union_sig_features$probe_rgSet,
-                                        beta_swan_p53_union_sig_features$probe_rgSet, 
-                                        beta_quan_p53_union_sig_features$probe_rgSet,
-                                        beta_funnorm_p53_union_sig_features$probe_rgSet,
-                                        num_vecs = 4)
-
-# beta_bal_counts_p53_union
-beta_bal_counts_p53_union_sig_features  <- getUnion(beta_raw_bal_counts_p53_sig_features$probe,
-                                                    beta_swan_bal_counts_p53_sig_features$probe,
-                                                    beta_quan_bal_counts_p53_sig_features$probe,
-                                                    beta_funnorm_bal_counts_p53_sig_features$probe,
-                                                    num_vecs = 4)
-
-##########
-# remove unneeded objects
-##########
-# keep only the objects that have features
-rm(list = ls()[!grepl("features", ls())])
-
-# save feaures
-save.image(paste0(model_data, '/bh_features.RData'))
-
+save.image(paste0(model_data, '/bh_feat.RData'))
 
