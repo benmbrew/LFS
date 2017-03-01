@@ -24,6 +24,13 @@ beta_quan <- readRDS(paste0(methyl_data, '/beta_quan.rda'))
 beta_quan_controls <- readRDS(paste0(methyl_data, '/beta_quan_controls.rda'))
 
 ##########
+# remove duplicated id columns
+##########
+beta_quan$ids.1 <- NULL
+beta_quan_controls$ids.1 <- NULL
+
+
+##########
 # get model data 
 ##########
 getModData <- function(data) 
@@ -54,10 +61,10 @@ getFeatInt <- function(data, data_controls)
   
   intersect_features <- intersect(features, features_controls)
   
-  data <- data[, c('id', 'p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses', 
+  data <- data[, c('ids', 'p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses', 
                    'age_sample_collection' ,'gender','type', intersect_features)]
   
-  data_controls <- data_controls[, c('id', 'p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses', 
+  data_controls <- data_controls[, c('ids', 'p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses', 
                                      'age_sample_collection' ,'gender','type', intersect_features)]
   
   data <- rbind(data, data_controls)
@@ -66,12 +73,11 @@ getFeatInt <- function(data, data_controls)
   
 }
 
-raw <- getFeatInt(beta_quan, beta_quan_controls)
+quan <- getFeatInt(beta_quan, beta_quan_controls)
 
 ########## 
 # PCA of each data type and cases vs controls
 ##########
-
 # functionp needs to take a clinical column, remove others, and plot pcas
 getPCA <- function(pca_data, column_name, name, gene_start, controls, cases) 
 {
@@ -79,12 +85,12 @@ getPCA <- function(pca_data, column_name, name, gene_start, controls, cases)
   if (controls) {
     
     pca_data <- pca_data[pca_data$type == 'controls',]
-    rownames(pca_data) <-pca_data$id
+    rownames(pca_data) <-pca_data$ids
     
   } else if (cases) {
     
     pca_data <- pca_data[pca_data$type == 'cases',]
-    rownames(pca_data) <-pca_data$id
+    rownames(pca_data) <-pca_data$ids
     
     
   } 
@@ -108,6 +114,7 @@ getPCA <- function(pca_data, column_name, name, gene_start, controls, cases)
   # run pca
   data_length <- ncol(pca_data)
   pca <- prcomp(pca_data[,2:data_length])
+  temp <- pca_data[,2:data_length]
   
   # plot data
   #fill in factors with colors 
@@ -135,18 +142,18 @@ getPCA <- function(pca_data, column_name, name, gene_start, controls, cases)
 # combine cases and controls and plot based on that
 ##########
 # cases
-getPCA(raw, 
+getPCA(quan, 
        'gender', 
-       'PCA raw cases gender',
+       'PCA quan cases gender',
        gene_start = 8,
        cases = T,
        controls = F)
 
 
 # controls
-getPCA(raw, 
+getPCA(quan, 
        'gender', 
-       'PCA raw controls gender',
+       'PCA quan controls gender',
        gene_start = 8,
        cases = F,
        controls = T)
@@ -157,34 +164,31 @@ getPCA(raw,
 ##########
 removeOutlier <- function(data, funnorm) {
   
-  # cases outlier
-  data <- data[data$id != '4257',]
-  
+
   #controls outlier
-  data <- data[data$id != '3391',]
-  data <- data[data$id != '3392',]
+  data <- data[data$ids != '3391',]
+  data <- data[data$ids != '3392',]
   return(data)
 }
 
-raw <- removeOutlier(raw, funnorm = F)
-rm(beta_quan, beta_quan_controls)
+quan <- removeOutlier(quan, funnorm = F)
 
 ##########
 # rerun pca
 ##########
 # cases
-getPCA(raw, 
+getPCA(quan, 
        'gender', 
-       'PCA raw cases gender',
+       'PCA quan cases gender',
        gene_start = 8,
        cases = T,
        controls = F)
 
 
 # controls
-getPCA(raw, 
+getPCA(quan, 
        'gender', 
-       'PCA raw controls gender',
+       'PCA quan controls gender',
        gene_start = 8,
        cases = F,
        controls = T)
@@ -207,7 +211,7 @@ getBatch <- function(data, cases)
   
   batch <- as.factor(data$gender)
   type <- data$type
-  id <- data$id
+  ids <- data$ids
   sample_collection <- data$age_sample_collection
   diagnosis <- data$age_diagnosis
   p53 <- data$p53_germline
@@ -226,13 +230,13 @@ getBatch <- function(data, cases)
   final_dat <- as.data.frame(t(combat))
   final_dat$model_id <- rownames(final_dat)
   final_dat$gender <- batch
-  final_dat$id <- id
+  final_dat$ids <- ids
   final_dat$type <- type
   final_dat$age_sample_collection <- sample_collection
   final_dat$age_diagnosis <- diagnosis
   final_dat$p53_germline <- p53
   final_dat$cancer_diagnosis_diagnoses <- cancer_diagnosis
-  final_dat <- final_dat[, c('id', 'type', 'gender', 'age_sample_collection',
+  final_dat <- final_dat[, c('ids', 'type', 'gender', 'age_sample_collection',
                              'age_diagnosis','cancer_diagnosis_diagnoses' ,'p53_germline', features)]
   rownames(final_dat) <- NULL
   
@@ -242,13 +246,13 @@ getBatch <- function(data, cases)
 }
 
 # get non batch corrected cases and controls
-raw_cases <- raw[raw$type == 'cases',]
-raw_controls <- raw[raw$type == 'controls',]
+quan_cases <- quan[quan$type == 'cases',]
+quan_controls <- quan[quan$type == 'controls',]
 
 
 # get batch corrected cases and controls
-raw_cases_batch <- getBatch(raw, cases = T)
-raw_controls_batch <- getBatch(raw, cases = F)
+quan_cases_batch <- getBatch(quan, cases = T)
+quan_controls_batch <- getBatch(quan, cases = F)
 
 
 ##########
@@ -256,35 +260,35 @@ raw_controls_batch <- getBatch(raw, cases = F)
 ##########
 
 # cases
-getPCA(raw_cases, 
+getPCA(quan_cases, 
        'gender', 
-       'PCA raw cases gender no batch',
+       'PCA quan cases gender no batch',
        gene_start = 8,
        cases = T,
        controls = F)
 
 
 # controls
-getPCA(raw_controls, 
+getPCA(quan_controls, 
        'gender', 
-       'PCA raw controls gender no batch',
+       'PCA quan controls gender no batch',
        gene_start = 8,
        cases = F,
        controls = T)
 
 # cases
-getPCA(raw_cases_batch, 
+getPCA(quan_cases_batch, 
        'gender', 
-       'PCA raw cases gender batch',
+       'PCA quan cases gender batch',
        gene_start = 8,
        cases = T,
        controls = F)
 
 
 # controls
-getPCA(raw_controls_batch, 
+getPCA(quan_controls_batch, 
        'gender', 
-       'PCA raw controls gender batch',
+       'PCA quan controls gender batch',
        gene_start = 8,
        cases = F,
        controls = T)
@@ -296,17 +300,17 @@ getPCA(raw_controls_batch,
 ##########
 
 # save cases 
-saveRDS(raw_cases_batch, paste0(model_data, '/raw_cases_batch.rda'))
+saveRDS(quan_cases_batch, paste0(model_data, '/quan_cases_batch.rda'))
 
 # save contorls
-saveRDS(raw_controls_batch, paste0(model_data, '/raw_controls_batch.rda'))
+saveRDS(quan_controls_batch, paste0(model_data, '/quan_controls_batch.rda'))
 
 ##########
 # save non batch corrected
 ##########
 
 # save cases 
-saveRDS(raw_cases, paste0(model_data, '/raw_cases.rda'))
+saveRDS(quan_cases, paste0(model_data, '/quan_cases.rda'))
 
 # save contorls
-saveRDS(raw_controls, paste0(model_data, '/raw_controls.rda'))
+saveRDS(quan_controls, paste0(model_data, '/quan_controls.rda'))
