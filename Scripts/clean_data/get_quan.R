@@ -24,8 +24,22 @@ clin_data <- paste0(data_folder, '/clin_data')
 ##########
 # Load id_map, which has ids to merge with methylation - do for cases and controls
 ##########
+# read in id map for model data
+
+# batch1 
 id_map <- read.csv(paste0(methyl_data, '/ids_map.csv'), stringsAsFactors = F)
+
+#batch2
+id_map_other <- read.csv(paste0(methyl_data, '/batch_2014.csv'), stringsAsFactors = F)
+id_map_other$Project <- NULL
+
+# controls
 id_map_control <- read.csv(paste0(methyl_data, '/ids_map_controls.csv'), stringsAsFactors = F)
+
+##########
+# combine id_map and id_map_other
+##########
+id_map <- rbind(id_map, id_map_other)
 
 
 ##########
@@ -125,8 +139,12 @@ findIds <- function(data_methyl, id_map) {
   data_methyl$identifier <- as.factor(data_methyl$identifier)
   # loop to combine identifiers, without merging large table
   data_methyl$ids <- NA
+  data_methyl$sentrix_id <- NA
+  
   for (i in data_methyl$identifier) {
     data_methyl$ids[data_methyl$identifier == i] <- id_map$sample_name[id_map$identifier == i]
+    data_methyl$sentrix_id[data_methyl$identifier == i] <- id_map$sentrix_id[id_map$identifier == i]
+    
     print(i)
   }
   
@@ -136,6 +154,7 @@ findIds <- function(data_methyl, id_map) {
 ##########
 # Function that gets malkin id from sample_name
 ##########
+
 getIdName <- function(data) {
   
   column_split <- strsplit(as.character(data$ids), '#')
@@ -144,7 +163,6 @@ getIdName <- function(data) {
   sub_ids <- gsub('RD-', '', sub_ids)
   data$ids <- sub_ids
   data$sentrix_position <- NULL
-  data$sentrix_id <- NULL
   data$pool_id <- NULL
   data$sample_group <- NULL
   data$sample_plate <- NULL
@@ -154,7 +172,6 @@ getIdName <- function(data) {
   return(data)
   
 }
-
 ##########
 # Main function that specifies a preprocessing method and get beta
 ##########
@@ -162,6 +179,9 @@ getMethyl <- function(data_list,control) {
   
   processed_list <-preprocessMethod(data_list)
   
+  # save.image('/home/benbrew/Desktop/temp_process.RData')
+  # load('/home/benbrew/Desktop/temp_process.RData')
+  # 
   # combinelist
   beta_methyl <- combineList(processed_list)
   # m_methyl <- combineList(processed_list[[2]])

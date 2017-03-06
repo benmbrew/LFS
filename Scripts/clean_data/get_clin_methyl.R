@@ -154,7 +154,7 @@ joinData <- function(data, control) {
     data <- data[!duplicated(data$ids),]
     data <- data[!duplicated(data$tm_donor_),]
     data <- data[, c('ids', 'p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses',
-                     'age_sample_collection', 'gender', features)]
+                     'age_sample_collection', 'gender','sentrix_id', features)]
   } else {
     
     for (i in intersected_ids) {
@@ -172,7 +172,7 @@ joinData <- function(data, control) {
     data <- data[!duplicated(data$ids),]
     # data <- data[!duplicated(data$tm_donor_),]
     data <- data[, c('ids', 'p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses',
-                     'age_sample_collection', 'gender', features)]
+                     'age_sample_collection', 'gender', 'sentrix_id', features)]
   }
   
   return(data)
