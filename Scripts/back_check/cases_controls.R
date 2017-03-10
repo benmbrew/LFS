@@ -1,10 +1,10 @@
-####### Script will subset probes used based on highly correlated probes and near zero variance probes
-# This is 5th step
+####### Script will give summary stats of model data
 
 ##########
 # initialize libraries
 ##########
-library(caret)
+library(dplyr)
+library(sva)
 
 ##########
 # Initialize folders
@@ -15,6 +15,7 @@ data_folder <- paste0(project_folder, '/Data')
 methyl_data <- paste0(data_folder, '/methyl_data')
 model_data <- paste0(data_folder, '/model_data')
 clin_data <- paste0(data_folder, '/clin_data')
+
 
 ##########
 # load data batch data
@@ -35,17 +36,7 @@ quan_cases_sen_gen <- readRDS(paste0(model_data, '/quan_cases_sen_gen.rda'))
 
 quan_cases_sam_gen <- readRDS(paste0(model_data, '/quan_cases_sam_gen.rda'))
 
+# load features
+load(paste0(model_data, '/bh_feat.RData'))
 
-##########
-# drop highly correlated (find appropriate threshold)
-##########
-cor_mat <- quan_cases[, 8:ncol(quan_cases)]
-cor_mat <- cor(as.matrix(cor_mat))
-
-
-highlyCorDescr <- findCorrelation(cor_mat, cutoff = .70)
-
-quan_mat <- cor_mat[,-highlyCorDescr]
-
-saveRDS(quan_mat,paste0(model_data, '/quan_cases.rda'))
 

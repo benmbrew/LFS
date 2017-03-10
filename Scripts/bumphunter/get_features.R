@@ -77,40 +77,39 @@ getProbe <- function(data) {
 }
 
 ##########
-# apply raw/quan, even/uneven, batch/unbatch
+# apply quan, even/uneven, gen, sam
 ##########
-##RAW
-#raw even
-raw_even <- getProbe(raw_even)
-raw_even_bh <- raw_even[[1]]
-raw_even_bh_sig <- raw_even[[2]]
-raw_even_bh_fwer <- raw_even[[3]]
+###quan
 
-#raw uneven
-raw_uneven <- getProbe(raw_uneven)
-raw_uneven_bh <- raw_uneven[[1]]
-raw_uneven_bh_sig <- raw_uneven[[2]]
-raw_uneven_bh_fwer <- raw_uneven[[3]]
+## even
 
-#raw even batch
-raw_batch_even <- getProbe(raw_batch_even)
-raw_batch_even_bh <- raw_batch_even[[1]]
-raw_batch_even_bh_sig <- raw_batch_even[[2]] 
-raw_batch_even_bh_fwer <- raw_batch_even[[3]]
-
-#raw uneven
-raw_batch_uneven <- getProbe(raw_batch_uneven)
-raw_batch_uneven_bh <- raw_batch_uneven[[1]]
-raw_batch_uneven_bh_sig <- raw_batch_uneven[[2]]
-raw_batch_uneven_bh_fwer <- raw_batch_uneven[[3]]
-
-rm(raw_even, raw_uneven, raw_batch_even, raw_batch_uneven)
-##quan
 #quan even
 quan_even <- getProbe(quan_even)
 quan_even_bh <- quan_even[[1]]
 quan_even_bh_sig <- quan_even[[2]]
 quan_even_bh_fwer <- quan_even[[3]]
+
+#quan even gen
+quan_even_gen <- getProbe(quan_even_gen)
+quan_even_gen_bh <- quan_even_gen[[1]]
+quan_even_gen_bh_sig <- quan_even_gen[[2]]
+quan_even_gen_bh_fwer <- quan_even_gen[[3]]
+
+#quan even gen sen
+quan_even_gen_sen <- getProbe(quan_even_gen_sen)
+quan_even_gen_sen_bh <- quan_even_gen_sen[[1]]
+quan_even_gen_sen_bh_sig <- quan_even_gen_sen[[2]]
+quan_even_gen_sen_bh_fwer <- quan_even_gen_sen[[3]]
+
+#quan even gen sam
+quan_even_gen_sam <- getProbe(quan_even_gen_sam)
+quan_even_gen_sam_bh <- quan_even_gen_sam[[1]]
+quan_even_gen_sam_bh_sig <- quan_even_gen_sam[[2]]
+quan_even_gen_sam_bh_fwer <- quan_even_gen_sam[[3]]
+
+# save.image('/home/benbrew/Desktop/feat_Temp_temp.RData')
+
+## uneven
 
 #quan uneven
 quan_uneven <- getProbe(quan_uneven)
@@ -118,19 +117,26 @@ quan_uneven_bh <- quan_uneven[[1]]
 quan_uneven_bh_sig <- quan_uneven[[2]]
 quan_uneven_bh_fwer <- quan_uneven[[3]]
 
-#quan even batch
-quan_batch_even <- getProbe(quan_batch_even)
-quan_batch_even_bh <- quan_batch_even[[1]]
-quan_batch_even_bh_sig <- quan_batch_even[[2]] 
-quan_batch_even_bh_fwer <- quan_batch_even[[3]]
+#quan uneven gen
+quan_uneven_gen <- getProbe(quan_uneven_gen)
+quan_uneven_gen_bh <- quan_uneven_gen[[1]]
+quan_uneven_gen_bh_sig <- quan_uneven_gen[[2]]
+quan_uneven_gen_bh_fwer <- quan_uneven_gen[[3]]
 
-#quan uneven
-quan_batch_uneven <- getProbe(quan_batch_uneven)
-quan_batch_uneven_bh <- quan_batch_uneven[[1]]
-quan_batch_uneven_bh_sig <- quan_batch_uneven[[2]]
-quan_batch_uneven_bh_fwer <- quan_batch_uneven[[3]]
+#quan uneven gen sen
+quan_uneven_gen_sen <- getProbe(quan_uneven_gen_sen)
+quan_uneven_gen_sen_bh <- quan_uneven_gen_sen[[1]]
+quan_uneven_gen_sen_bh_sig <- quan_uneven_gen_sen[[2]]
+quan_uneven_gen_sen_bh_fwer <- quan_uneven_gen_sen[[3]]
 
-rm(quan_even, quan_uneven, quan_batch_even, quan_batch_uneven, cg_locations)
+#quan uneven gen sam
+quan_uneven_gen_sam <- getProbe(quan_uneven_gen_sam)
+quan_uneven_gen_sam_bh <- quan_uneven_gen_sam[[1]]
+quan_uneven_gen_sam_bh_sig <- quan_uneven_gen_sam[[2]]
+quan_uneven_gen_sam_bh_fwer <- quan_uneven_gen_sam[[3]]
+
+rm(quan_even, quan_even_gen, quan_even_gen_sam, quan_even_gen_sen,
+   quan_uneven, quan_uneven_gen, quan_uneven_gen_sam, quan_uneven_gen_sen)
 
 ##########
 # get run from each dataset
@@ -144,136 +150,12 @@ getRun <- function(data, run_num)
   return(data_feat)
 }
 
-##########
-# raw 10
-##########
-#NOT BATCH
-# even
-raw_even_10 <- getRun(raw_even_bh, run_num = 0.10)
-raw_even_sig_10 <- getRun(raw_even_bh_sig, run_num = 0.10)
-raw_even_fwer_10 <- getRun(raw_even_bh_fwer, run_num = 0.10)
-
-# uneven
-raw_uneven_10 <- getRun(raw_uneven_bh, run_num = 0.10)
-raw_uneven_sig_10 <- getRun(raw_uneven_bh_sig, run_num = 0.10)
-raw_uneven_fwer_10 <- getRun(raw_uneven_bh_fwer, run_num = 0.10)
-
-#BATCH
-# even
-raw_batch_even_batch_10 <- getRun(raw_batch_even_bh, run_num = 0.10)
-raw_batch_even_batch_sig_10 <- getRun(raw_batch_even_bh_sig, run_num = 0.10)
-raw_batch_even_batch_fwer_10 <- getRun(raw_batch_even_bh_fwer, run_num = 0.10)
-
-# uneven
-raw_batch_uneven_10 <- getRun(raw_batch_uneven_bh, run_num = 0.10)
-raw_batch_uneven_sig_10 <- getRun(raw_batch_uneven_bh_sig, run_num = 0.10)
-raw_batch_uneven_fwer_10 <- getRun(raw_batch_uneven_bh_fwer, run_num = 0.10)
-
-##########
-# raw 20
-##########
-#NOT BATCH
-# even
-raw_even_20 <- getRun(raw_even_bh, run_num = 0.20)
-raw_even_sig_20 <- getRun(raw_even_bh_sig, run_num = 0.20)
-raw_even_fwer_20 <- getRun(raw_even_bh_fwer, run_num = 0.20)
-
-# uneven
-raw_uneven_20 <- getRun(raw_uneven_bh, run_num = 0.20)
-raw_uneven_sig_20 <- getRun(raw_uneven_bh_sig, run_num = 0.20)
-raw_uneven_fwer_20 <- getRun(raw_uneven_bh_fwer, run_num = 0.20)
-
-#BATCH
-# even
-raw_batch_even_batch_20 <- getRun(raw_batch_even_bh, run_num = 0.20)
-raw_batch_even_batch_sig_20 <- getRun(raw_batch_even_bh_sig, run_num = 0.20)
-raw_batch_even_batch_fwer_20 <- getRun(raw_batch_even_bh_fwer, run_num = 0.20)
-
-# uneven
-raw_batch_uneven_20 <- getRun(raw_batch_uneven_bh, run_num = 0.20)
-raw_batch_uneven_sig_20 <- getRun(raw_batch_uneven_bh_sig, run_num = 0.20)
-raw_batch_uneven_fwer_20 <- getRun(raw_batch_uneven_bh_fwer, run_num = 0.20)
-
-##########
-# raw 30
-##########
-#NOT BATCH
-# even
-raw_even_30 <- getRun(raw_even_bh, run_num = 0.30)
-raw_even_sig_30 <- getRun(raw_even_bh_sig, run_num = 0.30)
-raw_even_fwer_30 <- getRun(raw_even_bh_fwer, run_num = 0.30)
-
-# uneven
-raw_uneven_30 <- getRun(raw_uneven_bh, run_num = 0.30)
-raw_uneven_sig_30 <- getRun(raw_uneven_bh_sig, run_num = 0.30)
-raw_uneven_fwer_30 <- getRun(raw_uneven_bh_fwer, run_num = 0.30)
-
-#BATCH
-# even
-raw_batch_even_batch_30 <- getRun(raw_batch_even_bh, run_num = 0.30)
-raw_batch_even_batch_sig_30 <- getRun(raw_batch_even_bh_sig, run_num = 0.30)
-raw_batch_even_batch_fwer_30 <- getRun(raw_batch_even_bh_fwer, run_num = 0.30)
-
-# uneven
-raw_batch_uneven_30 <- getRun(raw_batch_uneven_bh, run_num = 0.30)
-raw_batch_uneven_sig_30 <- getRun(raw_batch_uneven_bh_sig, run_num = 0.30)
-raw_batch_uneven_fwer_30 <- getRun(raw_batch_uneven_bh_fwer, run_num = 0.30)
-
-##########
-# raw 40
-##########
-#NOT BATCH
-# even
-raw_even_40 <- getRun(raw_even_bh, run_num = 0.40)
-raw_even_sig_40 <- getRun(raw_even_bh_sig, run_num = 0.40)
-raw_even_fwer_40 <- getRun(raw_even_bh_fwer, run_num = 0.40)
-
-# uneven
-raw_uneven_40 <- getRun(raw_uneven_bh, run_num = 0.40)
-raw_uneven_sig_40 <- getRun(raw_uneven_bh_sig, run_num = 0.40)
-raw_uneven_fwer_40 <- getRun(raw_uneven_bh_fwer, run_num = 0.40)
-
-#BATCH
-# even
-raw_batch_even_batch_40 <- getRun(raw_batch_even_bh, run_num = 0.40)
-raw_batch_even_batch_sig_40 <- getRun(raw_batch_even_bh_sig, run_num = 0.40)
-raw_batch_even_batch_fwer_40 <- getRun(raw_batch_even_bh_fwer, run_num = 0.40)
-
-# uneven
-raw_batch_uneven_40 <- getRun(raw_batch_uneven_bh, run_num = 0.40)
-raw_batch_uneven_sig_40 <- getRun(raw_batch_uneven_bh_sig, run_num = 0.40)
-raw_batch_uneven_fwer_40 <- getRun(raw_batch_uneven_bh_fwer, run_num = 0.40)
-
-##########
-# raw 50
-##########
-#NOT BATCH
-# even
-raw_even_50 <- getRun(raw_even_bh, run_num = 0.50)
-raw_even_sig_50 <- getRun(raw_even_bh_sig, run_num = 0.50)
-raw_even_fwer_50 <- getRun(raw_even_bh_fwer, run_num = 0.50)
-
-# uneven
-raw_uneven_50 <- getRun(raw_uneven_bh, run_num = 0.50)
-raw_uneven_sig_50 <- getRun(raw_uneven_bh_sig, run_num = 0.50)
-raw_uneven_fwer_50 <- getRun(raw_uneven_bh_fwer, run_num = 0.50)
-
-#BATCH
-# even
-raw_batch_even_batch_50 <- getRun(raw_batch_even_bh, run_num = 0.50)
-raw_batch_even_batch_sig_50 <- getRun(raw_batch_even_bh_sig, run_num = 0.50)
-raw_batch_even_batch_fwer_50 <- getRun(raw_batch_even_bh_fwer, run_num = 0.50)
-
-# uneven
-raw_batch_uneven_50 <- getRun(raw_batch_uneven_bh, run_num = 0.50)
-raw_batch_uneven_sig_50 <- getRun(raw_batch_uneven_bh_sig, run_num = 0.50)
-raw_batch_uneven_fwer_50 <- getRun(raw_batch_uneven_bh_fwer, run_num = 0.50)
 
 
 ##########
 # quan 10
 ##########
-#NOT BATCH
+###NOT GEN
 # even
 quan_even_10 <- getRun(quan_even_bh, run_num = 0.10)
 quan_even_sig_10 <- getRun(quan_even_bh_sig, run_num = 0.10)
@@ -284,22 +166,49 @@ quan_uneven_10 <- getRun(quan_uneven_bh, run_num = 0.10)
 quan_uneven_sig_10 <- getRun(quan_uneven_bh_sig, run_num = 0.10)
 quan_uneven_fwer_10 <- getRun(quan_uneven_bh_fwer, run_num = 0.10)
 
-#BATCH
-# even
-quan_batch_even_batch_10 <- getRun(quan_batch_even_bh, run_num = 0.10)
-quan_batch_even_batch_sig_10 <- getRun(quan_batch_even_bh_sig, run_num = 0.10)
-quan_batch_even_batch_fwer_10 <- getRun(quan_batch_even_bh_fwer, run_num = 0.10)
+###GEN
+
+#even
+quan_even_gen_10 <- getRun(quan_even_gen_bh, run_num = 0.10)
+quan_even_gen_sig_10 <- getRun(quan_even_gen_bh_sig, run_num = 0.10)
+quan_even_gen_fwer_10 <- getRun(quan_even_gen_bh_fwer, run_num = 0.10)
 
 # uneven
-quan_batch_uneven_10 <- getRun(quan_batch_uneven_bh, run_num = 0.10)
-quan_batch_uneven_sig_10 <- getRun(quan_batch_uneven_bh_sig, run_num = 0.10)
-quan_batch_uneven_fwer_10 <- getRun(quan_batch_uneven_bh_fwer, run_num = 0.10)
+quan_uneven_gen_10 <- getRun(quan_uneven_gen_bh, run_num = 0.10)
+quan_uneven_gen_sig_10 <- getRun(quan_uneven_gen_bh_sig, run_num = 0.10)
+quan_uneven_gen_fwer_10 <- getRun(quan_uneven_gen_bh_fwer, run_num = 0.10)
 
+###GEN SAM
+
+#even
+quan_even_gen_sam_10 <- getRun(quan_even_gen_sam_bh, run_num = 0.10)
+quan_even_gen_sam_sig_10 <- getRun(quan_even_gen_sam_bh_sig, run_num = 0.10)
+quan_even_gen_sam_fwer_10 <- getRun(quan_even_gen_sam_bh_fwer, run_num = 0.10)
+
+# uneven
+quan_uneven_gen_sam_10 <- getRun(quan_uneven_gen_sam_bh, run_num = 0.10)
+quan_uneven_gen_sam_sig_10 <- getRun(quan_uneven_gen_sam_bh_sig, run_num = 0.10)
+quan_uneven_gen_sam_fwer_10 <- getRun(quan_uneven_gen_sam_bh_fwer, run_num = 0.10)
+
+
+###GEN SEN
+
+#even
+quan_even_gen_sen_10 <- getRun(quan_even_gen_sen_bh, run_num = 0.10)
+quan_even_gen_sen_sig_10 <- getRun(quan_even_gen_sen_bh_sig, run_num = 0.10)
+quan_even_gen_sen_fwer_10 <- getRun(quan_even_gen_sen_bh_fwer, run_num = 0.10)
+
+# uneven
+quan_uneven_gen_sen_10 <- getRun(quan_uneven_gen_sen_bh, run_num = 0.10)
+quan_uneven_gen_sen_sig_10 <- getRun(quan_uneven_gen_sen_bh_sig, run_num = 0.10)
+quan_uneven_gen_sen_fwer_10 <- getRun(quan_uneven_gen_sen_bh_fwer, run_num = 0.10)
+
+##############
 
 ##########
 # quan 20
 ##########
-#NOT BATCH
+###NOT GEN
 # even
 quan_even_20 <- getRun(quan_even_bh, run_num = 0.20)
 quan_even_sig_20 <- getRun(quan_even_bh_sig, run_num = 0.20)
@@ -310,21 +219,52 @@ quan_uneven_20 <- getRun(quan_uneven_bh, run_num = 0.20)
 quan_uneven_sig_20 <- getRun(quan_uneven_bh_sig, run_num = 0.20)
 quan_uneven_fwer_20 <- getRun(quan_uneven_bh_fwer, run_num = 0.20)
 
-#BATCH
-# even
-quan_batch_even_batch_20 <- getRun(quan_batch_even_bh, run_num = 0.20)
-quan_batch_even_batch_sig_20 <- getRun(quan_batch_even_bh_sig, run_num = 0.20)
-quan_batch_even_batch_fwer_20 <- getRun(quan_batch_even_bh_fwer, run_num = 0.20)
+###GEN
+
+#even
+quan_even_gen_20 <- getRun(quan_even_gen_bh, run_num = 0.20)
+quan_even_gen_sig_20 <- getRun(quan_even_gen_bh_sig, run_num = 0.20)
+quan_even_gen_fwer_20 <- getRun(quan_even_gen_bh_fwer, run_num = 0.20)
 
 # uneven
-quan_batch_uneven_20 <- getRun(quan_batch_uneven_bh, run_num = 0.20)
-quan_batch_uneven_sig_20 <- getRun(quan_batch_uneven_bh_sig, run_num = 0.20)
-quan_batch_uneven_fwer_20 <- getRun(quan_batch_uneven_bh_fwer, run_num = 0.20)
+quan_uneven_gen_20 <- getRun(quan_uneven_gen_bh, run_num = 0.20)
+quan_uneven_gen_sig_20 <- getRun(quan_uneven_gen_bh_sig, run_num = 0.20)
+quan_uneven_gen_fwer_20 <- getRun(quan_uneven_gen_bh_fwer, run_num = 0.20)
+
+###GEN SAM
+
+#even
+quan_even_gen_sam_20 <- getRun(quan_even_gen_sam_bh, run_num = 0.20)
+quan_even_gen_sam_sig_20 <- getRun(quan_even_gen_sam_bh_sig, run_num = 0.20)
+quan_even_gen_sam_fwer_20 <- getRun(quan_even_gen_sam_bh_fwer, run_num = 0.20)
+
+# uneven
+quan_uneven_gen_sam_20 <- getRun(quan_uneven_gen_sam_bh, run_num = 0.20)
+quan_uneven_gen_sam_sig_20 <- getRun(quan_uneven_gen_sam_bh_sig, run_num = 0.20)
+quan_uneven_gen_sam_fwer_20 <- getRun(quan_uneven_gen_sam_bh_fwer, run_num = 0.20)
+
+
+###GEN SEN
+
+#even
+quan_even_gen_sen_20 <- getRun(quan_even_gen_sen_bh, run_num = 0.20)
+quan_even_gen_sen_sig_20 <- getRun(quan_even_gen_sen_bh_sig, run_num = 0.20)
+quan_even_gen_sen_fwer_20 <- getRun(quan_even_gen_sen_bh_fwer, run_num = 0.20)
+
+# uneven
+quan_uneven_gen_sen_20 <- getRun(quan_uneven_gen_sen_bh, run_num = 0.20)
+quan_uneven_gen_sen_sig_20 <- getRun(quan_uneven_gen_sen_bh_sig, run_num = 0.20)
+quan_uneven_gen_sen_fwer_20 <- getRun(quan_uneven_gen_sen_bh_fwer, run_num = 0.20)
+
+##############
+
+
+
 
 ##########
 # quan 30
 ##########
-#NOT BATCH
+###NOT GEN
 # even
 quan_even_30 <- getRun(quan_even_bh, run_num = 0.30)
 quan_even_sig_30 <- getRun(quan_even_bh_sig, run_num = 0.30)
@@ -335,67 +275,44 @@ quan_uneven_30 <- getRun(quan_uneven_bh, run_num = 0.30)
 quan_uneven_sig_30 <- getRun(quan_uneven_bh_sig, run_num = 0.30)
 quan_uneven_fwer_30 <- getRun(quan_uneven_bh_fwer, run_num = 0.30)
 
-#BATCH
-# even
-quan_batch_even_batch_30 <- getRun(quan_batch_even_bh, run_num = 0.30)
-quan_batch_even_batch_sig_30 <- getRun(quan_batch_even_bh_sig, run_num = 0.30)
-quan_batch_even_batch_fwer_30 <- getRun(quan_batch_even_bh_fwer, run_num = 0.30)
+###GEN
+
+#even
+quan_even_gen_30 <- getRun(quan_even_gen_bh, run_num = 0.30)
+quan_even_gen_sig_30 <- getRun(quan_even_gen_bh_sig, run_num = 0.30)
+quan_even_gen_fwer_30 <- getRun(quan_even_gen_bh_fwer, run_num = 0.30)
 
 # uneven
-quan_batch_uneven_30 <- getRun(quan_batch_uneven_bh, run_num = 0.30)
-quan_batch_uneven_sig_30 <- getRun(quan_batch_uneven_bh_sig, run_num = 0.30)
-quan_batch_uneven_fwer_30 <- getRun(quan_batch_uneven_bh_fwer, run_num = 0.30)
+quan_uneven_gen_30 <- getRun(quan_uneven_gen_bh, run_num = 0.30)
+quan_uneven_gen_sig_30 <- getRun(quan_uneven_gen_bh_sig, run_num = 0.30)
+quan_uneven_gen_fwer_30 <- getRun(quan_uneven_gen_bh_fwer, run_num = 0.30)
 
-##########
-# quan 40
-##########
-#NOT BATCH
-# even
-quan_even_40 <- getRun(quan_even_bh, run_num = 0.40)
-quan_even_sig_40 <- getRun(quan_even_bh_sig, run_num = 0.40)
-quan_even_fwer_40 <- getRun(quan_even_bh_fwer, run_num = 0.40)
+###GEN SAM
+
+#even
+quan_even_gen_sam_30 <- getRun(quan_even_gen_sam_bh, run_num = 0.30)
+quan_even_gen_sam_sig_30 <- getRun(quan_even_gen_sam_bh_sig, run_num = 0.30)
+quan_even_gen_sam_fwer_30 <- getRun(quan_even_gen_sam_bh_fwer, run_num = 0.30)
 
 # uneven
-quan_uneven_40 <- getRun(quan_uneven_bh, run_num = 0.40)
-quan_uneven_sig_40 <- getRun(quan_uneven_bh_sig, run_num = 0.40)
-quan_uneven_fwer_40 <- getRun(quan_uneven_bh_fwer, run_num = 0.40)
+quan_uneven_gen_sam_30 <- getRun(quan_uneven_gen_sam_bh, run_num = 0.30)
+quan_uneven_gen_sam_sig_30 <- getRun(quan_uneven_gen_sam_bh_sig, run_num = 0.30)
+quan_uneven_gen_sam_fwer_30 <- getRun(quan_uneven_gen_sam_bh_fwer, run_num = 0.30)
 
-#BATCH
-# even
-quan_batch_even_batch_40 <- getRun(quan_batch_even_bh, run_num = 0.40)
-quan_batch_even_batch_sig_40 <- getRun(quan_batch_even_bh_sig, run_num = 0.40)
-quan_batch_even_batch_fwer_40 <- getRun(quan_batch_even_bh_fwer, run_num = 0.40)
 
-# uneven
-quan_batch_uneven_40 <- getRun(quan_batch_uneven_bh, run_num = 0.40)
-quan_batch_uneven_sig_40 <- getRun(quan_batch_uneven_bh_sig, run_num = 0.40)
-quan_batch_uneven_fwer_40 <- getRun(quan_batch_uneven_bh_fwer, run_num = 0.40)
+###GEN SEN
 
-##########
-# quan 50
-##########
-#NOT BATCH
-# even
-quan_even_50 <- getRun(quan_even_bh, run_num = 0.50)
-quan_even_sig_50 <- getRun(quan_even_bh_sig, run_num = 0.50)
-quan_even_fwer_50 <- getRun(quan_even_bh_fwer, run_num = 0.50)
+#even
+quan_even_gen_sen_30 <- getRun(quan_even_gen_sen_bh, run_num = 0.30)
+quan_even_gen_sen_sig_30 <- getRun(quan_even_gen_sen_bh_sig, run_num = 0.30)
+quan_even_gen_sen_fwer_30 <- getRun(quan_even_gen_sen_bh_fwer, run_num = 0.30)
 
 # uneven
-quan_uneven_50 <- getRun(quan_uneven_bh, run_num = 0.50)
-quan_uneven_sig_50 <- getRun(quan_uneven_bh_sig, run_num = 0.50)
-quan_uneven_fwer_50 <- getRun(quan_uneven_bh_fwer, run_num = 0.50)
+quan_uneven_gen_sen_30 <- getRun(quan_uneven_gen_sen_bh, run_num = 0.30)
+quan_uneven_gen_sen_sig_30 <- getRun(quan_uneven_gen_sen_bh_sig, run_num = 0.30)
+quan_uneven_gen_sen_fwer_30 <- getRun(quan_uneven_gen_sen_bh_fwer, run_num = 0.30)
 
-#BATCH
-# even
-quan_batch_even_batch_50 <- getRun(quan_batch_even_bh, run_num = 0.50)
-quan_batch_even_batch_sig_50 <- getRun(quan_batch_even_bh_sig, run_num = 0.50)
-quan_batch_even_batch_fwer_50 <- getRun(quan_batch_even_bh_fwer, run_num = 0.50)
-
-# uneven
-quan_batch_uneven_50 <- getRun(quan_batch_uneven_bh, run_num = 0.50)
-quan_batch_uneven_sig_50 <- getRun(quan_batch_uneven_bh_sig, run_num = 0.50)
-quan_batch_uneven_fwer_50 <- getRun(quan_batch_uneven_bh_fwer, run_num = 0.50)
-
+##############
 ##########
 # remove unneccssary objects
 ##########
@@ -406,18 +323,12 @@ rm(bumpHunterBalanced, getProbe, getRun)
 ##########
 # remove any object filled with NAs
 ##########
-rm(quan_batch_even_batch_sig_30, quan_batch_even_batch_sig_40, 
-   quan_batch_even_batch_sig_50 , quan_batch_uneven_sig_20, 
-   quan_batch_uneven_sig_30,quan_batch_uneven_sig_40,
-   quan_batch_uneven_sig_50, quan_even_sig_20, 
-   quan_even_sig_30, quan_even_sig_40, quan_even_sig_50,
-   quan_uneven_sig_30, quan_uneven_sig_40, quan_uneven_sig_50,
-   raw_batch_even_batch_sig_30, raw_batch_even_batch_sig_40, 
-   raw_batch_even_batch_sig_50, raw_batch_uneven_sig_20, 
-   raw_batch_uneven_sig_30,raw_batch_uneven_sig_40,
-   raw_batch_uneven_sig_50,  raw_even_sig_20, 
-   raw_even_sig_30, raw_even_sig_40, raw_even_sig_50,
-   raw_uneven_sig_30, raw_uneven_sig_40, i)
+rm(quan_even_gen_sam_sig_30, quan_even_gen_sen_sig_20,
+   quan_even_gen_sen_sig_30, quan_even_gen_sig_30,
+   quan_even_sig_30, quan_uneven_gen_sam_sig_20,
+   quan_uneven_gen_sam_sig_30, quan_uneven_gen_sen_sig_20,
+   quan_uneven_gen_sen_sig_30, quan_uneven_gen_sig_20,
+   quan_uneven_gen_sig_30, quan_uneven_sig_30, cg_locations)
 
 save.image(paste0(model_data, '/bh_feat.RData'))
 

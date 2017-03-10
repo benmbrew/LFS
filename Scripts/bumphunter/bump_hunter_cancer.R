@@ -15,12 +15,31 @@ project_folder <- paste0(home_folder, '/LFS')
 data_folder <- paste0(project_folder, '/Data')
 model_data <- paste0(data_folder, '/model_data')
 
+#########
+# Load data
+#########
 
-#########
-# Load model data batch, non batch, raw, quan, cases, controls
-#########
-# load image
-load(paste0(model_data, '/model_data.RData'))
+# read cases
+quan_cases <- readRDS(paste0(model_data, '/quan_cases.rda'))
+
+# read contorls
+quan_controls <- readRDS(paste0(model_data, '/quan_controls.rda'))
+
+# read batch corrected data for gender
+quan_cases_gen <- readRDS(paste0(model_data, '/quan_cases_gen.rda'))
+
+# read controls
+quan_controls_gen <- readRDS(paste0(model_data, '/quan_controls_gen.rda'))
+
+# read batch corrected data for sentrix id and SAM
+quan_cases_sen <- readRDS(paste0(model_data, '/quan_cases_sen.rda'))
+
+quan_cases_sam <- readRDS(paste0(model_data, '/quan_cases_sam.rda'))
+
+# read batch corrected data for sentrix id and SAM and gender!
+quan_cases_sen_gen <- readRDS(paste0(model_data, '/quan_cases_sen_gen.rda'))
+
+quan_cases_sam_gen <- readRDS(paste0(model_data, '/quan_cases_sam_gen.rda'))
 
 # ge cg_locations
 cg_locations <- read.csv(paste0(model_data, '/cg_locations.csv'))
@@ -29,7 +48,8 @@ cg_locations <- read.csv(paste0(model_data, '/cg_locations.csv'))
 # function that takes LFS patients and run balanced and unbalanced bumphunter on cancer and controls
 # type is the indicator
 ##########
-
+# dat_cases <- quan_cases
+# dat_controls <- quan_controls
 # will return one unbalanced, one balanced by age, and balanced by age and counts
 bumpHunterBalanced <- function(dat_cases,
                                dat_controls,
@@ -49,7 +69,7 @@ bumpHunterBalanced <- function(dat_cases,
     remove_index <- which(dat$type == 'controls' & ((dat$age_sample_collection >= 100 & dat$age_sample_collection <= 200) |
                             (dat$age_sample_collection >= 300 & dat$age_sample_collection <= 400)))
     
-    remove_index <- sample(remove_index, 8, replace = F )
+    remove_index <- sample(remove_index, 10, replace = F )
     dat <- dat[-remove_index,]
     
   } 
@@ -57,7 +77,7 @@ bumpHunterBalanced <- function(dat_cases,
   ##########
   # get clinical dat 
   ##########
-  bump_clin <- dat[,1:7]
+  bump_clin <- dat[,1:9]
   
   ##########
   # get indicator and put into design matrix with intercept 1
@@ -69,8 +89,8 @@ bumpHunterBalanced <- function(dat_cases,
   ##########
   # Get genetic locations
   ##########
-  dat$p53_germline <- dat$age_diagnosis <- dat$cancer_diagnosis_diagnoses <-
-    dat$age_sample_collection <- dat$id <- dat$type <- dat$gender <-  NULL
+  dat$p53_germline <- dat$age_diagnosis <- dat$cancer_diagnosis_diagnoses <- dat$ids <- dat$batch <- 
+    dat$age_sample_collection <- dat$id <- dat$type <- dat$gender <-  dat$sentrix_id <-  NULL
   # transpose methylation to join with cg_locations to get genetic location vector.
   dat <- as.data.frame(t(dat), stringsAsFactors = F)
   
@@ -106,7 +126,7 @@ bumpHunterBalanced <- function(dat_cases,
   stopifnot(dim(beta)[1] == length(pos))
   
   # set paramenters 
-  DELTA_BETA_THRESH = c(0.10, 0.20, 0.30, 0.40, 0.50) # DNAm difference threshold
+  DELTA_BETA_THRESH = c(0.10, 0.20, 0.30) # DNAm difference threshold
   NUM_BOOTSTRAPS = 4   # number of randomizations
   
   # create tab list
@@ -133,21 +153,6 @@ bumpHunterBalanced <- function(dat_cases,
 }
 
 
-#########
-# Now Apply to Original IDAT data
-#########
-
-##########
-# raw
-##########
-# RAW no batch
-raw_even <- bumpHunterBalanced(raw_cases, raw_controls, bal_age = T)
-raw_uneven <- bumpHunterBalanced(raw_cases, raw_controls, bal_age = F)
-
-# RAW batch
-raw_batch_even <- bumpHunterBalanced(raw_cases_batch, raw_controls_batch, bal_age = T)
-raw_batch_uneven <- bumpHunterBalanced(raw_cases_batch, raw_controls_batch, bal_age = F)
-
 ##########
 # quantile
 ##########
@@ -155,20 +160,26 @@ raw_batch_uneven <- bumpHunterBalanced(raw_cases_batch, raw_controls_batch, bal_
 quan_even <- bumpHunterBalanced(quan_cases, quan_controls, bal_age = T)
 quan_uneven <- bumpHunterBalanced(quan_cases, quan_controls, bal_age = F)
 
-# quan batch
-quan_batch_even <- bumpHunterBalanced(quan_cases_batch, quan_controls_batch, bal_age = T)
-quan_batch_uneven <- bumpHunterBalanced(quan_cases_batch, quan_controls_batch, bal_age = F)
+# quan gender
+quan_even_gen <- bumpHunterBalanced(quan_cases_gen, quan_controls_gen, bal_age = T)
+quan_uneven_gen <- bumpHunterBalanced(quan_cases_gen, quan_controls_gen, bal_age = F)
 
-##########
-# quality ontrol of bumphunter results (feature intersection - are higher thresholds a subset of lower ones?)
-##########
+# quan gender sentrix
+quan_even_gen_sen <- bumpHunterBalanced(quan_cases_sen_gen, quan_controls_gen, bal_age = T)
+quan_uneven_gen_sen <- bumpHunterBalanced(quan_cases_sen_gen, quan_controls_gen, bal_age = F)
+
+# quan gender sam
+quan_even_gen_sam <- bumpHunterBalanced(quan_cases_sam_gen, quan_controls_gen, bal_age = T)
+quan_uneven_gen_sam <- bumpHunterBalanced(quan_cases_sam_gen, quan_controls_gen, bal_age = F)
+
 
 ##########
 # remove non model objects and save
 ##########
-rm(cg_locations, raw_cases, raw_cases_batch,
-   quan_cases, quan_cases_batch, raw_controls, 
-   raw_controls_batch, quan_controls, quan_controls_batch)
+rm(quan_cases_gen, quan_controls_gen,
+   quan_cases, quan_controls,
+   quan_cases_sen, quan_cases_sen_gen,
+   quan_cases_sam_gen, quan_cases_sam)
 
 ###########
 # save image of bh_features

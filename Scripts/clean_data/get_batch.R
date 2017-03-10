@@ -137,7 +137,12 @@ getPCA <- function(pca_data,
   
   # plot data
   #fill in factors with colors 
-  col_vec <- c('red', 'green', 'blue', 'orange', 'black', 'orange')
+  col_vec <- c('black','red' , 'beige', 'bisque', 'bisque1', 'bisque2', 'lightblue', 
+               'green', 'blueviolet', 'brown', 'cyan', 'coral',
+               'grey', 'orange', 'yellow', 'darkblue','darkred', 
+               'darkgreen', 'darkorchid', 'gold', 'darkorange', 'deeppink',
+               'greenyellow', 'purple')
+  
   colors <- col_vec[pca_data[, column_name]]
   
   
@@ -214,6 +219,26 @@ getPCA(quan,
        pca2 = 2)
 
 
+# cases sentrix
+getPCA(quan, 
+       'sentrix_id', 
+       'PCA quan cases sentrix',
+       gene_start = 10,
+       cases = T,
+       controls = F,
+       pca1 = 1,
+       pca2 = 2)
+
+# cases sentrix
+getPCA(quan, 
+       'sentrix_id', 
+       'PCA quan cases sentrix',
+       gene_start = 10,
+       cases = T,
+       controls = F,
+       pca1 = 2,
+       pca2 = 3)
+
 ##########
 # remove outliers  4257 cases, 3391, 3392 controls
 ##########
@@ -231,7 +256,6 @@ quan <- removeOutlier(quan, funnorm = F)
 ##########
 # fix gender batch in cases and controls.
 ##########
-data<- quan
 
 getBatch <- function(data, cases, batch)
 {
@@ -315,8 +339,6 @@ quan_cases_sen <-  getBatch(quan, cases = T, batch = 'sentrix_id')
 quan_cases_sam_gen <-getBatch(quan_cases_sam, cases = T, batch = 'gender')
 quan_cases_sen_gen <-getBatch(quan_cases_sen, cases = T, batch = 'gender')
 
-
-
 ##########
 # rerun pca and cases and controls
 ##########
@@ -328,18 +350,18 @@ getPCA(quan_cases,
        gene_start = 10,
        cases = T,
        controls = F,
-       pca1 = 1, 
-       pca2 = 2)
+       pca1 = 2, 
+       pca2 = 3)
 
 # cases
 getPCA(quan_cases_gen, 
        'gender', 
-       'PCA quan cases gender gender batch',
+       'PCA quan cases gender batch',
        gene_start = 10,
        cases = T,
        controls = F,
-       pca1 = 1, 
-       pca2 = 2)
+       pca1 = 2, 
+       pca2 = 3)
 
 # cases
 getPCA(quan_cases_sen_gen, 
@@ -362,6 +384,25 @@ getPCA(quan_cases_sam_gen,
        pca2 = 2)
 
 
+# cases sentrix
+getPCA(quan_cases, 
+       'sentrix_id', 
+       'PCA quan cases sentrix',
+       gene_start = 10,
+       cases = T,
+       controls = F,
+       pca1 = 1,
+       pca2 = 2)
+
+# cases sentrix
+getPCA(quan_cases_sen, 
+       'sentrix_id', 
+       'PCA quan cases sentrix',
+       gene_start = 10,
+       cases = T,
+       controls = F,
+       pca1 = 2,
+       pca2 = 3)
 
 ##########
 # save non batch corrected
@@ -392,7 +433,7 @@ saveRDS(quan_controls_gen, paste0(model_data, '/quan_controls_gen.rda'))
 saveRDS(quan_cases_sen, paste0(model_data, '/quan_cases_sen.rda'))
 
 # save contorls
-saveRDS(quan_controls_sam, paste0(model_data, '/quan_controls_sam.rda'))
+saveRDS(quan_cases_sam, paste0(model_data, '/quan_cases_sam.rda'))
 
 ##########
 # save batch corrected data for sentrix id and SAM and gender!
@@ -402,4 +443,4 @@ saveRDS(quan_controls_sam, paste0(model_data, '/quan_controls_sam.rda'))
 saveRDS(quan_cases_sen_gen, paste0(model_data, '/quan_cases_sen_gen.rda'))
 
 # save contorls
-saveRDS(quan_controls_sam_gen, paste0(model_data, '/quan_controls_sam_gen.rda'))
+saveRDS(quan_cases_sam_gen, paste0(model_data, '/quan_cases_sam_gen.rda'))

@@ -40,7 +40,7 @@ source(paste0(scripts_folder, '/predict_age/model_functions.R'))
 ##########
 # set parameters 
 ##########
-data_thresholds <- c(48, 60, 72, 84)
+data_thresholds <- c(48, 60, 72)
 p53 <- c('Mut', 'WT')
 
 ##########

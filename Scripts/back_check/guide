@@ -1,0 +1,5 @@
+- differences between cases and control data - cancer, age, other clinical variables.
+- run model permute 
+- run model sub sample - keep track of samples
+- bumphunter inside of training set
+
