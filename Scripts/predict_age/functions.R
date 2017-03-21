@@ -6,7 +6,8 @@
 subsetDat <- function(model_data,
                       random = random,
                       num_feat = num_feat,
-                      seed_num = seed_num) 
+                      gender = gender,
+                      seed_num) 
 {
   
   feature_names <- colnames(model_data)[10:ncol(model_data)]
@@ -18,10 +19,18 @@ subsetDat <- function(model_data,
     model_data <- model_data[, c('age_diagnosis', 'age_sample_collection', keep_index) ]
     
   } else {
-    model_data <- model_data[, c('age_diagnosis', 'age_sample_collection', feature_names)]
+    
+    if(gender) {
+      model_data <- model_data[, c('age_diagnosis', 'age_sample_collection', 'gender',feature_names)]
+      model_data$gender <- ifelse(model_data$gender == 'M', 1,2)
+      
+    } else {
+      model_data <- model_data[, c('age_diagnosis', 'age_sample_collection', feature_names)]
+      
+    }
+    
     
   }
-  
   return(model_data)
   
 }
@@ -43,13 +52,20 @@ runControl <- function(model_data, bh_data)
 
 # function that takes a full data set and subsets it by bumphunter features
 bhSubset <- function(model_data, 
-                     bh_data) 
+                     bh_data,
+                     gender) 
 {
   
   bh_features <- as.character(bh_data[,1])
   model_features <- colnames(model_data)
   bh_intersect <- intersect(bh_features, model_features)
-  model_data <- model_data[, c('age_diagnosis', 'age_sample_collection', bh_intersect)]
+  if(gender){
+    model_data <- model_data[, c('age_diagnosis', 'age_sample_collection', 'gender', bh_intersect)]
+    
+  } else {
+    model_data <- model_data[, c('age_diagnosis', 'age_sample_collection', bh_intersect)]
+    
+  }
   
   
   return(model_data)
@@ -58,7 +74,7 @@ bhSubset <- function(model_data,
 
 # Function that takes model model_data and obstains residual features based on regressin each gene/probe on age of sample collection
 
-getResidual <- function(model_data) 
+getResidual <- function(model_data, gender) 
 {
   
   data_list <- list()
@@ -67,25 +83,51 @@ getResidual <- function(model_data)
   # subset by mut, and complete cases for age diagnosis and age sample collection
   sub_data <- sub_data[complete.cases(sub_data),]
   
-  feature_names <- colnames(sub_data)[3:ncol(sub_data)]
-  
-  resid <- list()
-  
-  for (i in 3:ncol(sub_data)) {
+  if(gender){
+    feature_names <- colnames(sub_data)[4:ncol(sub_data)]
     
-    temp_response <- sub_data[, i]
-    temp_var <- sub_data$age_sample_collection
+    resid <- list()
     
-    resid[[i]] <- lm(temp_response ~ temp_var)$residuals
+    for (i in 4:ncol(sub_data)) {
+      
+      temp_response <- sub_data[, i]
+      temp_var <- sub_data$age_sample_collection
+      
+      resid[[i]] <- lm(temp_response ~ temp_var)$residuals
+      
+      print(i)
+      
+    }
     
-    print(i)
+    resid_data <- as.data.frame(do.call('cbind', resid))
+    sub_data <- cbind(sub_data$age_diagnosis, sub_data$age_sample_collection, sub_data$gender, resid_data)
+    colnames(sub_data) <- c('age_diagnosis', 'age_sample_collection', 'gender', feature_names)
+    model_data <- sub_data
+    
+  } else {
+    feature_names <- colnames(sub_data)[3:ncol(sub_data)]
+    
+    resid <- list()
+    
+    for (i in 3:ncol(sub_data)) {
+      
+      temp_response <- sub_data[, i]
+      temp_var <- sub_data$age_sample_collection
+      
+      resid[[i]] <- lm(temp_response ~ temp_var)$residuals
+      
+      print(i)
+      
+    }
+    
+    resid_data <- as.data.frame(do.call('cbind', resid))
+    sub_data <- cbind(sub_data$age_diagnosis, sub_data$age_sample_collection, resid_data)
+    colnames(sub_data) <- c('age_diagnosis', 'age_sample_collection', feature_names)
+    model_data <- sub_data
     
   }
   
-  resid_data <- as.data.frame(do.call('cbind', resid))
-  sub_data <- cbind(sub_data$age_diagnosis, sub_data$age_sample_collection, resid_data)
-  colnames(sub_data) <- c('age_diagnosis', 'age_sample_collection', feature_names)
-  model_data <- sub_data
+  
   
   return(model_data)
 }
@@ -161,16 +203,15 @@ conMatrix <- function(results)
 {
   
   # test acc for age of diagnosis
-  acc_age <- mean(unlist(results[[7]]))
+  acc_age <- mean(unlist(results[[1]]))
   
-  # test acc for age of sample collection
-  acc_samp <-mean(unlist(results[[9]]))
+
   
   # confustion matrix age of diagnosis 10
   iterations <- 10
   temp <- list()
-  for (i in 1:10){
-    temp[[i]] <- results[[8]][[i]]$table
+  for (i in 1:iterations){
+    temp[[i]] <- results[[3]][[i]]$table
   }
   mat <- unlist(temp)
   new_mat <- matrix(, 2, 2)
@@ -182,7 +223,175 @@ conMatrix <- function(results)
   new_mat[1,2] <- sum(mat[mat_index + 2])/iterations
   new_mat[2,2] <- sum(mat[mat_index + 3])/iterations
   
-  return(list(new_mat, acc_age, acc_samp))
+  return(list(new_mat, acc_age))
+  
+}
+
+# now with my function
+enetPredFac <- function(model_data,
+                        thresh,
+                        N_CV_REPEATS,
+                        nfolds,
+                        cutoff,
+                        gender,
+                        iterations) {
+  
+  # get lists to store results
+  model <- list()
+  best_features <- list()
+  test.predictions <- list()
+  test.ground_truth <- list()
+  non_zero_coeff <- list()
+  important_features <- list()
+  test_stats <- list()
+  test_acc <- list()
+  
+  # remove all rows with NAs - you can also impute
+  # model_data <- model_data[complete.cases(model_data),]
+  dims <- dim(model_data)
+  
+  selected_features <- names(model_data)[3:ncol(model_data)]
+
+  
+  model_data$age_diagnosis_fac <- ifelse(model_data$age_diagnosis < thresh, 'a', 'b') # gets training outcome
+  
+  
+  for (i in 1:iterations){
+    
+    # set seed and get training index
+    set.seed(i)
+    train_index <- sample(nrow(model_data), nrow(model_data) *cutoff, replace = F)
+    
+    
+    
+    # get training outcome
+    
+    y = make.names(as.factor(model_data$age_diagnosis_fac[train_index]))
+
+  
+    ###### ENET
+    
+    # create vector and list to store best alpha on training data. alpha is the parameter that choses the 
+    # the optimal proportion lambda, the tuning parameter for L1 (ridge) and L2 (lasso)
+    elastic_net.cv_error = vector()
+    elastic_net.cv_model = list()
+    elastic_net.ALPHA <- c(1:9) / 10 # creates possible alpha values for model to choose from
+    
+    # set parameters for training model
+    # type_family <- 'gaussian'
+    
+    # create error matrix for for opitmal alpha that can run in parraellel if you have bigger data 
+    # or if you have a high number fo N_CV_REPEATS
+    temp.cv_error_matrix <- foreach (temp = 1:N_CV_REPEATS, .combine=rbind, .errorhandling="stop") %do% {      
+      for (alpha in 1:length(elastic_net.ALPHA)) # for i in 1:9 - the model will run 9 times
+      {      
+        elastic_net.cv_model[[alpha]] = cv.glmnet(x = as.matrix(model_data[train_index, selected_features])
+                                                  , y =  y
+                                                  , alpha = elastic_net.ALPHA[alpha] # first time with 0.1 and so on
+                                                  , type.measure = 'class'
+                                                  , family = 'binomial'
+                                                  , standardize = FALSE 
+                                                  , nfolds = nfolds 
+                                                  , nlambda = 10
+                                                  , parallel = TRUE
+        )
+        elastic_net.cv_error[alpha] = min(elastic_net.cv_model[[alpha]]$cvm)
+      }
+      elastic_net.cv_error # stores 9 errors    
+    }
+    
+    if (N_CV_REPEATS == 1) {
+      temp.cv_error_mean = temp.cv_error_matrix
+    } else {
+      temp.cv_error_mean = apply(temp.cv_error_matrix, 2, mean) # take the mean of the 5 iterations  
+      # as your value for alpha
+    }
+    
+    # stop if you did not recover error for any models 
+    stopifnot(length(temp.cv_error_mean) == length(elastic_net.ALPHA))
+    
+    # get index of best alpha (lowest error) - alpha is values 0.1-0.9
+    temp.best_alpha_index = which(min(temp.cv_error_mean) == temp.cv_error_mean)[length(which(min(temp.cv_error_mean) == temp.cv_error_mean))] 
+    print(paste("Best ALPHA:", elastic_net.ALPHA[temp.best_alpha_index])) # print the value for alpha
+    
+    temp.non_zero_coeff = 0
+    temp.loop_count = 0
+    # loop runs initially because temp.non_zero coefficient <3 and then stops 
+    # usually after one iteration because the nzero variable selected by lambda is greater that 3. if it keeps looping
+    # it they are never greater than 1, then the model does not converge. 
+    while (temp.non_zero_coeff < 1) { 
+      elastic_net.cv_model = cv.glmnet(as.matrix(model_data[train_index, selected_features])
+                                       , y
+                                       , alpha = elastic_net.ALPHA[temp.best_alpha_index]
+                                       , type.measure = 'class'
+                                       , family = 'binomial'
+                                       , standardize=FALSE
+                                       , nlambda = 100
+                                       , nfolds = nfolds
+                                       , parallel = TRUE
+      )
+      
+      # get optimal lambda - the tuning parameter for ridge and lasso
+      # THIS IS IMPORTANT BECAUSE WHEN YOU TRAIN THE MODEL ON 100 SEPERATE VALUES OF LAMBDA
+      # AND WHEN YOU TEST THE MODEL IT WILL RETURN PREDCITION FOR ALL THOSE VALUES (1-100). YOU NEED TO 
+      # GRAB THE PREDICTION WITH SAME LAMBDA THAT YOU TRAINED ON. ITS ALL IN THE CODE, BUT JUST WANTED TO 
+      # GIVE YOU REASONS
+      temp.min_lambda_index = which(elastic_net.cv_model$lambda == elastic_net.cv_model$lambda.min) 
+      
+      # # number of non zero coefficients at that lambda    
+      temp.non_zero_coeff = elastic_net.cv_model$nzero[temp.min_lambda_index] 
+      temp.loop_count = temp.loop_count + 1
+      
+      # set seed for next loop iteration
+      as.numeric(Sys.time())-> t 
+      set.seed((t - floor(t)) * 1e8 -> seed) 
+      if (temp.loop_count > 10) {
+        print("diverged")
+        temp.min_lambda_index = 50 # if it loops more than 5 times, then model did not converge
+        break
+      }
+    }# while loop ends 
+    print(temp.non_zero_coeff) 
+    non_zero_coeff[[i]] <- temp.non_zero_coeff
+    
+    important_features[[i]] <- colnames(as.matrix(model_data[train_index,  selected_features]))[which(coef(elastic_net.cv_model, s = "lambda.min") != 0)]
+    
+    
+    model[[i]] = glmnet(x = as.matrix(model_data[train_index,  selected_features])
+                        ,y =  y
+                        ,alpha = elastic_net.ALPHA[temp.best_alpha_index]
+                        ,standardize=FALSE
+                        ,nlambda = 100
+                        ,family = 'binomial')
+    
+    # This returns 100 prediction with 1-100 lambdas
+    temp_test.predictions <- predict(model[[i]], as.matrix(model_data[-train_index, selected_features,]),
+                                     type = 'class')
+    
+    test.predictions[[i]] <- temp_test.predictions[, temp.min_lambda_index]
+   
+    
+    test.ground_truth[[i]] <- as.factor(make.names(model_data$age_diagnosis_fac[-train_index]))
+    
+    
+    # temp.pred <- prediction(test.predictions[[i]], test.ground_truth[[i]])
+    # auc[[i]] <- unlist(slot(performance(temp.pred, 'auc'), "y.values"))          
+    # For age of diagnosis
+    # Accuracy
+    test_acc[[i]] <- sum(test.predictions[[i]] == test.ground_truth[[i]]) / length(test.predictions[[i]])
+    # Confustion Matrix
+    test_stats[[i]] <- confusionMatrix(test.predictions[[i]], test.ground_truth[[i]])
+    # print(rf.test_stats)
+   
+
+    print(i)
+    
+  }
+  
+  
+  return(list(test_acc, important_features,
+              test_stats, dims,
+              non_zero_coeff))
   
 }
 
@@ -304,8 +513,10 @@ rfPredictFac <- function(model_data,
 # function that runs random forest as a regression
 
 rfPredictReg <- function(model_data,
+                         model_data_controls,
                          cutoff,
                          features,
+                         control,
                          iterations) 
 {
   
@@ -314,6 +525,9 @@ rfPredictReg <- function(model_data,
   importance <- list()
   test.predictions <- list()
   test.ground_truth <- list()
+  samp.ground_truth <- list()
+  test.predictions_con <- list()
+  
   
   dims <- dim(model_data)
   selected_features <- names(model_data)[3:ncol(model_data)]
@@ -334,7 +548,9 @@ rfPredictReg <- function(model_data,
     )
     
     y <- model_data$age_diagnosis[train_index]
+    y_samp <- model_data_controls$age_sample_collection
     
+      
     # mtry: Number of variables randomly sampled as candidates at each split.
     # ntree: Number of trees to grow.
     mtry <- sqrt(ncol(model_data[train_index, selected_features]))
@@ -354,10 +570,14 @@ rfPredictReg <- function(model_data,
     
     test.predictions[[i]] <- predict(model[[i]] 
                                      , newdata = model_data[-train_index, selected_features])
+  
     
     test.ground_truth[[i]] <- model_data$age_diagnosis[-train_index]
     
+    test.predictions_con[[i]] <- predict(model[[i]] 
+                                        , newdata = model_data_controls[-train_index, selected_features])
     
+    samp.ground_truth[[i]] <- y_samp
     
     
     print(i)
@@ -365,15 +585,18 @@ rfPredictReg <- function(model_data,
   }
   
   return(list(test.predictions, model,
-              test.ground_truth,dims))
+              test.ground_truth,dims, test.predictions_con, 
+              samp.ground_truth))
 }
 
 
 # now with my function
 enetPredReg <- function(model_data,
+                        model_data_controls,
                         N_CV_REPEATS,
                         nfolds,
                         cutoff,
+                        gender,
                         iterations) {
   
   # get lists to store results
@@ -382,10 +605,17 @@ enetPredReg <- function(model_data,
   importance <- list()
   test.predictions <- list()
   test.ground_truth <- list()
+  non_zero_coeff <- list()
+  important_features <- list()
+  samp.ground_truth <- list()
+  test.predictions_con <- list()
+  
   
   # remove all rows with NAs - you can also impute
   # model_data <- model_data[complete.cases(model_data),]
   dims <- dim(model_data)
+  
+
   
   for (i in 1:iterations){
     
@@ -393,9 +623,13 @@ enetPredReg <- function(model_data,
     set.seed(i)
     train_index <- sample(nrow(model_data), nrow(model_data) *cutoff, replace = F)
     
+    y_samp <- model_data_controls$age_sample_collection
+    
     # get training outcome 
     y <- model_data$age_diagnosis[train_index] # gets training outcome
+      
     selected_features <- names(model_data)[3:ncol(model_data)]
+      
     
     ###### ENET
     
@@ -479,8 +713,11 @@ enetPredReg <- function(model_data,
         break
       }
     }# while loop ends 
-    print(temp.non_zero_coeff)  
+    print(temp.non_zero_coeff) 
+    non_zero_coeff[[i]] <- temp.non_zero_coeff
     
+    important_features[[i]] <- colnames(as.matrix(model_data[train_index,  selected_features]))[which(coef(elastic_net.cv_model, s = "lambda.min") != 0)]
+   
     model[[i]] = glmnet(x = as.matrix(model_data[train_index,  selected_features])
                         ,y =  y
                         ,alpha = elastic_net.ALPHA[temp.best_alpha_index]
@@ -488,120 +725,170 @@ enetPredReg <- function(model_data,
                         ,nlambda = 100
                         ,family = type_family)
     
+
     # This returns 100 prediction with 1-100 lambdas
     temp_test.predictions <- predict(model[[i]], as.matrix(model_data[-train_index, selected_features,]),
                                      type = 'response')
-    
     test.predictions[[i]] <- temp_test.predictions[, temp.min_lambda_index]
     
     test.ground_truth[[i]] <- model_data$age_diagnosis[-train_index]
     
+    # This returns 100 prediction with 1-100 lambdas for controls
+    temp_test.predictions_con <- predict(model[[i]], as.matrix(model_data_controls[, selected_features]),
+                                     type = 'response')
+    test.predictions_con[[i]] <- temp_test.predictions_con[, temp.min_lambda_index]
+    
+    samp.ground_truth[[i]] <- y_samp
+      
     print(i)
     
   }
   
   
-  return(list(test.predictions, model,
+  return(list(test.predictions, important_features,
               test.ground_truth, dims,
-              temp.non_zero_coeff))
+              non_zero_coeff, test.predictions_con, 
+              samp.ground_truth))
   
 }
 
 
-# variables to zero and therefore is a lot faster than random forest and other models
-regPred <- function(model_data,
-                    alpha,
-                    nfolds,
-                    cutoff,
-                    iterations) {
+
+# model_data <- data
+# model_data_controls <- data_controls
+# now with my function
+enetPredCon <- function(model_data,
+                        model_data_controls,
+                        N_CV_REPEATS,
+                        nfolds,
+                        cutoff,
+                        gender,
+                        iterations) {
+
+  y_samp <- model_data_controls$age_sample_collection
   
-  # get lists to store results
-  model <- list()
-  best_features <- list()
-  importance <- list()
-  test.predictions <- list()
-  test.ground_truth <- list()
+  # get training outcome 
+  y <- model_data$age_diagnosis # gets training outcome
   
-  # remove all rows with NAs - you can also impute
-  dims <- dim(model_data)
   selected_features <- names(model_data)[3:ncol(model_data)]
   
-  for (i in 1:iterations){
-    
-    # set seed and get training index
-    set.seed(i)
-    
-    train_index <- sample(nrow(model_data), nrow(model_data)*cutoff, replace = F)
-    
-    # get training outcome 
-    y <- model_data$age_diagnosis[train_index] # gets training outcome
-    
-    # set parameters for training model
-    type_family <- 'gaussian'
-    
-    temp.non_zero_coeff = 0
-    temp.loop_count = 0
-    # loop runs initially because temp.non_zero coefficient <3 and then stops 
-    # usually after one iteration because the nzero variable selected by lambda is greater that 3. if it keeps looping
-    # it they are never greater than 1, then the model does not converge. 
-    while (temp.non_zero_coeff < 1) {      
-      temp.cv_model = cv.glmnet(as.matrix(model_data[train_index, selected_features])
-                                , y = y
-                                , alpha = alpha
-                                , type.measure = "deviance"
-                                , family = type_family
-                                , standardize = FALSE
-                                , nlambda = 10
-                                , nfolds = nfolds
-                                , parallel = TRUE
+  
+  ###### ENET
+  
+  # create vector and list to store best alpha on training data. alpha is the parameter that choses the 
+  # the optimal proportion lambda, the tuning parameter for L1 (ridge) and L2 (lasso)
+  elastic_net.cv_error = vector()
+  elastic_net.cv_model = list()
+  elastic_net.ALPHA <- c(1:9) / 10 # creates possible alpha values for model to choose from
+  
+  # set parameters for training model
+  type_family <- 'gaussian'
+  
+  # create error matrix for for opitmal alpha that can run in parraellel if you have bigger data 
+  # or if you have a high number fo N_CV_REPEATS
+  temp.cv_error_matrix <- foreach (temp = 1:N_CV_REPEATS, .combine=rbind, .errorhandling="stop") %do% {      
+    for (alpha in 1:length(elastic_net.ALPHA)) # for i in 1:9 - the model will run 9 times
+    {      
+      elastic_net.cv_model[[alpha]] = cv.glmnet(x = as.matrix(model_data[, selected_features])
+                                                , y =  y
+                                                , alpha = elastic_net.ALPHA[alpha] # first time with 0.1 and so on
+                                                , type.measure = 'deviance'
+                                                , family = type_family
+                                                , standardize = FALSE 
+                                                , nfolds = nfolds 
+                                                , nlambda = 10
+                                                , parallel = TRUE
       )
-      temp.min_lambda_index = which(temp.cv_model$lambda == temp.cv_model$lambda.min)
-      temp.non_zero_coeff = temp.cv_model$nzero[temp.min_lambda_index]
-      temp.loop_count = temp.loop_count + 1
-      as.numeric(Sys.time())-> t 
-      set.seed((t - floor(t)) * 1e8 -> seed) 
-      #print(paste0("seed: ", seed))
-      if (temp.loop_count > 5) {
-        print("diverged")
-        temp.min_lambda_index = 50
-        break
-      }    
-    }  
-    print(temp.non_zero_coeff)  
-    
-    model[[i]] = glmnet(x = as.matrix(model_data[train_index,  selected_features])
-                        ,y =  y
-                        ,alpha = alpha # this means lasso, would be between 0-1 if enet
-                        ,standardize=FALSE
-                        ,nlambda = 100
-                        ,family = type_family)
-    
-    # This returns 100 prediction with 1-100 lambdas
-    temp_test.predictions <- predict(model[[i]], as.matrix(model_data[-train_index, selected_features,]),
-                                     type = 'response')
-    
-    # get predictions with same lambda used in training 
-    test.predictions[[i]] <- temp_test.predictions[, temp.min_lambda_index]
-    
-    test.ground_truth[[i]] <- model_data$age_diagnosis[-train_index]
-    
-    
-    print(i)
-    
+      elastic_net.cv_error[alpha] = min(elastic_net.cv_model[[alpha]]$cvm)
+    }
+    elastic_net.cv_error # stores 9 errors    
   }
   
+  if (N_CV_REPEATS == 1) {
+    temp.cv_error_mean = temp.cv_error_matrix
+  } else {
+    temp.cv_error_mean = apply(temp.cv_error_matrix, 2, mean) # take the mean of the 5 iterations  
+    # as your value for alpha
+  }
   
-  return(list(test.predictions, model,
-              test.ground_truth, dims, 
-              temp.non_zero_coeff))
+  # stop if you did not recover error for any models 
+  stopifnot(length(temp.cv_error_mean) == length(elastic_net.ALPHA))
+  
+  # get index of best alpha (lowest error) - alpha is values 0.1-0.9
+  temp.best_alpha_index = which(min(temp.cv_error_mean) == temp.cv_error_mean)[length(which(min(temp.cv_error_mean) == temp.cv_error_mean))] 
+  print(paste("Best ALPHA:", elastic_net.ALPHA[temp.best_alpha_index])) # print the value for alpha
+  
+  temp.non_zero_coeff = 0
+  temp.loop_count = 0
+  # loop runs initially because temp.non_zero coefficient <3 and then stops 
+  # usually after one iteration because the nzero variable selected by lambda is greater that 3. if it keeps looping
+  # it they are never greater than 1, then the model does not converge. 
+  while (temp.non_zero_coeff < 1) { 
+    elastic_net.cv_model = cv.glmnet(as.matrix(model_data[, selected_features])
+                                     , y
+                                     , alpha = elastic_net.ALPHA[temp.best_alpha_index]
+                                     , type.measure = 'deviance'
+                                     , family = type_family
+                                     , standardize=FALSE
+                                     , nlambda = 100
+                                     , nfolds = nfolds
+                                     , parallel = TRUE
+    )
+    
+    # get optimal lambda - the tuning parameter for ridge and lasso
+    # THIS IS IMPORTANT BECAUSE WHEN YOU TRAIN THE MODEL ON 100 SEPERATE VALUES OF LAMBDA
+    # AND WHEN YOU TEST THE MODEL IT WILL RETURN PREDCITION FOR ALL THOSE VALUES (1-100). YOU NEED TO 
+    # GRAB THE PREDICTION WITH SAME LAMBDA THAT YOU TRAINED ON. ITS ALL IN THE CODE, BUT JUST WANTED TO 
+    # GIVE YOU REASONS
+    temp.min_lambda_index = which(elastic_net.cv_model$lambda == elastic_net.cv_model$lambda.min) 
+    
+    # # number of non zero coefficients at that lambda    
+    temp.non_zero_coeff = elastic_net.cv_model$nzero[temp.min_lambda_index] 
+    temp.loop_count = temp.loop_count + 1
+    
+    # set seed for next loop iteration
+    as.numeric(Sys.time())-> t 
+    set.seed((t - floor(t)) * 1e8 -> seed) 
+    if (temp.loop_count > 10) {
+      print("diverged")
+      temp.min_lambda_index = 50 # if it loops more than 5 times, then model did not converge
+      break
+    }
+  }# while loop ends 
+  print(temp.non_zero_coeff) 
+  non_zero_coeff <- temp.non_zero_coeff
+  
+  important_features <- colnames(as.matrix(model_data[, selected_features]))[which(coef(elastic_net.cv_model, s = "lambda.min") != 0)]
+  
+  model = glmnet(x = as.matrix(model_data[,  selected_features])
+                      ,y =  y
+                      ,alpha = elastic_net.ALPHA[temp.best_alpha_index]
+                      ,standardize=FALSE
+                      ,nlambda = 100
+                      ,family = type_family)
+  
+  
+  # This returns 100 prediction with 1-100 lambdas for controls
+  temp_test.predictions_con <- predict(model, as.matrix(model_data_controls[, selected_features]),
+                                       type = 'response')
+  test.predictions_con <- temp_test.predictions_con[, temp.min_lambda_index]
+  
+  samp.ground_truth <- y_samp
+
+  
+  return(list(important_features,
+              non_zero_coeff, test.predictions_con, 
+              samp.ground_truth))
   
 }
+
 
 
 
 extractResults <- function (result_list,
                             data_name,
-                            regularize) 
+                            regularize,
+                            bh_data) 
 {
   
   # extract regression normal, correlation 
@@ -614,9 +901,10 @@ extractResults <- function (result_list,
   reg_cor$age <- 'regression'
   reg_cor$type <- 'normal'
   reg_cor$data <- data_name
+  # reg_cor$full_data <- nrow(bh_data)
   
   if(regularize) {
-    reg_cor$features <- paste0(temp.1[[5]])
+    reg_cor$features <- mean(as.numeric(unlist(temp.1[[5]])))
     
   } else {
     reg_cor$features <- as.numeric(strsplit(as.character(temp.1[[4]]), split = ' ')[[2]])

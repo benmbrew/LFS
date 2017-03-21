@@ -149,9 +149,9 @@ getRand <- function(data, model,
   if (exclude) {
     
     features <- colnames(data[, 10:ncol(data)])
-    keep_these <- features[!features %in% union_features]
+    # keep_these <- features[!features %in% union_features]
     data <- data[, c('ids', 'p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses', 
-                     'age_sample_collection', keep_these)]
+                     'age_sample_collection', features)]
   }
   
   
@@ -232,16 +232,16 @@ getRand <- function(data, model,
 # get union 
 ##########
 
-# get list of features
-df_names <- ls()[sapply(mget(ls(), .GlobalEnv), is.data.frame)]
-dfs <-  sapply( df_names, function(x)  get( x )  )
-dfs[grepl('cases|controls', names(dfs))] <- NULL
-
-# combine and remove duplicates
-feats <- do.call(rbind, dfs)
-
-# union 
-union_features <- as.character(feats[!duplicated(feats),])
+# # get list of features
+# df_names <- ls()[sapply(mget(ls(), .GlobalEnv), is.data.frame)]
+# dfs <-  sapply( df_names, function(x)  get( x )  )
+# dfs[grepl('cases|controls', names(dfs))] <- NULL
+# 
+# # combine and remove duplicates
+# feats <- do.call(rbind, dfs)
+# 
+# # union 
+# union_features <- as.character(feats[!duplicated(feats),])
 
 #############################################################################################################
 #10
@@ -253,7 +253,7 @@ union_features <- as.character(feats[!duplicated(feats),])
 # ungen 10 features
 ungen_rand_rf_10 <- getRand(quan_cases, 
                              model = 'rf',
-                             rand_num = 10, 
+                             rand_num = 20, 
                              num_feat = 10, 
                              exclude = T,
                              union_features = union_features,
@@ -262,7 +262,7 @@ ungen_rand_rf_10 <- getRand(quan_cases,
 # gen 10 features
 gen_rand_rf_10 <- getRand(quan_cases_gen, 
                             model = 'rf',
-                            rand_num = 10, 
+                            rand_num = 20, 
                             num_feat = 10, 
                             exclude = T,
                             union_features = union_features,
@@ -271,7 +271,7 @@ gen_rand_rf_10 <- getRand(quan_cases_gen,
 # unsam 10 features
 sam_rand_rf_10 <- getRand(quan_cases_sam, 
                           model = 'rf',
-                          rand_num = 10, 
+                          rand_num = 20, 
                           num_feat = 10, 
                           exclude = T,
                           union_features = union_features,
@@ -280,7 +280,7 @@ sam_rand_rf_10 <- getRand(quan_cases_sam,
 # unsen 10 features
 sen_rand_rf_10 <- getRand(quan_cases_sen, 
                           model = 'rf',
-                          rand_num = 10, 
+                          rand_num = 20, 
                           num_feat = 10, 
                           exclude = T,
                           union_features = union_features,
@@ -289,7 +289,7 @@ sen_rand_rf_10 <- getRand(quan_cases_sen,
 # unsam_gen 10 features
 sam_gen_rand_rf_10 <- getRand(quan_cases_sam_gen, 
                           model = 'rf',
-                          rand_num = 10, 
+                          rand_num = 20, 
                           num_feat = 10, 
                           exclude = T,
                           union_features = union_features,
@@ -298,131 +298,12 @@ sam_gen_rand_rf_10 <- getRand(quan_cases_sam_gen,
 # unsen_gen 10 features
 sen_gen_rand_rf_10 <- getRand(quan_cases_sen_gen, 
                           model = 'rf',
-                          rand_num = 10, 
+                          rand_num = 20, 
                           num_feat = 10, 
                           exclude = T,
                           union_features = union_features,
                           data_name = "sen_gen_rand_rf_10")
 
-
-
-
-###########
-# enet
-###########
-
-# ungen 10 features
-ungen_rand_enet_10 <- getRand(quan_cases, 
-                            model = 'enet',
-                            rand_num = 10, 
-                            num_feat = 10, 
-                            exclude = T,
-                            union_features = union_features,
-                            data_name = "ungen_rand_enet_10")
-
-# gen 10 features
-gen_rand_enet_10 <- getRand(quan_cases_gen, 
-                          model = 'enet',
-                          rand_num = 10, 
-                          num_feat = 10, 
-                          exclude = T,
-                          union_features = union_features,
-                          data_name = "gen_rand_enet_10")
-
-# unsam 10 features
-sam_rand_enet_10 <- getRand(quan_cases_sam, 
-                          model = 'enet',
-                          rand_num = 10, 
-                          num_feat = 10, 
-                          exclude = T,
-                          union_features = union_features,
-                          data_name = "sam_rand_enet_10")
-
-# unsen 10 features
-sen_rand_enet_10 <- getRand(quan_cases_sen, 
-                          model = 'enet',
-                          rand_num = 10, 
-                          num_feat = 10, 
-                          exclude = T,
-                          union_features = union_features,
-                          data_name = "sen_rand_enet_10")
-
-# unsam_gen 10 features
-sam_gen_rand_enet_10 <- getRand(quan_cases_sam_gen, 
-                              model = 'enet',
-                              rand_num = 10, 
-                              num_feat = 10, 
-                              exclude = T,
-                              union_features = union_features,
-                              data_name = "sam_gen_rand_enet_10")
-
-# unsen_gen 10 features
-sen_gen_rand_enet_10 <- getRand(quan_cases_sen_gen, 
-                              model = 'enet',
-                              rand_num = 10, 
-                              num_feat = 10, 
-                              exclude = T,
-                              union_features = union_features,
-                              data_name = "sen_gen_rand_enet_10")
-
-
-###########
-# lasso
-###########
-
-# ungen 10 features
-ungen_rand_lasso_10 <- getRand(quan_cases, 
-                            model = 'lasso',
-                            rand_num = 10, 
-                            num_feat = 10, 
-                            exclude = T,
-                            union_features = union_features,
-                            data_name = "ungen_rand_lasso_10")
-
-# gen 10 features
-gen_rand_lasso_10 <- getRand(quan_cases_gen, 
-                          model = 'lasso',
-                          rand_num = 10, 
-                          num_feat = 10, 
-                          exclude = T,
-                          union_features = union_features,
-                          data_name = "gen_rand_lasso_10")
-
-# unsam 10 features
-sam_rand_lasso_10 <- getRand(quan_cases_sam, 
-                          model = 'lasso',
-                          rand_num = 10, 
-                          num_feat = 10, 
-                          exclude = T,
-                          union_features = union_features,
-                          data_name = "sam_rand_lasso_10")
-
-# unsen 10 features
-sen_rand_lasso_10 <- getRand(quan_cases_sen, 
-                          model = 'lasso',
-                          rand_num = 10, 
-                          num_feat = 10, 
-                          exclude = T,
-                          union_features = union_features,
-                          data_name = "sen_rand_lasso_10")
-
-# unsam_gen 10 features
-sam_gen_rand_lasso_10 <- getRand(quan_cases_sam_gen, 
-                              model = 'lasso',
-                              rand_num = 10, 
-                              num_feat = 10, 
-                              exclude = T,
-                              union_features = union_features,
-                              data_name = "sam_gen_rand_lasso_10")
-
-# unsen_gen 10 features
-sen_gen_rand_lasso_10 <- getRand(quan_cases_sen_gen, 
-                              model = 'lasso',
-                              rand_num = 10, 
-                              num_feat = 10, 
-                              exclude = T,
-                              union_features = union_features,
-                              data_name = "sen_gen_rand_lasso_10")
 
 
 
@@ -433,38 +314,14 @@ rand_10 <- rbind(ungen_rand_rf_10,
                  sen_rand_rf_10,
                  sam_rand_rf_10,
                  sam_gen_rand_rf_10,
-                 sen_gen_rand_rf_10,
-                 ungen_rand_enet_10,
-                 gen_rand_enet_10,
-                 sen_rand_enet_10,
-                 sam_rand_enet_10,
-                 sam_gen_rand_enet_10,
-                 sen_gen_rand_enet_10,
-                 ungen_rand_lasso_10,
-                 gen_rand_lasso_10,
-                 sen_rand_lasso_10,
-                 sam_rand_lasso_10,
-                 sam_gen_rand_lasso_10,
-                 sen_gen_rand_lasso_10)
+                 sen_gen_rand_rf_10)
 
 rm(ungen_rand_rf_10,
    gen_rand_rf_10,
    sen_rand_rf_10,
    sam_rand_rf_10,
    sam_gen_rand_rf_10,
-   sen_gen_rand_rf_10,
-   ungen_rand_enet_10,
-   gen_rand_enet_10,
-   sen_rand_enet_10,
-   sam_rand_enet_10,
-   sam_gen_rand_enet_10,
-   sen_gen_rand_enet_10,
-   ungen_rand_lasso_10,
-   gen_rand_lasso_10,
-   sen_rand_lasso_10,
-   sam_rand_lasso_10,
-   sam_gen_rand_lasso_10,
-   sen_gen_rand_lasso_10)
+   sen_gen_rand_rf_10)
 
 #############################################################################################################
 #20
@@ -476,7 +333,7 @@ rm(ungen_rand_rf_10,
 # ungen 20 features
 ungen_rand_rf_20 <- getRand(quan_cases, 
                             model = 'rf',
-                            rand_num = 10, 
+                            rand_num = 20, 
                             num_feat = 20, 
                             exclude = T,
                             union_features = union_features,
@@ -485,7 +342,7 @@ ungen_rand_rf_20 <- getRand(quan_cases,
 # gen 20 features
 gen_rand_rf_20 <- getRand(quan_cases_gen, 
                           model = 'rf',
-                          rand_num = 10, 
+                          rand_num = 20, 
                           num_feat = 20, 
                           exclude = T,
                           union_features = union_features,
@@ -494,7 +351,7 @@ gen_rand_rf_20 <- getRand(quan_cases_gen,
 # unsam 20 features
 sam_rand_rf_20 <- getRand(quan_cases_sam, 
                           model = 'rf',
-                          rand_num = 10, 
+                          rand_num = 20, 
                           num_feat = 20, 
                           exclude = T,
                           union_features = union_features,
@@ -503,7 +360,7 @@ sam_rand_rf_20 <- getRand(quan_cases_sam,
 # unsen 20 features
 sen_rand_rf_20 <- getRand(quan_cases_sen, 
                           model = 'rf',
-                          rand_num = 10, 
+                          rand_num = 20, 
                           num_feat = 20, 
                           exclude = T,
                           union_features = union_features,
@@ -512,7 +369,7 @@ sen_rand_rf_20 <- getRand(quan_cases_sen,
 # unsam_gen 20 features
 sam_gen_rand_rf_20 <- getRand(quan_cases_sam_gen, 
                               model = 'rf',
-                              rand_num = 10, 
+                              rand_num = 20, 
                               num_feat = 20, 
                               exclude = T,
                               union_features = union_features,
@@ -521,132 +378,11 @@ sam_gen_rand_rf_20 <- getRand(quan_cases_sam_gen,
 # unsen_gen 20 features
 sen_gen_rand_rf_20 <- getRand(quan_cases_sen_gen, 
                               model = 'rf',
-                              rand_num = 10, 
+                              rand_num = 20, 
                               num_feat = 20, 
                               exclude = T,
                               union_features = union_features,
                               data_name = "sen_gen_rand_rf_20")
-
-
-
-
-###########
-# enet
-###########
-
-# ungen 20 features
-ungen_rand_enet_20 <- getRand(quan_cases, 
-                              model = 'enet',
-                              rand_num = 10, 
-                              num_feat = 20, 
-                              exclude = T,
-                              union_features = union_features,
-                              data_name = "ungen_rand_enet_20")
-
-# gen 20 features
-gen_rand_enet_20 <- getRand(quan_cases_gen, 
-                            model = 'enet',
-                            rand_num = 10, 
-                            num_feat = 20, 
-                            exclude = T,
-                            union_features = union_features,
-                            data_name = "gen_rand_enet_20")
-
-# unsam 20 features
-sam_rand_enet_20 <- getRand(quan_cases_sam, 
-                            model = 'enet',
-                            rand_num = 10, 
-                            num_feat = 20, 
-                            exclude = T,
-                            union_features = union_features,
-                            data_name = "sam_rand_enet_20")
-
-# unsen 20 features
-sen_rand_enet_20 <- getRand(quan_cases_sen, 
-                            model = 'enet',
-                            rand_num = 10, 
-                            num_feat = 20, 
-                            exclude = T,
-                            union_features = union_features,
-                            data_name = "sen_rand_enet_20")
-
-# unsam_gen 20 features
-sam_gen_rand_enet_20 <- getRand(quan_cases_sam_gen, 
-                                model = 'enet',
-                                rand_num = 10, 
-                                num_feat = 20, 
-                                exclude = T,
-                                union_features = union_features,
-                                data_name = "sam_gen_rand_enet_20")
-
-# unsen_gen 20 features
-sen_gen_rand_enet_20 <- getRand(quan_cases_sen_gen, 
-                                model = 'enet',
-                                rand_num = 10, 
-                                num_feat = 20, 
-                                exclude = T,
-                                union_features = union_features,
-                                data_name = "sen_gen_rand_enet_20")
-
-
-###########
-# lasso
-###########
-
-# ungen 20 features
-ungen_rand_lasso_20 <- getRand(quan_cases, 
-                               model = 'lasso',
-                               rand_num = 10, 
-                               num_feat = 20, 
-                               exclude = T,
-                               union_features = union_features,
-                               data_name = "ungen_rand_lasso_20")
-
-# gen 20 features
-gen_rand_lasso_20 <- getRand(quan_cases_gen, 
-                             model = 'lasso',
-                             rand_num = 10, 
-                             num_feat = 20, 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "gen_rand_lasso_20")
-
-# unsam 20 features
-sam_rand_lasso_20 <- getRand(quan_cases_sam, 
-                             model = 'lasso',
-                             rand_num = 10, 
-                             num_feat = 20, 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "sam_rand_lasso_20")
-
-# unsen 20 features
-sen_rand_lasso_20 <- getRand(quan_cases_sen, 
-                             model = 'lasso',
-                             rand_num = 10, 
-                             num_feat = 20, 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "sen_rand_lasso_20")
-
-# unsam_gen 20 features
-sam_gen_rand_lasso_20 <- getRand(quan_cases_sam_gen, 
-                                 model = 'lasso',
-                                 rand_num = 10, 
-                                 num_feat = 20, 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "sam_gen_rand_lasso_20")
-
-# unsen_gen 20 features
-sen_gen_rand_lasso_20 <- getRand(quan_cases_sen_gen, 
-                                 model = 'lasso',
-                                 rand_num = 10, 
-                                 num_feat = 20, 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "sen_gen_rand_lasso_20")
-
 
 
 
@@ -656,38 +392,14 @@ rand_20 <- rbind(ungen_rand_rf_20,
                  sen_rand_rf_20,
                  sam_rand_rf_20,
                  sam_gen_rand_rf_20,
-                 sen_gen_rand_rf_20,
-                 ungen_rand_enet_20,
-                 gen_rand_enet_20,
-                 sen_rand_enet_20,
-                 sam_rand_enet_20,
-                 sam_gen_rand_enet_20,
-                 sen_gen_rand_enet_20,
-                 ungen_rand_lasso_20,
-                 gen_rand_lasso_20,
-                 sen_rand_lasso_20,
-                 sam_rand_lasso_20,
-                 sam_gen_rand_lasso_20,
-                 sen_gen_rand_lasso_20)
+                 sen_gen_rand_rf_20)
 
 rm(ungen_rand_rf_20,
    gen_rand_rf_20,
    sen_rand_rf_20,
    sam_rand_rf_20,
    sam_gen_rand_rf_20,
-   sen_gen_rand_rf_20,
-   ungen_rand_enet_20,
-   gen_rand_enet_20,
-   sen_rand_enet_20,
-   sam_rand_enet_20,
-   sam_gen_rand_enet_20,
-   sen_gen_rand_enet_20,
-   ungen_rand_lasso_20,
-   gen_rand_lasso_20,
-   sen_rand_lasso_20,
-   sam_rand_lasso_20,
-   sam_gen_rand_lasso_20,
-   sen_gen_rand_lasso_20)
+   sen_gen_rand_rf_20)
 
 #############################################################################################################
 #30
@@ -699,7 +411,7 @@ rm(ungen_rand_rf_20,
 # ungen 30 features
 ungen_rand_rf_30 <- getRand(quan_cases, 
                             model = 'rf',
-                            rand_num = 10, 
+                            rand_num = 20, 
                             num_feat = 30, 
                             exclude = T,
                             union_features = union_features,
@@ -708,7 +420,7 @@ ungen_rand_rf_30 <- getRand(quan_cases,
 # gen 30 features
 gen_rand_rf_30 <- getRand(quan_cases_gen, 
                           model = 'rf',
-                          rand_num = 10, 
+                          rand_num = 20, 
                           num_feat = 30, 
                           exclude = T,
                           union_features = union_features,
@@ -717,7 +429,7 @@ gen_rand_rf_30 <- getRand(quan_cases_gen,
 # unsam 30 features
 sam_rand_rf_30 <- getRand(quan_cases_sam, 
                           model = 'rf',
-                          rand_num = 10, 
+                          rand_num = 20, 
                           num_feat = 30, 
                           exclude = T,
                           union_features = union_features,
@@ -726,7 +438,7 @@ sam_rand_rf_30 <- getRand(quan_cases_sam,
 # unsen 30 features
 sen_rand_rf_30 <- getRand(quan_cases_sen, 
                           model = 'rf',
-                          rand_num = 10, 
+                          rand_num = 20, 
                           num_feat = 30, 
                           exclude = T,
                           union_features = union_features,
@@ -735,7 +447,7 @@ sen_rand_rf_30 <- getRand(quan_cases_sen,
 # unsam_gen 30 features
 sam_gen_rand_rf_30 <- getRand(quan_cases_sam_gen, 
                               model = 'rf',
-                              rand_num = 10, 
+                              rand_num = 20, 
                               num_feat = 30, 
                               exclude = T,
                               union_features = union_features,
@@ -744,131 +456,12 @@ sam_gen_rand_rf_30 <- getRand(quan_cases_sam_gen,
 # unsen_gen 30 features
 sen_gen_rand_rf_30 <- getRand(quan_cases_sen_gen, 
                               model = 'rf',
-                              rand_num = 10, 
+                              rand_num = 20, 
                               num_feat = 30, 
                               exclude = T,
                               union_features = union_features,
                               data_name = "sen_gen_rand_rf_30")
 
-
-
-
-###########
-# enet
-###########
-
-# ungen 30 features
-ungen_rand_enet_30 <- getRand(quan_cases, 
-                              model = 'enet',
-                              rand_num = 10, 
-                              num_feat = 30, 
-                              exclude = T,
-                              union_features = union_features,
-                              data_name = "ungen_rand_enet_30")
-
-# gen 30 features
-gen_rand_enet_30 <- getRand(quan_cases_gen, 
-                            model = 'enet',
-                            rand_num = 10, 
-                            num_feat = 30, 
-                            exclude = T,
-                            union_features = union_features,
-                            data_name = "gen_rand_enet_30")
-
-# unsam 30 features
-sam_rand_enet_30 <- getRand(quan_cases_sam, 
-                            model = 'enet',
-                            rand_num = 10, 
-                            num_feat = 30, 
-                            exclude = T,
-                            union_features = union_features,
-                            data_name = "sam_rand_enet_30")
-
-# unsen 30 features
-sen_rand_enet_30 <- getRand(quan_cases_sen, 
-                            model = 'enet',
-                            rand_num = 10, 
-                            num_feat = 30, 
-                            exclude = T,
-                            union_features = union_features,
-                            data_name = "sen_rand_enet_30")
-
-# unsam_gen 30 features
-sam_gen_rand_enet_30 <- getRand(quan_cases_sam_gen, 
-                                model = 'enet',
-                                rand_num = 10, 
-                                num_feat = 30, 
-                                exclude = T,
-                                union_features = union_features,
-                                data_name = "sam_gen_rand_enet_30")
-
-# unsen_gen 30 features
-sen_gen_rand_enet_30 <- getRand(quan_cases_sen_gen, 
-                                model = 'enet',
-                                rand_num = 10, 
-                                num_feat = 30, 
-                                exclude = T,
-                                union_features = union_features,
-                                data_name = "sen_gen_rand_enet_30")
-
-
-###########
-# lasso
-###########
-
-# ungen 30 features
-ungen_rand_lasso_30 <- getRand(quan_cases, 
-                               model = 'lasso',
-                               rand_num = 10, 
-                               num_feat = 30, 
-                               exclude = T,
-                               union_features = union_features,
-                               data_name = "ungen_rand_lasso_30")
-
-# gen 30 features
-gen_rand_lasso_30 <- getRand(quan_cases_gen, 
-                             model = 'lasso',
-                             rand_num = 10, 
-                             num_feat = 30, 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "gen_rand_lasso_30")
-
-# unsam 30 features
-sam_rand_lasso_30 <- getRand(quan_cases_sam, 
-                             model = 'lasso',
-                             rand_num = 10, 
-                             num_feat = 30, 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "sam_rand_lasso_30")
-
-# unsen 30 features
-sen_rand_lasso_30 <- getRand(quan_cases_sen, 
-                             model = 'lasso',
-                             rand_num = 10, 
-                             num_feat = 30, 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "sen_rand_lasso_30")
-
-# unsam_gen 30 features
-sam_gen_rand_lasso_30 <- getRand(quan_cases_sam_gen, 
-                                 model = 'lasso',
-                                 rand_num = 10, 
-                                 num_feat = 30, 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "sam_gen_rand_lasso_30")
-
-# unsen_gen 30 features
-sen_gen_rand_lasso_30 <- getRand(quan_cases_sen_gen, 
-                                 model = 'lasso',
-                                 rand_num = 10, 
-                                 num_feat = 30, 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "sen_gen_rand_lasso_30")
 
 
 
@@ -879,262 +472,15 @@ rand_30 <- rbind(ungen_rand_rf_30,
                  sen_rand_rf_30,
                  sam_rand_rf_30,
                  sam_gen_rand_rf_30,
-                 sen_gen_rand_rf_30,
-                 ungen_rand_enet_30,
-                 gen_rand_enet_30,
-                 sen_rand_enet_30,
-                 sam_rand_enet_30,
-                 sam_gen_rand_enet_30,
-                 sen_gen_rand_enet_30,
-                 ungen_rand_lasso_30,
-                 gen_rand_lasso_30,
-                 sen_rand_lasso_30,
-                 sam_rand_lasso_30,
-                 sam_gen_rand_lasso_30,
-                 sen_gen_rand_lasso_30)
+                 sen_gen_rand_rf_30)
 
 rm(ungen_rand_rf_30,
    gen_rand_rf_30,
    sen_rand_rf_30,
    sam_rand_rf_30,
    sam_gen_rand_rf_30,
-   sen_gen_rand_rf_30,
-   ungen_rand_enet_30,
-   gen_rand_enet_30,
-   sen_rand_enet_30,
-   sam_rand_enet_30,
-   sam_gen_rand_enet_30,
-   sen_gen_rand_enet_30,
-   ungen_rand_lasso_30,
-   gen_rand_lasso_30,
-   sen_rand_lasso_30,
-   sam_rand_lasso_30,
-   sam_gen_rand_lasso_30,
-   sen_gen_rand_lasso_30)
+   sen_gen_rand_rf_30)
 
-
-#############################################################################################################
-#50
-
-###########
-# rf
-###########
-
-# ungen 50 features
-ungen_rand_rf_50 <- getRand(quan_cases, 
-                            model = 'rf',
-                            rand_num = 10, 
-                            num_feat = 50, 
-                            exclude = T,
-                            union_features = union_features,
-                            data_name = "ungen_rand_rf_50")
-
-# gen 50 features
-gen_rand_rf_50 <- getRand(quan_cases_gen, 
-                          model = 'rf',
-                          rand_num = 10, 
-                          num_feat = 50, 
-                          exclude = T,
-                          union_features = union_features,
-                          data_name = "gen_rand_rf_50")
-
-# unsam 50 features
-sam_rand_rf_50 <- getRand(quan_cases_sam, 
-                          model = 'rf',
-                          rand_num = 10, 
-                          num_feat = 50, 
-                          exclude = T,
-                          union_features = union_features,
-                          data_name = "sam_rand_rf_50")
-
-# unsen 50 features
-sen_rand_rf_50 <- getRand(quan_cases_sen, 
-                          model = 'rf',
-                          rand_num = 10, 
-                          num_feat = 50, 
-                          exclude = T,
-                          union_features = union_features,
-                          data_name = "sen_rand_rf_50")
-
-# unsam_gen 50 features
-sam_gen_rand_rf_50 <- getRand(quan_cases_sam_gen, 
-                              model = 'rf',
-                              rand_num = 10, 
-                              num_feat = 50, 
-                              exclude = T,
-                              union_features = union_features,
-                              data_name = "sam_gen_rand_rf_50")
-
-# unsen_gen 50 features
-sen_gen_rand_rf_50 <- getRand(quan_cases_sen_gen, 
-                              model = 'rf',
-                              rand_num = 10, 
-                              num_feat = 50, 
-                              exclude = T,
-                              union_features = union_features,
-                              data_name = "sen_gen_rand_rf_50")
-
-
-
-
-###########
-# enet
-###########
-
-# ungen 50 features
-ungen_rand_enet_50 <- getRand(quan_cases, 
-                              model = 'enet',
-                              rand_num = 10, 
-                              num_feat = 50, 
-                              exclude = T,
-                              union_features = union_features,
-                              data_name = "ungen_rand_enet_50")
-
-# gen 50 features
-gen_rand_enet_50 <- getRand(quan_cases_gen, 
-                            model = 'enet',
-                            rand_num = 10, 
-                            num_feat = 50, 
-                            exclude = T,
-                            union_features = union_features,
-                            data_name = "gen_rand_enet_50")
-
-# unsam 50 features
-sam_rand_enet_50 <- getRand(quan_cases_sam, 
-                            model = 'enet',
-                            rand_num = 10, 
-                            num_feat = 50, 
-                            exclude = T,
-                            union_features = union_features,
-                            data_name = "sam_rand_enet_50")
-
-# unsen 50 features
-sen_rand_enet_50 <- getRand(quan_cases_sen, 
-                            model = 'enet',
-                            rand_num = 10, 
-                            num_feat = 50, 
-                            exclude = T,
-                            union_features = union_features,
-                            data_name = "sen_rand_enet_50")
-
-# unsam_gen 50 features
-sam_gen_rand_enet_50 <- getRand(quan_cases_sam_gen, 
-                                model = 'enet',
-                                rand_num = 10, 
-                                num_feat = 50, 
-                                exclude = T,
-                                union_features = union_features,
-                                data_name = "sam_gen_rand_enet_50")
-
-# unsen_gen 50 features
-sen_gen_rand_enet_50 <- getRand(quan_cases_sen_gen, 
-                                model = 'enet',
-                                rand_num = 10, 
-                                num_feat = 50, 
-                                exclude = T,
-                                union_features = union_features,
-                                data_name = "sen_gen_rand_enet_50")
-
-
-###########
-# lasso
-###########
-
-# ungen 50 features
-ungen_rand_lasso_50 <- getRand(quan_cases, 
-                               model = 'lasso',
-                               rand_num = 10, 
-                               num_feat = 50, 
-                               exclude = T,
-                               union_features = union_features,
-                               data_name = "ungen_rand_lasso_50")
-
-# gen 50 features
-gen_rand_lasso_50 <- getRand(quan_cases_gen, 
-                             model = 'lasso',
-                             rand_num = 10, 
-                             num_feat = 50, 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "gen_rand_lasso_50")
-
-# unsam 50 features
-sam_rand_lasso_50 <- getRand(quan_cases_sam, 
-                             model = 'lasso',
-                             rand_num = 10, 
-                             num_feat = 50, 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "sam_rand_lasso_50")
-
-# unsen 50 features
-sen_rand_lasso_50 <- getRand(quan_cases_sen, 
-                             model = 'lasso',
-                             rand_num = 10, 
-                             num_feat = 50, 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "sen_rand_lasso_50")
-
-# unsam_gen 50 features
-sam_gen_rand_lasso_50 <- getRand(quan_cases_sam_gen, 
-                                 model = 'lasso',
-                                 rand_num = 10, 
-                                 num_feat = 50, 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "sam_gen_rand_lasso_50")
-
-# unsen_gen 50 features
-sen_gen_rand_lasso_50 <- getRand(quan_cases_sen_gen, 
-                                 model = 'lasso',
-                                 rand_num = 10, 
-                                 num_feat = 50, 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "sen_gen_rand_lasso_50")
-
-
-
-
-
-rand_50 <- rbind(ungen_rand_rf_50,
-                 gen_rand_rf_50,
-                 sen_rand_rf_50,
-                 sam_rand_rf_50,
-                 sam_gen_rand_rf_50,
-                 sen_gen_rand_rf_50,
-                 ungen_rand_enet_50,
-                 gen_rand_enet_50,
-                 sen_rand_enet_50,
-                 sam_rand_enet_50,
-                 sam_gen_rand_enet_50,
-                 sen_gen_rand_enet_50,
-                 ungen_rand_lasso_50,
-                 gen_rand_lasso_50,
-                 sen_rand_lasso_50,
-                 sam_rand_lasso_50,
-                 sam_gen_rand_lasso_50,
-                 sen_gen_rand_lasso_50)
-
-rm(ungen_rand_rf_50,
-   gen_rand_rf_50,
-   sen_rand_rf_50,
-   sam_rand_rf_50,
-   sam_gen_rand_rf_50,
-   sen_gen_rand_rf_50,
-   ungen_rand_enet_50,
-   gen_rand_enet_50,
-   sen_rand_enet_50,
-   sam_rand_enet_50,
-   sam_gen_rand_enet_50,
-   sen_gen_rand_enet_50,
-   ungen_rand_lasso_50,
-   gen_rand_lasso_50,
-   sen_rand_lasso_50,
-   sam_rand_lasso_50,
-   sam_gen_rand_lasso_50,
-   sen_gen_rand_lasso_50)
 
 
 #############################################################################################################
@@ -1147,7 +493,7 @@ rm(ungen_rand_rf_50,
 # ungen 100 features
 ungen_rand_rf_100 <- getRand(quan_cases, 
                             model = 'rf',
-                            rand_num = 10, 
+                            rand_num = 20, 
                             num_feat = 100, 
                             exclude = T,
                             union_features = union_features,
@@ -1156,7 +502,7 @@ ungen_rand_rf_100 <- getRand(quan_cases,
 # gen 100 features
 gen_rand_rf_100 <- getRand(quan_cases_gen, 
                           model = 'rf',
-                          rand_num = 10, 
+                          rand_num = 20, 
                           num_feat = 100, 
                           exclude = T,
                           union_features = union_features,
@@ -1165,7 +511,7 @@ gen_rand_rf_100 <- getRand(quan_cases_gen,
 # unsam 100 features
 sam_rand_rf_100 <- getRand(quan_cases_sam, 
                           model = 'rf',
-                          rand_num = 10, 
+                          rand_num = 20, 
                           num_feat = 100, 
                           exclude = T,
                           union_features = union_features,
@@ -1174,7 +520,7 @@ sam_rand_rf_100 <- getRand(quan_cases_sam,
 # unsen 100 features
 sen_rand_rf_100 <- getRand(quan_cases_sen, 
                           model = 'rf',
-                          rand_num = 10, 
+                          rand_num = 20, 
                           num_feat = 100, 
                           exclude = T,
                           union_features = union_features,
@@ -1183,7 +529,7 @@ sen_rand_rf_100 <- getRand(quan_cases_sen,
 # unsam_gen 100 features
 sam_gen_rand_rf_100 <- getRand(quan_cases_sam_gen, 
                               model = 'rf',
-                              rand_num = 10, 
+                              rand_num = 20, 
                               num_feat = 100, 
                               exclude = T,
                               union_features = union_features,
@@ -1192,131 +538,11 @@ sam_gen_rand_rf_100 <- getRand(quan_cases_sam_gen,
 # unsen_gen 100 features
 sen_gen_rand_rf_100 <- getRand(quan_cases_sen_gen, 
                               model = 'rf',
-                              rand_num = 10, 
+                              rand_num = 20, 
                               num_feat = 100, 
                               exclude = T,
                               union_features = union_features,
                               data_name = "sen_gen_rand_rf_100")
-
-
-
-
-###########
-# enet
-###########
-
-# ungen 100 features
-ungen_rand_enet_100 <- getRand(quan_cases, 
-                              model = 'enet',
-                              rand_num = 10, 
-                              num_feat = 100, 
-                              exclude = T,
-                              union_features = union_features,
-                              data_name = "ungen_rand_enet_100")
-
-# gen 100 features
-gen_rand_enet_100 <- getRand(quan_cases_gen, 
-                            model = 'enet',
-                            rand_num = 10, 
-                            num_feat = 100, 
-                            exclude = T,
-                            union_features = union_features,
-                            data_name = "gen_rand_enet_100")
-
-# unsam 100 features
-sam_rand_enet_100 <- getRand(quan_cases_sam, 
-                            model = 'enet',
-                            rand_num = 10, 
-                            num_feat = 100, 
-                            exclude = T,
-                            union_features = union_features,
-                            data_name = "sam_rand_enet_100")
-
-# unsen 100 features
-sen_rand_enet_100 <- getRand(quan_cases_sen, 
-                            model = 'enet',
-                            rand_num = 10, 
-                            num_feat = 100, 
-                            exclude = T,
-                            union_features = union_features,
-                            data_name = "sen_rand_enet_100")
-
-# unsam_gen 100 features
-sam_gen_rand_enet_100 <- getRand(quan_cases_sam_gen, 
-                                model = 'enet',
-                                rand_num = 10, 
-                                num_feat = 100, 
-                                exclude = T,
-                                union_features = union_features,
-                                data_name = "sam_gen_rand_enet_100")
-
-# unsen_gen 100 features
-sen_gen_rand_enet_100 <- getRand(quan_cases_sen_gen, 
-                                model = 'enet',
-                                rand_num = 10, 
-                                num_feat = 100, 
-                                exclude = T,
-                                union_features = union_features,
-                                data_name = "sen_gen_rand_enet_100")
-
-
-###########
-# lasso
-###########
-
-# ungen 100 features
-ungen_rand_lasso_100 <- getRand(quan_cases, 
-                               model = 'lasso',
-                               rand_num = 10, 
-                               num_feat = 100, 
-                               exclude = T,
-                               union_features = union_features,
-                               data_name = "ungen_rand_lasso_100")
-
-# gen 100 features
-gen_rand_lasso_100 <- getRand(quan_cases_gen, 
-                             model = 'lasso',
-                             rand_num = 10, 
-                             num_feat = 100, 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "gen_rand_lasso_100")
-
-# unsam 100 features
-sam_rand_lasso_100 <- getRand(quan_cases_sam, 
-                             model = 'lasso',
-                             rand_num = 10, 
-                             num_feat = 100, 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "sam_rand_lasso_100")
-
-# unsen 100 features
-sen_rand_lasso_100 <- getRand(quan_cases_sen, 
-                             model = 'lasso',
-                             rand_num = 10, 
-                             num_feat = 100, 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "sen_rand_lasso_100")
-
-# unsam_gen 100 features
-sam_gen_rand_lasso_100 <- getRand(quan_cases_sam_gen, 
-                                 model = 'lasso',
-                                 rand_num = 10, 
-                                 num_feat = 100, 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "sam_gen_rand_lasso_100")
-
-# unsen_gen 100 features
-sen_gen_rand_lasso_100 <- getRand(quan_cases_sen_gen, 
-                                 model = 'lasso',
-                                 rand_num = 10, 
-                                 num_feat = 100, 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "sen_gen_rand_lasso_100")
 
 
 
@@ -1327,38 +553,14 @@ rand_100 <- rbind(ungen_rand_rf_100,
                  sen_rand_rf_100,
                  sam_rand_rf_100,
                  sam_gen_rand_rf_100,
-                 sen_gen_rand_rf_100,
-                 ungen_rand_enet_100,
-                 gen_rand_enet_100,
-                 sen_rand_enet_100,
-                 sam_rand_enet_100,
-                 sam_gen_rand_enet_100,
-                 sen_gen_rand_enet_100,
-                 ungen_rand_lasso_100,
-                 gen_rand_lasso_100,
-                 sen_rand_lasso_100,
-                 sam_rand_lasso_100,
-                 sam_gen_rand_lasso_100,
-                 sen_gen_rand_lasso_100)
+                 sen_gen_rand_rf_100)
 
 rm(ungen_rand_rf_100,
    gen_rand_rf_100,
    sen_rand_rf_100,
    sam_rand_rf_100,
    sam_gen_rand_rf_100,
-   sen_gen_rand_rf_100,
-   ungen_rand_enet_100,
-   gen_rand_enet_100,
-   sen_rand_enet_100,
-   sam_rand_enet_100,
-   sam_gen_rand_enet_100,
-   sen_gen_rand_enet_100,
-   ungen_rand_lasso_100,
-   gen_rand_lasso_100,
-   sen_rand_lasso_100,
-   sam_rand_lasso_100,
-   sam_gen_rand_lasso_100,
-   sen_gen_rand_lasso_100)
+   sen_gen_rand_rf_100)
 
 
 #############################################################################################################
@@ -1371,7 +573,7 @@ rm(ungen_rand_rf_100,
 # ungen 300 features
 ungen_rand_rf_300 <- getRand(quan_cases, 
                             model = 'rf',
-                            rand_num = 10, 
+                            rand_num = 20, 
                             num_feat = 300, 
                             exclude = T,
                             union_features = union_features,
@@ -1380,7 +582,7 @@ ungen_rand_rf_300 <- getRand(quan_cases,
 # gen 300 features
 gen_rand_rf_300 <- getRand(quan_cases_gen, 
                           model = 'rf',
-                          rand_num = 10, 
+                          rand_num = 20, 
                           num_feat = 300, 
                           exclude = T,
                           union_features = union_features,
@@ -1389,7 +591,7 @@ gen_rand_rf_300 <- getRand(quan_cases_gen,
 # unsam 300 features
 sam_rand_rf_300 <- getRand(quan_cases_sam, 
                           model = 'rf',
-                          rand_num = 10, 
+                          rand_num = 20, 
                           num_feat = 300, 
                           exclude = T,
                           union_features = union_features,
@@ -1398,7 +600,7 @@ sam_rand_rf_300 <- getRand(quan_cases_sam,
 # unsen 300 features
 sen_rand_rf_300 <- getRand(quan_cases_sen, 
                           model = 'rf',
-                          rand_num = 10, 
+                          rand_num = 20, 
                           num_feat = 300, 
                           exclude = T,
                           union_features = union_features,
@@ -1407,7 +609,7 @@ sen_rand_rf_300 <- getRand(quan_cases_sen,
 # unsam_gen 300 features
 sam_gen_rand_rf_300 <- getRand(quan_cases_sam_gen, 
                               model = 'rf',
-                              rand_num = 10, 
+                              rand_num = 20, 
                               num_feat = 300, 
                               exclude = T,
                               union_features = union_features,
@@ -1416,131 +618,11 @@ sam_gen_rand_rf_300 <- getRand(quan_cases_sam_gen,
 # unsen_gen 300 features
 sen_gen_rand_rf_300 <- getRand(quan_cases_sen_gen, 
                               model = 'rf',
-                              rand_num = 10, 
+                              rand_num = 20, 
                               num_feat = 300, 
                               exclude = T,
                               union_features = union_features,
                               data_name = "sen_gen_rand_rf_300")
-
-
-
-
-###########
-# enet
-###########
-
-# ungen 300 features
-ungen_rand_enet_300 <- getRand(quan_cases, 
-                              model = 'enet',
-                              rand_num = 10, 
-                              num_feat = 300, 
-                              exclude = T,
-                              union_features = union_features,
-                              data_name = "ungen_rand_enet_300")
-
-# gen 300 features
-gen_rand_enet_300 <- getRand(quan_cases_gen, 
-                            model = 'enet',
-                            rand_num = 10, 
-                            num_feat = 300, 
-                            exclude = T,
-                            union_features = union_features,
-                            data_name = "gen_rand_enet_300")
-
-# unsam 300 features
-sam_rand_enet_300 <- getRand(quan_cases_sam, 
-                            model = 'enet',
-                            rand_num = 10, 
-                            num_feat = 300, 
-                            exclude = T,
-                            union_features = union_features,
-                            data_name = "sam_rand_enet_300")
-
-# unsen 300 features
-sen_rand_enet_300 <- getRand(quan_cases_sen, 
-                            model = 'enet',
-                            rand_num = 10, 
-                            num_feat = 300, 
-                            exclude = T,
-                            union_features = union_features,
-                            data_name = "sen_rand_enet_300")
-
-# unsam_gen 300 features
-sam_gen_rand_enet_300 <- getRand(quan_cases_sam_gen, 
-                                model = 'enet',
-                                rand_num = 10, 
-                                num_feat = 300, 
-                                exclude = T,
-                                union_features = union_features,
-                                data_name = "sam_gen_rand_enet_300")
-
-# unsen_gen 300 features
-sen_gen_rand_enet_300 <- getRand(quan_cases_sen_gen, 
-                                model = 'enet',
-                                rand_num = 10, 
-                                num_feat = 300, 
-                                exclude = T,
-                                union_features = union_features,
-                                data_name = "sen_gen_rand_enet_300")
-
-
-###########
-# lasso
-###########
-
-# ungen 300 features
-ungen_rand_lasso_300 <- getRand(quan_cases, 
-                               model = 'lasso',
-                               rand_num = 10, 
-                               num_feat = 300, 
-                               exclude = T,
-                               union_features = union_features,
-                               data_name = "ungen_rand_lasso_300")
-
-# gen 300 features
-gen_rand_lasso_300 <- getRand(quan_cases_gen, 
-                             model = 'lasso',
-                             rand_num = 10, 
-                             num_feat = 300, 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "gen_rand_lasso_300")
-
-# unsam 300 features
-sam_rand_lasso_300 <- getRand(quan_cases_sam, 
-                             model = 'lasso',
-                             rand_num = 10, 
-                             num_feat = 300, 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "sam_rand_lasso_300")
-
-# unsen 300 features
-sen_rand_lasso_300 <- getRand(quan_cases_sen, 
-                             model = 'lasso',
-                             rand_num = 10, 
-                             num_feat = 300, 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "sen_rand_lasso_300")
-
-# unsam_gen 300 features
-sam_gen_rand_lasso_300 <- getRand(quan_cases_sam_gen, 
-                                 model = 'lasso',
-                                 rand_num = 10, 
-                                 num_feat = 300, 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "sam_gen_rand_lasso_300")
-
-# unsen_gen 300 features
-sen_gen_rand_lasso_300 <- getRand(quan_cases_sen_gen, 
-                                 model = 'lasso',
-                                 rand_num = 10, 
-                                 num_feat = 300, 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "sen_gen_rand_lasso_300")
 
 
 
@@ -1551,38 +633,14 @@ rand_300 <- rbind(ungen_rand_rf_300,
                  sen_rand_rf_300,
                  sam_rand_rf_300,
                  sam_gen_rand_rf_300,
-                 sen_gen_rand_rf_300,
-                 ungen_rand_enet_300,
-                 gen_rand_enet_300,
-                 sen_rand_enet_300,
-                 sam_rand_enet_300,
-                 sam_gen_rand_enet_300,
-                 sen_gen_rand_enet_300,
-                 ungen_rand_lasso_300,
-                 gen_rand_lasso_300,
-                 sen_rand_lasso_300,
-                 sam_rand_lasso_300,
-                 sam_gen_rand_lasso_300,
-                 sen_gen_rand_lasso_300)
+                 sen_gen_rand_rf_300)
 
 rm(ungen_rand_rf_300,
    gen_rand_rf_300,
    sen_rand_rf_300,
    sam_rand_rf_300,
    sam_gen_rand_rf_300,
-   sen_gen_rand_rf_300,
-   ungen_rand_enet_300,
-   gen_rand_enet_300,
-   sen_rand_enet_300,
-   sam_rand_enet_300,
-   sam_gen_rand_enet_300,
-   sen_gen_rand_enet_300,
-   ungen_rand_lasso_300,
-   gen_rand_lasso_300,
-   sen_rand_lasso_300,
-   sam_rand_lasso_300,
-   sam_gen_rand_lasso_300,
-   sen_gen_rand_lasso_300)
+   sen_gen_rand_rf_300)
 
 #############################################################################################################
 #500
@@ -1594,7 +652,7 @@ rm(ungen_rand_rf_300,
 # ungen 500 features
 ungen_rand_rf_500 <- getRand(quan_cases, 
                             model = 'rf',
-                            rand_num = 10, 
+                            rand_num = 20, 
                             num_feat = 500, 
                             exclude = T,
                             union_features = union_features,
@@ -1603,7 +661,7 @@ ungen_rand_rf_500 <- getRand(quan_cases,
 # gen 500 features
 gen_rand_rf_500 <- getRand(quan_cases_gen, 
                           model = 'rf',
-                          rand_num = 10, 
+                          rand_num = 20, 
                           num_feat = 500, 
                           exclude = T,
                           union_features = union_features,
@@ -1612,7 +670,7 @@ gen_rand_rf_500 <- getRand(quan_cases_gen,
 # unsam 500 features
 sam_rand_rf_500 <- getRand(quan_cases_sam, 
                           model = 'rf',
-                          rand_num = 10, 
+                          rand_num = 20, 
                           num_feat = 500, 
                           exclude = T,
                           union_features = union_features,
@@ -1621,7 +679,7 @@ sam_rand_rf_500 <- getRand(quan_cases_sam,
 # unsen 500 features
 sen_rand_rf_500 <- getRand(quan_cases_sen, 
                           model = 'rf',
-                          rand_num = 10, 
+                          rand_num = 20, 
                           num_feat = 500, 
                           exclude = T,
                           union_features = union_features,
@@ -1630,7 +688,7 @@ sen_rand_rf_500 <- getRand(quan_cases_sen,
 # unsam_gen 500 features
 sam_gen_rand_rf_500 <- getRand(quan_cases_sam_gen, 
                               model = 'rf',
-                              rand_num = 10, 
+                              rand_num = 20, 
                               num_feat = 500, 
                               exclude = T,
                               union_features = union_features,
@@ -1639,133 +697,11 @@ sam_gen_rand_rf_500 <- getRand(quan_cases_sam_gen,
 # unsen_gen 500 features
 sen_gen_rand_rf_500 <- getRand(quan_cases_sen_gen, 
                               model = 'rf',
-                              rand_num = 10, 
+                              rand_num = 20, 
                               num_feat = 500, 
                               exclude = T,
                               union_features = union_features,
                               data_name = "sen_gen_rand_rf_500")
-
-
-
-
-###########
-# enet
-###########
-
-# ungen 500 features
-ungen_rand_enet_500 <- getRand(quan_cases, 
-                              model = 'enet',
-                              rand_num = 10, 
-                              num_feat = 500, 
-                              exclude = T,
-                              union_features = union_features,
-                              data_name = "ungen_rand_enet_500")
-
-# gen 500 features
-gen_rand_enet_500 <- getRand(quan_cases_gen, 
-                            model = 'enet',
-                            rand_num = 10, 
-                            num_feat = 500, 
-                            exclude = T,
-                            union_features = union_features,
-                            data_name = "gen_rand_enet_500")
-
-# unsam 500 features
-sam_rand_enet_500 <- getRand(quan_cases_sam, 
-                            model = 'enet',
-                            rand_num = 10, 
-                            num_feat = 500, 
-                            exclude = T,
-                            union_features = union_features,
-                            data_name = "sam_rand_enet_500")
-
-# unsen 500 features
-sen_rand_enet_500 <- getRand(quan_cases_sen, 
-                            model = 'enet',
-                            rand_num = 10, 
-                            num_feat = 500, 
-                            exclude = T,
-                            union_features = union_features,
-                            data_name = "sen_rand_enet_500")
-
-# unsam_gen 500 features
-sam_gen_rand_enet_500 <- getRand(quan_cases_sam_gen, 
-                                model = 'enet',
-                                rand_num = 10, 
-                                num_feat = 500, 
-                                exclude = T,
-                                union_features = union_features,
-                                data_name = "sam_gen_rand_enet_500")
-
-# unsen_gen 500 features
-sen_gen_rand_enet_500 <- getRand(quan_cases_sen_gen, 
-                                model = 'enet',
-                                rand_num = 10, 
-                                num_feat = 500, 
-                                exclude = T,
-                                union_features = union_features,
-                                data_name = "sen_gen_rand_enet_500")
-
-
-###########
-# lasso
-###########
-
-# ungen 500 features
-ungen_rand_lasso_500 <- getRand(quan_cases, 
-                               model = 'lasso',
-                               rand_num = 10, 
-                               num_feat = 500, 
-                               exclude = T,
-                               union_features = union_features,
-                               data_name = "ungen_rand_lasso_500")
-
-# gen 500 features
-gen_rand_lasso_500 <- getRand(quan_cases_gen, 
-                             model = 'lasso',
-                             rand_num = 10, 
-                             num_feat = 500, 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "gen_rand_lasso_500")
-
-# unsam 500 features
-sam_rand_lasso_500 <- getRand(quan_cases_sam, 
-                             model = 'lasso',
-                             rand_num = 10, 
-                             num_feat = 500, 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "sam_rand_lasso_500")
-
-# unsen 500 features
-sen_rand_lasso_500 <- getRand(quan_cases_sen, 
-                             model = 'lasso',
-                             rand_num = 10, 
-                             num_feat = 500, 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "sen_rand_lasso_500")
-
-# unsam_gen 500 features
-sam_gen_rand_lasso_500 <- getRand(quan_cases_sam_gen, 
-                                 model = 'lasso',
-                                 rand_num = 10, 
-                                 num_feat = 500, 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "sam_gen_rand_lasso_500")
-
-# unsen_gen 500 features
-sen_gen_rand_lasso_500 <- getRand(quan_cases_sen_gen, 
-                                 model = 'lasso',
-                                 rand_num = 10, 
-                                 num_feat = 500, 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "sen_gen_rand_lasso_500")
-
-
 
 
 
@@ -1774,38 +710,14 @@ rand_500 <- rbind(ungen_rand_rf_500,
                  sen_rand_rf_500,
                  sam_rand_rf_500,
                  sam_gen_rand_rf_500,
-                 sen_gen_rand_rf_500,
-                 ungen_rand_enet_500,
-                 gen_rand_enet_500,
-                 sen_rand_enet_500,
-                 sam_rand_enet_500,
-                 sam_gen_rand_enet_500,
-                 sen_gen_rand_enet_500,
-                 ungen_rand_lasso_500,
-                 gen_rand_lasso_500,
-                 sen_rand_lasso_500,
-                 sam_rand_lasso_500,
-                 sam_gen_rand_lasso_500,
-                 sen_gen_rand_lasso_500)
+                 sen_gen_rand_rf_500)
 
 rm(ungen_rand_rf_500,
    gen_rand_rf_500,
    sen_rand_rf_500,
    sam_rand_rf_500,
    sam_gen_rand_rf_500,
-   sen_gen_rand_rf_500,
-   ungen_rand_enet_500,
-   gen_rand_enet_500,
-   sen_rand_enet_500,
-   sam_rand_enet_500,
-   sam_gen_rand_enet_500,
-   sen_gen_rand_enet_500,
-   ungen_rand_lasso_500,
-   gen_rand_lasso_500,
-   sen_rand_lasso_500,
-   sam_rand_lasso_500,
-   sam_gen_rand_lasso_500,
-   sen_gen_rand_lasso_500)
+   sen_gen_rand_rf_500)
 
 
 #############################################################################################################
@@ -1818,7 +730,7 @@ rm(ungen_rand_rf_500,
 # ungen 1000 features
 ungen_rand_rf_1000 <- getRand(quan_cases, 
                             model = 'rf',
-                            rand_num = 10, 
+                            rand_num = 20, 
                             num_feat = 1000, 
                             exclude = T,
                             union_features = union_features,
@@ -1827,7 +739,7 @@ ungen_rand_rf_1000 <- getRand(quan_cases,
 # gen 1000 features
 gen_rand_rf_1000 <- getRand(quan_cases_gen, 
                           model = 'rf',
-                          rand_num = 10, 
+                          rand_num = 20, 
                           num_feat = 1000, 
                           exclude = T,
                           union_features = union_features,
@@ -1836,7 +748,7 @@ gen_rand_rf_1000 <- getRand(quan_cases_gen,
 # unsam 1000 features
 sam_rand_rf_1000 <- getRand(quan_cases_sam, 
                           model = 'rf',
-                          rand_num = 10, 
+                          rand_num = 20, 
                           num_feat = 1000, 
                           exclude = T,
                           union_features = union_features,
@@ -1845,7 +757,7 @@ sam_rand_rf_1000 <- getRand(quan_cases_sam,
 # unsen 1000 features
 sen_rand_rf_1000 <- getRand(quan_cases_sen, 
                           model = 'rf',
-                          rand_num = 10, 
+                          rand_num = 20, 
                           num_feat = 1000, 
                           exclude = T,
                           union_features = union_features,
@@ -1854,7 +766,7 @@ sen_rand_rf_1000 <- getRand(quan_cases_sen,
 # unsam_gen 1000 features
 sam_gen_rand_rf_1000 <- getRand(quan_cases_sam_gen, 
                               model = 'rf',
-                              rand_num = 10, 
+                              rand_num = 20, 
                               num_feat = 1000, 
                               exclude = T,
                               union_features = union_features,
@@ -1863,133 +775,11 @@ sam_gen_rand_rf_1000 <- getRand(quan_cases_sam_gen,
 # unsen_gen 1000 features
 sen_gen_rand_rf_1000 <- getRand(quan_cases_sen_gen, 
                               model = 'rf',
-                              rand_num = 10, 
+                              rand_num = 20, 
                               num_feat = 1000, 
                               exclude = T,
                               union_features = union_features,
                               data_name = "sen_gen_rand_rf_1000")
-
-
-
-
-###########
-# enet
-###########
-
-# ungen 1000 features
-ungen_rand_enet_1000 <- getRand(quan_cases, 
-                              model = 'enet',
-                              rand_num = 10, 
-                              num_feat = 1000, 
-                              exclude = T,
-                              union_features = union_features,
-                              data_name = "ungen_rand_enet_1000")
-
-# gen 1000 features
-gen_rand_enet_1000 <- getRand(quan_cases_gen, 
-                            model = 'enet',
-                            rand_num = 10, 
-                            num_feat = 1000, 
-                            exclude = T,
-                            union_features = union_features,
-                            data_name = "gen_rand_enet_1000")
-
-# unsam 1000 features
-sam_rand_enet_1000 <- getRand(quan_cases_sam, 
-                            model = 'enet',
-                            rand_num = 10, 
-                            num_feat = 1000, 
-                            exclude = T,
-                            union_features = union_features,
-                            data_name = "sam_rand_enet_1000")
-
-# unsen 1000 features
-sen_rand_enet_1000 <- getRand(quan_cases_sen, 
-                            model = 'enet',
-                            rand_num = 10, 
-                            num_feat = 1000, 
-                            exclude = T,
-                            union_features = union_features,
-                            data_name = "sen_rand_enet_1000")
-
-# unsam_gen 1000 features
-sam_gen_rand_enet_1000 <- getRand(quan_cases_sam_gen, 
-                                model = 'enet',
-                                rand_num = 10, 
-                                num_feat = 1000, 
-                                exclude = T,
-                                union_features = union_features,
-                                data_name = "sam_gen_rand_enet_1000")
-
-# unsen_gen 1000 features
-sen_gen_rand_enet_1000 <- getRand(quan_cases_sen_gen, 
-                                model = 'enet',
-                                rand_num = 10, 
-                                num_feat = 1000, 
-                                exclude = T,
-                                union_features = union_features,
-                                data_name = "sen_gen_rand_enet_1000")
-
-
-###########
-# lasso
-###########
-
-# ungen 1000 features
-ungen_rand_lasso_1000 <- getRand(quan_cases, 
-                               model = 'lasso',
-                               rand_num = 10, 
-                               num_feat = 1000, 
-                               exclude = T,
-                               union_features = union_features,
-                               data_name = "ungen_rand_lasso_1000")
-
-# gen 1000 features
-gen_rand_lasso_1000 <- getRand(quan_cases_gen, 
-                             model = 'lasso',
-                             rand_num = 10, 
-                             num_feat = 1000, 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "gen_rand_lasso_1000")
-
-# unsam 1000 features
-sam_rand_lasso_1000 <- getRand(quan_cases_sam, 
-                             model = 'lasso',
-                             rand_num = 10, 
-                             num_feat = 1000, 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "sam_rand_lasso_1000")
-
-# unsen 1000 features
-sen_rand_lasso_1000 <- getRand(quan_cases_sen, 
-                             model = 'lasso',
-                             rand_num = 10, 
-                             num_feat = 1000, 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "sen_rand_lasso_1000")
-
-# unsam_gen 1000 features
-sam_gen_rand_lasso_1000 <- getRand(quan_cases_sam_gen, 
-                                 model = 'lasso',
-                                 rand_num = 10, 
-                                 num_feat = 1000, 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "sam_gen_rand_lasso_1000")
-
-# unsen_gen 1000 features
-sen_gen_rand_lasso_1000 <- getRand(quan_cases_sen_gen, 
-                                 model = 'lasso',
-                                 rand_num = 10, 
-                                 num_feat = 1000, 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "sen_gen_rand_lasso_1000")
-
-
 
 
 
@@ -1998,38 +788,14 @@ rand_1000 <- rbind(ungen_rand_rf_1000,
                  sen_rand_rf_1000,
                  sam_rand_rf_1000,
                  sam_gen_rand_rf_1000,
-                 sen_gen_rand_rf_1000,
-                 ungen_rand_enet_1000,
-                 gen_rand_enet_1000,
-                 sen_rand_enet_1000,
-                 sam_rand_enet_1000,
-                 sam_gen_rand_enet_1000,
-                 sen_gen_rand_enet_1000,
-                 ungen_rand_lasso_1000,
-                 gen_rand_lasso_1000,
-                 sen_rand_lasso_1000,
-                 sam_rand_lasso_1000,
-                 sam_gen_rand_lasso_1000,
-                 sen_gen_rand_lasso_1000)
+                 sen_gen_rand_rf_1000)
 
 rm(ungen_rand_rf_1000,
    gen_rand_rf_1000,
    sen_rand_rf_1000,
    sam_rand_rf_1000,
    sam_gen_rand_rf_1000,
-   sen_gen_rand_rf_1000,
-   ungen_rand_enet_1000,
-   gen_rand_enet_1000,
-   sen_rand_enet_1000,
-   sam_rand_enet_1000,
-   sam_gen_rand_enet_1000,
-   sen_gen_rand_enet_1000,
-   ungen_rand_lasso_1000,
-   gen_rand_lasso_1000,
-   sen_rand_lasso_1000,
-   sam_rand_lasso_1000,
-   sam_gen_rand_lasso_1000,
-   sen_gen_rand_lasso_1000)
+   sen_gen_rand_rf_1000)
 
 
 
@@ -2043,7 +809,7 @@ rm(ungen_rand_rf_1000,
 # ungen 5000 features
 ungen_rand_rf_5000 <- getRand(quan_cases, 
                             model = 'rf',
-                            rand_num = 10, 
+                            rand_num = 20, 
                             num_feat = 5000, 
                             exclude = T,
                             union_features = union_features,
@@ -2052,7 +818,7 @@ ungen_rand_rf_5000 <- getRand(quan_cases,
 # gen 5000 features
 gen_rand_rf_5000 <- getRand(quan_cases_gen, 
                           model = 'rf',
-                          rand_num = 10, 
+                          rand_num = 20, 
                           num_feat = 5000, 
                           exclude = T,
                           union_features = union_features,
@@ -2061,7 +827,7 @@ gen_rand_rf_5000 <- getRand(quan_cases_gen,
 # unsam 5000 features
 sam_rand_rf_5000 <- getRand(quan_cases_sam, 
                           model = 'rf',
-                          rand_num = 10, 
+                          rand_num = 20, 
                           num_feat = 5000, 
                           exclude = T,
                           union_features = union_features,
@@ -2070,7 +836,7 @@ sam_rand_rf_5000 <- getRand(quan_cases_sam,
 # unsen 5000 features
 sen_rand_rf_5000 <- getRand(quan_cases_sen, 
                           model = 'rf',
-                          rand_num = 10, 
+                          rand_num = 20, 
                           num_feat = 5000, 
                           exclude = T,
                           union_features = union_features,
@@ -2079,7 +845,7 @@ sen_rand_rf_5000 <- getRand(quan_cases_sen,
 # unsam_gen 5000 features
 sam_gen_rand_rf_5000 <- getRand(quan_cases_sam_gen, 
                               model = 'rf',
-                              rand_num = 10, 
+                              rand_num = 20, 
                               num_feat = 5000, 
                               exclude = T,
                               union_features = union_features,
@@ -2088,133 +854,11 @@ sam_gen_rand_rf_5000 <- getRand(quan_cases_sam_gen,
 # unsen_gen 5000 features
 sen_gen_rand_rf_5000 <- getRand(quan_cases_sen_gen, 
                               model = 'rf',
-                              rand_num = 10, 
+                              rand_num = 20, 
                               num_feat = 5000, 
                               exclude = T,
                               union_features = union_features,
                               data_name = "sen_gen_rand_rf_5000")
-
-
-
-
-###########
-# enet
-###########
-
-# ungen 5000 features
-ungen_rand_enet_5000 <- getRand(quan_cases, 
-                              model = 'enet',
-                              rand_num = 10, 
-                              num_feat = 5000, 
-                              exclude = T,
-                              union_features = union_features,
-                              data_name = "ungen_rand_enet_5000")
-
-# gen 5000 features
-gen_rand_enet_5000 <- getRand(quan_cases_gen, 
-                            model = 'enet',
-                            rand_num = 10, 
-                            num_feat = 5000, 
-                            exclude = T,
-                            union_features = union_features,
-                            data_name = "gen_rand_enet_5000")
-
-# unsam 5000 features
-sam_rand_enet_5000 <- getRand(quan_cases_sam, 
-                            model = 'enet',
-                            rand_num = 10, 
-                            num_feat = 5000, 
-                            exclude = T,
-                            union_features = union_features,
-                            data_name = "sam_rand_enet_5000")
-
-# unsen 5000 features
-sen_rand_enet_5000 <- getRand(quan_cases_sen, 
-                            model = 'enet',
-                            rand_num = 10, 
-                            num_feat = 5000, 
-                            exclude = T,
-                            union_features = union_features,
-                            data_name = "sen_rand_enet_5000")
-
-# unsam_gen 5000 features
-sam_gen_rand_enet_5000 <- getRand(quan_cases_sam_gen, 
-                                model = 'enet',
-                                rand_num = 10, 
-                                num_feat = 5000, 
-                                exclude = T,
-                                union_features = union_features,
-                                data_name = "sam_gen_rand_enet_5000")
-
-# unsen_gen 5000 features
-sen_gen_rand_enet_5000 <- getRand(quan_cases_sen_gen, 
-                                model = 'enet',
-                                rand_num = 10, 
-                                num_feat = 5000, 
-                                exclude = T,
-                                union_features = union_features,
-                                data_name = "sen_gen_rand_enet_5000")
-
-
-###########
-# lasso
-###########
-
-# ungen 5000 features
-ungen_rand_lasso_5000 <- getRand(quan_cases, 
-                               model = 'lasso',
-                               rand_num = 10, 
-                               num_feat = 5000, 
-                               exclude = T,
-                               union_features = union_features,
-                               data_name = "ungen_rand_lasso_5000")
-
-# gen 5000 features
-gen_rand_lasso_5000 <- getRand(quan_cases_gen, 
-                             model = 'lasso',
-                             rand_num = 10, 
-                             num_feat = 5000, 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "gen_rand_lasso_5000")
-
-# unsam 5000 features
-sam_rand_lasso_5000 <- getRand(quan_cases_sam, 
-                             model = 'lasso',
-                             rand_num = 10, 
-                             num_feat = 5000, 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "sam_rand_lasso_5000")
-
-# unsen 5000 features
-sen_rand_lasso_5000 <- getRand(quan_cases_sen, 
-                             model = 'lasso',
-                             rand_num = 10, 
-                             num_feat = 5000, 
-                             exclude = T,
-                             union_features = union_features,
-                             data_name = "sen_rand_lasso_5000")
-
-# unsam_gen 5000 features
-sam_gen_rand_lasso_5000 <- getRand(quan_cases_sam_gen, 
-                                 model = 'lasso',
-                                 rand_num = 10, 
-                                 num_feat = 5000, 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "sam_gen_rand_lasso_5000")
-
-# unsen_gen 5000 features
-sen_gen_rand_lasso_5000 <- getRand(quan_cases_sen_gen, 
-                                 model = 'lasso',
-                                 rand_num = 10, 
-                                 num_feat = 5000, 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "sen_gen_rand_lasso_5000")
-
-
 
 
 
@@ -2223,38 +867,14 @@ rand_5000 <- rbind(ungen_rand_rf_5000,
                  sen_rand_rf_5000,
                  sam_rand_rf_5000,
                  sam_gen_rand_rf_5000,
-                 sen_gen_rand_rf_5000,
-                 ungen_rand_enet_5000,
-                 gen_rand_enet_5000,
-                 sen_rand_enet_5000,
-                 sam_rand_enet_5000,
-                 sam_gen_rand_enet_5000,
-                 sen_gen_rand_enet_5000,
-                 ungen_rand_lasso_5000,
-                 gen_rand_lasso_5000,
-                 sen_rand_lasso_5000,
-                 sam_rand_lasso_5000,
-                 sam_gen_rand_lasso_5000,
-                 sen_gen_rand_lasso_5000)
+                 sen_gen_rand_rf_5000)
 
 rm(ungen_rand_rf_5000,
    gen_rand_rf_5000,
    sen_rand_rf_5000,
    sam_rand_rf_5000,
    sam_gen_rand_rf_5000,
-   sen_gen_rand_rf_5000,
-   ungen_rand_enet_5000,
-   gen_rand_enet_5000,
-   sen_rand_enet_5000,
-   sam_rand_enet_5000,
-   sam_gen_rand_enet_5000,
-   sen_gen_rand_enet_5000,
-   ungen_rand_lasso_5000,
-   gen_rand_lasso_5000,
-   sen_rand_lasso_5000,
-   sam_rand_lasso_5000,
-   sam_gen_rand_lasso_5000,
-   sen_gen_rand_lasso_5000)
+   sen_gen_rand_rf_5000)
 
 
 
@@ -2269,7 +889,7 @@ rm(ungen_rand_rf_5000,
 # ungen 10000 features
 ungen_rand_rf_10000 <- getRand(quan_cases, 
                               model = 'rf',
-                              rand_num = 10, 
+                              rand_num = 20, 
                               num_feat = 10000, 
                               exclude = T,
                               union_features = union_features,
@@ -2278,7 +898,7 @@ ungen_rand_rf_10000 <- getRand(quan_cases,
 # gen 10000 features
 gen_rand_rf_10000 <- getRand(quan_cases_gen, 
                             model = 'rf',
-                            rand_num = 10, 
+                            rand_num = 20, 
                             num_feat = 10000, 
                             exclude = T,
                             union_features = union_features,
@@ -2287,7 +907,7 @@ gen_rand_rf_10000 <- getRand(quan_cases_gen,
 # unsam 10000 features
 sam_rand_rf_10000 <- getRand(quan_cases_sam, 
                             model = 'rf',
-                            rand_num = 10, 
+                            rand_num = 20, 
                             num_feat = 10000, 
                             exclude = T,
                             union_features = union_features,
@@ -2296,7 +916,7 @@ sam_rand_rf_10000 <- getRand(quan_cases_sam,
 # unsen 10000 features
 sen_rand_rf_10000 <- getRand(quan_cases_sen, 
                             model = 'rf',
-                            rand_num = 10, 
+                            rand_num = 20, 
                             num_feat = 10000, 
                             exclude = T,
                             union_features = union_features,
@@ -2305,7 +925,7 @@ sen_rand_rf_10000 <- getRand(quan_cases_sen,
 # unsam_gen 10000 features
 sam_gen_rand_rf_10000 <- getRand(quan_cases_sam_gen, 
                                 model = 'rf',
-                                rand_num = 10, 
+                                rand_num = 20, 
                                 num_feat = 10000, 
                                 exclude = T,
                                 union_features = union_features,
@@ -2314,7 +934,7 @@ sam_gen_rand_rf_10000 <- getRand(quan_cases_sam_gen,
 # unsen_gen 10000 features
 sen_gen_rand_rf_10000 <- getRand(quan_cases_sen_gen, 
                                 model = 'rf',
-                                rand_num = 10, 
+                                rand_num = 20, 
                                 num_feat = 10000, 
                                 exclude = T,
                                 union_features = union_features,
@@ -2322,162 +942,98 @@ sen_gen_rand_rf_10000 <- getRand(quan_cases_sen_gen,
 
 
 
-
-###########
-# enet
-###########
-
-# ungen 10000 features
-ungen_rand_enet_10000 <- getRand(quan_cases, 
-                                model = 'enet',
-                                rand_num = 10, 
-                                num_feat = 10000, 
-                                exclude = T,
-                                union_features = union_features,
-                                data_name = "ungen_rand_enet_10000")
-
-# gen 10000 features
-gen_rand_enet_10000 <- getRand(quan_cases_gen, 
-                              model = 'enet',
-                              rand_num = 10, 
-                              num_feat = 10000, 
-                              exclude = T,
-                              union_features = union_features,
-                              data_name = "gen_rand_enet_10000")
-
-# unsam 10000 features
-sam_rand_enet_10000 <- getRand(quan_cases_sam, 
-                              model = 'enet',
-                              rand_num = 10, 
-                              num_feat = 10000, 
-                              exclude = T,
-                              union_features = union_features,
-                              data_name = "sam_rand_enet_10000")
-
-# unsen 10000 features
-sen_rand_enet_10000 <- getRand(quan_cases_sen, 
-                              model = 'enet',
-                              rand_num = 10, 
-                              num_feat = 10000, 
-                              exclude = T,
-                              union_features = union_features,
-                              data_name = "sen_rand_enet_10000")
-
-# unsam_gen 10000 features
-sam_gen_rand_enet_10000 <- getRand(quan_cases_sam_gen, 
-                                  model = 'enet',
-                                  rand_num = 10, 
-                                  num_feat = 10000, 
-                                  exclude = T,
-                                  union_features = union_features,
-                                  data_name = "sam_gen_rand_enet_10000")
-
-# unsen_gen 10000 features
-sen_gen_rand_enet_10000 <- getRand(quan_cases_sen_gen, 
-                                  model = 'enet',
-                                  rand_num = 10, 
-                                  num_feat = 10000, 
-                                  exclude = T,
-                                  union_features = union_features,
-                                  data_name = "sen_gen_rand_enet_10000")
-
-
-###########
-# lasso
-###########
-
-# ungen 10000 features
-ungen_rand_lasso_10000 <- getRand(quan_cases, 
-                                 model = 'lasso',
-                                 rand_num = 10, 
-                                 num_feat = 10000, 
-                                 exclude = T,
-                                 union_features = union_features,
-                                 data_name = "ungen_rand_lasso_10000")
-
-# gen 10000 features
-gen_rand_lasso_10000 <- getRand(quan_cases_gen, 
-                               model = 'lasso',
-                               rand_num = 10, 
-                               num_feat = 10000, 
-                               exclude = T,
-                               union_features = union_features,
-                               data_name = "gen_rand_lasso_10000")
-
-# unsam 10000 features
-sam_rand_lasso_10000 <- getRand(quan_cases_sam, 
-                               model = 'lasso',
-                               rand_num = 10, 
-                               num_feat = 10000, 
-                               exclude = T,
-                               union_features = union_features,
-                               data_name = "sam_rand_lasso_10000")
-
-# unsen 10000 features
-sen_rand_lasso_10000 <- getRand(quan_cases_sen, 
-                               model = 'lasso',
-                               rand_num = 10, 
-                               num_feat = 10000, 
-                               exclude = T,
-                               union_features = union_features,
-                               data_name = "sen_rand_lasso_10000")
-
-# unsam_gen 10000 features
-sam_gen_rand_lasso_10000 <- getRand(quan_cases_sam_gen, 
-                                   model = 'lasso',
-                                   rand_num = 10, 
-                                   num_feat = 10000, 
-                                   exclude = T,
-                                   union_features = union_features,
-                                   data_name = "sam_gen_rand_lasso_10000")
-
-# unsen_gen 10000 features
-sen_gen_rand_lasso_10000 <- getRand(quan_cases_sen_gen, 
-                                   model = 'lasso',
-                                   rand_num = 10, 
-                                   num_feat = 10000, 
-                                   exclude = T,
-                                   union_features = union_features,
-                                   data_name = "sen_gen_rand_lasso_10000")
-
-
 rand_10000 <- rbind(ungen_rand_rf_10000,
                    gen_rand_rf_10000,
                    sen_rand_rf_10000,
                    sam_rand_rf_10000,
                    sam_gen_rand_rf_10000,
-                   sen_gen_rand_rf_10000,
-                   ungen_rand_enet_10000,
-                   gen_rand_enet_10000,
-                   sen_rand_enet_10000,
-                   sam_rand_enet_10000,
-                   sam_gen_rand_enet_10000,
-                   sen_gen_rand_enet_10000,
-                   ungen_rand_lasso_10000,
-                   gen_rand_lasso_10000,
-                   sen_rand_lasso_10000,
-                   sam_rand_lasso_10000,
-                   sam_gen_rand_lasso_10000,
-                   sen_gen_rand_lasso_10000)
+                   sen_gen_rand_rf_10000)
 
 rm(ungen_rand_rf_10000,
    gen_rand_rf_10000,
    sen_rand_rf_10000,
    sam_rand_rf_10000,
    sam_gen_rand_rf_10000,
-   sen_gen_rand_rf_10000,
-   ungen_rand_enet_10000,
-   gen_rand_enet_10000,
-   sen_rand_enet_10000,
-   sam_rand_enet_10000,
-   sam_gen_rand_enet_10000,
-   sen_gen_rand_enet_10000,
-   ungen_rand_lasso_10000,
-   gen_rand_lasso_10000,
-   sen_rand_lasso_10000,
-   sam_rand_lasso_10000,
-   sam_gen_rand_lasso_10000,
-   sen_gen_rand_lasso_10000)
+   sen_gen_rand_rf_10000)
+
+
+
+#############################################################################################################
+#450000
+
+###########
+# rf
+###########
+
+# ungen 450000 features
+ungen_rand_rf_450000 <- getRand(quan_cases, 
+                               model = 'rf',
+                               rand_num = 1, 
+                               num_feat = 450000, 
+                               exclude = T,
+                               union_features = union_features,
+                               data_name = "ungen_rand_rf_450000")
+
+# gen 450000 features
+gen_rand_rf_450000 <- getRand(quan_cases_gen, 
+                             model = 'rf',
+                             rand_num = 1, 
+                             num_feat = 450000, 
+                             exclude = T,
+                             union_features = union_features,
+                             data_name = "gen_rand_rf_450000")
+
+# unsam 450000 features
+sam_rand_rf_450000 <- getRand(quan_cases_sam, 
+                             model = 'rf',
+                             rand_num = 1, 
+                             num_feat = 450000, 
+                             exclude = T,
+                             union_features = union_features,
+                             data_name = "sam_rand_rf_450000")
+
+# unsen 450000 features
+sen_rand_rf_450000 <- getRand(quan_cases_sen, 
+                             model = 'rf',
+                             rand_num = 1, 
+                             num_feat = 450000, 
+                             exclude = T,
+                             union_features = union_features,
+                             data_name = "sen_rand_rf_450000")
+
+# unsam_gen 450000 features
+sam_gen_rand_rf_450000 <- getRand(quan_cases_sam_gen, 
+                                 model = 'rf',
+                                 rand_num = 1, 
+                                 num_feat = 450000, 
+                                 exclude = T,
+                                 union_features = union_features,
+                                 data_name = "sam_gen_rand_rf_450000")
+
+# unsen_gen 450000 features
+sen_gen_rand_rf_450000 <- getRand(quan_cases_sen_gen, 
+                                 model = 'rf',
+                                 rand_num = 1, 
+                                 num_feat = 450000, 
+                                 exclude = T,
+                                 union_features = union_features,
+                                 data_name = "sen_gen_rand_rf_450000")
+
+
+
+rand_450000 <- rbind(ungen_rand_rf_450000,
+                    gen_rand_rf_450000,
+                    sen_rand_rf_450000,
+                    sam_rand_rf_450000,
+                    sam_gen_rand_rf_450000,
+                    sen_gen_rand_rf_450000)
+
+rm(ungen_rand_rf_450000,
+   gen_rand_rf_450000,
+   sen_rand_rf_450000,
+   sam_rand_rf_450000,
+   sam_gen_rand_rf_450000,
+   sen_gen_rand_rf_450000)
 
 
 
@@ -2485,7 +1041,11 @@ rm(ungen_rand_rf_10000,
 # combine data
 ##########
 
-rand <- rbind(rand_10, rand_20, rand_30, rand_50, rand_100, rand_300, rand_500,
-              rand_1000, rand_5000, rand_10000)
+rand <- rbind(rand_10, rand_20, rand_30, rand_100, rand_300, rand_500,
+              rand_1000, rand_5000,rand_450000)
 
-saveRDS(rand, paste0(model_data, '/rand.rda'))
+saveRDS(rand, paste0(model_data, '/rand_2.rda'))
+
+# order 
+
+rand <- rand[order(rand$score, decreasing = T),]

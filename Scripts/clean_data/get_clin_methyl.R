@@ -18,7 +18,7 @@ library(preprocessCore)
 ##########
 # Initialize folders
 ##########
-home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
+home_folder <- '/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
 data_folder <- paste0(project_folder, '/Data')
 methyl_data <- paste0(data_folder, '/methyl_data')

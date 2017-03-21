@@ -65,6 +65,8 @@ source(paste0(scripts_folder, '/predict_age/functions.R'))
 ##########
 # function to run models - subset, get residuals, get categorical, predict with regression and fac. 
 ##########
+# data <- quan_cases
+# bump_hunter_data <- quan_even_30
 runModels <- function(data,
                       model,
                       random = F,

@@ -51,9 +51,9 @@ source(paste0(scripts_folder, '/predict_age/final_functions.R'))
 ##########
 # function to run models - subset, get residuals, get categorical, predict with regression and fac. 
 ##########
-data<- quan_cases_sam
-data_controls <- quan_controls
-model = 'enet'
+# data<- quan_cases_sam_gen
+# data_controls <- quan_controls_gen
+# model = 'enet'
 # add in argument for bumphunter, so there can be full models run
 # add in code for gender
 runModels <- function(data,
@@ -65,7 +65,7 @@ runModels <- function(data,
                       DELTA_BETA_THRESH) 
   
 {
-  
+    
   if (resid) {
     
     # get residuals
@@ -90,33 +90,6 @@ runModels <- function(data,
     
   }
   
-  ##########
-  # run bumphunter to get features
-  ##########
-  # get balanced data from train
-  dat <- getBal(data, controls)
-  
-  # get bh results
-  bh_dat <- bumpHunter(dat, DELTA_BETA_THRESH = DELTA_BETA_THRESH)
-  
-  # extract probe
-  probe_features <- getProbe(bh_dat, cg_locations)
-  sig <- probe_features[[2]]
-  fwer <- probe_features[[1]]
-  
-  
-  # model_feat <- as.character(sig$probe)
-  model_feat <- as.character(fwer$probe)
-  
-  
-  if(gender) {
-    model_feat <- append('gender', model_feat)
-  } 
-  
-  # intersect model_feat with all_feat
-  int_feat <- intersect(model_feat, all_feat)
-  
-  
   # get holders
   model <- list()
   best_features <- list()
@@ -134,10 +107,30 @@ runModels <- function(data,
     train_index <- sample(nrow(data), nrow(data) *.70, replace = F)
     # creat training data frame
     dat_train <- data[train_index, ]
-    
+
     # create testing data frame 
     dat_test <- data[-train_index,]
+
+    ##########
+    # run bumphunter to get features
+    ##########
+    # get balanced data from train
+    dat <- getBal(dat_train, controls)
     
+    # get bh results
+    bh_dat <- bumpHunter(dat, DELTA_BETA_THRESH = DELTA_BETA_THRESH)
+    
+    # extract probe
+    probe_features <- getProbe(bh_dat, cg_locations)
+    model_feat <- as.character(probe_features$probe)
+    
+    if(gender) {
+      model_feat <- append('gender', model_feat)
+    } 
+    
+    # intersect model_feat with all_feat
+    int_feat <- intersect(model_feat, all_feat)
+      
     ##########
     # get model training and testing data
     ##########
@@ -177,19 +170,19 @@ runModels <- function(data,
       tunegrid <- expand.grid(.mtry=mtry)
       
       model[[i]] <- train(x = dat_train
-                          , y = y_train
-                          , method = "rf"
-                          , trControl = fitControl
-                          , tuneGrid = tunegrid
-                          , importance = T
-                          , verbose = FALSE)
+                    , y = y_train
+                    , method = "rf"
+                    , trControl = fitControl
+                    , tuneGrid = tunegrid
+                    , importance = T
+                    , verbose = FALSE)
       
       temp <- varImp(model[[i]])[[1]]
       importance <- cbind(rownames(temp), temp$Overall)
       
       
       test.predictions[[i]] <- predict(model[[i]] 
-                                       , newdata = dat_test)
+                                  , newdata = dat_test)
       
       y_test_holder[[i]] <- y_test
       
@@ -303,12 +296,11 @@ runModels <- function(data,
       
       
     }
-    
-    print(i)
+
+  print(i)
   }
-  
+
   return (list(model,test.predictions, y_test_holder,  importance, dims))
   
 }
 
-cor(unlist(test.predictions), unlist(y_test_holder))

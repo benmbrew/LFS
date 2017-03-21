@@ -14,7 +14,7 @@ getResidual <- function(model_data)
   
   # subset by mut, and complete cases for age diagnosis and age sample collection
   model_data <- model_data[complete.cases(model_data),]
-  
+
   feature_names <- colnames(model_data)[10:ncol(model_data)]
   
   resid <- list()
@@ -30,11 +30,11 @@ getResidual <- function(model_data)
     
   }
   
-  resid_data <- as.data.frame(do.call('cbind', resid))
-  model_data <- cbind(model_data$age_diagnosis, model_data$age_sample_collection, model_data$gender, 
-                      model_data$type, resid_data)
-  colnames(model_data) <- c('age_diagnosis', 'age_sample_collection', 'gender', 'type', feature_names)
-  
+    resid_data <- as.data.frame(do.call('cbind', resid))
+    model_data <- cbind(model_data$age_diagnosis, model_data$age_sample_collection, model_data$gender, 
+                        model_data$type, resid_data)
+    colnames(model_data) <- c('age_diagnosis', 'age_sample_collection', 'gender', 'type', feature_names)
+
   return(model_data)
 }
 
@@ -62,7 +62,7 @@ bumpHunter<- function(model_data,
                       DELTA_BETA_THRESH) {
   
   
-  
+ 
   ##########
   # get clinical model_data 
   ##########
@@ -115,7 +115,7 @@ bumpHunter<- function(model_data,
   stopifnot(dim(beta)[1] == length(pos))
   
   # set paramenters 
-  # DNAm difference threshold
+   # DNAm difference threshold
   NUM_BOOTSTRAPS = 3   # number of randomizations
   
   # create tab list
@@ -127,12 +127,12 @@ bumpHunter<- function(model_data,
                     cutoff = DELTA_BETA_THRESH,
                     B = NUM_BOOTSTRAPS,
                     type = "Beta")
+    
+    bump_hunter_results <- tab$table
+    bump_hunter_results$run <- DELTA_BETA_THRESH
   
-  bump_hunter_results <- tab$table
-  bump_hunter_results$run <- DELTA_BETA_THRESH
   
-  
-  
+
   return(bump_hunter_results)
   
 }
@@ -167,12 +167,12 @@ getProbe <- function(data, cgs) {
   colnames(result) <- c('chr', 'start', 'end', 'probe', 'p.value', 'fwer', 'run')
   
   # get sig results
-  result_sig <- result[result$p.value < 0.05,]
+  # result_sig <- result[result$p.value < 0.05,]
   
   # get fwer results
-  result_fwer <- result[result$fwer == 0,]
+  # result_fwer <- result[result$fwer == 0,]
   
-  return(list(result_fwer, result_sig))
+  return(result)
   
 }
 

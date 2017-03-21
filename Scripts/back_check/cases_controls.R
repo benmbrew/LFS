@@ -40,3 +40,24 @@ quan_cases_sam_gen <- readRDS(paste0(model_data, '/quan_cases_sam_gen.rda'))
 load(paste0(model_data, '/bh_feat.RData'))
 
 
+##########
+# plot age of diagnosis vs age of sample collection
+##########
+x_axis <- quan_cases$age_diagnosis
+y_axis <- quan_cases$age_sample_collection
+
+plot_dat <- as.data.frame(cbind(x_axis, y_axis))
+
+ggplot(plot_dat, aes(x_axis, y_axis)) + geom_point(alpha= 0.7) + xlab('Age of Diagnosis') + ylab('Age of Sample Collection') +
+  ggtitle('Age Correlation') + theme_bw() + geom_abline(intercept = 0, slope = 1)  
+  
+
+
+##########
+# look at model data (cases) summary stats 
+##########
+
+##########
+# difference btw cases and controls
+##########
+
