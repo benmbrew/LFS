@@ -18,7 +18,7 @@ library(preprocessCore)
 ##########
 # Initialize folders
 ##########
-home_folder <- '/hpf/largeprojects/agoldenb/ben/Projects'
+home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
 data_folder <- paste0(project_folder, '/Data')
 methyl_data <- paste0(data_folder, '/methyl_data')
@@ -169,7 +169,7 @@ joinData <- function(data, control) {
       print(i)
     } 
     data <- data[!is.na(data$p53_germline),]
-    data <- data[!duplicated(data$ids),]
+    # data <- data[!duplicated(data$ids),]
     # data <- data[!duplicated(data$tm_donor_),]
     data <- data[, c('ids', 'p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses',
                      'age_sample_collection', 'gender', 'sentrix_id', features)]
@@ -227,6 +227,7 @@ beta_quan_controls <- cleanids(beta_quan_controls)
 
 # second join data
 beta_quan_controls <- joinData(beta_quan_controls, control = T)
+
 
 #########
 # save data

@@ -51,9 +51,9 @@ source(paste0(scripts_folder, '/predict_age/final_functions.R'))
 ##########
 # function to run models - subset, get residuals, get categorical, predict with regression and fac. 
 ##########
-data<- quan_cases_sam
-data_controls <- quan_controls
-model = 'enet'
+# data<- quan_cases_sam
+# data_controls <- quan_controls
+# model = 'enet'
 # add in argument for bumphunter, so there can be full models run
 # add in code for gender
 runModels <- function(data,

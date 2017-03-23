@@ -31,6 +31,9 @@ quan_cases_gen <- readRDS(paste0(model_data, '/quan_cases_gen.rda'))
 # read controls
 quan_controls_gen <- readRDS(paste0(model_data, '/quan_controls_gen.rda'))
 
+# read controls
+quan_controls_type <- readRDS(paste0(model_data, '/quan_controls_type.rda'))
+
 # read batch corrected data for sentrix id and SAM
 quan_cases_sen <- readRDS(paste0(model_data, '/quan_cases_sen.rda'))
 
@@ -44,44 +47,63 @@ quan_cases_sam_gen <- readRDS(paste0(model_data, '/quan_cases_sam_gen.rda'))
 # ge cg_locations
 cg_locations <- read.csv(paste0(model_data, '/cg_locations.csv'))
 
+
+##########
+# remove samples to get balanced age
+##########
+getBalAge <- function(data_controls)
+{
+  # # balance age
+  # hist(quan_cases$age_sample_collection[quan_cases$type == 'cases'])
+  # hist(data_controls$age_sample_collection[grepl('controls', data_controls$type)])
+  
+  # remove a few from ranges 100-200, 300-400
+  # randomly remove controls that have a less than 50 month age of diganosis to have balanced classes
+  remove_index <- which(grepl('controls', data_controls$type) & ((data_controls$age_sample_collection >= 100 & data_controls$age_sample_collection <= 200) |
+                                                                        (data_controls$age_sample_collection >= 300 & data_controls$age_sample_collection <= 400)))
+  
+  set.seed(1)
+  remove_index <- sample(remove_index, 10, replace = F )
+  data_controls_sub <- data_controls[-remove_index,]
+  return(data_controls_sub)
+  
+}
+
+quan_controls_bal <- getBalAge(quan_controls)
+quan_controls_gen_bal <- getBalAge(quan_controls_gen)
+quan_controls_type_bal <- getBalAge(quan_controls_type)
+
+saveRDS(quan_controls_bal, paste0(model_data, '/quan_controls_bal.rda'))
+saveRDS(quan_controls_gen_bal, paste0(model_data, '/quan_controls_gen_bal.rda'))
+saveRDS(quan_controls_type_bal, paste0(model_data, '/quan_controls_type_bal.rda'))
+
+
 ##########
 # function that takes LFS patients and run balanced and unbalanced bumphunter on cancer and controls
 # type is the indicator
 ##########
 # dat_cases <- quan_cases
-# dat_controls <- quan_controls
+# dat_controls <- quan_controls_bal
 # will return one unbalanced, one balanced by age, and balanced by age and counts
 bumpHunterBalanced <- function(dat_cases,
-                               dat_controls,
-                               bal_age) {
+                               dat_controls) {
   
   
   # combine data
   dat <- rbind(dat_cases, dat_controls)
-  
-  if (bal_age) {
-    # # balance age 
-    hist(dat$age_sample_collection[dat$type == 'cases'])
-    hist(dat$age_sample_collection[dat$type == 'controls'])
-    
-    # remove a few from ranges 100-200, 300-400
-    # randomly remove controls that have a less than 50 month age of diganosis to have balanced classes
-    remove_index <- which(dat$type == 'controls' & ((dat$age_sample_collection >= 100 & dat$age_sample_collection <= 200) |
-                            (dat$age_sample_collection >= 300 & dat$age_sample_collection <= 400)))
-    
-    remove_index <- sample(remove_index, 10, replace = F )
-    dat <- dat[-remove_index,]
-    
-  } 
+
 
   ##########
   # get clinical dat 
   ##########
   bump_clin <- dat[,1:9]
   
+  # recode type
+  dat$type <- ifelse(dat$type == 'cases', 'cases', 'controls')
+  
   ##########
   # get indicator and put into design matrix with intercept 1
-  ##########
+  #########
   indicator_vector <- as.factor(dat$type)
   designMatrix <- cbind(rep(1, nrow(dat)), indicator_vector)
   designMatrix <- as.matrix(designMatrix)
@@ -126,7 +148,7 @@ bumpHunterBalanced <- function(dat_cases,
   stopifnot(dim(beta)[1] == length(pos))
   
   # set paramenters 
-  DELTA_BETA_THRESH = c(0.10, 0.20, 0.30) # DNAm difference threshold
+  DELTA_BETA_THRESH = c(0.10, 0.20) # DNAm difference threshold
   NUM_BOOTSTRAPS = 4   # number of randomizations
   
   # create tab list
@@ -154,23 +176,41 @@ bumpHunterBalanced <- function(dat_cases,
 
 
 ##########
-# quantile
+# quantile even
 ##########
 # quan no batch
-quan_even <- bumpHunterBalanced(quan_cases, quan_controls, bal_age = T)
-quan_uneven <- bumpHunterBalanced(quan_cases, quan_controls, bal_age = F)
+even <- bumpHunterBalanced(quan_cases, quan_controls_bal)
 
 # quan gender
-quan_even_gen <- bumpHunterBalanced(quan_cases_gen, quan_controls_gen, bal_age = T)
-quan_uneven_gen <- bumpHunterBalanced(quan_cases_gen, quan_controls_gen, bal_age = F)
+even_gen <- bumpHunterBalanced(quan_cases_gen, quan_controls_gen_bal)
+
+# quan
+even_type <- bumpHunterBalanced(quan_cases_gen, quan_controls_type_bal)
 
 # quan gender sentrix
-quan_even_gen_sen <- bumpHunterBalanced(quan_cases_sen_gen, quan_controls_gen, bal_age = T)
-quan_uneven_gen_sen <- bumpHunterBalanced(quan_cases_sen_gen, quan_controls_gen, bal_age = F)
+even_gen_sen_type <- bumpHunterBalanced(quan_cases_sen_gen, quan_controls_type_bal)
 
 # quan gender sam
-quan_even_gen_sam <- bumpHunterBalanced(quan_cases_sam_gen, quan_controls_gen, bal_age = T)
-quan_uneven_gen_sam <- bumpHunterBalanced(quan_cases_sam_gen, quan_controls_gen, bal_age = F)
+even_gen_sam_type <- bumpHunterBalanced(quan_cases_sam_gen, quan_controls_type_bal)
+
+
+##########
+# quantile uneven
+##########
+# quan no batch
+uneven <- bumpHunterBalanced(quan_cases, quan_controls)
+
+# quan gender
+uneven_gen <- bumpHunterBalanced(quan_cases_gen, quan_controls_gen)
+
+# quan
+uneven_type <- bumpHunterBalanced(quan_cases_gen, quan_controls_type)
+
+# quan gender sentrix
+uneven_gen_sen_type <- bumpHunterBalanced(quan_cases_sen_gen, quan_controls_type)
+
+# quan gender sam
+uneven_gen_sam_type <- bumpHunterBalanced(quan_cases_sam_gen, quan_controls_type)
 
 
 ##########
@@ -179,7 +219,11 @@ quan_uneven_gen_sam <- bumpHunterBalanced(quan_cases_sam_gen, quan_controls_gen,
 rm(quan_cases_gen, quan_controls_gen,
    quan_cases, quan_controls,
    quan_cases_sen, quan_cases_sen_gen,
-   quan_cases_sam_gen, quan_cases_sam)
+   quan_cases_sam_gen, quan_cases_sam,
+   quan_controls, quan_controls_bal, 
+   quan_controls_gen, quan_controls_gen_bal,
+   quan_controls_type, quan_controls_type_bal,
+   cg_locations)
 
 ###########
 # save image of bh_features

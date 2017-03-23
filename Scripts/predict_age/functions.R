@@ -753,7 +753,6 @@ enetPredReg <- function(model_data,
 }
 
 
-
 # model_data <- data
 # model_data_controls <- data_controls
 # now with my function
@@ -884,6 +883,25 @@ enetPredCon <- function(model_data,
 
 
 
+# Run models
+# 1 = data_result
+# 2 = data_result_con
+
+# enetpredCon
+# 1 = important_features
+# 2 = non_Zero_cutoff
+# 3 = test.predictions_con
+# 4 = samp.ground_truth
+
+# enetpredreg
+# 1= test.predictions
+# 2 =important features
+# 3 = test.ground_truth
+# 4 = dims
+# 5 = non_zero_coeff,
+# 6 = test.predictions_con
+# 7 = samp.ground_truth
+# result_list <- even_10_all
 
 extractResults <- function (result_list,
                             data_name,
@@ -892,43 +910,39 @@ extractResults <- function (result_list,
 {
   
   # extract regression normal, correlation 
-  temp.1 <- result_list
-  reg_cor <- round(cor(unlist(temp.1[[1]]), unlist(temp.1[[3]])), 2)
+  temp.cases <- result_list[[1]]
+  temp.controls <- result_list[[2]]
+  
+  reg_cor <- round(cor(unlist(temp.cases[[1]]), unlist(temp.cases[[3]])), 2)
+  con_cor_train <- round(cor(unlist(temp.cases[[6]]), unlist(temp.cases[[7]])), 2)
   
   
   reg_cor <- as.data.frame(reg_cor)
   colnames(reg_cor) <- 'score'
-  reg_cor$age <- 'regression'
-  reg_cor$type <- 'normal'
   reg_cor$data <- data_name
+  reg_cor$con_cor_train <- con_cor_train
+  reg_cor$con_cor_all <- round(cor(unlist(temp.controls[[3]]), unlist(temp.controls[[4]])), 2)
+  
+  
   # reg_cor$full_data <- nrow(bh_data)
   
   if(regularize) {
-    reg_cor$features <- mean(as.numeric(unlist(temp.1[[5]])))
+    reg_cor$features <- mean(as.numeric(unlist(temp.cases[[5]])))
     
   } else {
-    reg_cor$features <- as.numeric(strsplit(as.character(temp.1[[4]]), split = ' ')[[2]])
+    reg_cor$features <- as.numeric(strsplit(as.character(temp.cases[[4]]), split = ' ')[[2]])
     
   }
   
   
-  # # extract regression resid , resid_correlation 
-  # 
-  # temp.1 <- result_list[[2]]
-  # reg_resid_cor <- round(cor(unlist(temp.1[[1]]), unlist(temp.1[[3]])), 2)
-  # 
-  # 
-  # reg_resid_cor <- as.data.frame(reg_resid_cor)
-  # colnames(reg_resid_cor) <- 'score'
-  # reg_resid_cor$age <- 'regression'
-  # reg_resid_cor$type <- 'resid'
-  # reg_resid_cor$data <- data_name
-  # reg_resid_cor$features <- paste0(result_list[[1]][[4]], collapse = '_')
-  # 
+  # extract regression resid , resid_correlation
+
+ 
+  
   # # extract fac normal, acc for mut and all
   # temp.1 <- result_list[[3]]
   # temp.2 <- round(mean(unlist(temp.1[[9]])), 2)
-  #   
+
   # 
   # 
   # fac_final <- as.data.frame(temp.2)

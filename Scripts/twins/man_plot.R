@@ -53,6 +53,21 @@ reg_72 <- left_join(cg_locations,feat_72, by = 'probe')
 rm(list=ls(pattern="feat"))
 
 ##########
+# group by chr and get counts
+##########
+
+# first remove NA 
+reg_sub <- reg_cg[complete.cases(reg_cg),]
+
+# group by chr
+chr_counts <- reg_sub %>%
+  group_by(seqnames) %>%
+  summarise(counts= n())
+
+# order by counts
+chr_counts <- chr_counts[order(chr_counts$counts, decreasing = T),]
+
+##########
 # raw manhattan plot function
 ##########
 
@@ -74,6 +89,8 @@ getManData <- function(reg)
   reg$CHR <- ifelse(grepl('X', reg$CHR), 23, 
                     ifelse(grepl('Y', reg$CHR), 24, reg$CHR))
   reg$CHR <- as.numeric(reg$CHR)
+  reg$P <- jitter(reg$P, factor = 2, amount = NULL)
+  
   
   return(reg)
 }
@@ -203,6 +220,8 @@ manPlot <- function (x, chr = "CHR", bp = "BP", p = "P", snp = "SNP", col = adju
                              ...))
   }
 }
+
+
 manPlot(reg_cg , 
           chr = "CHR", 
           bp = "BP",
@@ -210,9 +229,49 @@ manPlot(reg_cg ,
           chrlabs = c(1:22, "X", "Y"), 
           logp = FALSE,suggestiveline = F, genomewideline = F,
           ylab = "# of times in model",
-          ylim = c(0, 12))
+          ylim = c(0, 11),
+          cex = 3,
+          cex.lab=1.7, 
+          cex.axis=1.7, 
+          cex.main=1.7, 
+          cex.sub=1.7)
+
+
+
 # abline(a = seq(0, 10, 2))
 grid(nx = 5, ny = 5, col = "gray", lty = "dotted",
      lwd = par("lwd"), equilogs = TRUE)
 
 
+
+##########
+# generate random heatmaps
+##########
+
+#############################################################
+# function to generate random proportions whose rowSums = 1 #
+#############################################################
+props <- function(ncol, nrow, var.names=NULL){
+  if (ncol < 2) stop("ncol must be greater than 1")
+  p <- function(n){
+    y <- 0
+    z <- sapply(seq_len(n-1), function(i) {
+      x <- sample(seq(0, 1-y, by=.01), 1)
+      y <<- y + x
+      return(x)
+    }
+    )
+    w <- c(z , 1-sum(z))
+    return(w)
+  }
+  DF <- data.frame(t(replicate(nrow, p(n=ncol))))
+  if (!is.null(var.names)) colnames(DF) <- var.names
+  return(DF)
+}
+##############
+# TRY IT OUT #
+##############
+tab <-as.matrix(props(ncol=5, nrow=5))
+
+
+heatmap(tab, labRow = '', labCol = '', keep.dendro = FALSE, verbose = FALSE)

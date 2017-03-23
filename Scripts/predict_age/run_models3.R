@@ -29,26 +29,46 @@ rand_folder <- paste0(results_folder, '/rand')
 scripts_folder <- paste0(project_folder, '/Scripts')
 
 
-##########
-# load data batch data
-##########
+#########
+# Load data
+#########
+
 # read cases
 quan_cases <- readRDS(paste0(model_data, '/quan_cases.rda'))
 
+# read contorls
+quan_controls <- readRDS(paste0(model_data, '/quan_controls.rda'))
+
+# read batch corrected data for gender
+quan_cases_gen <- readRDS(paste0(model_data, '/quan_cases_gen.rda'))
+
+# read controls
+quan_controls_gen <- readRDS(paste0(model_data, '/quan_controls_gen.rda'))
+
+# read controls
+quan_controls_type <- readRDS(paste0(model_data, '/quan_controls_type.rda'))
+
+# read batch corrected data for sentrix id and SAM
+quan_cases_sen <- readRDS(paste0(model_data, '/quan_cases_sen.rda'))
+
 quan_cases_sam <- readRDS(paste0(model_data, '/quan_cases_sam.rda'))
+
+# read batch corrected data for sentrix id and SAM and gender!
+quan_cases_sen_gen <- readRDS(paste0(model_data, '/quan_cases_sen_gen.rda'))
 
 quan_cases_sam_gen <- readRDS(paste0(model_data, '/quan_cases_sam_gen.rda'))
 
-# read controls
-quan_controls <- readRDS(paste0(model_data, '/quan_controls.rda'))
+# balanced data
+quan_controls_bal <- readRDS(paste0(model_data, '/quan_controls_bal.rda'))
 
-quan_controls_gen <- readRDS(paste0(model_data, '/quan_controls_gen.rda'))
+quan_controls_gen_bal <- readRDS(paste0(model_data, '/quan_controls_gen_bal.rda'))
 
+quan_controls_type_bal <- readRDS(paste0(model_data, '/quan_controls_type_bal.rda'))
+
+##########
 # load features
+##########
 load(paste0(model_data, '/bh_feat.RData'))
-
-# load gene locations
-cg_locations <- read.csv(paste0(model_data, '/cg_locations.csv'))
 
 
 ##########
@@ -72,15 +92,15 @@ source(paste0(scripts_folder, '/predict_age/functions.R'))
 ##########
 # function to run models - subset, get residuals, get categorical, predict with regression and fac. 
 ##########
-data <- quan_cases
-data_controls <- quan_controls
-bump_hunter_data <- quan_even_10
- model <- 'rf'
-control = T
-# random = F
-gender = F
-cutoff <- .7
-# i = 1
+# data <- quan_cases
+# data_controls <- quan_controls
+# bump_hunter_data <- quan_even_10
+#  model <- 'rf'
+# control = T
+# # random = F
+# gender = F
+# cutoff <- .7
+# # i = 1
 # gender <- F
 runModels <- function(data,
                       data_controls,
@@ -142,12 +162,12 @@ runModels <- function(data,
   
   if (model == 'enet') {
     
-    data_result <- enetPredReg(data, data_controls, N_CV_REPEATS = 3, nfolds = 3, cutoff = .7, iterations = 10)
-    data_result_con <- enetPredCon(data, data_controls, N_CV_REPEATS = 3, nfolds = 3, cutoff = .7, iterations = 10)
+    data_result <- enetPredReg(data, data_controls, N_CV_REPEATS = 3, nfolds = 3, cutoff = .7, iterations = 1)
+    data_result_con <- enetPredCon(data, data_controls, N_CV_REPEATS = 3, nfolds = 3, cutoff = .7, iterations = 1)
     
-    data_fac_48 <- enetPredFac(data, N_CV_REPEATS = 3, nfolds = 3, cutoff = .7, iterations = 10, thresh = 48)
-    data_fac_60 <- enetPredFac(data, N_CV_REPEATS = 3, nfolds = 3, cutoff = .7, iterations = 10, thresh = 60)
-    data_fac_72 <- enetPredFac(data, N_CV_REPEATS = 3, nfolds = 3, cutoff = .7, iterations = 10, thresh = 72)
+    # data_fac_48 <- enetPredFac(data, N_CV_REPEATS = 3, nfolds = 3, cutoff = .7, iterations = 1, thresh = 48)
+    # data_fac_60 <- enetPredFac(data, N_CV_REPEATS = 3, nfolds = 3, cutoff = .7, iterations = 1, thresh = 60)
+    # data_fac_72 <- enetPredFac(data, N_CV_REPEATS = 3, nfolds = 3, cutoff = .7, iterations = 1, thresh = 72)
 
   }
   
@@ -167,15 +187,319 @@ runModels <- function(data,
   # data_fac_result  <- rfPredictFac(data_fac, cutoff = .7, iterations = 5)
   # data_resid_fac_result <- rfPredictFac(data_resid_fac, cutoff = .7, iterations = 5)
   
-  return (list(data_result, data_fac_48, data_fac_60, data_fac_72, data_result_con)) 
+  return (list(data_result,data_result_con)) 
   # data_fac_result, 
   # data_resid_fac_result))
   
-  
 }
+# Run models
+# 1 = data_result
+# 2 = data_result_con
+
+# enetpredCon
+# 1 = important_features
+# 2 = non_Zero_cutoff
+# 3 = test.predictions_con
+# 4 = samp.ground_truth
+
+# enetpredreg
+# 1= test.predictions
+# 2 =important features
+# 3 = test.ground_truth
+# 4 = dims
+# 5 = non_zero_coeff,
+# 6 = test.predictions_con
+# 7 = samp.ground_truth
+
 
 ########################################################################
+# Data: 
+# Cases: quan_cases_sam, quan_cases_gen, quan_cases_sam_gen,
+# Controls: quan_controls_type, quan_controls_gen, quan_controls_bal, quan_controls_gen_bal, qun_controls_type_bal
 
+# Even: even_10, even_20, even_fwer_10, even_fwer_20, even_gen_10, even_gen_20, even_gen_fwer_10, even_gen_fwer_20,
+# even_gen_sam_type_10, even_gen_sam_type_20, even_gen_sam_type_gwer_10, even_gen_sam_type_fwer_20,
+# even_gen_sam_type_sig_10 even_gen_sen_type_10, even_gen_sen_type_20, even_gen_sen_type_fwer_10 ,
+# even_gen_sen_type_fwer_20, even_gen_sen_type_sig_10, even_gen_sig_10, even_gen_type_10          
+# even_gen_type_20, even_gen_type_fwer_10, even_gen_type_fwer_20, even_gen_type_sig_10.  
+
+# Uneven: uneven_10, uneven_20, uneven_fwer_10, uneven_fwer_20, uneven_gen_10, uneven_gen_20, uneven_gen_fwer_10,     
+# uneven_gen_fwer_20,uneven_gen_sam_type_10, uneven_gen_sam_type_20, uneven_gen_sam_type_fwer_10, uneven_gen_sam_type_fwer_20
+# uneven_gen_sam_type_sig_10, uneven_gen_sen_type_10, uneven_gen_sen_type_20, uneven_gen_sen_type_fwer_10, 
+# uneven_gen_sen_type_fwer_20, uneven_gen_sen_type_sig_10, uneven_gen_sen_type_sig_20, uneven_gen_sig_10, uneven_gen_type_10
+# uneven_gen_type_20, uneven_gen_type_fwer_10, uneven_gen_type_fwer_20, uneven_gen_type_sig_10, uneven_sig_10, uneven_sig_20              
+
+
+######################################################################################
+
+##########
+# quan_cases_sam & quan_controls_type
+##########
+
+# 10, gen_10, gen_type_10,  gen_sam_type_10 gen_sen_type_10
+
+##########
+# 10
+
+
+##########
+# SAM
+
+even_10_all <- runModels(quan_cases_sam, 
+                         quan_controls_type,
+                         model = 'enet',
+                         control = F,
+                         random = F,
+                         bump_hunter = T,
+                         bump_hunter_data = even_10,
+                         num_feat = NULL,
+                         gender = F,
+                         residual = F,
+                         seed_num) 
+
+even_10_all_table <- extractResults(even_10_all, 
+                                    'even_10_all',
+                                    regularize = T,
+                                    bh_data = even_10)
+
+##########
+# 10 bal
+even_10_bal <- runModels(quan_cases_sam, 
+                             quan_controls_type_bal,
+                             model = 'enet',
+                             control = F,
+                             random = F,
+                             bump_hunter = T,
+                             bump_hunter_data = even_10,
+                             num_feat = NULL,
+                             gender = F,
+                             residual = F,
+                             seed_num) 
+
+even_10_bal_table <- extractResults(even_10_bal, 
+                                    'even_10_bal',
+                                    regularize = T,
+                                    bh_data = quan_even_10)
+
+##########
+# 10 
+uneven_10_all <- runModels(quan_cases_sam, 
+                         quan_controls_type,
+                         model = 'enet',
+                         control = F,
+                         random = F,
+                         bump_hunter = T,
+                         bump_hunter_data = uneven_10,
+                         num_feat = NULL,
+                         gender = F,
+                         residual = F,
+                         seed_num) 
+
+uneven_10_all_table <- extractResults(uneven_10_all, 
+                                    'uneven_10_all',
+                                    regularize = T,
+                                    bh_data = uneven_10)
+
+##########
+# 10 
+uneven_10_bal <- runModels(quan_cases_sam, 
+                         quan_controls_type_bal,
+                         model = 'enet',
+                         control = F,
+                         random = F,
+                         bump_hunter = T,
+                         bump_hunter_data = uneven_10,
+                         num_feat = NULL,
+                         gender = F,
+                         residual = F,
+                         seed_num) 
+
+uneven_10_bal_table <- extractResults(uneven_10_bal, 
+                                    'uneven_10_bal',
+                                    regularize = T,
+                                    bh_data = quan_uneven_10)
+
+
+
+
+##########
+# sam_gen
+
+##########
+# 10 
+even_10_all_gen <- runModels(quan_cases_sam_gen, 
+                         quan_controls_type,
+                         model = 'enet',
+                         control = F,
+                         random = F,
+                         bump_hunter = T,
+                         bump_hunter_data = even_10,
+                         num_feat = NULL,
+                         gender = F,
+                         residual = F,
+                         seed_num) 
+
+even_10_all_gen_table <- extractResults(even_10_all_gen, 
+                                    'even_10_all_gen',
+                                    regularize = T,
+                                    bh_data = even_10)
+
+##########
+# 10 bal_gen
+even_10_bal_gen <- runModels(quan_cases_sam_gen, 
+                         quan_controls_type_bal,
+                         model = 'enet',
+                         control = F,
+                         random = F,
+                         bump_hunter = T,
+                         bump_hunter_data = even_10,
+                         num_feat = NULL,
+                         gender = F,
+                         residual = F,
+                         seed_num) 
+
+even_10_bal_gen_table <- extractResults(even_10_bal_gen, 
+                                    'even_10_bal_gen',
+                                    regularize = T,
+                                    bh_data = quan_even_10)
+
+
+
+##########
+# 10 
+uneven_10_all_gen <- runModels(quan_cases_sam_gen, 
+                           quan_controls_type,
+                           model = 'enet',
+                           control = F,
+                           random = F,
+                           bump_hunter = T,
+                           bump_hunter_data = uneven_10,
+                           num_feat = NULL,
+                           gender = F,
+                           residual = F,
+                           seed_num) 
+
+uneven_10_all_gen_table <- extractResults(uneven_10_all_gen, 
+                                      'uneven_10_all_gen',
+                                      regularize = T,
+                                      bh_data = uneven_10)
+
+##########
+# 10 
+uneven_10_bal_gen <- runModels(quan_cases_sam_gen, 
+                           quan_controls_type_bal,
+                           model = 'enet',
+                           control = F,
+                           random = F,
+                           bump_hunter = T,
+                           bump_hunter_data = uneven_10,
+                           num_feat = NULL,
+                           gender = F,
+                           residual = F,
+                           seed_num) 
+
+uneven_10_bal_gen_table <- extractResults(uneven_10_bal_gen, 
+                                      'uneven_10_bal_gen',
+                                      regularize = T,
+                                      bh_data = quan_uneven_10)
+
+
+
+
+##########
+#combeine tables
+##########
+
+result_10 <- rbind(even_10_all_table, even_10_bal_table,
+                      uneven_10_all_table, uneven_10_bal_table,
+                      even_10_all_gen_table, even_10_bal_gen_table,
+                      uneven_10_all_gen_table, uneven_10_bal_gen_table)
+
+rm(even_10_all_table, even_10_bal_table,
+   uneven_10_all_table, uneven_10_bal_table,
+   even_10_all_gen_table, even_10_bal_gen_table,
+   uneven_10_all_gen_table, uneven_10_bal_gen_table)
+
+
+################################################################################################
+################################################################################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#########
+# plot individual correlations
+##########
+
+# extract controls plot for presentation 
+model <- uneven_10_bal[[1]]
+
+x_axis <- unlist(model[[6]]) # preds
+y_axis <- unlist(model[[7]]) # real
+
+
+cor(x_axis, y_axis)
+
+plot_dat <- as.data.frame(cbind(x_axis, y_axis))
+
+ggplot(plot_dat, aes(x_axis, y_axis)) + geom_point(alpha= 0.7) + xlab('Predicted age') + ylab('Real age') +
+  ggtitle('Elastic net predictions on controls') + theme_bw() + geom_abline(intercept = 0, slope = 1) + xlim(0,800) +
+  ylim(0,800) + theme(text = element_text(size = 15))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#########################################################################################################################
+###########################################################################################################################
 # 
 # # full data sam
 # even_full_sam_rf <- runModels(quan_cases_sam, 
@@ -216,23 +540,57 @@ runModels <- function(data,
 #######
 # WITH gender as covariate
 
+temp <- quan_controls[1:35,]
 
 #### 10
 mod <- runModels(quan_cases_sam, 
-                 quan_controls,
+                 temp,
                  model = 'enet',
                  rand = F,
                  bump_hunter = T,
                  bump_hunter_data = quan_even_fwer_10,
-                 gender= T,
+                 gender= F,
                  residual = F)
 
 
 # get reg, and class
 mod_reg <- mod[[1]]
+x_axis <- unlist(mod_reg[[6]])
+y_axis <- unlist(mod_reg[[7]])
+
+cor(x_axis, y_axis)
+
+plot_dat <- as.data.frame(cbind(x_axis, y_axis))
+
+ggplot(plot_dat, aes(x_axis, y_axis)) + geom_point(alpha= 0.7) + xlab('Predicted age of onset') + ylab('Real age of onset') +
+  ggtitle('Elastic Net Predictions') + theme_bw() + geom_abline(intercept = 0, slope = 1) + xlim(0,800) +
+  ylim(0,800) + theme(text = element_text(size = 15))
+
+
+
 mod_48 <- mod[[2]]
 mod_60 <- mod[[3]]
 mod_72 <- mod[[4]]
+
+
+##########
+# plot data
+##########
+con <- mod[[5]]
+
+# plot mod_reg: 1 is predictions, 3 is real 
+x_axis <- unlist(con[[3]])
+y_axis <- unlist(con[[4]])
+
+cor(x_axis, y_axis)
+
+plot_dat <- as.data.frame(cbind(x_axis, y_axis))
+
+ggplot(plot_dat, aes(x_axis, y_axis)) + geom_point(alpha= 0.7) + xlab('Predicted age of onset') + ylab('Real age of onset') +
+  ggtitle('Elastic Net Predictions') + theme_bw() + geom_abline(intercept = 0, slope = 1) + xlim(0,800) +
+  ylim(0,800) + theme(text = element_text(size = 15))
+
+
 
 # get table
 mod_reg_table <- extractResults(mod_reg, 
@@ -452,4 +810,22 @@ ggplot(plot_dat, aes(x_axis, y_axis)) + geom_point(alpha= 0.7) + xlab('Model Pre
   ggtitle('Elastic Net Predictions on controls') + theme_bw() + geom_abline(intercept = 0, slope = 1) + xlim(0,600)
 
 
+##########
+# plot data age of sample with age of diagnosis
+##########
+# plot mod_reg: 1 is predictions, 3 is real 
+x_axis <- unlist()
+y_axis <- unlist(mod_reg[[3]])
+
+cor(x_axis, y_axis)
+
+plot_dat <- as.data.frame(cbind(x_axis, y_axis))
+
+quan_plot <- quan_cases[, c('age_diagnosis', 'age_sample_collection')]
+quan_plot <- quan_plot[complete.cases(quan_plot),]
+
+ggplot(quan_plot, aes(age_diagnosis, age_sample_collection)) + geom_point(alpha= 0.7) + xlab('Age of Onset') + 
+  ylab('Age of Sample Collection') + theme_bw() + geom_abline(intercept = 0, slope = 1) + xlim(0,850) +
+  ylim(0,850) + theme(text = element_text(size = 15))
+cor(quan_plot$age_diagnosis, quan_plot$age_sample_collection)
 
