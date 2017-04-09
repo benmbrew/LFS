@@ -226,6 +226,69 @@ even_gen_type_fwer_10 <- getRun(even_gen_type_bh_fwer, run_num = 0.10)
 uneven_gen_type_10 <- getRun(uneven_gen_type_bh, run_num = 0.10)
 uneven_gen_type_sig_10 <- getRun(uneven_gen_type_bh_sig, run_num = 0.10)
 uneven_gen_type_fwer_10 <- getRun(uneven_gen_type_bh_fwer, run_num = 0.10)
+##########
+# quan 15
+##########
+###NOT GEN
+# even
+even_15 <- getRun(even_bh, run_num = 0.15)
+even_sig_15 <- getRun(even_bh_sig, run_num = 0.15)
+even_fwer_15 <- getRun(even_bh_fwer, run_num = 0.15)
+
+# uneven
+uneven_15 <- getRun(uneven_bh, run_num = 0.15)
+uneven_sig_15 <- getRun(uneven_bh_sig, run_num = 0.15)
+uneven_fwer_15 <- getRun(uneven_bh_fwer, run_num = 0.15)
+
+###GEN
+
+#even
+even_gen_15 <- getRun(even_gen_bh, run_num = 0.15)
+even_gen_sig_15 <- getRun(even_gen_bh_sig, run_num = 0.15)
+even_gen_fwer_15 <- getRun(even_gen_bh_fwer, run_num = 0.15)
+
+# uneven
+uneven_gen_15 <- getRun(uneven_gen_bh, run_num = 0.15)
+uneven_gen_sig_15 <- getRun(uneven_gen_bh_sig, run_num = 0.15)
+uneven_gen_fwer_15 <- getRun(uneven_gen_bh_fwer, run_num = 0.15)
+
+###GEN SAM
+
+#even
+even_gen_sam_type_15 <- getRun(even_gen_sam_type_bh, run_num = 0.15)
+even_gen_sam_type_sig_15 <- getRun(even_gen_sam_type_bh_sig, run_num = 0.15)
+even_gen_sam_type_fwer_15 <- getRun(even_gen_sam_type_bh_fwer, run_num = 0.15)
+
+# uneven
+uneven_gen_sam_type_15 <- getRun(uneven_gen_sam_type_bh, run_num = 0.15)
+uneven_gen_sam_type_sig_15 <- getRun(uneven_gen_sam_type_bh_sig, run_num = 0.15)
+uneven_gen_sam_type_fwer_15 <- getRun(uneven_gen_sam_type_bh_fwer, run_num = 0.15)
+
+
+###GEN SEN
+
+#even
+even_gen_sen_type_15 <- getRun(even_gen_sen_type_bh, run_num = 0.15)
+even_gen_sen_type_sig_15 <- getRun(even_gen_sen_type_bh_sig, run_num = 0.15)
+even_gen_sen_type_fwer_15 <- getRun(even_gen_sen_type_bh_fwer, run_num = 0.15)
+
+# uneven
+uneven_gen_sen_type_15 <- getRun(uneven_gen_sen_type_bh, run_num = 0.15)
+uneven_gen_sen_type_sig_15 <- getRun(uneven_gen_sen_type_bh_sig, run_num = 0.15)
+uneven_gen_sen_type_fwer_15 <- getRun(uneven_gen_sen_type_bh_fwer, run_num = 0.15)
+
+##Type
+
+#even
+even_gen_type_15 <- getRun(even_gen_type_bh, run_num = 0.15)
+even_gen_type_sig_15 <- getRun(even_gen_type_bh_sig, run_num = 0.15)
+even_gen_type_fwer_15 <- getRun(even_gen_type_bh_fwer, run_num = 0.15)
+
+# uneven
+uneven_gen_type_15 <- getRun(uneven_gen_type_bh, run_num = 0.15)
+uneven_gen_type_sig_15 <- getRun(uneven_gen_type_bh_sig, run_num = 0.15)
+uneven_gen_type_fwer_15 <- getRun(uneven_gen_type_bh_fwer, run_num = 0.15)
+
 
 
 ##########
@@ -291,6 +354,69 @@ uneven_gen_type_20 <- getRun(uneven_gen_type_bh, run_num = 0.20)
 uneven_gen_type_sig_20 <- getRun(uneven_gen_type_bh_sig, run_num = 0.20)
 uneven_gen_type_fwer_20 <- getRun(uneven_gen_type_bh_fwer, run_num = 0.20)
 
+##########
+# quan 25
+##########
+###NOT GEN
+# even
+even_25 <- getRun(even_bh, run_num = 0.25)
+even_sig_25 <- getRun(even_bh_sig, run_num = 0.25)
+even_fwer_25 <- getRun(even_bh_fwer, run_num = 0.25)
+
+# uneven
+uneven_25 <- getRun(uneven_bh, run_num = 0.25)
+uneven_sig_25 <- getRun(uneven_bh_sig, run_num = 0.25)
+uneven_fwer_25 <- getRun(uneven_bh_fwer, run_num = 0.25)
+
+###GEN
+
+#even
+even_gen_25 <- getRun(even_gen_bh, run_num = 0.25)
+even_gen_sig_25 <- getRun(even_gen_bh_sig, run_num = 0.25)
+even_gen_fwer_25 <- getRun(even_gen_bh_fwer, run_num = 0.25)
+
+# uneven
+uneven_gen_25 <- getRun(uneven_gen_bh, run_num = 0.25)
+uneven_gen_sig_25 <- getRun(uneven_gen_bh_sig, run_num = 0.25)
+uneven_gen_fwer_25 <- getRun(uneven_gen_bh_fwer, run_num = 0.25)
+
+###GEN SAM
+
+#even
+even_gen_sam_type_25 <- getRun(even_gen_sam_type_bh, run_num = 0.25)
+even_gen_sam_type_sig_25 <- getRun(even_gen_sam_type_bh_sig, run_num = 0.25)
+even_gen_sam_type_fwer_25 <- getRun(even_gen_sam_type_bh_fwer, run_num = 0.25)
+
+# uneven
+uneven_gen_sam_type_25 <- getRun(uneven_gen_sam_type_bh, run_num = 0.25)
+uneven_gen_sam_type_sig_25 <- getRun(uneven_gen_sam_type_bh_sig, run_num = 0.25)
+uneven_gen_sam_type_fwer_25 <- getRun(uneven_gen_sam_type_bh_fwer, run_num = 0.25)
+
+
+###GEN SEN
+
+#even
+even_gen_sen_type_25 <- getRun(even_gen_sen_type_bh, run_num = 0.25)
+even_gen_sen_type_sig_25 <- getRun(even_gen_sen_type_bh_sig, run_num = 0.25)
+even_gen_sen_type_fwer_25 <- getRun(even_gen_sen_type_bh_fwer, run_num = 0.25)
+
+# uneven
+uneven_gen_sen_type_25 <- getRun(uneven_gen_sen_type_bh, run_num = 0.25)
+uneven_gen_sen_type_sig_25 <- getRun(uneven_gen_sen_type_bh_sig, run_num = 0.25)
+uneven_gen_sen_type_fwer_25 <- getRun(uneven_gen_sen_type_bh_fwer, run_num = 0.25)
+
+##Type
+
+#even
+even_gen_type_25 <- getRun(even_gen_type_bh, run_num = 0.25)
+even_gen_type_sig_25 <- getRun(even_gen_type_bh_sig, run_num = 0.25)
+even_gen_type_fwer_25 <- getRun(even_gen_type_bh_fwer, run_num = 0.25)
+
+# uneven
+uneven_gen_type_25 <- getRun(uneven_gen_type_bh, run_num = 0.25)
+uneven_gen_type_sig_25 <- getRun(uneven_gen_type_bh_sig, run_num = 0.25)
+uneven_gen_type_fwer_25 <- getRun(uneven_gen_type_bh_fwer, run_num = 0.25)
+
 
 
 ##############
@@ -300,14 +426,21 @@ uneven_gen_type_fwer_20 <- getRun(uneven_gen_type_bh_fwer, run_num = 0.20)
 rm(list=ls(pattern="bh"))
 rm(bumpHunterBalanced, getProbe, getRun)
 
+# save.image(paste0(model_data, '/bh_feat.RData'))
+load(paste0(model_data, '/bh_feat.RData'))
 
+#LOAD THIS AND REMOVE ONES THAT ACTUALLY ARE EMPTY
 ##########
 # remove any object filled with NAs
 ##########
-rm(even_gen_sam_type_sig_20,even_gen_sen_type_sig_20,
-   even_gen_sig_20, even_gen_type_sig_20,even_sig_20,
-   uneven_gen_sam_type_sig_20, uneven_gen_sig_20,
-   uneven_gen_type_sig_20)
+rm(even_gen_sam_type_sig_20, even_gen_sam_type_sig_25,
+   even_gen_sen_type_sig_20, even_gen_sen_type_sig_25,
+   even_gen_sig_25, even_gen_type_sig_20, even_gen_type_sig_25,
+   even_sig_25, uneven_gen_sam_type_sig_20, uneven_gen_sam_type_sig_25,
+   uneven_gen_sen_type_sig_20, uneven_gen_sen_type_sig_25,
+   uneven_gen_sig_20, uneven_gen_sig_25,
+   uneven_gen_type_sig_25, uneven_sig_20, 
+   uneven_sig_25)
 
 rm(uneven_gen_sam_type, uneven_gen_sen_type, uneven_gen_type,
    even_gen_sam_type, even_gen_sen_type, even_gen_type)
@@ -316,5 +449,3 @@ rm(cg_locations)
 
 save.image(paste0(model_data, '/bh_feat.RData'))
 
-#HERE LOOK HERE BEFORE STARTING TOMORROW MORNING 
-##### predict with all controls with uneven, and controls_bal with even

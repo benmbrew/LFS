@@ -1,4 +1,4 @@
-
+ 
 
 ##########
 # initialize libraries
@@ -89,8 +89,6 @@ getManData <- function(reg)
   reg$CHR <- ifelse(grepl('X', reg$CHR), 23, 
                     ifelse(grepl('Y', reg$CHR), 24, reg$CHR))
   reg$CHR <- as.numeric(reg$CHR)
-  reg$P <- jitter(reg$P, factor = 2, amount = NULL)
-  
   
   return(reg)
 }
@@ -104,8 +102,8 @@ reg_72 <- getManData(reg_72)
 # recode CHR 
 
 
-manPlot <- function (x, chr = "CHR", bp = "BP", p = "P", snp = "SNP", col = adjustcolor(c("gray10", 
-                                                                                          "gray60"), alpha.f = 0.6), chrlabs = NULL, suggestiveline = -log10(1e-05), 
+manPlot <- function (x, chr = "CHR", bp = "BP", p = "P", snp = "SNP", col = adjustcolor(c("darkblue", 
+                                                                                          "darkred"), alpha.f = 0.8), chrlabs = NULL, suggestiveline = -log10(1e-05), 
                      genomewideline = -log10(5e-08), highlight = NULL, logp = TRUE, 
                      ...) 
 {
@@ -230,20 +228,41 @@ manPlot(reg_cg ,
           logp = FALSE,suggestiveline = F, genomewideline = F,
           ylab = "# of times in model",
           ylim = c(0, 11),
-          cex = 3,
-          cex.lab=1.7, 
+          cex = 2,
+          cex.lab=2, 
           cex.axis=1.7, 
-          cex.main=1.7, 
+          cex.main=2, 
           cex.sub=1.7)
-
-
 
 # abline(a = seq(0, 10, 2))
 grid(nx = 5, ny = 5, col = "gray", lty = "dotted",
      lwd = par("lwd"), equilogs = TRUE)
 
 
+##########
+# barplot chromosome and counts 
+##########
+library(ggplot2)
 
+# group by chr
+gr_chr <- reg_cg %>%
+  group_by(CHR) %>%
+  summarise(counts = sum(P>0))
+
+gr_chr$CHR <- ifelse(gr_chr$CHR == '23', 'X',
+                     ifelse(gr_chr$CHR == '24', 'Y', gr_chr$CHR))
+gr_chr$CHR <- as.factor(as.character(gr_chr$CHR))
+
+gr_chr$CHR <- factor(gr_chr$CHR, levels = c('1','2', '3', '4', '5', '6', '7', '8',
+                                            '9', '10', '11', '12', '13', '14', '15',
+                                            '16', '17','18', '19', '20', '21', '22',
+                                            'X', 'Y'))
+
+ggplot(gr_chr, aes(CHR, counts)) + geom_bar(stat = 'identity', colour = 'grey', fill = 'darkblue', alpha = 0.8) + 
+  xlab('Chromosome') + ylab('# of probes') + theme(text = element_text(size = 25),
+                                                   axis.text = element_text(colour = 'black'),
+                                                   panel.grid.major = element_line(colour = "grey", linetype = 3),
+                                                   panel.background = element_rect(fill = "white"))
 ##########
 # generate random heatmaps
 ##########
@@ -251,6 +270,7 @@ grid(nx = 5, ny = 5, col = "gray", lty = "dotted",
 #############################################################
 # function to generate random proportions whose rowSums = 1 #
 #############################################################
+set.seed(10)
 props <- function(ncol, nrow, var.names=NULL){
   if (ncol < 2) stop("ncol must be greater than 1")
   p <- function(n){
@@ -275,3 +295,13 @@ tab <-as.matrix(props(ncol=5, nrow=5))
 
 
 heatmap(tab, labRow = '', labCol = '', keep.dendro = FALSE, verbose = FALSE)
+
+
+# other
+library(gplots)
+colors = seq(1,5,1)
+
+my_palette <- colorRampPalette(c("yellow", "red"))(n = 5)
+
+heatmap.2(as.matrix(tab), col=my_palette, density.info="none", trace="none", 
+          dendrogram=c("row"), symm=F,symkey=F,symbreaks=T, scale="none")

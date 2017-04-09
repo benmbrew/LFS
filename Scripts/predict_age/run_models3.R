@@ -162,8 +162,8 @@ runModels <- function(data,
   
   if (model == 'enet') {
     
-    data_result <- enetPredReg(data, data_controls, N_CV_REPEATS = 3, nfolds = 3, cutoff = .7, iterations = 1)
-    data_result_con <- enetPredCon(data, data_controls, N_CV_REPEATS = 3, nfolds = 3, cutoff = .7, iterations = 1)
+    data_result <- enetPredReg(data, data_controls, N_CV_REPEATS = 3, nfolds = 3, cutoff = .7, iterations = 10)
+    data_result_con <- enetPredCon(data, data_controls, N_CV_REPEATS = 3, nfolds = 3, cutoff = .7, iterations = 10)
     
     # data_fac_48 <- enetPredFac(data, N_CV_REPEATS = 3, nfolds = 3, cutoff = .7, iterations = 1, thresh = 48)
     # data_fac_60 <- enetPredFac(data, N_CV_REPEATS = 3, nfolds = 3, cutoff = .7, iterations = 1, thresh = 60)
@@ -236,14 +236,976 @@ runModels <- function(data,
 # quan_cases_sam & quan_controls_type
 ##########
 
-# 10, gen_10, gen_type_10,  gen_sam_type_10 gen_sen_type_10
+# 15, gen_15, gen_type_15,  gen_sam_type_15 gen_sen_type_15
+
+##########
+# 15
+
+
+##########
+# SAM
+
+even_15_all <- runModels(quan_cases_sam, 
+                         quan_controls_type,
+                         model = 'enet',
+                         control = F,
+                         random = F,
+                         bump_hunter = T,
+                         bump_hunter_data = even_15,
+                         num_feat = NULL,
+                         gender = F,
+                         residual = F,
+                         seed_num) 
+
+even_15_all_table <- extractResults(even_15_all, 
+                                    'even_15_all',
+                                    regularize = T,
+                                    bh_data = even_15)
+
+##########
+# 15 bal
+even_15_bal <- runModels(quan_cases_sam, 
+                         quan_controls_type_bal,
+                         model = 'enet',
+                         control = F,
+                         random = F,
+                         bump_hunter = T,
+                         bump_hunter_data = even_15,
+                         num_feat = NULL,
+                         gender = F,
+                         residual = F,
+                         seed_num) 
+
+even_15_bal_table <- extractResults(even_15_bal, 
+                                    'even_15_bal',
+                                    regularize = T,
+                                    bh_data = quan_even_15)
+
+##########
+# 15 
+uneven_15_all <- runModels(quan_cases_sam, 
+                           quan_controls_type,
+                           model = 'enet',
+                           control = F,
+                           random = F,
+                           bump_hunter = T,
+                           bump_hunter_data = uneven_15,
+                           num_feat = NULL,
+                           gender = F,
+                           residual = F,
+                           seed_num) 
+
+uneven_15_all_table <- extractResults(uneven_15_all, 
+                                      'uneven_15_all',
+                                      regularize = T,
+                                      bh_data = uneven_15)
+
+##########
+# 15 
+uneven_15_bal <- runModels(quan_cases_sam, 
+                           quan_controls_type_bal,
+                           model = 'enet',
+                           control = F,
+                           random = F,
+                           bump_hunter = T,
+                           bump_hunter_data = uneven_15,
+                           num_feat = NULL,
+                           gender = F,
+                           residual = F,
+                           seed_num) 
+
+uneven_15_bal_table <- extractResults(uneven_15_bal, 
+                                      'uneven_15_bal',
+                                      regularize = T,
+                                      bh_data = quan_uneven_15)
+
+
+
+
+##########
+# sam_gen
+
+##########
+# 15 
+even_15_all_gen <- runModels(quan_cases_sam_gen, 
+                             quan_controls_type,
+                             model = 'enet',
+                             control = F,
+                             random = F,
+                             bump_hunter = T,
+                             bump_hunter_data = even_15,
+                             num_feat = NULL,
+                             gender = F,
+                             residual = F,
+                             seed_num) 
+
+even_15_all_gen_table <- extractResults(even_15_all_gen, 
+                                        'even_15_all_gen',
+                                        regularize = T,
+                                        bh_data = even_15)
+
+##########
+# 15 bal_gen
+even_15_bal_gen <- runModels(quan_cases_sam_gen, 
+                             quan_controls_type_bal,
+                             model = 'enet',
+                             control = F,
+                             random = F,
+                             bump_hunter = T,
+                             bump_hunter_data = even_15,
+                             num_feat = NULL,
+                             gender = F,
+                             residual = F,
+                             seed_num) 
+
+even_15_bal_gen_table <- extractResults(even_15_bal_gen, 
+                                        'even_15_bal_gen',
+                                        regularize = T,
+                                        bh_data = quan_even_15)
+
+
+
+##########
+# 15 
+uneven_15_all_gen <- runModels(quan_cases_sam_gen, 
+                               quan_controls_type,
+                               model = 'enet',
+                               control = F,
+                               random = F,
+                               bump_hunter = T,
+                               bump_hunter_data = uneven_15,
+                               num_feat = NULL,
+                               gender = F,
+                               residual = F,
+                               seed_num) 
+
+uneven_15_all_gen_table <- extractResults(uneven_15_all_gen, 
+                                          'uneven_15_all_gen',
+                                          regularize = T,
+                                          bh_data = uneven_15)
+
+##########
+# 15 
+uneven_15_bal_gen <- runModels(quan_cases_sam_gen, 
+                               quan_controls_type_bal,
+                               model = 'enet',
+                               control = F,
+                               random = F,
+                               bump_hunter = T,
+                               bump_hunter_data = uneven_15,
+                               num_feat = NULL,
+                               gender = F,
+                               residual = F,
+                               seed_num) 
+
+uneven_15_bal_gen_table <- extractResults(uneven_15_bal_gen, 
+                                          'uneven_15_bal_gen',
+                                          regularize = T,
+                                          bh_data = quan_uneven_15)
+
+
+
+
+##########
+#combeine tables
+##########
+
+result_15 <- rbind(even_15_all_table, even_15_bal_table,
+                   uneven_15_all_table, uneven_15_bal_table,
+                   even_15_all_gen_table, even_15_bal_gen_table,
+                   uneven_15_all_gen_table, uneven_15_bal_gen_table)
+
+rm(even_15_all_table, even_15_bal_table,
+   uneven_15_all_table, uneven_15_bal_table,
+   even_15_all_gen_table, even_15_bal_gen_table,
+   uneven_15_all_gen_table, uneven_15_bal_gen_table)
+
+################################################################################################
+################################################################################################
+
+
+# 15, gen_15, gen_type_15,  gen_sam_type_15 gen_sam_type_15
+
+##########
+# 15
+
+
+##########
+# sam
+
+even_gen_15_all <- runModels(quan_cases_sam, 
+                             quan_controls_type,
+                             model = 'enet',
+                             control = F,
+                             random = F,
+                             bump_hunter = T,
+                             bump_hunter_data = even_gen_15,
+                             num_feat = NULL,
+                             gender = F,
+                             residual = F,
+                             seed_num) 
+
+even_gen_15_all_table <- extractResults(even_gen_15_all, 
+                                        'even_gen_15_all',
+                                        regularize = T,
+                                        bh_data = even_gen_15)
+
+##########
+# 15 bal
+even_gen_15_bal <- runModels(quan_cases_sam, 
+                             quan_controls_type_bal,
+                             model = 'enet',
+                             control = F,
+                             random = F,
+                             bump_hunter = T,
+                             bump_hunter_data = even_gen_15,
+                             num_feat = NULL,
+                             gender = F,
+                             residual = F,
+                             seed_num) 
+
+even_gen_15_bal_table <- extractResults(even_gen_15_bal, 
+                                        'even_gen_15_bal',
+                                        regularize = T,
+                                        bh_data = quan_even_gen_15)
+
+##########
+# 15 
+uneven_gen_15_all <- runModels(quan_cases_sam, 
+                               quan_controls_type,
+                               model = 'enet',
+                               control = F,
+                               random = F,
+                               bump_hunter = T,
+                               bump_hunter_data = uneven_gen_15,
+                               num_feat = NULL,
+                               gender = F,
+                               residual = F,
+                               seed_num) 
+
+uneven_gen_15_all_table <- extractResults(uneven_gen_15_all, 
+                                          'uneven_gen_15_all',
+                                          regularize = T,
+                                          bh_data = uneven_gen_15)
+
+##########
+# 15 
+uneven_gen_15_bal <- runModels(quan_cases_sam, 
+                               quan_controls_type_bal,
+                               model = 'enet',
+                               control = F,
+                               random = F,
+                               bump_hunter = T,
+                               bump_hunter_data = uneven_gen_15,
+                               num_feat = NULL,
+                               gender = F,
+                               residual = F,
+                               seed_num) 
+
+uneven_gen_15_bal_table <- extractResults(uneven_gen_15_bal, 
+                                          'uneven_gen_15_bal',
+                                          regularize = T,
+                                          bh_data = quan_uneven_gen_15)
+
+
+
+
+##########
+# sam_gen
+
+##########
+# 15 
+even_gen_15_all_gen <- runModels(quan_cases_sam_gen, 
+                                 quan_controls_type,
+                                 model = 'enet',
+                                 control = F,
+                                 random = F,
+                                 bump_hunter = T,
+                                 bump_hunter_data = even_gen_15,
+                                 num_feat = NULL,
+                                 gender = F,
+                                 residual = F,
+                                 seed_num) 
+
+even_gen_15_all_gen_table <- extractResults(even_gen_15_all_gen, 
+                                            'even_gen_15_all_gen',
+                                            regularize = T,
+                                            bh_data = even_gen_15)
+
+##########
+# 15 bal_gen
+even_gen_15_bal_gen <- runModels(quan_cases_sam_gen, 
+                                 quan_controls_type_bal,
+                                 model = 'enet',
+                                 control = F,
+                                 random = F,
+                                 bump_hunter = T,
+                                 bump_hunter_data = even_gen_15,
+                                 num_feat = NULL,
+                                 gender = F,
+                                 residual = F,
+                                 seed_num) 
+
+even_gen_15_bal_gen_table <- extractResults(even_gen_15_bal_gen, 
+                                            'even_gen_15_bal_gen',
+                                            regularize = T,
+                                            bh_data = quan_even_gen_15)
+
+
+
+##########
+# 15 
+uneven_gen_15_all_gen <- runModels(quan_cases_sam_gen, 
+                                   quan_controls_type,
+                                   model = 'enet',
+                                   control = F,
+                                   random = F,
+                                   bump_hunter = T,
+                                   bump_hunter_data = uneven_gen_15,
+                                   num_feat = NULL,
+                                   gender = F,
+                                   residual = F,
+                                   seed_num) 
+
+uneven_gen_15_all_gen_table <- extractResults(uneven_gen_15_all_gen, 
+                                              'uneven_gen_15_all_gen',
+                                              regularize = T,
+                                              bh_data = uneven_gen_15)
+
+##########
+# 15 
+uneven_gen_15_bal_gen <- runModels(quan_cases_sam_gen, 
+                                   quan_controls_type_bal,
+                                   model = 'enet',
+                                   control = F,
+                                   random = F,
+                                   bump_hunter = T,
+                                   bump_hunter_data = uneven_gen_15,
+                                   num_feat = NULL,
+                                   gender = F,
+                                   residual = F,
+                                   seed_num) 
+
+uneven_gen_15_bal_gen_table <- extractResults(uneven_gen_15_bal_gen, 
+                                              'uneven_gen_15_bal_gen',
+                                              regularize = T,
+                                              bh_data = quan_uneven_gen_15)
+
+
+
+
+##########
+#combeine tables
+##########
+
+result_gen_15 <- rbind(even_gen_15_all_table, even_gen_15_bal_table,
+                       uneven_gen_15_all_table, uneven_gen_15_bal_table,
+                       even_gen_15_all_gen_table, even_gen_15_bal_gen_table,
+                       uneven_gen_15_all_gen_table, uneven_gen_15_bal_gen_table)
+
+
+rm(even_gen_15_all_table, even_gen_15_bal_table,
+   uneven_gen_15_all_table, uneven_gen_15_bal_table,
+   even_gen_15_all_gen_table, even_gen_15_bal_gen_table,
+   uneven_gen_15_all_gen_table, uneven_gen_15_bal_gen_table)
+
+
+################################################################################################
+################################################################################################
+
+
+
+# 15, gen_15, gen_type_15,  gen_sam_type_15 gen_sam_type_15
+
+##########
+# 15
+
+
+##########
+# sam
+
+even_gen_type_15_all <- runModels(quan_cases_sam, 
+                                  quan_controls_type,
+                                  model = 'enet',
+                                  control = F,
+                                  random = F,
+                                  bump_hunter = T,
+                                  bump_hunter_data = even_gen_type_15,
+                                  num_feat = NULL,
+                                  gender = F,
+                                  residual = F,
+                                  seed_num) 
+
+even_gen_type_15_all_table <- extractResults(even_gen_type_15_all, 
+                                             'even_gen_type_15_all',
+                                             regularize = T,
+                                             bh_data = even_gen_type_15)
+
+##########
+# 15 bal
+even_gen_type_15_bal <- runModels(quan_cases_sam, 
+                                  quan_controls_type_bal,
+                                  model = 'enet',
+                                  control = F,
+                                  random = F,
+                                  bump_hunter = T,
+                                  bump_hunter_data = even_gen_type_15,
+                                  num_feat = NULL,
+                                  gender = F,
+                                  residual = F,
+                                  seed_num) 
+
+even_gen_type_15_bal_table <- extractResults(even_gen_type_15_bal, 
+                                             'even_gen_type_15_bal',
+                                             regularize = T,
+                                             bh_data = quan_even_gen_type_15)
+
+##########
+# 15 
+uneven_gen_type_15_all <- runModels(quan_cases_sam, 
+                                    quan_controls_type,
+                                    model = 'enet',
+                                    control = F,
+                                    random = F,
+                                    bump_hunter = T,
+                                    bump_hunter_data = uneven_gen_type_15,
+                                    num_feat = NULL,
+                                    gender = F,
+                                    residual = F,
+                                    seed_num) 
+
+uneven_gen_type_15_all_table <- extractResults(uneven_gen_type_15_all, 
+                                               'uneven_gen_type_15_all',
+                                               regularize = T,
+                                               bh_data = uneven_gen_type_15)
+
+##########
+# 15 
+uneven_gen_type_15_bal <- runModels(quan_cases_sam, 
+                                    quan_controls_type_bal,
+                                    model = 'enet',
+                                    control = F,
+                                    random = F,
+                                    bump_hunter = T,
+                                    bump_hunter_data = uneven_gen_type_15,
+                                    num_feat = NULL,
+                                    gender = F,
+                                    residual = F,
+                                    seed_num) 
+
+uneven_gen_type_15_bal_table <- extractResults(uneven_gen_type_15_bal, 
+                                               'uneven_gen_type_15_bal',
+                                               regularize = T,
+                                               bh_data = quan_uneven_gen_type_15)
+
+
+
+
+##########
+# sam_gen
+
+##########
+# 15 
+even_gen_type_15_all_gen <- runModels(quan_cases_sam_gen, 
+                                      quan_controls_type,
+                                      model = 'enet',
+                                      control = F,
+                                      random = F,
+                                      bump_hunter = T,
+                                      bump_hunter_data = even_gen_type_15,
+                                      num_feat = NULL,
+                                      gender = F,
+                                      residual = F,
+                                      seed_num) 
+
+even_gen_type_15_all_gen_table <- extractResults(even_gen_type_15_all_gen, 
+                                                 'even_gen_type_15_all_gen',
+                                                 regularize = T,
+                                                 bh_data = even_gen_type_15)
+
+##########
+# 15 bal_gen
+even_gen_type_15_bal_gen <- runModels(quan_cases_sam_gen, 
+                                      quan_controls_type_bal,
+                                      model = 'enet',
+                                      control = F,
+                                      random = F,
+                                      bump_hunter = T,
+                                      bump_hunter_data = even_gen_type_15,
+                                      num_feat = NULL,
+                                      gender = F,
+                                      residual = F,
+                                      seed_num) 
+
+even_gen_type_15_bal_gen_table <- extractResults(even_gen_type_15_bal_gen, 
+                                                 'even_gen_type_15_bal_gen',
+                                                 regularize = T,
+                                                 bh_data = quan_even_gen_type_15)
+
+
+
+##########
+# 15 
+uneven_gen_type_15_all_gen <- runModels(quan_cases_sam_gen, 
+                                        quan_controls_type,
+                                        model = 'enet',
+                                        control = F,
+                                        random = F,
+                                        bump_hunter = T,
+                                        bump_hunter_data = uneven_gen_type_15,
+                                        num_feat = NULL,
+                                        gender = F,
+                                        residual = F,
+                                        seed_num) 
+
+uneven_gen_type_15_all_gen_table <- extractResults(uneven_gen_type_15_all_gen, 
+                                                   'uneven_gen_type_15_all_gen',
+                                                   regularize = T,
+                                                   bh_data = uneven_gen_type_15)
+
+##########
+# 15 
+uneven_gen_type_15_bal_gen <- runModels(quan_cases_sam_gen, 
+                                        quan_controls_type_bal,
+                                        model = 'enet',
+                                        control = F,
+                                        random = F,
+                                        bump_hunter = T,
+                                        bump_hunter_data = uneven_gen_type_15,
+                                        num_feat = NULL,
+                                        gender = F,
+                                        residual = F,
+                                        seed_num) 
+
+uneven_gen_type_15_bal_gen_table <- extractResults(uneven_gen_type_15_bal_gen, 
+                                                   'uneven_gen_type_15_bal_gen',
+                                                   regularize = T,
+                                                   bh_data = quan_uneven_gen_type_15)
+
+
+
+
+##########
+#combeine tables
+##########
+
+result_gen_type_15 <- rbind(even_gen_type_15_all_table, even_gen_type_15_bal_table,
+                            uneven_gen_type_15_all_table, uneven_gen_type_15_bal_table,
+                            even_gen_type_15_all_gen_table, even_gen_type_15_bal_gen_table,
+                            uneven_gen_type_15_all_gen_table, uneven_gen_type_15_bal_gen_table)
+
+rm(even_gen_type_15_all_table, even_gen_type_15_bal_table,
+   uneven_gen_type_15_all_table, uneven_gen_type_15_bal_table,
+   even_gen_type_15_all_gen_table, even_gen_type_15_bal_gen_table,
+   uneven_gen_type_15_all_gen_table, uneven_gen_type_15_bal_gen_table)
+
+
+################################################################################################
+################################################################################################
+
+
+
+# 15, gen_15, gen_type_15,  gen_sam_type_15 gen_sam_type_15
+
+##########
+# 15
+
+
+##########
+# sam
+
+even_gen_sam_type_15_all <- runModels(quan_cases_sam, 
+                                      quan_controls_type,
+                                      model = 'enet',
+                                      control = F,
+                                      random = F,
+                                      bump_hunter = T,
+                                      bump_hunter_data = even_gen_sam_type_15,
+                                      num_feat = NULL,
+                                      gender = F,
+                                      residual = F,
+                                      seed_num) 
+
+even_gen_sam_type_15_all_table <- extractResults(even_gen_sam_type_15_all, 
+                                                 'even_gen_sam_type_15_all',
+                                                 regularize = T,
+                                                 bh_data = even_gen_sam_type_15)
+
+##########
+# 15 bal
+even_gen_sam_type_15_bal <- runModels(quan_cases_sam, 
+                                      quan_controls_type_bal,
+                                      model = 'enet',
+                                      control = F,
+                                      random = F,
+                                      bump_hunter = T,
+                                      bump_hunter_data = even_gen_sam_type_15,
+                                      num_feat = NULL,
+                                      gender = F,
+                                      residual = F,
+                                      seed_num) 
+
+even_gen_sam_type_15_bal_table <- extractResults(even_gen_sam_type_15_bal, 
+                                                 'even_gen_sam_type_15_bal',
+                                                 regularize = T,
+                                                 bh_data = quan_even_gen_sam_type_15)
+
+##########
+# 15 
+uneven_gen_sam_type_15_all <- runModels(quan_cases_sam, 
+                                        quan_controls_type,
+                                        model = 'enet',
+                                        control = F,
+                                        random = F,
+                                        bump_hunter = T,
+                                        bump_hunter_data = uneven_gen_sam_type_15,
+                                        num_feat = NULL,
+                                        gender = F,
+                                        residual = F,
+                                        seed_num) 
+
+uneven_gen_sam_type_15_all_table <- extractResults(uneven_gen_sam_type_15_all, 
+                                                   'uneven_gen_sam_type_15_all',
+                                                   regularize = T,
+                                                   bh_data = uneven_gen_sam_type_15)
+
+##########
+# 15 
+uneven_gen_sam_type_15_bal <- runModels(quan_cases_sam, 
+                                        quan_controls_type_bal,
+                                        model = 'enet',
+                                        control = F,
+                                        random = F,
+                                        bump_hunter = T,
+                                        bump_hunter_data = uneven_gen_sam_type_15,
+                                        num_feat = NULL,
+                                        gender = F,
+                                        residual = F,
+                                        seed_num) 
+
+uneven_gen_sam_type_15_bal_table <- extractResults(uneven_gen_sam_type_15_bal, 
+                                                   'uneven_gen_sam_type_15_bal',
+                                                   regularize = T,
+                                                   bh_data = quan_uneven_gen_sam_type_15)
+
+
+
+
+##########
+# sam_gen
+
+##########
+# 15 
+even_gen_sam_type_15_all_gen <- runModels(quan_cases_sam_gen, 
+                                          quan_controls_type,
+                                          model = 'enet',
+                                          control = F,
+                                          random = F,
+                                          bump_hunter = T,
+                                          bump_hunter_data = even_gen_sam_type_15,
+                                          num_feat = NULL,
+                                          gender = F,
+                                          residual = F,
+                                          seed_num) 
+
+even_gen_sam_type_15_all_gen_table <- extractResults(even_gen_sam_type_15_all_gen, 
+                                                     'even_gen_sam_type_15_all_gen',
+                                                     regularize = T,
+                                                     bh_data = even_gen_sam_type_15)
+
+##########
+# 15 bal_gen
+even_gen_sam_type_15_bal_gen <- runModels(quan_cases_sam_gen, 
+                                          quan_controls_type_bal,
+                                          model = 'enet',
+                                          control = F,
+                                          random = F,
+                                          bump_hunter = T,
+                                          bump_hunter_data = even_gen_sam_type_15,
+                                          num_feat = NULL,
+                                          gender = F,
+                                          residual = F,
+                                          seed_num) 
+
+even_gen_sam_type_15_bal_gen_table <- extractResults(even_gen_sam_type_15_bal_gen, 
+                                                     'even_gen_sam_type_15_bal_gen',
+                                                     regularize = T,
+                                                     bh_data = quan_even_gen_sam_type_15)
+
+
+
+##########
+# 15 
+uneven_gen_sam_type_15_all_gen <- runModels(quan_cases_sam_gen, 
+                                            quan_controls_type,
+                                            model = 'enet',
+                                            control = F,
+                                            random = F,
+                                            bump_hunter = T,
+                                            bump_hunter_data = uneven_gen_sam_type_15,
+                                            num_feat = NULL,
+                                            gender = F,
+                                            residual = F,
+                                            seed_num) 
+
+uneven_gen_sam_type_15_all_gen_table <- extractResults(uneven_gen_sam_type_15_all_gen, 
+                                                       'uneven_gen_sam_type_15_all_gen',
+                                                       regularize = T,
+                                                       bh_data = uneven_gen_sam_type_15)
+
+##########
+# 15 
+uneven_gen_sam_type_15_bal_gen <- runModels(quan_cases_sam_gen, 
+                                            quan_controls_type_bal,
+                                            model = 'enet',
+                                            control = F,
+                                            random = F,
+                                            bump_hunter = T,
+                                            bump_hunter_data = uneven_gen_sam_type_15,
+                                            num_feat = NULL,
+                                            gender = F,
+                                            residual = F,
+                                           seed_num) 
+
+uneven_gen_sam_type_15_bal_gen_table <- extractResults(uneven_gen_sam_type_15_bal_gen, 
+                                                       'uneven_gen_sam_type_15_bal_gen',
+                                                       regularize = T,
+                                                       bh_data = quan_uneven_gen_sam_type_15)
+
+
+
+
+##########
+#combeine tables
+##########
+
+result_gen_sam_type_15 <- rbind(even_gen_sam_type_15_all_table, even_gen_sam_type_15_bal_table,
+                                uneven_gen_sam_type_15_all_table, uneven_gen_sam_type_15_bal_table,
+                                even_gen_sam_type_15_all_gen_table, even_gen_sam_type_15_bal_gen_table,
+                                uneven_gen_sam_type_15_all_gen_table, uneven_gen_sam_type_15_bal_gen_table)
+
+rm(even_gen_sam_type_15_all_table, even_gen_sam_type_15_bal_table,
+   uneven_gen_sam_type_15_all_table, uneven_gen_sam_type_15_bal_table,
+   even_gen_sam_type_15_all_gen_table, even_gen_sam_type_15_bal_gen_table,
+   uneven_gen_sam_type_15_all_gen_table, uneven_gen_sam_type_15_bal_gen_table)
+
+
+################################################################################################
+################################################################################################
+
+
+
+# 15, gen_15, gen_type_15,  gen_sam_type_15 gen_sam_type_15
+
+##########
+# 15
+
+
+##########
+# sam
+
+even_gen_sam_type_15_all <- runModels(quan_cases_sam, 
+                                      quan_controls_type,
+                                      model = 'enet',
+                                      control = F,
+                                      random = F,
+                                      bump_hunter = T,
+                                      bump_hunter_data = even_gen_sam_type_15,
+                                      num_feat = NULL,
+                                      gender = F,
+                                      residual = F,
+                                      seed_num) 
+
+even_gen_sam_type_15_all_table <- extractResults(even_gen_sam_type_15_all, 
+                                                 'even_gen_sam_type_15_all',
+                                                 regularize = T,
+                                                 bh_data = even_gen_sam_type_15)
+
+##########
+# 15 bal
+even_gen_sam_type_15_bal <- runModels(quan_cases_sam, 
+                                      quan_controls_type_bal,
+                                      model = 'enet',
+                                      control = F,
+                                      random = F,
+                                      bump_hunter = T,
+                                      bump_hunter_data = even_gen_sam_type_15,
+                                      num_feat = NULL,
+                                      gender = F,
+                                      residual = F,
+                                      seed_num) 
+
+even_gen_sam_type_15_bal_table <- extractResults(even_gen_sam_type_15_bal, 
+                                                 'even_gen_sam_type_15_bal',
+                                                 regularize = T,
+                                                 bh_data = quan_even_gen_sam_type_15)
+
+##########
+# 15 
+uneven_gen_sam_type_15_all <- runModels(quan_cases_sam, 
+                                        quan_controls_type,
+                                        model = 'enet',
+                                        control = F,
+                                        random = F,
+                                        bump_hunter = T,
+                                        bump_hunter_data = uneven_gen_sam_type_15,
+                                        num_feat = NULL,
+                                        gender = F,
+                                        residual = F,
+                                        seed_num) 
+
+uneven_gen_sam_type_15_all_table <- extractResults(uneven_gen_sam_type_15_all, 
+                                                   'uneven_gen_sam_type_15_all',
+                                                   regularize = T,
+                                                   bh_data = uneven_gen_sam_type_15)
+
+##########
+# 15 
+uneven_gen_sam_type_15_bal <- runModels(quan_cases_sam, 
+                                        quan_controls_type_bal,
+                                        model = 'enet',
+                                        control = F,
+                                        random = F,
+                                        bump_hunter = T,
+                                        bump_hunter_data = uneven_gen_sam_type_15,
+                                        num_feat = NULL,
+                                        gender = F,
+                                        residual = F,
+                                        seed_num) 
+
+uneven_gen_sam_type_15_bal_table <- extractResults(uneven_gen_sam_type_15_bal, 
+                                                   'uneven_gen_sam_type_15_bal',
+                                                   regularize = T,
+                                                   bh_data = quan_uneven_gen_sam_type_15)
+
+
+
+
+##########
+# sam_gen
+
+##########
+# 15 
+even_gen_sam_type_15_all_gen <- runModels(quan_cases_sam_gen, 
+                                          quan_controls_type,
+                                          model = 'enet',
+                                          control = F,
+                                          random = F,
+                                          bump_hunter = T,
+                                          bump_hunter_data = even_gen_sam_type_15,
+                                          num_feat = NULL,
+                                          gender = F,
+                                          residual = F,
+                                          seed_num) 
+
+even_gen_sam_type_15_all_gen_table <- extractResults(even_gen_sam_type_15_all_gen, 
+                                                     'even_gen_sam_type_15_all_gen',
+                                                     regularize = T,
+                                                     bh_data = even_gen_sam_type_15)
+
+##########
+# 15 bal_gen
+even_gen_sam_type_15_bal_gen <- runModels(quan_cases_sam_gen, 
+                                          quan_controls_type_bal,
+                                          model = 'enet',
+                                          control = F,
+                                          random = F,
+                                          bump_hunter = T,
+                                          bump_hunter_data = even_gen_sam_type_15,
+                                          num_feat = NULL,
+                                          gender = F,
+                                          residual = F,
+                                          seed_num) 
+
+even_gen_sam_type_15_bal_gen_table <- extractResults(even_gen_sam_type_15_bal_gen, 
+                                                     'even_gen_sam_type_15_bal_gen',
+                                                     regularize = T,
+                                                     bh_data = quan_even_gen_sam_type_15)
+
+
+
+##########
+# 15 
+uneven_gen_sam_type_15_all_gen <- runModels(quan_cases_sam_gen, 
+                                            quan_controls_type,
+                                            model = 'enet',
+                                            control = F,
+                                            random = F,
+                                            bump_hunter = T,
+                                            bump_hunter_data = uneven_gen_sam_type_15,
+                                            num_feat = NULL,
+                                            gender = F,
+                                            residual = F,
+                                            seed_num) 
+
+uneven_gen_sam_type_15_all_gen_table <- extractResults(uneven_gen_sam_type_15_all_gen, 
+                                                       'uneven_gen_sam_type_15_all_gen',
+                                                       regularize = T,
+                                                       bh_data = uneven_gen_sam_type_15)
+
+##########
+# 15 
+uneven_gen_sam_type_15_bal_gen <- runModels(quan_cases_sam_gen, 
+                                            quan_controls_type_bal,
+                                            model = 'enet',
+                                            control = F,
+                                            random = F,
+                                            bump_hunter = T,
+                                            bump_hunter_data = uneven_gen_sam_type_15,
+                                            num_feat = NULL,
+                                            gender = F,
+                                            residual = F,
+                                            seed_num) 
+
+uneven_gen_sam_type_15_bal_gen_table <- extractResults(uneven_gen_sam_type_15_bal_gen, 
+                                                       'uneven_gen_sam_type_15_bal_gen',
+                                                       regularize = T,
+                                                       bh_data = quan_uneven_gen_sam_type_15)
+
+
+
+# you are right at first 10 model
+##########
+#combeine tables
+##########
+
+result_gen_sam_type_15 <- rbind(even_gen_sam_type_15_all_table, even_gen_sam_type_15_bal_table,
+                                uneven_gen_sam_type_15_all_table, uneven_gen_sam_type_15_bal_table,
+                                even_gen_sam_type_15_all_gen_table, even_gen_sam_type_15_bal_gen_table,
+                                uneven_gen_sam_type_15_all_gen_table, uneven_gen_sam_type_15_bal_gen_table)
+
+rm(even_gen_sam_type_15_all_table, even_gen_sam_type_15_bal_table,
+   uneven_gen_sam_type_15_all_table, uneven_gen_sam_type_15_bal_table,
+   even_gen_sam_type_15_all_gen_table, even_gen_sam_type_15_bal_gen_table,
+   uneven_gen_sam_type_15_all_gen_table, uneven_gen_sam_type_15_bal_gen_table)
+
+
+################################################################################################
+################################################################################################
+
+# Put 15 tables together
+full_results_15 <- rbind(result_15, result_gen_15, result_gen_type_15,
+                         result_gen_sam_type_15, result_gen_sam_type_15)
+
+
+rm(result_15, result_gen_15, result_gen_type_15,
+   result_gen_sam_type_15, result_gen_sam_type_15)
+
+#####################################################################################################
+####################################################################################################
+
+##########
+# quan_cases_sam & quan_controls_type
+##########
+
+# 10, gen_10, gen_type_10,  gen_sam_type_10 gen_sam_type_10
 
 ##########
 # 10
 
 
 ##########
-# SAM
+# sam
 
 even_10_all <- runModels(quan_cases_sam, 
                          quan_controls_type,
@@ -425,14 +1387,14 @@ rm(even_10_all_table, even_10_bal_table,
 ################################################################################################
 
 
-# 10, gen_10, gen_type_10,  gen_sam_type_10 gen_sen_type_10
+# 10, gen_10, gen_type_10,  gen_sam_type_10 gen_sam_type_10
 
 ##########
 # 10
 
 
 ##########
-# SAM
+# sam
 
 even_gen_10_all <- runModels(quan_cases_sam, 
                          quan_controls_type,
@@ -604,6 +1566,7 @@ result_gen_10 <- rbind(even_gen_10_all_table, even_gen_10_bal_table,
                    even_gen_10_all_gen_table, even_gen_10_bal_gen_table,
                    uneven_gen_10_all_gen_table, uneven_gen_10_bal_gen_table)
 
+
 rm(even_gen_10_all_table, even_gen_10_bal_table,
    uneven_gen_10_all_table, uneven_gen_10_bal_table,
    even_gen_10_all_gen_table, even_gen_10_bal_gen_table,
@@ -615,88 +1578,88 @@ rm(even_gen_10_all_table, even_gen_10_bal_table,
 
 
 
-# 10, gen_10, gen_type_10,  gen_sam_type_10 gen_sen_type_10
+# 10, gen_10, gen_type_10,  gen_sam_type_10 gen_sam_type_10
 
 ##########
 # 10
 
 
 ##########
-# SAM
+# sam
 
-even_gen_type_all <- runModels(quan_cases_sam, 
+even_gen_type_10_all <- runModels(quan_cases_sam, 
                          quan_controls_type,
                          model = 'enet',
                          control = F,
                          random = F,
                          bump_hunter = T,
-                         bump_hunter_data = even_gen_type,
+                         bump_hunter_data = even_gen_type_10,
                          num_feat = NULL,
                          gender = F,
                          residual = F,
                          seed_num) 
 
-even_gen_type_all_table <- extractResults(even_gen_type_all, 
-                                    'even_gen_type_all',
+even_gen_type_10_all_table <- extractResults(even_gen_type_10_all, 
+                                    'even_gen_type_10_all',
                                     regularize = T,
-                                    bh_data = even_gen_type)
+                                    bh_data = even_gen_type_10)
 
 ##########
 # 10 bal
-even_gen_type_bal <- runModels(quan_cases_sam, 
+even_gen_type_10_bal <- runModels(quan_cases_sam, 
                          quan_controls_type_bal,
                          model = 'enet',
                          control = F,
                          random = F,
                          bump_hunter = T,
-                         bump_hunter_data = even_gen_type,
+                         bump_hunter_data = even_gen_type_10,
                          num_feat = NULL,
                          gender = F,
                          residual = F,
                          seed_num) 
 
-even_gen_type_bal_table <- extractResults(even_gen_type_bal, 
-                                    'even_gen_type_bal',
+even_gen_type_10_bal_table <- extractResults(even_gen_type_10_bal, 
+                                    'even_gen_type_10_bal',
                                     regularize = T,
-                                    bh_data = quan_even_gen_type)
+                                    bh_data = quan_even_gen_type_10)
 
 ##########
 # 10 
-uneven_gen_type_all <- runModels(quan_cases_sam, 
+uneven_gen_type_10_all <- runModels(quan_cases_sam, 
                            quan_controls_type,
                            model = 'enet',
                            control = F,
                            random = F,
                            bump_hunter = T,
-                           bump_hunter_data = uneven_gen_type,
+                           bump_hunter_data = uneven_gen_type_10,
                            num_feat = NULL,
                            gender = F,
                            residual = F,
                            seed_num) 
 
-uneven_gen_type_all_table <- extractResults(uneven_gen_type_all, 
-                                      'uneven_gen_type_all',
+uneven_gen_type_10_all_table <- extractResults(uneven_gen_type_10_all, 
+                                      'uneven_gen_type_10_all',
                                       regularize = T,
-                                      bh_data = uneven_gen_type)
+                                      bh_data = uneven_gen_type_10)
 
 ##########
 # 10 
-uneven_gen_type_bal <- runModels(quan_cases_sam, 
+uneven_gen_type_10_bal <- runModels(quan_cases_sam, 
                            quan_controls_type_bal,
                            model = 'enet',
                            control = F,
                            random = F,
                            bump_hunter = T,
-                           bump_hunter_data = uneven_gen_type,
+                           bump_hunter_data = uneven_gen_type_10,
                            num_feat = NULL,
                            gender = F,
                            residual = F,
                            seed_num) 
 
-uneven_gen_type_bal_table <- extractResults(uneven_gen_type_bal, 
-                                      'uneven_gen_type_bal',
+uneven_gen_type_10_bal_table <- extractResults(uneven_gen_type_10_bal, 
+                                      'uneven_gen_type_10_bal',
                                       regularize = T,
-                                      bh_data = quan_uneven_gen_type)
+                                      bh_data = quan_uneven_gen_type_10)
 
 
 
@@ -706,81 +1669,81 @@ uneven_gen_type_bal_table <- extractResults(uneven_gen_type_bal,
 
 ##########
 # 10 
-even_gen_type_all_gen <- runModels(quan_cases_sam_gen, 
+even_gen_type_10_all_gen <- runModels(quan_cases_sam_gen, 
                              quan_controls_type,
                              model = 'enet',
                              control = F,
                              random = F,
                              bump_hunter = T,
-                             bump_hunter_data = even_gen_type,
+                             bump_hunter_data = even_gen_type_10,
                              num_feat = NULL,
                              gender = F,
                              residual = F,
                              seed_num) 
 
-even_gen_type_all_gen_table <- extractResults(even_gen_type_all_gen, 
-                                        'even_gen_type_all_gen',
+even_gen_type_10_all_gen_table <- extractResults(even_gen_type_10_all_gen, 
+                                        'even_gen_type_10_all_gen',
                                         regularize = T,
-                                        bh_data = even_gen_type)
+                                        bh_data = even_gen_type_10)
 
 ##########
 # 10 bal_gen
-even_gen_type_bal_gen <- runModels(quan_cases_sam_gen, 
+even_gen_type_10_bal_gen <- runModels(quan_cases_sam_gen, 
                              quan_controls_type_bal,
                              model = 'enet',
                              control = F,
                              random = F,
                              bump_hunter = T,
-                             bump_hunter_data = even_gen_type,
+                             bump_hunter_data = even_gen_type_10,
                              num_feat = NULL,
                              gender = F,
                              residual = F,
                              seed_num) 
 
-even_gen_type_bal_gen_table <- extractResults(even_gen_type_bal_gen, 
-                                        'even_gen_type_bal_gen',
+even_gen_type_10_bal_gen_table <- extractResults(even_gen_type_10_bal_gen, 
+                                        'even_gen_type_10_bal_gen',
                                         regularize = T,
-                                        bh_data = quan_even_gen_type)
+                                        bh_data = quan_even_gen_type_10)
 
 
 
 ##########
 # 10 
-uneven_gen_type_all_gen <- runModels(quan_cases_sam_gen, 
+uneven_gen_type_10_all_gen <- runModels(quan_cases_sam_gen, 
                                quan_controls_type,
                                model = 'enet',
                                control = F,
                                random = F,
                                bump_hunter = T,
-                               bump_hunter_data = uneven_gen_type,
+                               bump_hunter_data = uneven_gen_type_10,
                                num_feat = NULL,
                                gender = F,
                                residual = F,
                                seed_num) 
 
-uneven_gen_type_all_gen_table <- extractResults(uneven_gen_type_all_gen, 
-                                          'uneven_gen_type_all_gen',
+uneven_gen_type_10_all_gen_table <- extractResults(uneven_gen_type_10_all_gen, 
+                                          'uneven_gen_type_10_all_gen',
                                           regularize = T,
-                                          bh_data = uneven_gen_type)
+                                          bh_data = uneven_gen_type_10)
 
 ##########
 # 10 
-uneven_gen_type_bal_gen <- runModels(quan_cases_sam_gen, 
+uneven_gen_type_10_bal_gen <- runModels(quan_cases_sam_gen, 
                                quan_controls_type_bal,
                                model = 'enet',
                                control = F,
                                random = F,
                                bump_hunter = T,
-                               bump_hunter_data = uneven_gen_type,
+                               bump_hunter_data = uneven_gen_type_10,
                                num_feat = NULL,
                                gender = F,
                                residual = F,
                                seed_num) 
 
-uneven_gen_type_bal_gen_table <- extractResults(uneven_gen_type_bal_gen, 
-                                          'uneven_gen_type_bal_gen',
+uneven_gen_type_10_bal_gen_table <- extractResults(uneven_gen_type_10_bal_gen, 
+                                          'uneven_gen_type_10_bal_gen',
                                           regularize = T,
-                                          bh_data = quan_uneven_gen_type)
+                                          bh_data = quan_uneven_gen_type_10)
 
 
 
@@ -789,15 +1752,15 @@ uneven_gen_type_bal_gen_table <- extractResults(uneven_gen_type_bal_gen,
 #combeine tables
 ##########
 
-result_gen_type_10 <- rbind(even_gen_type_all_table, even_gen_type_bal_table,
-                   uneven_gen_type_all_table, uneven_gen_type_bal_table,
-                   even_gen_type_all_gen_table, even_gen_type_bal_gen_table,
-                   uneven_gen_type_all_gen_table, uneven_gen_type_bal_gen_table)
+result_gen_type_10 <- rbind(even_gen_type_10_all_table, even_gen_type_10_bal_table,
+                   uneven_gen_type_10_all_table, uneven_gen_type_10_bal_table,
+                   even_gen_type_10_all_gen_table, even_gen_type_10_bal_gen_table,
+                   uneven_gen_type_10_all_gen_table, uneven_gen_type_10_bal_gen_table)
 
-rm(even_gen_type_all_table, even_gen_type_bal_table,
-   uneven_gen_type_all_table, uneven_gen_type_bal_table,
-   even_gen_type_all_gen_table, even_gen_type_bal_gen_table,
-   uneven_gen_type_all_gen_table, uneven_gen_type_bal_gen_table)
+rm(even_gen_type_10_all_table, even_gen_type_10_bal_table,
+   uneven_gen_type_10_all_table, uneven_gen_type_10_bal_table,
+   even_gen_type_10_all_gen_table, even_gen_type_10_bal_gen_table,
+   uneven_gen_type_10_all_gen_table, uneven_gen_type_10_bal_gen_table)
 
 
 ################################################################################################
@@ -805,88 +1768,88 @@ rm(even_gen_type_all_table, even_gen_type_bal_table,
 
 
 
-# 10, gen_10, gen_type_10,  gen_sam_type_10 gen_sen_type_10
+# 10, gen_10, gen_type_10,  gen_sam_type_10 gen_sam_type_10
 
 ##########
 # 10
 
 
 ##########
-# SAM
+# sam
 
-even_gen_sen_type_all <- runModels(quan_cases_sam, 
+even_gen_sam_type_10_all <- runModels(quan_cases_sam, 
                          quan_controls_type,
                          model = 'enet',
                          control = F,
                          random = F,
                          bump_hunter = T,
-                         bump_hunter_data = even_gen_sen_type,
+                         bump_hunter_data = even_gen_sam_type_10,
                          num_feat = NULL,
                          gender = F,
                          residual = F,
                          seed_num) 
 
-even_gen_sen_type_all_table <- extractResults(even_gen_sen_type_all, 
-                                    'even_gen_sen_type_all',
+even_gen_sam_type_10_all_table <- extractResults(even_gen_sam_type_10_all, 
+                                    'even_gen_sam_type_10_all',
                                     regularize = T,
-                                    bh_data = even_gen_sen_type)
+                                    bh_data = even_gen_sam_type_10)
 
 ##########
 # 10 bal
-even_gen_sen_type_bal <- runModels(quan_cases_sam, 
+even_gen_sam_type_10_bal <- runModels(quan_cases_sam, 
                          quan_controls_type_bal,
                          model = 'enet',
                          control = F,
                          random = F,
                          bump_hunter = T,
-                         bump_hunter_data = even_gen_sen_type,
+                         bump_hunter_data = even_gen_sam_type_10,
                          num_feat = NULL,
                          gender = F,
                          residual = F,
                          seed_num) 
 
-even_gen_sen_type_bal_table <- extractResults(even_gen_sen_type_bal, 
-                                    'even_gen_sen_type_bal',
+even_gen_sam_type_10_bal_table <- extractResults(even_gen_sam_type_10_bal, 
+                                    'even_gen_sam_type_10_bal',
                                     regularize = T,
-                                    bh_data = quan_even_gen_sen_type)
+                                    bh_data = quan_even_gen_sam_type_10)
 
 ##########
 # 10 
-uneven_gen_sen_type_all <- runModels(quan_cases_sam, 
+uneven_gen_sam_type_10_all <- runModels(quan_cases_sam, 
                            quan_controls_type,
                            model = 'enet',
                            control = F,
                            random = F,
                            bump_hunter = T,
-                           bump_hunter_data = uneven_gen_sen_type,
+                           bump_hunter_data = uneven_gen_sam_type_10,
                            num_feat = NULL,
                            gender = F,
                            residual = F,
                            seed_num) 
 
-uneven_gen_sen_type_all_table <- extractResults(uneven_gen_sen_type_all, 
-                                      'uneven_gen_sen_type_all',
+uneven_gen_sam_type_10_all_table <- extractResults(uneven_gen_sam_type_10_all, 
+                                      'uneven_gen_sam_type_10_all',
                                       regularize = T,
-                                      bh_data = uneven_gen_sen_type)
+                                      bh_data = uneven_gen_sam_type_10)
 
 ##########
 # 10 
-uneven_gen_sen_type_bal <- runModels(quan_cases_sam, 
+uneven_gen_sam_type_10_bal <- runModels(quan_cases_sam, 
                            quan_controls_type_bal,
                            model = 'enet',
                            control = F,
                            random = F,
                            bump_hunter = T,
-                           bump_hunter_data = uneven_gen_sen_type,
+                           bump_hunter_data = uneven_gen_sam_type_10,
                            num_feat = NULL,
                            gender = F,
                            residual = F,
                            seed_num) 
 
-uneven_gen_sen_type_bal_table <- extractResults(uneven_gen_sen_type_bal, 
-                                      'uneven_gen_sen_type_bal',
+uneven_gen_sam_type_10_bal_table <- extractResults(uneven_gen_sam_type_10_bal, 
+                                      'uneven_gen_sam_type_10_bal',
                                       regularize = T,
-                                      bh_data = quan_uneven_gen_sen_type)
+                                      bh_data = quan_uneven_gen_sam_type_10)
 
 
 
@@ -896,81 +1859,81 @@ uneven_gen_sen_type_bal_table <- extractResults(uneven_gen_sen_type_bal,
 
 ##########
 # 10 
-even_gen_sen_type_all_gen <- runModels(quan_cases_sam_gen, 
+even_gen_sam_type_10_all_gen <- runModels(quan_cases_sam_gen, 
                              quan_controls_type,
                              model = 'enet',
                              control = F,
                              random = F,
                              bump_hunter = T,
-                             bump_hunter_data = even_gen_sen_type,
+                             bump_hunter_data = even_gen_sam_type_10,
                              num_feat = NULL,
                              gender = F,
                              residual = F,
                              seed_num) 
 
-even_gen_sen_type_all_gen_table <- extractResults(even_gen_sen_type_all_gen, 
-                                        'even_gen_sen_type_all_gen',
+even_gen_sam_type_10_all_gen_table <- extractResults(even_gen_sam_type_10_all_gen, 
+                                        'even_gen_sam_type_10_all_gen',
                                         regularize = T,
-                                        bh_data = even_gen_sen_type)
+                                        bh_data = even_gen_sam_type_10)
 
 ##########
 # 10 bal_gen
-even_gen_sen_type_bal_gen <- runModels(quan_cases_sam_gen, 
+even_gen_sam_type_10_bal_gen <- runModels(quan_cases_sam_gen, 
                              quan_controls_type_bal,
                              model = 'enet',
                              control = F,
                              random = F,
                              bump_hunter = T,
-                             bump_hunter_data = even_gen_sen_type,
+                             bump_hunter_data = even_gen_sam_type_10,
                              num_feat = NULL,
                              gender = F,
                              residual = F,
                              seed_num) 
 
-even_gen_sen_type_bal_gen_table <- extractResults(even_gen_sen_type_bal_gen, 
-                                        'even_gen_sen_type_bal_gen',
+even_gen_sam_type_10_bal_gen_table <- extractResults(even_gen_sam_type_10_bal_gen, 
+                                        'even_gen_sam_type_10_bal_gen',
                                         regularize = T,
-                                        bh_data = quan_even_gen_sen_type)
+                                        bh_data = quan_even_gen_sam_type_10)
 
 
 
 ##########
 # 10 
-uneven_gen_sen_type_all_gen <- runModels(quan_cases_sam_gen, 
+uneven_gen_sam_type_10_all_gen <- runModels(quan_cases_sam_gen, 
                                quan_controls_type,
                                model = 'enet',
                                control = F,
                                random = F,
                                bump_hunter = T,
-                               bump_hunter_data = uneven_gen_sen_type,
+                               bump_hunter_data = uneven_gen_sam_type_10,
                                num_feat = NULL,
                                gender = F,
                                residual = F,
                                seed_num) 
 
-uneven_gen_sen_type_all_gen_table <- extractResults(uneven_gen_sen_type_all_gen, 
-                                          'uneven_gen_sen_type_all_gen',
+uneven_gen_sam_type_10_all_gen_table <- extractResults(uneven_gen_sam_type_10_all_gen, 
+                                          'uneven_gen_sam_type_10_all_gen',
                                           regularize = T,
-                                          bh_data = uneven_gen_sen_type)
+                                          bh_data = uneven_gen_sam_type_10)
 
 ##########
 # 10 
-uneven_gen_sen_type_bal_gen <- runModels(quan_cases_sam_gen, 
+uneven_gen_sam_type_10_bal_gen <- runModels(quan_cases_sam_gen, 
                                quan_controls_type_bal,
                                model = 'enet',
                                control = F,
                                random = F,
                                bump_hunter = T,
-                               bump_hunter_data = uneven_gen_sen_type,
+                               bump_hunter_data = uneven_gen_sam_type_10,
                                num_feat = NULL,
                                gender = F,
                                residual = F,
                                seed_num) 
 
-uneven_gen_sen_type_bal_gen_table <- extractResults(uneven_gen_sen_type_bal_gen, 
-                                          'uneven_gen_sen_type_bal_gen',
+uneven_gen_sam_type_10_bal_gen_table <- extractResults(uneven_gen_sam_type_10_bal_gen, 
+                                          'uneven_gen_sam_type_10_bal_gen',
                                           regularize = T,
-                                          bh_data = quan_uneven_gen_sen_type)
+                                          bh_data = quan_uneven_gen_sam_type_10)
 
 
 
@@ -979,15 +1942,15 @@ uneven_gen_sen_type_bal_gen_table <- extractResults(uneven_gen_sen_type_bal_gen,
 #combeine tables
 ##########
 
-result_gen_sen_type_10 <- rbind(even_gen_sen_type_all_table, even_gen_sen_type_bal_table,
-                   uneven_gen_sen_type_all_table, uneven_gen_sen_type_bal_table,
-                   even_gen_sen_type_all_gen_table, even_gen_sen_type_bal_gen_table,
-                   uneven_gen_sen_type_all_gen_table, uneven_gen_sen_type_bal_gen_table)
+result_gen_sam_type_10 <- rbind(even_gen_sam_type_10_all_table, even_gen_sam_type_10_bal_table,
+                   uneven_gen_sam_type_10_all_table, uneven_gen_sam_type_10_bal_table,
+                   even_gen_sam_type_10_all_gen_table, even_gen_sam_type_10_bal_gen_table,
+                   uneven_gen_sam_type_10_all_gen_table, uneven_gen_sam_type_10_bal_gen_table)
 
-rm(even_gen_sen_type_all_table, even_gen_sen_type_bal_table,
-   uneven_gen_sen_type_all_table, uneven_gen_sen_type_bal_table,
-   even_gen_sen_type_all_gen_table, even_gen_sen_type_bal_gen_table,
-   uneven_gen_sen_type_all_gen_table, uneven_gen_sen_type_bal_gen_table)
+rm(even_gen_sam_type_10_all_table, even_gen_sam_type_10_bal_table,
+   uneven_gen_sam_type_10_all_table, uneven_gen_sam_type_10_bal_table,
+   even_gen_sam_type_10_all_gen_table, even_gen_sam_type_10_bal_gen_table,
+   uneven_gen_sam_type_10_all_gen_table, uneven_gen_sam_type_10_bal_gen_table)
 
 
 ################################################################################################
@@ -995,88 +1958,88 @@ rm(even_gen_sen_type_all_table, even_gen_sen_type_bal_table,
 
 
 
-# 10, gen_10, gen_type_10,  gen_sam_type_10 gen_sen_type_10
+# 10, gen_10, gen_type_10,  gen_sam_type_10 gen_sam_type_10
 
 ##########
 # 10
 
 
 ##########
-# SAM
+# sam
 
-even_gen_sam_type_all <- runModels(quan_cases_sam, 
+even_gen_sam_type_10_all <- runModels(quan_cases_sam, 
                          quan_controls_type,
                          model = 'enet',
                          control = F,
                          random = F,
                          bump_hunter = T,
-                         bump_hunter_data = even_gen_sam_type,
+                         bump_hunter_data = even_gen_sam_type_10,
                          num_feat = NULL,
                          gender = F,
                          residual = F,
                          seed_num) 
 
-even_gen_sam_type_all_table <- extractResults(even_gen_sam_type_all, 
-                                    'even_gen_sam_type_all',
+even_gen_sam_type_10_all_table <- extractResults(even_gen_sam_type_10_all, 
+                                    'even_gen_sam_type_10_all',
                                     regularize = T,
-                                    bh_data = even_gen_sam_type)
+                                    bh_data = even_gen_sam_type_10)
 
 ##########
 # 10 bal
-even_gen_sam_type_bal <- runModels(quan_cases_sam, 
+even_gen_sam_type_10_bal <- runModels(quan_cases_sam, 
                          quan_controls_type_bal,
                          model = 'enet',
                          control = F,
                          random = F,
                          bump_hunter = T,
-                         bump_hunter_data = even_gen_sam_type,
+                         bump_hunter_data = even_gen_sam_type_10,
                          num_feat = NULL,
                          gender = F,
                          residual = F,
                          seed_num) 
 
-even_gen_sam_type_bal_table <- extractResults(even_gen_sam_type_bal, 
-                                    'even_gen_sam_type_bal',
+even_gen_sam_type_10_bal_table <- extractResults(even_gen_sam_type_10_bal, 
+                                    'even_gen_sam_type_10_bal',
                                     regularize = T,
-                                    bh_data = quan_even_gen_sam_type)
+                                    bh_data = quan_even_gen_sam_type_10)
 
 ##########
 # 10 
-uneven_gen_sam_type_all <- runModels(quan_cases_sam, 
+uneven_gen_sam_type_10_all <- runModels(quan_cases_sam, 
                            quan_controls_type,
                            model = 'enet',
                            control = F,
                            random = F,
                            bump_hunter = T,
-                           bump_hunter_data = uneven_gen_sam_type,
+                           bump_hunter_data = uneven_gen_sam_type_10,
                            num_feat = NULL,
                            gender = F,
                            residual = F,
                            seed_num) 
 
-uneven_gen_sam_type_all_table <- extractResults(uneven_gen_sam_type_all, 
-                                      'uneven_gen_sam_type_all',
+uneven_gen_sam_type_10_all_table <- extractResults(uneven_gen_sam_type_10_all, 
+                                      'uneven_gen_sam_type_10_all',
                                       regularize = T,
-                                      bh_data = uneven_gen_sam_type)
+                                      bh_data = uneven_gen_sam_type_10)
 
 ##########
 # 10 
-uneven_gen_sam_type_bal <- runModels(quan_cases_sam, 
+uneven_gen_sam_type_10_bal <- runModels(quan_cases_sam, 
                            quan_controls_type_bal,
                            model = 'enet',
                            control = F,
                            random = F,
                            bump_hunter = T,
-                           bump_hunter_data = uneven_gen_sam_type,
+                           bump_hunter_data = uneven_gen_sam_type_10,
                            num_feat = NULL,
                            gender = F,
                            residual = F,
                            seed_num) 
 
-uneven_gen_sam_type_bal_table <- extractResults(uneven_gen_sam_type_bal, 
-                                      'uneven_gen_sam_type_bal',
+uneven_gen_sam_type_10_bal_table <- extractResults(uneven_gen_sam_type_10_bal, 
+                                      'uneven_gen_sam_type_10_bal',
                                       regularize = T,
-                                      bh_data = quan_uneven_gen_sam_type)
+                                      bh_data = quan_uneven_gen_sam_type_10)
 
 
 
@@ -1086,81 +2049,81 @@ uneven_gen_sam_type_bal_table <- extractResults(uneven_gen_sam_type_bal,
 
 ##########
 # 10 
-even_gen_sam_type_all_gen <- runModels(quan_cases_sam_gen, 
+even_gen_sam_type_10_all_gen <- runModels(quan_cases_sam_gen, 
                              quan_controls_type,
                              model = 'enet',
                              control = F,
                              random = F,
                              bump_hunter = T,
-                             bump_hunter_data = even_gen_sam_type,
+                             bump_hunter_data = even_gen_sam_type_10,
                              num_feat = NULL,
                              gender = F,
                              residual = F,
                              seed_num) 
 
-even_gen_sam_type_all_gen_table <- extractResults(even_gen_sam_type_all_gen, 
-                                        'even_gen_sam_type_all_gen',
+even_gen_sam_type_10_all_gen_table <- extractResults(even_gen_sam_type_10_all_gen, 
+                                        'even_gen_sam_type_10_all_gen',
                                         regularize = T,
-                                        bh_data = even_gen_sam_type)
+                                        bh_data = even_gen_sam_type_10)
 
 ##########
 # 10 bal_gen
-even_gen_sam_type_bal_gen <- runModels(quan_cases_sam_gen, 
+even_gen_sam_type_10_bal_gen <- runModels(quan_cases_sam_gen, 
                              quan_controls_type_bal,
                              model = 'enet',
                              control = F,
                              random = F,
                              bump_hunter = T,
-                             bump_hunter_data = even_gen_sam_type,
+                             bump_hunter_data = even_gen_sam_type_10,
                              num_feat = NULL,
                              gender = F,
                              residual = F,
                              seed_num) 
 
-even_gen_sam_type_bal_gen_table <- extractResults(even_gen_sam_type_bal_gen, 
-                                        'even_gen_sam_type_bal_gen',
+even_gen_sam_type_10_bal_gen_table <- extractResults(even_gen_sam_type_10_bal_gen, 
+                                        'even_gen_sam_type_10_bal_gen',
                                         regularize = T,
-                                        bh_data = quan_even_gen_sam_type)
+                                        bh_data = quan_even_gen_sam_type_10)
 
 
 
 ##########
 # 10 
-uneven_gen_sam_type_all_gen <- runModels(quan_cases_sam_gen, 
+uneven_gen_sam_type_10_all_gen <- runModels(quan_cases_sam_gen, 
                                quan_controls_type,
                                model = 'enet',
                                control = F,
                                random = F,
                                bump_hunter = T,
-                               bump_hunter_data = uneven_gen_sam_type,
+                               bump_hunter_data = uneven_gen_sam_type_10,
                                num_feat = NULL,
                                gender = F,
                                residual = F,
                                seed_num) 
 
-uneven_gen_sam_type_all_gen_table <- extractResults(uneven_gen_sam_type_all_gen, 
-                                          'uneven_gen_sam_type_all_gen',
+uneven_gen_sam_type_10_all_gen_table <- extractResults(uneven_gen_sam_type_10_all_gen, 
+                                          'uneven_gen_sam_type_10_all_gen',
                                           regularize = T,
-                                          bh_data = uneven_gen_sam_type)
+                                          bh_data = uneven_gen_sam_type_10)
 
 ##########
 # 10 
-uneven_gen_sam_type_bal_gen <- runModels(quan_cases_sam_gen, 
+uneven_gen_sam_type_10_bal_gen <- runModels(quan_cases_sam_gen, 
                                quan_controls_type_bal,
                                model = 'enet',
                                control = F,
                                random = F,
                                bump_hunter = T,
-                               bump_hunter_data = uneven_gen_sam_type,
+                               bump_hunter_data = uneven_gen_sam_type_10,
                                num_feat = NULL,
                                gender = F,
                                residual = F,
                                seed_num) 
 
-uneven_gen_sam_type_bal_gen_table <- extractResults(uneven_gen_sam_type_bal_gen, 
-                                          'uneven_gen_sam_type_bal_gen',
+uneven_gen_sam_type_10_bal_gen_table <- extractResults(uneven_gen_sam_type_10_bal_gen, 
+                                          'uneven_gen_sam_type_10_bal_gen',
                                           regularize = T,
-                                          bh_data = quan_uneven_gen_sam_type)
+                                          bh_data = quan_uneven_gen_sam_type_10)
 
 
 
@@ -1169,15 +2132,15 @@ uneven_gen_sam_type_bal_gen_table <- extractResults(uneven_gen_sam_type_bal_gen,
 #combeine tables
 ##########
 
-result_gen_sam_type_10 <- rbind(even_gen_sam_type_all_table, even_gen_sam_type_bal_table,
-                   uneven_gen_sam_type_all_table, uneven_gen_sam_type_bal_table,
-                   even_gen_sam_type_all_gen_table, even_gen_sam_type_bal_gen_table,
-                   uneven_gen_sam_type_all_gen_table, uneven_gen_sam_type_bal_gen_table)
+result_gen_sam_type_10 <- rbind(even_gen_sam_type_10_all_table, even_gen_sam_type_10_bal_table,
+                   uneven_gen_sam_type_10_all_table, uneven_gen_sam_type_10_bal_table,
+                   even_gen_sam_type_10_all_gen_table, even_gen_sam_type_10_bal_gen_table,
+                   uneven_gen_sam_type_10_all_gen_table, uneven_gen_sam_type_10_bal_gen_table)
 
-rm(even_gen_sam_type_all_table, even_gen_sam_type_bal_table,
-   uneven_gen_sam_type_all_table, uneven_gen_sam_type_bal_table,
-   even_gen_sam_type_all_gen_table, even_gen_sam_type_bal_gen_table,
-   uneven_gen_sam_type_all_gen_table, uneven_gen_sam_type_bal_gen_table)
+rm(even_gen_sam_type_10_all_table, even_gen_sam_type_10_bal_table,
+   uneven_gen_sam_type_10_all_table, uneven_gen_sam_type_10_bal_table,
+   even_gen_sam_type_10_all_gen_table, even_gen_sam_type_10_bal_gen_table,
+   uneven_gen_sam_type_10_all_gen_table, uneven_gen_sam_type_10_bal_gen_table)
 
 
 ################################################################################################
@@ -1185,24 +2148,23 @@ rm(even_gen_sam_type_all_table, even_gen_sam_type_bal_table,
 
 # Put 10 tables together
 full_results_10 <- rbind(result_10, result_gen_10, result_gen_type_10,
-                         result_gen_sam_type_10, result_gen_sen_type_10)
+                         result_gen_sam_type_10, result_gen_sam_type_10)
 
 
 rm(result_10, result_gen_10, result_gen_type_10,
-   result_gen_sam_type_10, result_gen_sen_type_10)
+   result_gen_sam_type_10, result_gen_sam_type_10)
 
+#####################################################################################################
+####################################################################################################
 
-
-
-########################################################################################################
-# 20, gen_20, gen_type_20,  gen_sam_type_20 gen_sen_type_20
+# 20, gen_20, gen_type_20,  gen_sam_type_20 gen_sam_type_20
 
 ##########
 # 20
 
 
 ##########
-# SAM
+# sam
 
 even_20_all <- runModels(quan_cases_sam, 
                          quan_controls_type,
@@ -1384,14 +2346,14 @@ rm(even_20_all_table, even_20_bal_table,
 ################################################################################################
 
 
-# 20, gen_20, gen_type_20,  gen_sam_type_20 gen_sen_type_20
+# 20, gen_20, gen_type_20,  gen_sam_type_20 gen_sam_type_20
 
 ##########
 # 20
 
 
 ##########
-# SAM
+# sam
 
 even_gen_20_all <- runModels(quan_cases_sam, 
                              quan_controls_type,
@@ -1563,6 +2525,7 @@ result_gen_20 <- rbind(even_gen_20_all_table, even_gen_20_bal_table,
                        even_gen_20_all_gen_table, even_gen_20_bal_gen_table,
                        uneven_gen_20_all_gen_table, uneven_gen_20_bal_gen_table)
 
+
 rm(even_gen_20_all_table, even_gen_20_bal_table,
    uneven_gen_20_all_table, uneven_gen_20_bal_table,
    even_gen_20_all_gen_table, even_gen_20_bal_gen_table,
@@ -1574,88 +2537,88 @@ rm(even_gen_20_all_table, even_gen_20_bal_table,
 
 
 
-# 20, gen_20, gen_type_20,  gen_sam_type_20 gen_sen_type_20
+# 20, gen_20, gen_type_20,  gen_sam_type_20 gen_sam_type_20
 
 ##########
 # 20
 
 
 ##########
-# SAM
+# sam
 
-even_gen_type_all <- runModels(quan_cases_sam, 
-                               quan_controls_type,
-                               model = 'enet',
-                               control = F,
-                               random = F,
-                               bump_hunter = T,
-                               bump_hunter_data = even_gen_type,
-                               num_feat = NULL,
-                               gender = F,
-                               residual = F,
-                               seed_num) 
+even_gen_type_20_all <- runModels(quan_cases_sam, 
+                                  quan_controls_type,
+                                  model = 'enet',
+                                  control = F,
+                                  random = F,
+                                  bump_hunter = T,
+                                  bump_hunter_data = even_gen_type_20,
+                                  num_feat = NULL,
+                                  gender = F,
+                                  residual = F,
+                                  seed_num) 
 
-even_gen_type_all_table <- extractResults(even_gen_type_all, 
-                                          'even_gen_type_all',
-                                          regularize = T,
-                                          bh_data = even_gen_type)
+even_gen_type_20_all_table <- extractResults(even_gen_type_20_all, 
+                                             'even_gen_type_20_all',
+                                             regularize = T,
+                                             bh_data = even_gen_type_20)
 
 ##########
 # 20 bal
-even_gen_type_bal <- runModels(quan_cases_sam, 
-                               quan_controls_type_bal,
-                               model = 'enet',
-                               control = F,
-                               random = F,
-                               bump_hunter = T,
-                               bump_hunter_data = even_gen_type,
-                               num_feat = NULL,
-                               gender = F,
-                               residual = F,
-                               seed_num) 
+even_gen_type_20_bal <- runModels(quan_cases_sam, 
+                                  quan_controls_type_bal,
+                                  model = 'enet',
+                                  control = F,
+                                  random = F,
+                                  bump_hunter = T,
+                                  bump_hunter_data = even_gen_type_20,
+                                  num_feat = NULL,
+                                  gender = F,
+                                  residual = F,
+                                  seed_num) 
 
-even_gen_type_bal_table <- extractResults(even_gen_type_bal, 
-                                          'even_gen_type_bal',
-                                          regularize = T,
-                                          bh_data = quan_even_gen_type)
-
-##########
-# 20 
-uneven_gen_type_all <- runModels(quan_cases_sam, 
-                                 quan_controls_type,
-                                 model = 'enet',
-                                 control = F,
-                                 random = F,
-                                 bump_hunter = T,
-                                 bump_hunter_data = uneven_gen_type,
-                                 num_feat = NULL,
-                                 gender = F,
-                                 residual = F,
-                                 seed_num) 
-
-uneven_gen_type_all_table <- extractResults(uneven_gen_type_all, 
-                                            'uneven_gen_type_all',
-                                            regularize = T,
-                                            bh_data = uneven_gen_type)
+even_gen_type_20_bal_table <- extractResults(even_gen_type_20_bal, 
+                                             'even_gen_type_20_bal',
+                                             regularize = T,
+                                             bh_data = quan_even_gen_type_20)
 
 ##########
 # 20 
-uneven_gen_type_bal <- runModels(quan_cases_sam, 
-                                 quan_controls_type_bal,
-                                 model = 'enet',
-                                 control = F,
-                                 random = F,
-                                 bump_hunter = T,
-                                 bump_hunter_data = uneven_gen_type,
-                                 num_feat = NULL,
-                                 gender = F,
-                                 residual = F,
-                                 seed_num) 
+uneven_gen_type_20_all <- runModels(quan_cases_sam, 
+                                    quan_controls_type,
+                                    model = 'enet',
+                                    control = F,
+                                    random = F,
+                                    bump_hunter = T,
+                                    bump_hunter_data = uneven_gen_type_20,
+                                    num_feat = NULL,
+                                    gender = F,
+                                    residual = F,
+                                    seed_num) 
 
-uneven_gen_type_bal_table <- extractResults(uneven_gen_type_bal, 
-                                            'uneven_gen_type_bal',
-                                            regularize = T,
-                                            bh_data = quan_uneven_gen_type)
+uneven_gen_type_20_all_table <- extractResults(uneven_gen_type_20_all, 
+                                               'uneven_gen_type_20_all',
+                                               regularize = T,
+                                               bh_data = uneven_gen_type_20)
+
+##########
+# 20 
+uneven_gen_type_20_bal <- runModels(quan_cases_sam, 
+                                    quan_controls_type_bal,
+                                    model = 'enet',
+                                    control = F,
+                                    random = F,
+                                    bump_hunter = T,
+                                    bump_hunter_data = uneven_gen_type_20,
+                                    num_feat = NULL,
+                                    gender = F,
+                                    residual = F,
+                                    seed_num) 
+
+uneven_gen_type_20_bal_table <- extractResults(uneven_gen_type_20_bal, 
+                                               'uneven_gen_type_20_bal',
+                                               regularize = T,
+                                               bh_data = quan_uneven_gen_type_20)
 
 
 
@@ -1665,81 +2628,81 @@ uneven_gen_type_bal_table <- extractResults(uneven_gen_type_bal,
 
 ##########
 # 20 
-even_gen_type_all_gen <- runModels(quan_cases_sam_gen, 
-                                   quan_controls_type,
-                                   model = 'enet',
-                                   control = F,
-                                   random = F,
-                                   bump_hunter = T,
-                                   bump_hunter_data = even_gen_type,
-                                   num_feat = NULL,
-                                   gender = F,
-                                   residual = F,
-                                   seed_num) 
+even_gen_type_20_all_gen <- runModels(quan_cases_sam_gen, 
+                                      quan_controls_type,
+                                      model = 'enet',
+                                      control = F,
+                                      random = F,
+                                      bump_hunter = T,
+                                      bump_hunter_data = even_gen_type_20,
+                                      num_feat = NULL,
+                                      gender = F,
+                                      residual = F,
+                                      seed_num) 
 
-even_gen_type_all_gen_table <- extractResults(even_gen_type_all_gen, 
-                                              'even_gen_type_all_gen',
-                                              regularize = T,
-                                              bh_data = even_gen_type)
+even_gen_type_20_all_gen_table <- extractResults(even_gen_type_20_all_gen, 
+                                                 'even_gen_type_20_all_gen',
+                                                 regularize = T,
+                                                 bh_data = even_gen_type_20)
 
 ##########
 # 20 bal_gen
-even_gen_type_bal_gen <- runModels(quan_cases_sam_gen, 
-                                   quan_controls_type_bal,
-                                   model = 'enet',
-                                   control = F,
-                                   random = F,
-                                   bump_hunter = T,
-                                   bump_hunter_data = even_gen_type,
-                                   num_feat = NULL,
-                                   gender = F,
-                                   residual = F,
-                                   seed_num) 
+even_gen_type_20_bal_gen <- runModels(quan_cases_sam_gen, 
+                                      quan_controls_type_bal,
+                                      model = 'enet',
+                                      control = F,
+                                      random = F,
+                                      bump_hunter = T,
+                                      bump_hunter_data = even_gen_type_20,
+                                      num_feat = NULL,
+                                      gender = F,
+                                      residual = F,
+                                      seed_num) 
 
-even_gen_type_bal_gen_table <- extractResults(even_gen_type_bal_gen, 
-                                              'even_gen_type_bal_gen',
-                                              regularize = T,
-                                              bh_data = quan_even_gen_type)
+even_gen_type_20_bal_gen_table <- extractResults(even_gen_type_20_bal_gen, 
+                                                 'even_gen_type_20_bal_gen',
+                                                 regularize = T,
+                                                 bh_data = quan_even_gen_type_20)
 
 
-
-##########
-# 20 
-uneven_gen_type_all_gen <- runModels(quan_cases_sam_gen, 
-                                     quan_controls_type,
-                                     model = 'enet',
-                                     control = F,
-                                     random = F,
-                                     bump_hunter = T,
-                                     bump_hunter_data = uneven_gen_type,
-                                     num_feat = NULL,
-                                     gender = F,
-                                     residual = F,
-                                     seed_num) 
-
-uneven_gen_type_all_gen_table <- extractResults(uneven_gen_type_all_gen, 
-                                                'uneven_gen_type_all_gen',
-                                                regularize = T,
-                                                bh_data = uneven_gen_type)
 
 ##########
 # 20 
-uneven_gen_type_bal_gen <- runModels(quan_cases_sam_gen, 
-                                     quan_controls_type_bal,
-                                     model = 'enet',
-                                     control = F,
-                                     random = F,
-                                     bump_hunter = T,
-                                     bump_hunter_data = uneven_gen_type,
-                                     num_feat = NULL,
-                                     gender = F,
-                                     residual = F,
-                                     seed_num) 
+uneven_gen_type_20_all_gen <- runModels(quan_cases_sam_gen, 
+                                        quan_controls_type,
+                                        model = 'enet',
+                                        control = F,
+                                        random = F,
+                                        bump_hunter = T,
+                                        bump_hunter_data = uneven_gen_type_20,
+                                        num_feat = NULL,
+                                        gender = F,
+                                        residual = F,
+                                        seed_num) 
 
-uneven_gen_type_bal_gen_table <- extractResults(uneven_gen_type_bal_gen, 
-                                                'uneven_gen_type_bal_gen',
-                                                regularize = T,
-                                                bh_data = quan_uneven_gen_type)
+uneven_gen_type_20_all_gen_table <- extractResults(uneven_gen_type_20_all_gen, 
+                                                   'uneven_gen_type_20_all_gen',
+                                                   regularize = T,
+                                                   bh_data = uneven_gen_type_20)
+
+##########
+# 20 
+uneven_gen_type_20_bal_gen <- runModels(quan_cases_sam_gen, 
+                                        quan_controls_type_bal,
+                                        model = 'enet',
+                                        control = F,
+                                        random = F,
+                                        bump_hunter = T,
+                                        bump_hunter_data = uneven_gen_type_20,
+                                        num_feat = NULL,
+                                        gender = F,
+                                        residual = F,
+                                        seed_num) 
+
+uneven_gen_type_20_bal_gen_table <- extractResults(uneven_gen_type_20_bal_gen, 
+                                                   'uneven_gen_type_20_bal_gen',
+                                                   regularize = T,
+                                                   bh_data = quan_uneven_gen_type_20)
 
 
 
@@ -1748,15 +2711,15 @@ uneven_gen_type_bal_gen_table <- extractResults(uneven_gen_type_bal_gen,
 #combeine tables
 ##########
 
-result_gen_type_20 <- rbind(even_gen_type_all_table, even_gen_type_bal_table,
-                            uneven_gen_type_all_table, uneven_gen_type_bal_table,
-                            even_gen_type_all_gen_table, even_gen_type_bal_gen_table,
-                            uneven_gen_type_all_gen_table, uneven_gen_type_bal_gen_table)
+result_gen_type_20 <- rbind(even_gen_type_20_all_table, even_gen_type_20_bal_table,
+                            uneven_gen_type_20_all_table, uneven_gen_type_20_bal_table,
+                            even_gen_type_20_all_gen_table, even_gen_type_20_bal_gen_table,
+                            uneven_gen_type_20_all_gen_table, uneven_gen_type_20_bal_gen_table)
 
-rm(even_gen_type_all_table, even_gen_type_bal_table,
-   uneven_gen_type_all_table, uneven_gen_type_bal_table,
-   even_gen_type_all_gen_table, even_gen_type_bal_gen_table,
-   uneven_gen_type_all_gen_table, uneven_gen_type_bal_gen_table)
+rm(even_gen_type_20_all_table, even_gen_type_20_bal_table,
+   uneven_gen_type_20_all_table, uneven_gen_type_20_bal_table,
+   even_gen_type_20_all_gen_table, even_gen_type_20_bal_gen_table,
+   uneven_gen_type_20_all_gen_table, uneven_gen_type_20_bal_gen_table)
 
 
 ################################################################################################
@@ -1764,88 +2727,88 @@ rm(even_gen_type_all_table, even_gen_type_bal_table,
 
 
 
-# 20, gen_20, gen_type_20,  gen_sam_type_20 gen_sen_type_20
+# 20, gen_20, gen_type_20,  gen_sam_type_20 gen_sam_type_20
 
 ##########
 # 20
 
 
 ##########
-# SAM
+# sam
 
-even_gen_sen_type_all <- runModels(quan_cases_sam, 
-                                   quan_controls_type,
-                                   model = 'enet',
-                                   control = F,
-                                   random = F,
-                                   bump_hunter = T,
-                                   bump_hunter_data = even_gen_sen_type,
-                                   num_feat = NULL,
-                                   gender = F,
-                                   residual = F,
-                                   seed_num) 
+even_gen_sam_type_20_all <- runModels(quan_cases_sam, 
+                                      quan_controls_type,
+                                      model = 'enet',
+                                      control = F,
+                                      random = F,
+                                      bump_hunter = T,
+                                      bump_hunter_data = even_gen_sam_type_20,
+                                      num_feat = NULL,
+                                      gender = F,
+                                      residual = F,
+                                      seed_num) 
 
-even_gen_sen_type_all_table <- extractResults(even_gen_sen_type_all, 
-                                              'even_gen_sen_type_all',
-                                              regularize = T,
-                                              bh_data = even_gen_sen_type)
+even_gen_sam_type_20_all_table <- extractResults(even_gen_sam_type_20_all, 
+                                                 'even_gen_sam_type_20_all',
+                                                 regularize = T,
+                                                 bh_data = even_gen_sam_type_20)
 
 ##########
 # 20 bal
-even_gen_sen_type_bal <- runModels(quan_cases_sam, 
-                                   quan_controls_type_bal,
-                                   model = 'enet',
-                                   control = F,
-                                   random = F,
-                                   bump_hunter = T,
-                                   bump_hunter_data = even_gen_sen_type,
-                                   num_feat = NULL,
-                                   gender = F,
-                                   residual = F,
-                                   seed_num) 
+even_gen_sam_type_20_bal <- runModels(quan_cases_sam, 
+                                      quan_controls_type_bal,
+                                      model = 'enet',
+                                      control = F,
+                                      random = F,
+                                      bump_hunter = T,
+                                      bump_hunter_data = even_gen_sam_type_20,
+                                      num_feat = NULL,
+                                      gender = F,
+                                      residual = F,
+                                      seed_num) 
 
-even_gen_sen_type_bal_table <- extractResults(even_gen_sen_type_bal, 
-                                              'even_gen_sen_type_bal',
-                                              regularize = T,
-                                              bh_data = quan_even_gen_sen_type)
-
-##########
-# 20 
-uneven_gen_sen_type_all <- runModels(quan_cases_sam, 
-                                     quan_controls_type,
-                                     model = 'enet',
-                                     control = F,
-                                     random = F,
-                                     bump_hunter = T,
-                                     bump_hunter_data = uneven_gen_sen_type,
-                                     num_feat = NULL,
-                                     gender = F,
-                                     residual = F,
-                                     seed_num) 
-
-uneven_gen_sen_type_all_table <- extractResults(uneven_gen_sen_type_all, 
-                                                'uneven_gen_sen_type_all',
-                                                regularize = T,
-                                                bh_data = uneven_gen_sen_type)
+even_gen_sam_type_20_bal_table <- extractResults(even_gen_sam_type_20_bal, 
+                                                 'even_gen_sam_type_20_bal',
+                                                 regularize = T,
+                                                 bh_data = quan_even_gen_sam_type_20)
 
 ##########
 # 20 
-uneven_gen_sen_type_bal <- runModels(quan_cases_sam, 
-                                     quan_controls_type_bal,
-                                     model = 'enet',
-                                     control = F,
-                                     random = F,
-                                     bump_hunter = T,
-                                     bump_hunter_data = uneven_gen_sen_type,
-                                     num_feat = NULL,
-                                     gender = F,
-                                     residual = F,
-                                     seed_num) 
+uneven_gen_sam_type_20_all <- runModels(quan_cases_sam, 
+                                        quan_controls_type,
+                                        model = 'enet',
+                                        control = F,
+                                        random = F,
+                                        bump_hunter = T,
+                                        bump_hunter_data = uneven_gen_sam_type_20,
+                                        num_feat = NULL,
+                                        gender = F,
+                                        residual = F,
+                                        seed_num) 
 
-uneven_gen_sen_type_bal_table <- extractResults(uneven_gen_sen_type_bal, 
-                                                'uneven_gen_sen_type_bal',
-                                                regularize = T,
-                                                bh_data = quan_uneven_gen_sen_type)
+uneven_gen_sam_type_20_all_table <- extractResults(uneven_gen_sam_type_20_all, 
+                                                   'uneven_gen_sam_type_20_all',
+                                                   regularize = T,
+                                                   bh_data = uneven_gen_sam_type_20)
+
+##########
+# 20 
+uneven_gen_sam_type_20_bal <- runModels(quan_cases_sam, 
+                                        quan_controls_type_bal,
+                                        model = 'enet',
+                                        control = F,
+                                        random = F,
+                                        bump_hunter = T,
+                                        bump_hunter_data = uneven_gen_sam_type_20,
+                                        num_feat = NULL,
+                                        gender = F,
+                                        residual = F,
+                                        seed_num) 
+
+uneven_gen_sam_type_20_bal_table <- extractResults(uneven_gen_sam_type_20_bal, 
+                                                   'uneven_gen_sam_type_20_bal',
+                                                   regularize = T,
+                                                   bh_data = quan_uneven_gen_sam_type_20)
 
 
 
@@ -1855,81 +2818,81 @@ uneven_gen_sen_type_bal_table <- extractResults(uneven_gen_sen_type_bal,
 
 ##########
 # 20 
-even_gen_sen_type_all_gen <- runModels(quan_cases_sam_gen, 
-                                       quan_controls_type,
-                                       model = 'enet',
-                                       control = F,
-                                       random = F,
-                                       bump_hunter = T,
-                                       bump_hunter_data = even_gen_sen_type,
-                                       num_feat = NULL,
-                                       gender = F,
-                                       residual = F,
-                                       seed_num) 
+even_gen_sam_type_20_all_gen <- runModels(quan_cases_sam_gen, 
+                                          quan_controls_type,
+                                          model = 'enet',
+                                          control = F,
+                                          random = F,
+                                          bump_hunter = T,
+                                          bump_hunter_data = even_gen_sam_type_20,
+                                          num_feat = NULL,
+                                          gender = F,
+                                          residual = F,
+                                          seed_num) 
 
-even_gen_sen_type_all_gen_table <- extractResults(even_gen_sen_type_all_gen, 
-                                                  'even_gen_sen_type_all_gen',
-                                                  regularize = T,
-                                                  bh_data = even_gen_sen_type)
+even_gen_sam_type_20_all_gen_table <- extractResults(even_gen_sam_type_20_all_gen, 
+                                                     'even_gen_sam_type_20_all_gen',
+                                                     regularize = T,
+                                                     bh_data = even_gen_sam_type_20)
 
 ##########
 # 20 bal_gen
-even_gen_sen_type_bal_gen <- runModels(quan_cases_sam_gen, 
-                                       quan_controls_type_bal,
-                                       model = 'enet',
-                                       control = F,
-                                       random = F,
-                                       bump_hunter = T,
-                                       bump_hunter_data = even_gen_sen_type,
-                                       num_feat = NULL,
-                                       gender = F,
-                                       residual = F,
-                                       seed_num) 
+even_gen_sam_type_20_bal_gen <- runModels(quan_cases_sam_gen, 
+                                          quan_controls_type_bal,
+                                          model = 'enet',
+                                          control = F,
+                                          random = F,
+                                          bump_hunter = T,
+                                          bump_hunter_data = even_gen_sam_type_20,
+                                          num_feat = NULL,
+                                          gender = F,
+                                          residual = F,
+                                          seed_num) 
 
-even_gen_sen_type_bal_gen_table <- extractResults(even_gen_sen_type_bal_gen, 
-                                                  'even_gen_sen_type_bal_gen',
-                                                  regularize = T,
-                                                  bh_data = quan_even_gen_sen_type)
+even_gen_sam_type_20_bal_gen_table <- extractResults(even_gen_sam_type_20_bal_gen, 
+                                                     'even_gen_sam_type_20_bal_gen',
+                                                     regularize = T,
+                                                     bh_data = quan_even_gen_sam_type_20)
 
 
-
-##########
-# 20 
-uneven_gen_sen_type_all_gen <- runModels(quan_cases_sam_gen, 
-                                         quan_controls_type,
-                                         model = 'enet',
-                                         control = F,
-                                         random = F,
-                                         bump_hunter = T,
-                                         bump_hunter_data = uneven_gen_sen_type,
-                                         num_feat = NULL,
-                                         gender = F,
-                                         residual = F,
-                                         seed_num) 
-
-uneven_gen_sen_type_all_gen_table <- extractResults(uneven_gen_sen_type_all_gen, 
-                                                    'uneven_gen_sen_type_all_gen',
-                                                    regularize = T,
-                                                    bh_data = uneven_gen_sen_type)
 
 ##########
 # 20 
-uneven_gen_sen_type_bal_gen <- runModels(quan_cases_sam_gen, 
-                                         quan_controls_type_bal,
-                                         model = 'enet',
-                                         control = F,
-                                         random = F,
-                                         bump_hunter = T,
-                                         bump_hunter_data = uneven_gen_sen_type,
-                                         num_feat = NULL,
-                                         gender = F,
-                                         residual = F,
-                                         seed_num) 
+uneven_gen_sam_type_20_all_gen <- runModels(quan_cases_sam_gen, 
+                                            quan_controls_type,
+                                            model = 'enet',
+                                            control = F,
+                                            random = F,
+                                            bump_hunter = T,
+                                            bump_hunter_data = uneven_gen_sam_type_20,
+                                            num_feat = NULL,
+                                            gender = F,
+                                            residual = F,
+                                            seed_num) 
 
-uneven_gen_sen_type_bal_gen_table <- extractResults(uneven_gen_sen_type_bal_gen, 
-                                                    'uneven_gen_sen_type_bal_gen',
-                                                    regularize = T,
-                                                    bh_data = quan_uneven_gen_sen_type)
+uneven_gen_sam_type_20_all_gen_table <- extractResults(uneven_gen_sam_type_20_all_gen, 
+                                                       'uneven_gen_sam_type_20_all_gen',
+                                                       regularize = T,
+                                                       bh_data = uneven_gen_sam_type_20)
+
+##########
+# 20 
+uneven_gen_sam_type_20_bal_gen <- runModels(quan_cases_sam_gen, 
+                                            quan_controls_type_bal,
+                                            model = 'enet',
+                                            control = F,
+                                            random = F,
+                                            bump_hunter = T,
+                                            bump_hunter_data = uneven_gen_sam_type_20,
+                                            num_feat = NULL,
+                                            gender = F,
+                                            residual = F,
+                                            seed_num) 
+
+uneven_gen_sam_type_20_bal_gen_table <- extractResults(uneven_gen_sam_type_20_bal_gen, 
+                                                       'uneven_gen_sam_type_20_bal_gen',
+                                                       regularize = T,
+                                                       bh_data = quan_uneven_gen_sam_type_20)
 
 
 
@@ -1938,15 +2901,15 @@ uneven_gen_sen_type_bal_gen_table <- extractResults(uneven_gen_sen_type_bal_gen,
 #combeine tables
 ##########
 
-result_gen_sen_type_20 <- rbind(even_gen_sen_type_all_table, even_gen_sen_type_bal_table,
-                                uneven_gen_sen_type_all_table, uneven_gen_sen_type_bal_table,
-                                even_gen_sen_type_all_gen_table, even_gen_sen_type_bal_gen_table,
-                                uneven_gen_sen_type_all_gen_table, uneven_gen_sen_type_bal_gen_table)
+result_gen_sam_type_20 <- rbind(even_gen_sam_type_20_all_table, even_gen_sam_type_20_bal_table,
+                                uneven_gen_sam_type_20_all_table, uneven_gen_sam_type_20_bal_table,
+                                even_gen_sam_type_20_all_gen_table, even_gen_sam_type_20_bal_gen_table,
+                                uneven_gen_sam_type_20_all_gen_table, uneven_gen_sam_type_20_bal_gen_table)
 
-rm(even_gen_sen_type_all_table, even_gen_sen_type_bal_table,
-   uneven_gen_sen_type_all_table, uneven_gen_sen_type_bal_table,
-   even_gen_sen_type_all_gen_table, even_gen_sen_type_bal_gen_table,
-   uneven_gen_sen_type_all_gen_table, uneven_gen_sen_type_bal_gen_table)
+rm(even_gen_sam_type_20_all_table, even_gen_sam_type_20_bal_table,
+   uneven_gen_sam_type_20_all_table, uneven_gen_sam_type_20_bal_table,
+   even_gen_sam_type_20_all_gen_table, even_gen_sam_type_20_bal_gen_table,
+   uneven_gen_sam_type_20_all_gen_table, uneven_gen_sam_type_20_bal_gen_table)
 
 
 ################################################################################################
@@ -1954,88 +2917,88 @@ rm(even_gen_sen_type_all_table, even_gen_sen_type_bal_table,
 
 
 
-# 20, gen_20, gen_type_20,  gen_sam_type_20 gen_sen_type_20
+# 20, gen_20, gen_type_20,  gen_sam_type_20 gen_sam_type_20
 
 ##########
 # 20
 
 
 ##########
-# SAM
+# sam
 
-even_gen_sam_type_all <- runModels(quan_cases_sam, 
-                                   quan_controls_type,
-                                   model = 'enet',
-                                   control = F,
-                                   random = F,
-                                   bump_hunter = T,
-                                   bump_hunter_data = even_gen_sam_type,
-                                   num_feat = NULL,
-                                   gender = F,
-                                   residual = F,
-                                   seed_num) 
+even_gen_sam_type_20_all <- runModels(quan_cases_sam, 
+                                      quan_controls_type,
+                                      model = 'enet',
+                                      control = F,
+                                      random = F,
+                                      bump_hunter = T,
+                                      bump_hunter_data = even_gen_sam_type_20,
+                                      num_feat = NULL,
+                                      gender = F,
+                                      residual = F,
+                                      seed_num) 
 
-even_gen_sam_type_all_table <- extractResults(even_gen_sam_type_all, 
-                                              'even_gen_sam_type_all',
-                                              regularize = T,
-                                              bh_data = even_gen_sam_type)
+even_gen_sam_type_20_all_table <- extractResults(even_gen_sam_type_20_all, 
+                                                 'even_gen_sam_type_20_all',
+                                                 regularize = T,
+                                                 bh_data = even_gen_sam_type_20)
 
 ##########
 # 20 bal
-even_gen_sam_type_bal <- runModels(quan_cases_sam, 
-                                   quan_controls_type_bal,
-                                   model = 'enet',
-                                   control = F,
-                                   random = F,
-                                   bump_hunter = T,
-                                   bump_hunter_data = even_gen_sam_type,
-                                   num_feat = NULL,
-                                   gender = F,
-                                   residual = F,
-                                   seed_num) 
+even_gen_sam_type_20_bal <- runModels(quan_cases_sam, 
+                                      quan_controls_type_bal,
+                                      model = 'enet',
+                                      control = F,
+                                      random = F,
+                                      bump_hunter = T,
+                                      bump_hunter_data = even_gen_sam_type_20,
+                                      num_feat = NULL,
+                                      gender = F,
+                                      residual = F,
+                                      seed_num) 
 
-even_gen_sam_type_bal_table <- extractResults(even_gen_sam_type_bal, 
-                                              'even_gen_sam_type_bal',
-                                              regularize = T,
-                                              bh_data = quan_even_gen_sam_type)
-
-##########
-# 20 
-uneven_gen_sam_type_all <- runModels(quan_cases_sam, 
-                                     quan_controls_type,
-                                     model = 'enet',
-                                     control = F,
-                                     random = F,
-                                     bump_hunter = T,
-                                     bump_hunter_data = uneven_gen_sam_type,
-                                     num_feat = NULL,
-                                     gender = F,
-                                     residual = F,
-                                     seed_num) 
-
-uneven_gen_sam_type_all_table <- extractResults(uneven_gen_sam_type_all, 
-                                                'uneven_gen_sam_type_all',
-                                                regularize = T,
-                                                bh_data = uneven_gen_sam_type)
+even_gen_sam_type_20_bal_table <- extractResults(even_gen_sam_type_20_bal, 
+                                                 'even_gen_sam_type_20_bal',
+                                                 regularize = T,
+                                                 bh_data = quan_even_gen_sam_type_20)
 
 ##########
 # 20 
-uneven_gen_sam_type_bal <- runModels(quan_cases_sam, 
-                                     quan_controls_type_bal,
-                                     model = 'enet',
-                                     control = F,
-                                     random = F,
-                                     bump_hunter = T,
-                                     bump_hunter_data = uneven_gen_sam_type,
-                                     num_feat = NULL,
-                                     gender = F,
-                                     residual = F,
-                                     seed_num) 
+uneven_gen_sam_type_20_all <- runModels(quan_cases_sam, 
+                                        quan_controls_type,
+                                        model = 'enet',
+                                        control = F,
+                                        random = F,
+                                        bump_hunter = T,
+                                        bump_hunter_data = uneven_gen_sam_type_20,
+                                        num_feat = NULL,
+                                        gender = F,
+                                        residual = F,
+                                        seed_num) 
 
-uneven_gen_sam_type_bal_table <- extractResults(uneven_gen_sam_type_bal, 
-                                                'uneven_gen_sam_type_bal',
-                                                regularize = T,
-                                                bh_data = quan_uneven_gen_sam_type)
+uneven_gen_sam_type_20_all_table <- extractResults(uneven_gen_sam_type_20_all, 
+                                                   'uneven_gen_sam_type_20_all',
+                                                   regularize = T,
+                                                   bh_data = uneven_gen_sam_type_20)
+
+##########
+# 20 
+uneven_gen_sam_type_20_bal <- runModels(quan_cases_sam, 
+                                        quan_controls_type_bal,
+                                        model = 'enet',
+                                        control = F,
+                                        random = F,
+                                        bump_hunter = T,
+                                        bump_hunter_data = uneven_gen_sam_type_20,
+                                        num_feat = NULL,
+                                        gender = F,
+                                        residual = F,
+                                        seed_num) 
+
+uneven_gen_sam_type_20_bal_table <- extractResults(uneven_gen_sam_type_20_bal, 
+                                                   'uneven_gen_sam_type_20_bal',
+                                                   regularize = T,
+                                                   bh_data = quan_uneven_gen_sam_type_20)
 
 
 
@@ -2045,81 +3008,81 @@ uneven_gen_sam_type_bal_table <- extractResults(uneven_gen_sam_type_bal,
 
 ##########
 # 20 
-even_gen_sam_type_all_gen <- runModels(quan_cases_sam_gen, 
-                                       quan_controls_type,
-                                       model = 'enet',
-                                       control = F,
-                                       random = F,
-                                       bump_hunter = T,
-                                       bump_hunter_data = even_gen_sam_type,
-                                       num_feat = NULL,
-                                       gender = F,
-                                       residual = F,
-                                       seed_num) 
+even_gen_sam_type_20_all_gen <- runModels(quan_cases_sam_gen, 
+                                          quan_controls_type,
+                                          model = 'enet',
+                                          control = F,
+                                          random = F,
+                                          bump_hunter = T,
+                                          bump_hunter_data = even_gen_sam_type_20,
+                                          num_feat = NULL,
+                                          gender = F,
+                                          residual = F,
+                                          seed_num) 
 
-even_gen_sam_type_all_gen_table <- extractResults(even_gen_sam_type_all_gen, 
-                                                  'even_gen_sam_type_all_gen',
-                                                  regularize = T,
-                                                  bh_data = even_gen_sam_type)
+even_gen_sam_type_20_all_gen_table <- extractResults(even_gen_sam_type_20_all_gen, 
+                                                     'even_gen_sam_type_20_all_gen',
+                                                     regularize = T,
+                                                     bh_data = even_gen_sam_type_20)
 
 ##########
 # 20 bal_gen
-even_gen_sam_type_bal_gen <- runModels(quan_cases_sam_gen, 
-                                       quan_controls_type_bal,
-                                       model = 'enet',
-                                       control = F,
-                                       random = F,
-                                       bump_hunter = T,
-                                       bump_hunter_data = even_gen_sam_type,
-                                       num_feat = NULL,
-                                       gender = F,
-                                       residual = F,
-                                       seed_num) 
+even_gen_sam_type_20_bal_gen <- runModels(quan_cases_sam_gen, 
+                                          quan_controls_type_bal,
+                                          model = 'enet',
+                                          control = F,
+                                          random = F,
+                                          bump_hunter = T,
+                                          bump_hunter_data = even_gen_sam_type_20,
+                                          num_feat = NULL,
+                                          gender = F,
+                                          residual = F,
+                                          seed_num) 
 
-even_gen_sam_type_bal_gen_table <- extractResults(even_gen_sam_type_bal_gen, 
-                                                  'even_gen_sam_type_bal_gen',
-                                                  regularize = T,
-                                                  bh_data = quan_even_gen_sam_type)
+even_gen_sam_type_20_bal_gen_table <- extractResults(even_gen_sam_type_20_bal_gen, 
+                                                     'even_gen_sam_type_20_bal_gen',
+                                                     regularize = T,
+                                                     bh_data = quan_even_gen_sam_type_20)
 
 
-
-##########
-# 20 
-uneven_gen_sam_type_all_gen <- runModels(quan_cases_sam_gen, 
-                                         quan_controls_type,
-                                         model = 'enet',
-                                         control = F,
-                                         random = F,
-                                         bump_hunter = T,
-                                         bump_hunter_data = uneven_gen_sam_type,
-                                         num_feat = NULL,
-                                         gender = F,
-                                         residual = F,
-                                         seed_num) 
-
-uneven_gen_sam_type_all_gen_table <- extractResults(uneven_gen_sam_type_all_gen, 
-                                                    'uneven_gen_sam_type_all_gen',
-                                                    regularize = T,
-                                                    bh_data = uneven_gen_sam_type)
 
 ##########
 # 20 
-uneven_gen_sam_type_bal_gen <- runModels(quan_cases_sam_gen, 
-                                         quan_controls_type_bal,
-                                         model = 'enet',
-                                         control = F,
-                                         random = F,
-                                         bump_hunter = T,
-                                         bump_hunter_data = uneven_gen_sam_type,
-                                         num_feat = NULL,
-                                         gender = F,
-                                         residual = F,
-                                         seed_num) 
+uneven_gen_sam_type_20_all_gen <- runModels(quan_cases_sam_gen, 
+                                            quan_controls_type,
+                                            model = 'enet',
+                                            control = F,
+                                            random = F,
+                                            bump_hunter = T,
+                                            bump_hunter_data = uneven_gen_sam_type_20,
+                                            num_feat = NULL,
+                                            gender = F,
+                                            residual = F,
+                                            seed_num) 
 
-uneven_gen_sam_type_bal_gen_table <- extractResults(uneven_gen_sam_type_bal_gen, 
-                                                    'uneven_gen_sam_type_bal_gen',
-                                                    regularize = T,
-                                                    bh_data = quan_uneven_gen_sam_type)
+uneven_gen_sam_type_20_all_gen_table <- extractResults(uneven_gen_sam_type_20_all_gen, 
+                                                       'uneven_gen_sam_type_20_all_gen',
+                                                       regularize = T,
+                                                       bh_data = uneven_gen_sam_type_20)
+
+##########
+# 20 
+uneven_gen_sam_type_20_bal_gen <- runModels(quan_cases_sam_gen, 
+                                            quan_controls_type_bal,
+                                            model = 'enet',
+                                            control = F,
+                                            random = F,
+                                            bump_hunter = T,
+                                            bump_hunter_data = uneven_gen_sam_type_20,
+                                            num_feat = NULL,
+                                            gender = F,
+                                            residual = F,
+                                            seed_num) 
+
+uneven_gen_sam_type_20_bal_gen_table <- extractResults(uneven_gen_sam_type_20_bal_gen, 
+                                                       'uneven_gen_sam_type_20_bal_gen',
+                                                       regularize = T,
+                                                       bh_data = quan_uneven_gen_sam_type_20)
 
 
 
@@ -2128,15 +3091,15 @@ uneven_gen_sam_type_bal_gen_table <- extractResults(uneven_gen_sam_type_bal_gen,
 #combeine tables
 ##########
 
-result_gen_sam_type_20 <- rbind(even_gen_sam_type_all_table, even_gen_sam_type_bal_table,
-                                uneven_gen_sam_type_all_table, uneven_gen_sam_type_bal_table,
-                                even_gen_sam_type_all_gen_table, even_gen_sam_type_bal_gen_table,
-                                uneven_gen_sam_type_all_gen_table, uneven_gen_sam_type_bal_gen_table)
+result_gen_sam_type_20 <- rbind(even_gen_sam_type_20_all_table, even_gen_sam_type_20_bal_table,
+                                   uneven_gen_sam_type_20_all_table, uneven_gen_sam_type_20_bal_table,
+                                   even_gen_sam_type_20_all_gen_table, even_gen_sam_type_20_bal_gen_table,
+                                   uneven_gen_sam_type_20_all_gen_table, uneven_gen_sam_type_20_bal_gen_table)
 
-rm(even_gen_sam_type_all_table, even_gen_sam_type_bal_table,
-   uneven_gen_sam_type_all_table, uneven_gen_sam_type_bal_table,
-   even_gen_sam_type_all_gen_table, even_gen_sam_type_bal_gen_table,
-   uneven_gen_sam_type_all_gen_table, uneven_gen_sam_type_bal_gen_table)
+rm(even_gen_sam_type_20_all_table, even_gen_sam_type_20_bal_table,
+   uneven_gen_sam_type_20_all_table, uneven_gen_sam_type_20_bal_table,
+   even_gen_sam_type_20_all_gen_table, even_gen_sam_type_20_bal_gen_table,
+   uneven_gen_sam_type_20_all_gen_table, uneven_gen_sam_type_20_bal_gen_table)
 
 
 ################################################################################################
@@ -2144,30 +3107,997 @@ rm(even_gen_sam_type_all_table, even_gen_sam_type_bal_table,
 
 # Put 20 tables together
 full_results_20 <- rbind(result_20, result_gen_20, result_gen_type_20,
-                         result_gen_sam_type_20, result_gen_sen_type_20)
+                         result_gen_sam_type_20, result_gen_sam_type_20)
 
 
 rm(result_20, result_gen_20, result_gen_type_20,
-   result_gen_sam_type_20, result_gen_sen_type_20)
+   result_gen_sam_type_20, result_gen_sam_type_20)
+
+
+
+########################################################################################################
+# 20, gen_20, gen_type_20,  gen_sam_type_20 gen_sam_type_20
+
+##########
+# quan_cases_sam & quan_controls_type
+##########
+
+# 25, gen_25, gen_type_25,  gen_sam_type_25 gen_sam_type_25
+
+##########
+# 25
+
+
+##########
+# sam
+
+even_25_all <- runModels(quan_cases_sam, 
+                         quan_controls_type,
+                         model = 'enet',
+                         control = F,
+                         random = F,
+                         bump_hunter = T,
+                         bump_hunter_data = even_25,
+                         num_feat = NULL,
+                         gender = F,
+                         residual = F,
+                         seed_num) 
+
+even_25_all_table <- extractResults(even_25_all, 
+                                    'even_25_all',
+                                    regularize = T,
+                                    bh_data = even_25)
+
+##########
+# 25 bal
+even_25_bal <- runModels(quan_cases_sam, 
+                         quan_controls_type_bal,
+                         model = 'enet',
+                         control = F,
+                         random = F,
+                         bump_hunter = T,
+                         bump_hunter_data = even_25,
+                         num_feat = NULL,
+                         gender = F,
+                         residual = F,
+                         seed_num) 
+
+even_25_bal_table <- extractResults(even_25_bal, 
+                                    'even_25_bal',
+                                    regularize = T,
+                                    bh_data = quan_even_25)
+
+##########
+# 25 
+uneven_25_all <- runModels(quan_cases_sam, 
+                           quan_controls_type,
+                           model = 'enet',
+                           control = F,
+                           random = F,
+                           bump_hunter = T,
+                           bump_hunter_data = uneven_25,
+                           num_feat = NULL,
+                           gender = F,
+                           residual = F,
+                           seed_num) 
+
+uneven_25_all_table <- extractResults(uneven_25_all, 
+                                      'uneven_25_all',
+                                      regularize = T,
+                                      bh_data = uneven_25)
+
+##########
+# 25 
+uneven_25_bal <- runModels(quan_cases_sam, 
+                           quan_controls_type_bal,
+                           model = 'enet',
+                           control = F,
+                           random = F,
+                           bump_hunter = T,
+                           bump_hunter_data = uneven_25,
+                           num_feat = NULL,
+                           gender = F,
+                           residual = F,
+                           seed_num) 
+
+uneven_25_bal_table <- extractResults(uneven_25_bal, 
+                                      'uneven_25_bal',
+                                      regularize = T,
+                                      bh_data = quan_uneven_25)
+
+
+
+
+##########
+# sam_gen
+
+##########
+# 25 
+even_25_all_gen <- runModels(quan_cases_sam_gen, 
+                             quan_controls_type,
+                             model = 'enet',
+                             control = F,
+                             random = F,
+                             bump_hunter = T,
+                             bump_hunter_data = even_25,
+                             num_feat = NULL,
+                             gender = F,
+                             residual = F,
+                             seed_num) 
+
+even_25_all_gen_table <- extractResults(even_25_all_gen, 
+                                        'even_25_all_gen',
+                                        regularize = T,
+                                        bh_data = even_25)
+
+##########
+# 25 bal_gen
+even_25_bal_gen <- runModels(quan_cases_sam_gen, 
+                             quan_controls_type_bal,
+                             model = 'enet',
+                             control = F,
+                             random = F,
+                             bump_hunter = T,
+                             bump_hunter_data = even_25,
+                             num_feat = NULL,
+                             gender = F,
+                             residual = F,
+                             seed_num) 
+
+even_25_bal_gen_table <- extractResults(even_25_bal_gen, 
+                                        'even_25_bal_gen',
+                                        regularize = T,
+                                        bh_data = quan_even_25)
+
+
+
+##########
+# 25 
+uneven_25_all_gen <- runModels(quan_cases_sam_gen, 
+                               quan_controls_type,
+                               model = 'enet',
+                               control = F,
+                               random = F,
+                               bump_hunter = T,
+                               bump_hunter_data = uneven_25,
+                               num_feat = NULL,
+                               gender = F,
+                               residual = F,
+                               seed_num) 
+
+uneven_25_all_gen_table <- extractResults(uneven_25_all_gen, 
+                                          'uneven_25_all_gen',
+                                          regularize = T,
+                                          bh_data = uneven_25)
+
+##########
+# 25 
+uneven_25_bal_gen <- runModels(quan_cases_sam_gen, 
+                               quan_controls_type_bal,
+                               model = 'enet',
+                               control = F,
+                               random = F,
+                               bump_hunter = T,
+                               bump_hunter_data = uneven_25,
+                               num_feat = NULL,
+                               gender = F,
+                               residual = F,
+                               seed_num) 
+
+uneven_25_bal_gen_table <- extractResults(uneven_25_bal_gen, 
+                                          'uneven_25_bal_gen',
+                                          regularize = T,
+                                          bh_data = quan_uneven_25)
+
+
+
+
+##########
+#combeine tables
+##########
+
+result_25 <- rbind(even_25_all_table, even_25_bal_table,
+                   uneven_25_all_table, uneven_25_bal_table,
+                   even_25_all_gen_table, even_25_bal_gen_table,
+                   uneven_25_all_gen_table, uneven_25_bal_gen_table)
+
+rm(even_25_all_table, even_25_bal_table,
+   uneven_25_all_table, uneven_25_bal_table,
+   even_25_all_gen_table, even_25_bal_gen_table,
+   uneven_25_all_gen_table, uneven_25_bal_gen_table)
+
+
+################################################################################################
+################################################################################################
+
+
+# 25, gen_25, gen_type_25,  gen_sam_type_25 gen_sam_type_25
+
+##########
+# 25
+
+
+##########
+# sam
+
+even_gen_25_all <- runModels(quan_cases_sam, 
+                             quan_controls_type,
+                             model = 'enet',
+                             control = F,
+                             random = F,
+                             bump_hunter = T,
+                             bump_hunter_data = even_gen_25,
+                             num_feat = NULL,
+                             gender = F,
+                             residual = F,
+                             seed_num) 
+
+even_gen_25_all_table <- extractResults(even_gen_25_all, 
+                                        'even_gen_25_all',
+                                        regularize = T,
+                                        bh_data = even_gen_25)
+
+##########
+# 25 bal
+even_gen_25_bal <- runModels(quan_cases_sam, 
+                             quan_controls_type_bal,
+                             model = 'enet',
+                             control = F,
+                             random = F,
+                             bump_hunter = T,
+                             bump_hunter_data = even_gen_25,
+                             num_feat = NULL,
+                             gender = F,
+                             residual = F,
+                             seed_num) 
+
+even_gen_25_bal_table <- extractResults(even_gen_25_bal, 
+                                        'even_gen_25_bal',
+                                        regularize = T,
+                                        bh_data = quan_even_gen_25)
+
+##########
+# 25 
+uneven_gen_25_all <- runModels(quan_cases_sam, 
+                               quan_controls_type,
+                               model = 'enet',
+                               control = F,
+                               random = F,
+                               bump_hunter = T,
+                               bump_hunter_data = uneven_gen_25,
+                               num_feat = NULL,
+                               gender = F,
+                               residual = F,
+                               seed_num) 
+
+uneven_gen_25_all_table <- extractResults(uneven_gen_25_all, 
+                                          'uneven_gen_25_all',
+                                          regularize = T,
+                                          bh_data = uneven_gen_25)
+
+##########
+# 25 
+uneven_gen_25_bal <- runModels(quan_cases_sam, 
+                               quan_controls_type_bal,
+                               model = 'enet',
+                               control = F,
+                               random = F,
+                               bump_hunter = T,
+                               bump_hunter_data = uneven_gen_25,
+                               num_feat = NULL,
+                               gender = F,
+                               residual = F,
+                               seed_num) 
+
+uneven_gen_25_bal_table <- extractResults(uneven_gen_25_bal, 
+                                          'uneven_gen_25_bal',
+                                          regularize = T,
+                                          bh_data = quan_uneven_gen_25)
+
+
+
+
+##########
+# sam_gen
+
+##########
+# 25 
+even_gen_25_all_gen <- runModels(quan_cases_sam_gen, 
+                                 quan_controls_type,
+                                 model = 'enet',
+                                 control = F,
+                                 random = F,
+                                 bump_hunter = T,
+                                 bump_hunter_data = even_gen_25,
+                                 num_feat = NULL,
+                                 gender = F,
+                                 residual = F,
+                                 seed_num) 
+
+even_gen_25_all_gen_table <- extractResults(even_gen_25_all_gen, 
+                                            'even_gen_25_all_gen',
+                                            regularize = T,
+                                            bh_data = even_gen_25)
+
+##########
+# 25 bal_gen
+even_gen_25_bal_gen <- runModels(quan_cases_sam_gen, 
+                                 quan_controls_type_bal,
+                                 model = 'enet',
+                                 control = F,
+                                 random = F,
+                                 bump_hunter = T,
+                                 bump_hunter_data = even_gen_25,
+                                 num_feat = NULL,
+                                 gender = F,
+                                 residual = F,
+                                 seed_num) 
+
+even_gen_25_bal_gen_table <- extractResults(even_gen_25_bal_gen, 
+                                            'even_gen_25_bal_gen',
+                                            regularize = T,
+                                            bh_data = quan_even_gen_25)
+
+
+
+##########
+# 25 
+uneven_gen_25_all_gen <- runModels(quan_cases_sam_gen, 
+                                   quan_controls_type,
+                                   model = 'enet',
+                                   control = F,
+                                   random = F,
+                                   bump_hunter = T,
+                                   bump_hunter_data = uneven_gen_25,
+                                   num_feat = NULL,
+                                   gender = F,
+                                   residual = F,
+                                   seed_num) 
+
+uneven_gen_25_all_gen_table <- extractResults(uneven_gen_25_all_gen, 
+                                              'uneven_gen_25_all_gen',
+                                              regularize = T,
+                                              bh_data = uneven_gen_25)
+
+##########
+# 25 
+uneven_gen_25_bal_gen <- runModels(quan_cases_sam_gen, 
+                                   quan_controls_type_bal,
+                                   model = 'enet',
+                                   control = F,
+                                   random = F,
+                                   bump_hunter = T,
+                                   bump_hunter_data = uneven_gen_25,
+                                   num_feat = NULL,
+                                   gender = F,
+                                   residual = F,
+                                   seed_num) 
+
+uneven_gen_25_bal_gen_table <- extractResults(uneven_gen_25_bal_gen, 
+                                              'uneven_gen_25_bal_gen',
+                                              regularize = T,
+                                              bh_data = quan_uneven_gen_25)
+
+
+
+
+##########
+#combeine tables
+##########
+
+result_gen_25 <- rbind(even_gen_25_all_table, even_gen_25_bal_table,
+                       uneven_gen_25_all_table, uneven_gen_25_bal_table,
+                       even_gen_25_all_gen_table, even_gen_25_bal_gen_table,
+                       uneven_gen_25_all_gen_table, uneven_gen_25_bal_gen_table)
+
+
+rm(even_gen_25_all_table, even_gen_25_bal_table,
+   uneven_gen_25_all_table, uneven_gen_25_bal_table,
+   even_gen_25_all_gen_table, even_gen_25_bal_gen_table,
+   uneven_gen_25_all_gen_table, uneven_gen_25_bal_gen_table)
+
+
+################################################################################################
+################################################################################################
+
+
+
+# 25, gen_25, gen_type_25,  gen_sam_type_25 gen_sam_type_25
+
+##########
+# 25
+
+
+##########
+# sam
+
+even_gen_type_25_all <- runModels(quan_cases_sam, 
+                                  quan_controls_type,
+                                  model = 'enet',
+                                  control = F,
+                                  random = F,
+                                  bump_hunter = T,
+                                  bump_hunter_data = even_gen_type_25,
+                                  num_feat = NULL,
+                                  gender = F,
+                                  residual = F,
+                                  seed_num) 
+
+even_gen_type_25_all_table <- extractResults(even_gen_type_25_all, 
+                                             'even_gen_type_25_all',
+                                             regularize = T,
+                                             bh_data = even_gen_type_25)
+
+##########
+# 25 bal
+even_gen_type_25_bal <- runModels(quan_cases_sam, 
+                                  quan_controls_type_bal,
+                                  model = 'enet',
+                                  control = F,
+                                  random = F,
+                                  bump_hunter = T,
+                                  bump_hunter_data = even_gen_type_25,
+                                  num_feat = NULL,
+                                  gender = F,
+                                  residual = F,
+                                  seed_num) 
+
+even_gen_type_25_bal_table <- extractResults(even_gen_type_25_bal, 
+                                             'even_gen_type_25_bal',
+                                             regularize = T,
+                                             bh_data = quan_even_gen_type_25)
+
+##########
+# 25 
+uneven_gen_type_25_all <- runModels(quan_cases_sam, 
+                                    quan_controls_type,
+                                    model = 'enet',
+                                    control = F,
+                                    random = F,
+                                    bump_hunter = T,
+                                    bump_hunter_data = uneven_gen_type_25,
+                                    num_feat = NULL,
+                                    gender = F,
+                                    residual = F,
+                                    seed_num) 
+
+uneven_gen_type_25_all_table <- extractResults(uneven_gen_type_25_all, 
+                                               'uneven_gen_type_25_all',
+                                               regularize = T,
+                                               bh_data = uneven_gen_type_25)
+
+##########
+# 25 
+uneven_gen_type_25_bal <- runModels(quan_cases_sam, 
+                                    quan_controls_type_bal,
+                                    model = 'enet',
+                                    control = F,
+                                    random = F,
+                                    bump_hunter = T,
+                                    bump_hunter_data = uneven_gen_type_25,
+                                    num_feat = NULL,
+                                    gender = F,
+                                    residual = F,
+                                    seed_num) 
+
+uneven_gen_type_25_bal_table <- extractResults(uneven_gen_type_25_bal, 
+                                               'uneven_gen_type_25_bal',
+                                               regularize = T,
+                                               bh_data = quan_uneven_gen_type_25)
+
+
+
+
+##########
+# sam_gen
+
+##########
+# 25 
+even_gen_type_25_all_gen <- runModels(quan_cases_sam_gen, 
+                                      quan_controls_type,
+                                      model = 'enet',
+                                      control = F,
+                                      random = F,
+                                      bump_hunter = T,
+                                      bump_hunter_data = even_gen_type_25,
+                                      num_feat = NULL,
+                                      gender = F,
+                                      residual = F,
+                                      seed_num) 
+
+even_gen_type_25_all_gen_table <- extractResults(even_gen_type_25_all_gen, 
+                                                 'even_gen_type_25_all_gen',
+                                                 regularize = T,
+                                                 bh_data = even_gen_type_25)
+
+##########
+# 25 bal_gen
+even_gen_type_25_bal_gen <- runModels(quan_cases_sam_gen, 
+                                      quan_controls_type_bal,
+                                      model = 'enet',
+                                      control = F,
+                                      random = F,
+                                      bump_hunter = T,
+                                      bump_hunter_data = even_gen_type_25,
+                                      num_feat = NULL,
+                                      gender = F,
+                                      residual = F,
+                                      seed_num) 
+
+even_gen_type_25_bal_gen_table <- extractResults(even_gen_type_25_bal_gen, 
+                                                 'even_gen_type_25_bal_gen',
+                                                 regularize = T,
+                                                 bh_data = quan_even_gen_type_25)
+
+
+
+##########
+# 25 
+uneven_gen_type_25_all_gen <- runModels(quan_cases_sam_gen, 
+                                        quan_controls_type,
+                                        model = 'enet',
+                                        control = F,
+                                        random = F,
+                                        bump_hunter = T,
+                                        bump_hunter_data = uneven_gen_type_25,
+                                        num_feat = NULL,
+                                        gender = F,
+                                        residual = F,
+                                        seed_num) 
+
+uneven_gen_type_25_all_gen_table <- extractResults(uneven_gen_type_25_all_gen, 
+                                                   'uneven_gen_type_25_all_gen',
+                                                   regularize = T,
+                                                   bh_data = uneven_gen_type_25)
+
+##########
+# 25 
+uneven_gen_type_25_bal_gen <- runModels(quan_cases_sam_gen, 
+                                        quan_controls_type_bal,
+                                        model = 'enet',
+                                        control = F,
+                                        random = F,
+                                        bump_hunter = T,
+                                        bump_hunter_data = uneven_gen_type_25,
+                                        num_feat = NULL,
+                                        gender = F,
+                                        residual = F,
+                                        seed_num) 
+
+uneven_gen_type_25_bal_gen_table <- extractResults(uneven_gen_type_25_bal_gen, 
+                                                   'uneven_gen_type_25_bal_gen',
+                                                   regularize = T,
+                                                   bh_data = quan_uneven_gen_type_25)
+
+
+
+
+##########
+#combeine tables
+##########
+
+result_gen_type_25 <- rbind(even_gen_type_25_all_table, even_gen_type_25_bal_table,
+                            uneven_gen_type_25_all_table, uneven_gen_type_25_bal_table,
+                            even_gen_type_25_all_gen_table, even_gen_type_25_bal_gen_table,
+                            uneven_gen_type_25_all_gen_table, uneven_gen_type_25_bal_gen_table)
+
+rm(even_gen_type_25_all_table, even_gen_type_25_bal_table,
+   uneven_gen_type_25_all_table, uneven_gen_type_25_bal_table,
+   even_gen_type_25_all_gen_table, even_gen_type_25_bal_gen_table,
+   uneven_gen_type_25_all_gen_table, uneven_gen_type_25_bal_gen_table)
+
+
+################################################################################################
+################################################################################################
+
+
+
+# 25, gen_25, gen_type_25,  gen_sam_type_25 gen_sam_type_25
+
+##########
+# 25
+
+
+##########
+# sam
+
+even_gen_sam_type_25_all <- runModels(quan_cases_sam, 
+                                      quan_controls_type,
+                                      model = 'enet',
+                                      control = F,
+                                      random = F,
+                                      bump_hunter = T,
+                                      bump_hunter_data = even_gen_sam_type_25,
+                                      num_feat = NULL,
+                                      gender = F,
+                                      residual = F,
+                                      seed_num) 
+
+even_gen_sam_type_25_all_table <- extractResults(even_gen_sam_type_25_all, 
+                                                 'even_gen_sam_type_25_all',
+                                                 regularize = T,
+                                                 bh_data = even_gen_sam_type_25)
+
+##########
+# 25 bal
+even_gen_sam_type_25_bal <- runModels(quan_cases_sam, 
+                                      quan_controls_type_bal,
+                                      model = 'enet',
+                                      control = F,
+                                      random = F,
+                                      bump_hunter = T,
+                                      bump_hunter_data = even_gen_sam_type_25,
+                                      num_feat = NULL,
+                                      gender = F,
+                                      residual = F,
+                                      seed_num) 
+
+even_gen_sam_type_25_bal_table <- extractResults(even_gen_sam_type_25_bal, 
+                                                 'even_gen_sam_type_25_bal',
+                                                 regularize = T,
+                                                 bh_data = quan_even_gen_sam_type_25)
+
+##########
+# 25 
+uneven_gen_sam_type_25_all <- runModels(quan_cases_sam, 
+                                        quan_controls_type,
+                                        model = 'enet',
+                                        control = F,
+                                        random = F,
+                                        bump_hunter = T,
+                                        bump_hunter_data = uneven_gen_sam_type_25,
+                                        num_feat = NULL,
+                                        gender = F,
+                                        residual = F,
+                                        seed_num) 
+
+uneven_gen_sam_type_25_all_table <- extractResults(uneven_gen_sam_type_25_all, 
+                                                   'uneven_gen_sam_type_25_all',
+                                                   regularize = T,
+                                                   bh_data = uneven_gen_sam_type_25)
+
+##########
+# 25 
+uneven_gen_sam_type_25_bal <- runModels(quan_cases_sam, 
+                                        quan_controls_type_bal,
+                                        model = 'enet',
+                                        control = F,
+                                        random = F,
+                                        bump_hunter = T,
+                                        bump_hunter_data = uneven_gen_sam_type_25,
+                                        num_feat = NULL,
+                                        gender = F,
+                                        residual = F,
+                                        seed_num) 
+
+uneven_gen_sam_type_25_bal_table <- extractResults(uneven_gen_sam_type_25_bal, 
+                                                   'uneven_gen_sam_type_25_bal',
+                                                   regularize = T,
+                                                   bh_data = quan_uneven_gen_sam_type_25)
+
+
+
+
+##########
+# sam_gen
+
+##########
+# 25 
+even_gen_sam_type_25_all_gen <- runModels(quan_cases_sam_gen, 
+                                          quan_controls_type,
+                                          model = 'enet',
+                                          control = F,
+                                          random = F,
+                                          bump_hunter = T,
+                                          bump_hunter_data = even_gen_sam_type_25,
+                                          num_feat = NULL,
+                                          gender = F,
+                                          residual = F,
+                                          seed_num) 
+
+even_gen_sam_type_25_all_gen_table <- extractResults(even_gen_sam_type_25_all_gen, 
+                                                     'even_gen_sam_type_25_all_gen',
+                                                     regularize = T,
+                                                     bh_data = even_gen_sam_type_25)
+
+##########
+# 25 bal_gen
+even_gen_sam_type_25_bal_gen <- runModels(quan_cases_sam_gen, 
+                                          quan_controls_type_bal,
+                                          model = 'enet',
+                                          control = F,
+                                          random = F,
+                                          bump_hunter = T,
+                                          bump_hunter_data = even_gen_sam_type_25,
+                                          num_feat = NULL,
+                                          gender = F,
+                                          residual = F,
+                                          seed_num) 
+
+even_gen_sam_type_25_bal_gen_table <- extractResults(even_gen_sam_type_25_bal_gen, 
+                                                     'even_gen_sam_type_25_bal_gen',
+                                                     regularize = T,
+                                                     bh_data = quan_even_gen_sam_type_25)
+
+
+
+##########
+# 25 
+uneven_gen_sam_type_25_all_gen <- runModels(quan_cases_sam_gen, 
+                                            quan_controls_type,
+                                            model = 'enet',
+                                            control = F,
+                                            random = F,
+                                            bump_hunter = T,
+                                            bump_hunter_data = uneven_gen_sam_type_25,
+                                            num_feat = NULL,
+                                            gender = F,
+                                            residual = F,
+                                            seed_num) 
+
+uneven_gen_sam_type_25_all_gen_table <- extractResults(uneven_gen_sam_type_25_all_gen, 
+                                                       'uneven_gen_sam_type_25_all_gen',
+                                                       regularize = T,
+                                                       bh_data = uneven_gen_sam_type_25)
+
+##########
+# 25 
+uneven_gen_sam_type_25_bal_gen <- runModels(quan_cases_sam_gen, 
+                                            quan_controls_type_bal,
+                                            model = 'enet',
+                                            control = F,
+                                            random = F,
+                                            bump_hunter = T,
+                                            bump_hunter_data = uneven_gen_sam_type_25,
+                                            num_feat = NULL,
+                                            gender = F,
+                                            residual = F,
+                                            seed_num) 
+
+uneven_gen_sam_type_25_bal_gen_table <- extractResults(uneven_gen_sam_type_25_bal_gen, 
+                                                       'uneven_gen_sam_type_25_bal_gen',
+                                                       regularize = T,
+                                                       bh_data = quan_uneven_gen_sam_type_25)
+
+
+
+
+##########
+#combeine tables
+##########
+
+result_gen_sam_type_25 <- rbind(even_gen_sam_type_25_all_table, even_gen_sam_type_25_bal_table,
+                                uneven_gen_sam_type_25_all_table, uneven_gen_sam_type_25_bal_table,
+                                even_gen_sam_type_25_all_gen_table, even_gen_sam_type_25_bal_gen_table,
+                                uneven_gen_sam_type_25_all_gen_table, uneven_gen_sam_type_25_bal_gen_table)
+
+rm(even_gen_sam_type_25_all_table, even_gen_sam_type_25_bal_table,
+   uneven_gen_sam_type_25_all_table, uneven_gen_sam_type_25_bal_table,
+   even_gen_sam_type_25_all_gen_table, even_gen_sam_type_25_bal_gen_table,
+   uneven_gen_sam_type_25_all_gen_table, uneven_gen_sam_type_25_bal_gen_table)
+
+
+################################################################################################
+################################################################################################
+
+
+
+# 25, gen_25, gen_type_25,  gen_sam_type_25 gen_sam_type_25
+
+##########
+# 25
+
+
+##########
+# sam
+
+even_gen_sam_type_25_all <- runModels(quan_cases_sam, 
+                                      quan_controls_type,
+                                      model = 'enet',
+                                      control = F,
+                                      random = F,
+                                      bump_hunter = T,
+                                      bump_hunter_data = even_gen_sam_type_25,
+                                      num_feat = NULL,
+                                      gender = F,
+                                      residual = F,
+                                      seed_num) 
+
+even_gen_sam_type_25_all_table <- extractResults(even_gen_sam_type_25_all, 
+                                                 'even_gen_sam_type_25_all',
+                                                 regularize = T,
+                                                 bh_data = even_gen_sam_type_25)
+
+##########
+# 25 bal
+even_gen_sam_type_25_bal <- runModels(quan_cases_sam, 
+                                      quan_controls_type_bal,
+                                      model = 'enet',
+                                      control = F,
+                                      random = F,
+                                      bump_hunter = T,
+                                      bump_hunter_data = even_gen_sam_type_25,
+                                      num_feat = NULL,
+                                      gender = F,
+                                      residual = F,
+                                      seed_num) 
+
+even_gen_sam_type_25_bal_table <- extractResults(even_gen_sam_type_25_bal, 
+                                                 'even_gen_sam_type_25_bal',
+                                                 regularize = T,
+                                                 bh_data = quan_even_gen_sam_type_25)
+
+##########
+# 25 
+uneven_gen_sam_type_25_all <- runModels(quan_cases_sam, 
+                                        quan_controls_type,
+                                        model = 'enet',
+                                        control = F,
+                                        random = F,
+                                        bump_hunter = T,
+                                        bump_hunter_data = uneven_gen_sam_type_25,
+                                        num_feat = NULL,
+                                        gender = F,
+                                        residual = F,
+                                        seed_num) 
+
+uneven_gen_sam_type_25_all_table <- extractResults(uneven_gen_sam_type_25_all, 
+                                                   'uneven_gen_sam_type_25_all',
+                                                   regularize = T,
+                                                   bh_data = uneven_gen_sam_type_25)
+
+##########
+# 25 
+uneven_gen_sam_type_25_bal <- runModels(quan_cases_sam, 
+                                        quan_controls_type_bal,
+                                        model = 'enet',
+                                        control = F,
+                                        random = F,
+                                        bump_hunter = T,
+                                        bump_hunter_data = uneven_gen_sam_type_25,
+                                        num_feat = NULL,
+                                        gender = F,
+                                        residual = F,
+                                        seed_num) 
+
+uneven_gen_sam_type_25_bal_table <- extractResults(uneven_gen_sam_type_25_bal, 
+                                                   'uneven_gen_sam_type_25_bal',
+                                                   regularize = T,
+                                                   bh_data = quan_uneven_gen_sam_type_25)
+
+
+
+
+##########
+# sam_gen
+
+##########
+# 25 
+even_gen_sam_type_25_all_gen <- runModels(quan_cases_sam_gen, 
+                                          quan_controls_type,
+                                          model = 'enet',
+                                          control = F,
+                                          random = F,
+                                          bump_hunter = T,
+                                          bump_hunter_data = even_gen_sam_type_25,
+                                          num_feat = NULL,
+                                          gender = F,
+                                          residual = F,
+                                          seed_num) 
+
+even_gen_sam_type_25_all_gen_table <- extractResults(even_gen_sam_type_25_all_gen, 
+                                                     'even_gen_sam_type_25_all_gen',
+                                                     regularize = T,
+                                                     bh_data = even_gen_sam_type_25)
+
+##########
+# 25 bal_gen
+even_gen_sam_type_25_bal_gen <- runModels(quan_cases_sam_gen, 
+                                          quan_controls_type_bal,
+                                          model = 'enet',
+                                          control = F,
+                                          random = F,
+                                          bump_hunter = T,
+                                          bump_hunter_data = even_gen_sam_type_25,
+                                          num_feat = NULL,
+                                          gender = F,
+                                          residual = F,
+                                          seed_num) 
+
+even_gen_sam_type_25_bal_gen_table <- extractResults(even_gen_sam_type_25_bal_gen, 
+                                                     'even_gen_sam_type_25_bal_gen',
+                                                     regularize = T,
+                                                     bh_data = quan_even_gen_sam_type_25)
+
+
+
+##########
+# 25 
+uneven_gen_sam_type_25_all_gen <- runModels(quan_cases_sam_gen, 
+                                            quan_controls_type,
+                                            model = 'enet',
+                                            control = F,
+                                            random = F,
+                                            bump_hunter = T,
+                                            bump_hunter_data = uneven_gen_sam_type_25,
+                                            num_feat = NULL,
+                                            gender = F,
+                                            residual = F,
+                                            seed_num) 
+
+uneven_gen_sam_type_25_all_gen_table <- extractResults(uneven_gen_sam_type_25_all_gen, 
+                                                       'uneven_gen_sam_type_25_all_gen',
+                                                       regularize = T,
+                                                       bh_data = uneven_gen_sam_type_25)
+
+##########
+# 25 
+uneven_gen_sam_type_25_bal_gen <- runModels(quan_cases_sam_gen, 
+                                            quan_controls_type_bal,
+                                            model = 'enet',
+                                            control = F,
+                                            random = F,
+                                            bump_hunter = T,
+                                            bump_hunter_data = uneven_gen_sam_type_25,
+                                            num_feat = NULL,
+                                            gender = F,
+                                            residual = F,
+                                            seed_num) 
+
+uneven_gen_sam_type_25_bal_gen_table <- extractResults(uneven_gen_sam_type_25_bal_gen, 
+                                                       'uneven_gen_sam_type_25_bal_gen',
+                                                       regularize = T,
+                                                       bh_data = quan_uneven_gen_sam_type_25)
+
+
+
+
+##########
+#combeine tables
+##########
+
+result_gen_sam_type_25 <- rbind(even_gen_sam_type_25_all_table, even_gen_sam_type_25_bal_table,
+                                uneven_gen_sam_type_25_all_table, uneven_gen_sam_type_25_bal_table,
+                                even_gen_sam_type_25_all_gen_table, even_gen_sam_type_25_bal_gen_table,
+                                uneven_gen_sam_type_25_all_gen_table, uneven_gen_sam_type_25_bal_gen_table)
+
+rm(even_gen_sam_type_25_all_table, even_gen_sam_type_25_bal_table,
+   uneven_gen_sam_type_25_all_table, uneven_gen_sam_type_25_bal_table,
+   even_gen_sam_type_25_all_gen_table, even_gen_sam_type_25_bal_gen_table,
+   uneven_gen_sam_type_25_all_gen_table, uneven_gen_sam_type_25_bal_gen_table)
+
+
+################################################################################################
+################################################################################################
+
+# Put 25 tables together
+full_results_25 <- rbind(result_25, result_gen_25, result_gen_type_25,
+                         result_gen_sam_type_25, result_gen_sam_type_25)
+
+
+rm(result_25, result_gen_25, result_gen_type_25,
+   result_gen_sam_type_25, result_gen_sam_type_25)
+
+#####################################################################################################
+####################################################################################################
+
+
+
 
 
 ##########
 # combine full_results
 ##########
 
-full_results <- rbind(full_results_10, full_results_20)
+full_results <- rbind(full_results_05, full_results_10, full_results_20, full_results_30)
 
 
+load('/home/benbrew/Desktop/temp_05.RData')
+# save.image('/home/benbrew/Desktop/temp_05.RData')
+# 
 
 
-
-
-
-
-
-
-
-
+full_results <- full_results[order(full_results$score, decreasing = T),]
 
 
 

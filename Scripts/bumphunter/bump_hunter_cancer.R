@@ -6,6 +6,7 @@
 ##########
 library(minfi)
 library(bumphunter)
+library(dplyr)
 
 ##########
 # Initialize folders
@@ -63,7 +64,7 @@ getBalAge <- function(data_controls)
                                                                         (data_controls$age_sample_collection >= 300 & data_controls$age_sample_collection <= 400)))
   
   set.seed(1)
-  remove_index <- sample(remove_index, 10, replace = F )
+  remove_index <- sample(remove_index, 12, replace = F )
   data_controls_sub <- data_controls[-remove_index,]
   return(data_controls_sub)
   
@@ -76,6 +77,12 @@ quan_controls_type_bal <- getBalAge(quan_controls_type)
 saveRDS(quan_controls_bal, paste0(model_data, '/quan_controls_bal.rda'))
 saveRDS(quan_controls_gen_bal, paste0(model_data, '/quan_controls_gen_bal.rda'))
 saveRDS(quan_controls_type_bal, paste0(model_data, '/quan_controls_type_bal.rda'))
+
+# histogram of bal ages 
+hist(quan_cases$age_sample_collection[quan_cases$type == 'cases'])
+hist(quan_controls$age_sample_collection[quan_controls$type == 'controls'])
+hist(quan_controls_bal$age_sample_collection[quan_controls_bal$type == 'controls'])
+
 
 
 ##########
@@ -148,8 +155,8 @@ bumpHunterBalanced <- function(dat_cases,
   stopifnot(dim(beta)[1] == length(pos))
   
   # set paramenters 
-  DELTA_BETA_THRESH = c(0.10, 0.20) # DNAm difference threshold
-  NUM_BOOTSTRAPS = 4   # number of randomizations
+  DELTA_BETA_THRESH = c(0.10, 0.15, 0.20, 0.25) # DNAm difference threshold
+  NUM_BOOTSTRAPS = 3   # number of randomizations
   
   # create tab list
   tab <- list()
