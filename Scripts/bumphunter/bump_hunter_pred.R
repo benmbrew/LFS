@@ -1,5 +1,5 @@
-####### This script will run bumhunter on cancer patients and using p53 WT as control
-# this is 5th (part B) step in pipeline
+####### This script will run bumhunter LFS no cancer and WT (no cancer) - removes cancer signal
+# this is 7th (part B)
 
 ##########
 # initialize libraries

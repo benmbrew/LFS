@@ -1,5 +1,5 @@
 ####### Script will combine methylation and clinical data
-# this is 3th step in pipeline
+# this is 3th step in pipeline - check to see we are taking the first diagnosis
 
 ##########
 # initialize libraries
@@ -31,14 +31,28 @@ clin_data <- paste0(data_folder, '/clin_data')
 ##########
 # Read in methylation probe and gene
 ##########
+# quan
 beta_quan <- readRDS(paste0(methyl_data, '/beta_quan.rda'))
+beta_quan_sub <- readRDS(paste0(methyl_data, '/beta_quan_sub.rda'))
 beta_quan_controls <- readRDS(paste0(methyl_data, '/beta_quan_controls.rda'))
+
+# funnorm
+beta_funnorm <- readRDS(paste0(methyl_data, '/beta_funnorm.rda'))
+beta_funnorm_sub <- readRDS(paste0(methyl_data, '/beta_funnorm_sub.rda'))
+beta_funnorm_controls <- readRDS(paste0(methyl_data, '/beta_funnorm_controls.rda'))
 
 ##########
 # make data frames
 ##########
+#quan
 beta_quan <- as.data.frame(beta_quan, stringsAsFactors = F)
+beta_quan_sub <- as.data.frame(beta_quan_sub, stringsAsFactors = F)
 beta_quan_controls <- as.data.frame(beta_quan_controls, stringAsFactors = F)
+
+#funnorm
+beta_funnorm <- as.data.frame(beta_funnorm, stringsAsFactors = F)
+beta_funnorm_sub <- as.data.frame(beta_funnorm_sub, stringsAsFactors = F)
+beta_funnorm_controls <- as.data.frame(beta_funnorm_controls, stringAsFactors = F)
 
 
 ##########
@@ -208,30 +222,74 @@ relevelFactor <- function (data) {
 ##########
 # First do cases
 ##########
+
+# quan
 # first clean idss
 beta_quan <- cleanids(beta_quan)
+beta_quan_sub <- cleanids(beta_quan_sub)
 
 options(warn=1)
 
 # second join data
 beta_quan <- joinData(beta_quan, control = F)
+beta_quan_sub <- joinData(beta_quan_sub, control = F)
+
 
 # thrids relevel factors
 beta_quan <- relevelFactor(beta_quan)
+beta_quan_sub <- relevelFactor(beta_quan_sub)
+
+
+# funnorm
+# first clean idss
+beta_funnorm <- cleanids(beta_funnorm)
+beta_funnorm_sub <- cleanids(beta_funnorm_sub)
+
+options(warn=1)
+
+# second join data
+beta_funnorm <- joinData(beta_funnorm, control = F)
+beta_funnorm_sub <- joinData(beta_funnorm_sub, control = F)
+
+
+# thrids relevel factors
+beta_funnorm <- relevelFactor(beta_funnorm)
+beta_funnorm_sub <- relevelFactor(beta_funnorm_sub)
+
 
 ##########
 # 2nd do controls
 ##########
+
+# quan
 # first clean idss
 beta_quan_controls <- cleanids(beta_quan_controls)
 
 # second join data
 beta_quan_controls <- joinData(beta_quan_controls, control = T)
 
+# funnorm
+# first clean idss
+beta_funnorm_controls <- cleanids(beta_funnorm_controls)
+
+# second join data
+beta_funnorm_controls <- joinData(beta_funnorm_controls, control = T)
+
 
 #########
 # save data
 #########
+#quan
 saveRDS(beta_quan, paste0(methyl_data, '/beta_quan.rda'))
 
+saveRDS(beta_quan_sub, paste0(methyl_data, '/beta_quan_sub.rda'))
+
 saveRDS(beta_quan_controls, paste0(methyl_data, '/beta_quan_controls.rda'))
+
+#funnorm
+saveRDS(beta_funnorm, paste0(methyl_data, '/beta_funnorm.rda'))
+
+saveRDS(beta_funnorm_sub, paste0(methyl_data, '/beta_funnorm_sub.rda'))
+
+saveRDS(beta_funnorm_controls, paste0(methyl_data, '/beta_funnorm_controls.rda'))
+

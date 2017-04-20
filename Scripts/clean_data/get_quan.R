@@ -87,33 +87,37 @@ readIDAT <- function(path) {
 }
 
 rgSetListControls <- readIDAT(idat_data_controls)
-rgSetList <- readIDAT(idat_data)
 
+rgSetList <- readIDAT(idat_data)
 
 ##########
 # function that Loops through list, preprocesses, and convert to beta, m, and cn values 
 ##########
-preprocessMethod <- function(data) {
+preprocessMethod <- function(data, preprocess) {
   
+  Mset <- list()
   ratioSet <- list()
   gset <- list()
   beta <- list()
 
   for (dat in 1:length(data)) {
     
-  
-  ratioSet[[dat]] <- preprocessQuantile(data[[dat]], fixOutliers = T,
-                                        removeBadSamples = T, badSampleCutoff = 10.5,
-                                        quantileNormalize = TRUE, stratified = TRUE,
-                                        mergeManifest = FALSE)
-  
+    if (preprocess == 'quan') {
+      ratioSet[[dat]] <- preprocessQuantile(data[[dat]], fixOutliers = TRUE,
+                                            removeBadSamples = FALSE, badSampleCutoff = 10.5,
+                                            quantileNormalize = TRUE, stratified = TRUE,
+                                            mergeManifest = FALSE, sex = NULL)
+    } else {
+      ratioSet[[dat]] <-preprocessFunnorm(data[[dat]])
+      
+    }   
+
     gset[[dat]] <- mapToGenome(ratioSet[[dat]]) 
     beta[[dat]] <- getBeta(gset[[dat]])
     print(dat)
-    
   }
+  return(beta)
    
-    return(beta)
 }
 
 
@@ -175,9 +179,9 @@ getIdName <- function(data) {
 ##########
 # Main function that specifies a preprocessing method and get beta
 ##########
-getMethyl <- function(data_list,control) {
+getMethyl <- function(data_list,control, method) {
   
-  processed_list <-preprocessMethod(data_list)
+  processed_list <-preprocessMethod(data_list, preprocess = method)
   
   # save.image('/home/benbrew/Desktop/temp_process.RData')
   # load('/home/benbrew/Desktop/temp_process.RData')
@@ -213,12 +217,33 @@ getMethyl <- function(data_list,control) {
 ##########
 
 # quan
-beta_quan <- getMethyl(rgSetList, control = F)
-beta_quan_controls <- getMethyl(rgSetListControls, control = T)
+beta_quan <- getMethyl(rgSetList, control = F, method = 'quan')
+beta_quan_controls <- getMethyl(rgSetListControls, control = T, method = 'quan')
+
+# funnorm
+beta_funnorm <- getMethyl(rgSetList, control = F, method = 'funnorm')
+beta_funnorm_controls <- getMethyl(rgSetListControls, control = T, method = 'funnorm')
+
+##########
+# get full subsetted data (montreal vs toronto)
+##########
+# quan
+beta_quan_sub <- beta_quan[!grepl('9721365183', rownames(beta_quan)),]
+
+# funnorm
+beta_funnorm_sub <- beta_funnorm[!grepl('9721365183', rownames(beta_funnorm)),]
 
 # save data
 saveRDS(beta_quan, paste0(methyl_data, '/beta_quan.rda'))
+saveRDS(beta_quan_sub, paste0(methyl_data, '/beta_quan_sub.rda'))
 saveRDS(beta_quan_controls, paste0(methyl_data, '/beta_quan_controls.rda'))
+
+# save data
+saveRDS(beta_funnorm, paste0(methyl_data, '/beta_funnorm.rda'))
+saveRDS(beta_funnorm_sub, paste0(methyl_data, '/beta_funnorm_sub.rda'))
+saveRDS(beta_funnorm_controls, paste0(methyl_data, '/beta_funnorm_controls.rda'))
+
+
 
 
 

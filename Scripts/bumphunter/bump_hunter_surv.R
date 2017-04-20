@@ -1,4 +1,4 @@
-####### Script will run bumphunter on p53 Mut and use non cancer (family members) as controls
+####### Script will run bumphunter on (1) LFS patients with cancer (cases) and (2) LFS patients wtihout cancer (controls)
 # this is 7th  step in pipeline
 
 ##########

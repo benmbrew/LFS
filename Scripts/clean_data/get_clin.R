@@ -27,16 +27,6 @@ clin2 <- read.csv(paste0(clin_data, '/clin2.csv'), na.strings=c("","NA"),
                   stringsAsFactors = FALSE) # read the second sheet
 
 
-##########
-# remove unneeded fields and combine
-##########
-clin1$X <- NULL
-clin2$X <- NULL
-clin1$X.1 <- NULL
-clin2$Pin53 <- NULL
-# remove the unverified WT in clin2 (after row 136)
-clin2 <- clin2[1:136,]
-
 # combine the two data sets
 clin <- rbind(clin1, clin2)
 
@@ -59,7 +49,7 @@ cleanColNames <- function(data) {
   col_names <- colnames(data)
   col_names <- tolower(col_names)
   
-  if (grepl('.', col_names)) {
+  if (any(grepl('.', col_names))) {
     
     col_names <- gsub("([.])\\1+", "_", col_names)
     col_names <- gsub('.', '_', col_names, fixed = TRUE)
@@ -72,6 +62,23 @@ cleanColNames <- function(data) {
 }
 
 clin <- cleanColNames(clin)
+
+##########
+# remove leading and trailing white spaces to all columns
+##########
+ for(i in 1:ncol(clin)) {
+   clin[,i] <- gsub("^\\s+|\\s+$", "", clin[, i])
+   print(i)
+ }
+
+
+
+##########
+# check if properly read in
+##########
+# are there any age indicators 'y,m,w,d' in blood_dna_malkin_lab
+length(which(grepl('y|m|w|d', clin$blood_dna_malkin_lab_)))
+clin <- clin[!grepl('y|m|w|d', clin$blood_dna_malkin_lab_),]
 
 ##########
 # function clean white all leading and trailing white spaces 
@@ -88,6 +95,18 @@ convertColumn <- function(data) {
 
 
 clin <- convertColumn(clin)
+# ## HERE go back and clean age of sample collection manually
+length(which(grepl('/', clin$blood_dna_malkin_lab_)))
+length(which(grepl('/', clin$age_sample_collection)))
+# 
+temp <- clin[grepl('/', clin$blood_dna_malkin_lab_),]
+
+#########
+# clean unknown's from age_sample collection
+#########
+clin$age_sample_collection <- gsub('unknown|NA', NA, clin$age_sample_collection)
+clin$age_diagnosis <- gsub('unknown|NA', NA, clin$age_diagnosis)
+
 
 #########
 # function to split rows with multiple sample ids
@@ -134,6 +153,7 @@ clin$age_sample_collection <- as.character(clin$age_sample_collection)
 ##########
 # Clean the age variable so that is expressed in years
 ##########
+
 cleanAge <-  function(data, column_name) {
   
   age_vector <- data[, column_name]
@@ -161,17 +181,6 @@ cleanAge <-  function(data, column_name) {
         
       }
       
-      if (grepl('(', temp_age, fixed = TRUE)) {
-        
-        temp_age <- strsplit(temp_age, '(', fixed = TRUE)
-        
-        temp.2_age <- unlist(temp_age)
-        
-        temp.3_age <- temp.2_age[1]
-        
-        temp_age <- temp.3_age
-        
-      }
       
       if (grepl('>', temp_age) || grepl('<', temp_age)) {
         
@@ -180,12 +189,6 @@ cleanAge <-  function(data, column_name) {
         temp_age <- gsub('>', '', temp_age)
         
       }
-      
-      # if (grepl('k|NA|noinfo|no info|Unaffected|unable to retest', temp_age)) {
-      #   
-      #   temp_age <- NA
-      #   
-      # }
       
       
       if (grepl('y', temp_age) && grepl('m', temp_age)) {
@@ -222,7 +225,7 @@ cleanAge <-  function(data, column_name) {
         
       } else if (grepl('d', temp_age)) {
         
-        temp_age <- gsub('2d', '0.005', temp_age)
+        temp_age <- gsub('12d', '0.032', temp_age)
       } 
     }
     age_vector[i] <- temp_age
