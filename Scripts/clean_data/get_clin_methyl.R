@@ -23,7 +23,7 @@ project_folder <- paste0(home_folder, '/LFS')
 data_folder <- paste0(project_folder, '/Data')
 methyl_data <- paste0(data_folder, '/methyl_data')
 imputed_data <- paste0(data_folder, '/imputed_data')
-idsat_data <- paste0(methyl_data, '/raw_files')
+idat_data <- paste0(methyl_data, '/raw_files')
 model_data <- paste0(data_folder, '/model_data')
 bumphunter_data <- paste0(data_folder, '/bumphunter_data')
 clin_data <- paste0(data_folder, '/clin_data')
@@ -33,12 +33,10 @@ clin_data <- paste0(data_folder, '/clin_data')
 ##########
 # quan
 beta_quan <- readRDS(paste0(methyl_data, '/beta_quan.rda'))
-beta_quan_sub <- readRDS(paste0(methyl_data, '/beta_quan_sub.rda'))
 beta_quan_controls <- readRDS(paste0(methyl_data, '/beta_quan_controls.rda'))
 
 # funnorm
 beta_funnorm <- readRDS(paste0(methyl_data, '/beta_funnorm.rda'))
-beta_funnorm_sub <- readRDS(paste0(methyl_data, '/beta_funnorm_sub.rda'))
 beta_funnorm_controls <- readRDS(paste0(methyl_data, '/beta_funnorm_controls.rda'))
 
 ##########
@@ -46,12 +44,10 @@ beta_funnorm_controls <- readRDS(paste0(methyl_data, '/beta_funnorm_controls.rda
 ##########
 #quan
 beta_quan <- as.data.frame(beta_quan, stringsAsFactors = F)
-beta_quan_sub <- as.data.frame(beta_quan_sub, stringsAsFactors = F)
 beta_quan_controls <- as.data.frame(beta_quan_controls, stringAsFactors = F)
 
 #funnorm
 beta_funnorm <- as.data.frame(beta_funnorm, stringsAsFactors = F)
-beta_funnorm_sub <- as.data.frame(beta_funnorm_sub, stringsAsFactors = F)
 beta_funnorm_controls <- as.data.frame(beta_funnorm_controls, stringAsFactors = F)
 
 
@@ -107,6 +103,7 @@ getMethylVar <- function(dat_cases, dat_controls) {
 ##########
 # functions to clean and join data
 ##########
+
 # clean idss in each data set 
 cleanids <- function(data){
   
@@ -114,16 +111,15 @@ cleanids <- function(data){
   data$ids <- substr(data$ids, 1,4) 
   return(data)
 }
-
 # get probe locations 
 
-getidsAT <- function(cg_locations) {
+getIds <- function(cg_locations) {
   
-  #idsat files
-  idsatFiles <- list.files("GSE68777/idsat", pattern = "idsat.gz$", full = TRUE)
-  sapply(idsatFiles, gunzip, overwrite = TRUE)
+  #idat files
+  idatFiles <- list.files("GSE68777/idat", pattern = "idat.gz$", full = TRUE)
+  sapply(idatFiles, gunzip, overwrite = TRUE)
   # read into rgSet
-  rgSet <- read.450k.exp("GSE68777/idsat")
+  rgSet <- read.450k.exp("GSE68777/idat")
   # preprocess quantil
   rgSet <- preprocessQuantile(rgSet)
   # get rangers 
@@ -140,7 +136,7 @@ joinData <- function(data, control) {
   
   # get intersection of clin idss and data idss
   intersected_ids <- intersect(data$ids, clin$ids)
-  features <- colnames(data)[2:(length(colnames(data)))]
+  features <- colnames(data)[1:(length(colnames(data)) - 2)]
   
   # loop to combine idsentifiers, without merging large table
   data$p53_germline <- NA
@@ -160,6 +156,7 @@ joinData <- function(data, control) {
       data$age_sample_collection[data$ids == i] <- clin$age_sample_collection[which(clin$ids == i)]
       data$tm_donor_[data$ids == i] <- clin$tm_donor_[which(clin$ids == i)]
       data$gender[data$ids == i] <- clin$gender[which(clin$ids == i)]
+
       
       
       print(i)
@@ -167,8 +164,11 @@ joinData <- function(data, control) {
     data <- data[!is.na(data$p53_germline),]
     data <- data[!duplicated(data$ids),]
     data <- data[!duplicated(data$tm_donor_),]
+    # data <- data[!is.na(data$age_diagnosis),]
+    # data <- data[!is.na(data$age_sample_collection), ]
+    
     data <- data[, c('ids', 'p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses',
-                     'age_sample_collection', 'gender','sentrix_id', features)]
+                     'age_sample_collection', 'gender','sentrix_id','sen_batch', features)]
   } else {
     
     for (i in intersected_ids) {
@@ -209,13 +209,13 @@ relevelFactor <- function (data) {
 
 
 ##########
-# apply functions to idsat data - cases and controls and save to model_data folder
+# apply functions to idat data - cases and controls and save to model_data folder
 # ##########
 # # get clinical methylation indicator
 # clin <- getMethylVar(beta_quan, beta_quan_controls)
 # 
 # # get cg locations
-# cg_locations <- getids()
+# cg_locations <- getIds()
 # 
 # write.csv(cg_locations, paste0(model_data, '/cg_locations.csv'))
 # write.csv(clin, paste0(clin_data, '/clinical_two.csv'))
@@ -226,36 +226,27 @@ relevelFactor <- function (data) {
 # quan
 # first clean idss
 beta_quan <- cleanids(beta_quan)
-beta_quan_sub <- cleanids(beta_quan_sub)
 
 options(warn=1)
 
 # second join data
 beta_quan <- joinData(beta_quan, control = F)
-beta_quan_sub <- joinData(beta_quan_sub, control = F)
-
 
 # thrids relevel factors
 beta_quan <- relevelFactor(beta_quan)
-beta_quan_sub <- relevelFactor(beta_quan_sub)
 
 
 # funnorm
 # first clean idss
 beta_funnorm <- cleanids(beta_funnorm)
-beta_funnorm_sub <- cleanids(beta_funnorm_sub)
 
 options(warn=1)
 
 # second join data
 beta_funnorm <- joinData(beta_funnorm, control = F)
-beta_funnorm_sub <- joinData(beta_funnorm_sub, control = F)
-
 
 # thrids relevel factors
 beta_funnorm <- relevelFactor(beta_funnorm)
-beta_funnorm_sub <- relevelFactor(beta_funnorm_sub)
-
 
 ##########
 # 2nd do controls
@@ -282,14 +273,12 @@ beta_funnorm_controls <- joinData(beta_funnorm_controls, control = T)
 #quan
 saveRDS(beta_quan, paste0(methyl_data, '/beta_quan.rda'))
 
-saveRDS(beta_quan_sub, paste0(methyl_data, '/beta_quan_sub.rda'))
 
 saveRDS(beta_quan_controls, paste0(methyl_data, '/beta_quan_controls.rda'))
 
 #funnorm
 saveRDS(beta_funnorm, paste0(methyl_data, '/beta_funnorm.rda'))
 
-saveRDS(beta_funnorm_sub, paste0(methyl_data, '/beta_funnorm_sub.rda'))
 
 saveRDS(beta_funnorm_controls, paste0(methyl_data, '/beta_funnorm_controls.rda'))
 

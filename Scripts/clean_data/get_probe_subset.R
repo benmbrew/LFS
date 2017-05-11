@@ -17,23 +17,17 @@ model_data <- paste0(data_folder, '/model_data')
 clin_data <- paste0(data_folder, '/clin_data')
 
 ##########
-# load data batch data
+# load cases only
 ##########
-# read cases
-quan_cases <- readRDS(paste0(model_data, '/quan_cases.rda'))
+# full
+quan_cases_full <- readRDS(paste0(model_data, '/quan_cases_full.rda'))
 
-# read batch corrected data for gender
-quan_cases_gen <- readRDS(paste0(model_data, '/quan_cases_gen.rda'))
+funnorm_cases_full <- readRDS(paste0(model_data, '/funnorm_cases_full.rda'))
 
-# read batch corrected data for sentrix id and SAM
-quan_cases_sen <- readRDS(paste0(model_data, '/quan_cases_sen.rda'))
+# full
+quan_cases_full <- readRDS(paste0(model_data, '/quan_cases_full.rda'))
 
-quan_cases_sam <- readRDS(paste0(model_data, '/quan_cases_sam.rda'))
-
-# read batch corrected data for sentrix id and SAM and gender!
-quan_cases_sen_gen <- readRDS(paste0(model_data, '/quan_cases_sen_gen.rda'))
-
-quan_cases_sam_gen <- readRDS(paste0(model_data, '/quan_cases_sam_gen.rda'))
+funnorm_cases_full <- readRDS(paste0(model_data, '/funnorm_cases_full.rda'))
 
 
 ##########

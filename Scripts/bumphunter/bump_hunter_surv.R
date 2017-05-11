@@ -1,5 +1,5 @@
 ####### Script will run bumphunter on (1) LFS patients with cancer (cases) and (2) LFS patients wtihout cancer (controls)
-# this is 7th  step in pipeline
+# this is 5th  step in pipeline
 
 ##########
 # initialize libraries
@@ -14,36 +14,36 @@ library(dplyr)
 home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
 data_folder <- paste0(project_folder, '/Data')
+methyl_data <- paste0(data_folder, '/methyl_data')
 model_data <- paste0(data_folder, '/model_data')
+clin_data <- paste0(data_folder, '/clin_data')
 
-#########
-# Load data
-#########
+##########
+# load cases 
+##########
+# full
+quan_cases_full <- readRDS(paste0(model_data, '/quan_cases_full.rda'))
 
-# read cases
-quan_cases <- readRDS(paste0(model_data, '/quan_cases.rda'))
+funnorm_cases_full <- readRDS(paste0(model_data, '/funnorm_cases_full.rda'))
 
-# read contorls
-quan_controls <- readRDS(paste0(model_data, '/quan_controls.rda'))
+# sub
+quan_cases_sub <- readRDS(paste0(model_data, '/quan_cases_sub.rda'))
 
-# read batch corrected data for gender
-quan_cases_gen <- readRDS(paste0(model_data, '/quan_cases_gen.rda'))
+funnorm_cases_sub <- readRDS(paste0(model_data, '/funnorm_cases_sub.rda'))
 
-# read controls
-quan_controls_gen <- readRDS(paste0(model_data, '/quan_controls_gen.rda'))
 
-# read controls
-quan_controls_type <- readRDS(paste0(model_data, '/quan_controls_type.rda'))
+##########
+# load controls 
+##########
+# full
+quan_controls_full <- readRDS(paste0(model_data, '/quan_controls_full.rda'))
 
-# read batch corrected data for sentrix id and SAM
-quan_cases_sen <- readRDS(paste0(model_data, '/quan_cases_sen.rda'))
+funnorm_controls_full <- readRDS(paste0(model_data, '/funnorm_controls_full.rda'))
 
-quan_cases_sam <- readRDS(paste0(model_data, '/quan_cases_sam.rda'))
+# sub
+quan_controls_sub <- readRDS(paste0(model_data, '/quan_controls_sub.rda'))
 
-# read batch corrected data for sentrix id and SAM and gender!
-quan_cases_sen_gen <- readRDS(paste0(model_data, '/quan_cases_sen_gen.rda'))
-
-quan_cases_sam_gen <- readRDS(paste0(model_data, '/quan_cases_sam_gen.rda'))
+funnorm_controls_sub <- readRDS(paste0(model_data, '/funnorm_controls_sub.rda'))
 
 # ge cg_locations
 cg_locations <- read.csv(paste0(model_data, '/cg_locations.csv'))
@@ -52,45 +52,52 @@ cg_locations <- read.csv(paste0(model_data, '/cg_locations.csv'))
 ##########
 # remove samples to get balanced age
 ##########
-getBalAge <- function(data_controls)
+
+getBalAge <- function(data_controls, full)
 {
   # # balance age
-  # hist(quan_cases$age_sample_collection[quan_cases$type == 'cases'])
-  # hist(data_controls$age_sample_collection[grepl('controls', data_controls$type)])
-  
+  # hist(quan_cases_full$age_sample_collection)
+  # hist(data_controls$age_sample_collection)
+
   # remove a few from ranges 100-200, 300-400
   # randomly remove controls that have a less than 50 month age of diganosis to have balanced classes
-  remove_index <- which(grepl('controls', data_controls$type) & ((data_controls$age_sample_collection >= 100 & data_controls$age_sample_collection <= 200) |
-                                                                        (data_controls$age_sample_collection >= 300 & data_controls$age_sample_collection <= 400)))
+  remove_index <- which((data_controls$age_sample_collection >= 100 & data_controls$age_sample_collection <= 250) |
+                       (data_controls$age_sample_collection >= 300 & data_controls$age_sample_collection <= 400))
   
-  set.seed(1)
-  remove_index <- sample(remove_index, 12, replace = F )
-  data_controls_sub <- data_controls[-remove_index,]
-  return(data_controls_sub)
+  if(full) {
+    remove_index <- sample(remove_index, 13, replace = F)
+    
+  } else {
+    remove_index <- sample(remove_index, 10, replace = F)
+    
+  }
+  
+  data_controls <- data_controls[-remove_index,]
+  
+  return(data_controls)
   
 }
 
-quan_controls_bal <- getBalAge(quan_controls)
-quan_controls_gen_bal <- getBalAge(quan_controls_gen)
-quan_controls_type_bal <- getBalAge(quan_controls_type)
+##########
+# get balanced ages for each control group
+##########
 
-saveRDS(quan_controls_bal, paste0(model_data, '/quan_controls_bal.rda'))
-saveRDS(quan_controls_gen_bal, paste0(model_data, '/quan_controls_gen_bal.rda'))
-saveRDS(quan_controls_type_bal, paste0(model_data, '/quan_controls_type_bal.rda'))
+# full
+quan_controls_full_bal <- getBalAge(quan_controls_full, full = T)
+funnorm_controls_full_bal <- getBalAge(funnorm_controls_full, full = T)
 
-# histogram of bal ages 
-hist(quan_cases$age_sample_collection[quan_cases$type == 'cases'])
-hist(quan_controls$age_sample_collection[quan_controls$type == 'controls'])
-hist(quan_controls_bal$age_sample_collection[quan_controls_bal$type == 'controls'])
-
+# sub
+quan_controls_sub_bal <- getBalAge(quan_controls_sub, full = F)
+funnorm_controls_sub_bal <- getBalAge(funnorm_controls_sub, full = F)
 
 
 ##########
 # function that takes LFS patients and run balanced and unbalanced bumphunter on cancer and controls
-# type is the indicator
 ##########
-# dat_cases <- quan_cases
-# dat_controls <- quan_controls_bal
+# HERE
+# check histograms  
+dat_cases <- quan_cases_full
+dat_controls <- quan_controls_full_bal
 # will return one unbalanced, one balanced by age, and balanced by age and counts
 bumpHunterBalanced <- function(dat_cases,
                                dat_controls) {
@@ -106,7 +113,7 @@ bumpHunterBalanced <- function(dat_cases,
   bump_clin <- dat[,1:9]
   
   # recode type
-  dat$type <- ifelse(dat$type == 'cases', 'cases', 'controls')
+  dat$type <- ifelse(grepl('Unaffected', dat$cancer_diagnosis_diagnoses), 'controls', 'cases')
   
   ##########
   # get indicator and put into design matrix with intercept 1

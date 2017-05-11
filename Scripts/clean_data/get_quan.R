@@ -225,22 +225,18 @@ beta_funnorm <- getMethyl(rgSetList, control = F, method = 'funnorm')
 beta_funnorm_controls <- getMethyl(rgSetListControls, control = T, method = 'funnorm')
 
 ##########
-# get full subsetted data (montreal vs toronto)
-##########
-# quan
-beta_quan_sub <- beta_quan[!grepl('9721365183', rownames(beta_quan)),]
+# new variable called sen_batch
+#########
+beta_quan$sen_batch <- ifelse(grepl('9721365183', rownames(beta_quan)), 'mon', 'tor_1')
+beta_funnorm$sen_batch <- ifelse(grepl('9721365183', rownames(beta_funnorm)), 'mon', 'tor_1')
 
-# funnorm
-beta_funnorm_sub <- beta_funnorm[!grepl('9721365183', rownames(beta_funnorm)),]
 
 # save data
 saveRDS(beta_quan, paste0(methyl_data, '/beta_quan.rda'))
-saveRDS(beta_quan_sub, paste0(methyl_data, '/beta_quan_sub.rda'))
 saveRDS(beta_quan_controls, paste0(methyl_data, '/beta_quan_controls.rda'))
 
 # save data
 saveRDS(beta_funnorm, paste0(methyl_data, '/beta_funnorm.rda'))
-saveRDS(beta_funnorm_sub, paste0(methyl_data, '/beta_funnorm_sub.rda'))
 saveRDS(beta_funnorm_controls, paste0(methyl_data, '/beta_funnorm_controls.rda'))
 
 

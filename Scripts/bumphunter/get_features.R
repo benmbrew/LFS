@@ -1,5 +1,5 @@
 ####### Script will map regions to probes and save the final bh features for both cancer and lfs
-# this is 8th step in pipeline
+# this is 6th step in pipeline
 
 ##########
 # initialize libraries

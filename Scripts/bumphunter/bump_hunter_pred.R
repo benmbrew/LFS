@@ -1,5 +1,5 @@
 ####### This script will run bumhunter LFS no cancer and WT (no cancer) - removes cancer signal
-# this is 7th (part B)
+# this is 5th (part B)
 
 ##########
 # initialize libraries
