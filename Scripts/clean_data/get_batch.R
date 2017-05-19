@@ -8,6 +8,36 @@ library(dplyr)
 library(sva)
 
 ##########
+# test scale and normalization
+##########
+# temp <- as.data.frame(replicate(10,sample(0:10,1000,rep=TRUE)))
+# 
+# 
+# 
+# temp_scale <- scale(temp)
+# data <- temp
+# testNorm <- function(data) {
+#   
+#   data <- t(data)
+#   # get col statistics
+#   colMean <- apply(data, 1, mean, na.rm=TRUE)
+#   colSd <- apply(data, 1, sd, na.rm=TRUE)
+#   constantInd <- colSd==0
+#   colSd[constantInd] <- 1
+#   colStats <- list(mean=colMean, sd=colSd, ind=constantInd)
+#   
+#   # apply normilization
+#   data  <- (data - colStats$mean) / colStats$sd
+#   # data <- data[!colStats$ind, ]
+#   
+#   data <- t(data)
+#   return(data)
+#   
+# }
+# temp_row <- testNorm(temp)
+# temp_col <- testNorm(temp)
+
+##########
 # Initialize folders
 ##########
 home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
@@ -28,6 +58,69 @@ beta_quan_controls <- readRDS(paste0(methyl_data, '/beta_quan_controls.rda'))
 beta_funnorm <- readRDS(paste0(methyl_data, '/beta_funnorm.rda'))
 beta_funnorm_controls <- readRDS(paste0(methyl_data, '/beta_funnorm_controls.rda'))
 
+# raw
+beta_raw <- readRDS(paste0(methyl_data, '/beta_raw.rda'))
+beta_raw_controls <- readRDS(paste0(methyl_data, '/beta_raw_controls.rda'))
+
+##########
+# remove id.1
+##########
+beta_quan_controls$ids.1 <- beta_quan$ids.1 <- beta_funnorm_controls$ids.1 <- beta_funnorm$ids.1 <- 
+  beta_raw_controls$ids.1 <- beta_raw$ids.1 <- NULL
+
+##########
+# remove identifier in controls
+##########
+beta_funnorm_controls$identifier <- beta_quan_controls$identifier <- beta_raw_controls$identifier <- NULL
+
+##########
+# normalize raw 
+##########
+data <- beta_raw
+controls <- T
+normDat <- function(data, controls) 
+{
+  if(controls){
+    # first get clin dat 
+    clin_dat <- data[, 1:7]
+    
+    # now remove clin part of nov_dat and convert to matrix for scale
+    data <- as.matrix(t(data[, -c(1:7)]))
+    
+
+    stopifnot(!is.na(data))
+  } else {
+    # first get clin dat 
+    clin_dat <- data[, 1:8]
+    
+    # now remove clin part of nov_dat and convert to matrix for scale
+    data <- as.matrix(t(data[, -c(1:8)]))
+  }
+  
+  # data <- apply(data, 2, function(x) as.numeric(x))
+  
+  # get row statistics
+  rowMean <- apply(data, 1, mean, na.rm=TRUE)
+  rowSd <- apply(data, 1, sd, na.rm=TRUE)
+  constantInd <- rowSd==0
+  rowSd[constantInd] <- 1
+  rowStats <- list(mean=rowMean, sd=rowSd, ind=constantInd)
+  
+  # apply normilization
+  data  <- (data - rowStats$mean) / rowStats$sd
+  # data <- data[!rowStats$ind, ]
+  
+  data <- t(data)
+  
+  data <- cbind(clin_dat, data)
+  
+  return(data)
+}
+
+beta_raw <- normDat(beta_raw, controls = F)
+beta_raw_controls <- normDat(beta_raw_controls, controls = T)
+
+
 ##########
 # make data frames
 ##########
@@ -38,6 +131,10 @@ beta_quan_controls <- as.data.frame(beta_quan_controls, stringAsFactors = F)
 #funnorm
 beta_funnorm <- as.data.frame(beta_funnorm, stringsAsFactors = F)
 beta_funnorm_controls <- as.data.frame(beta_funnorm_controls, stringAsFactors = F)
+
+#raw
+beta_raw <- as.data.frame(beta_raw, stringsAsFactors = F)
+beta_raw_controls <- as.data.frame(beta_raw_controls, stringAsFactors = F)
 
 
 ##########
@@ -52,6 +149,7 @@ removeCancer <- function(data_controls)
 
 beta_quan_controls <- removeCancer(beta_quan_controls)
 beta_funnorm_controls <- removeCancer(beta_funnorm_controls)
+beta_raw_controls <- removeCancer(beta_raw_controls)
 
 ##########
 # get extra controls
@@ -65,6 +163,7 @@ getExtraCon <- function(data)
 }
 beta_quan_controls_2 <- getExtraCon(beta_quan)
 beta_funnorm_controls_2 <- getExtraCon(beta_funnorm)
+beta_raw_controls_2 <- getExtraCon(beta_raw)
 
 
 ##########
@@ -83,6 +182,9 @@ beta_quan <- getModData(beta_quan)
 
 # funnorm
 beta_funnorm <- getModData(beta_funnorm)
+
+# funnorm
+beta_raw <- getModData(beta_raw)
 
 
 ##########
@@ -126,6 +228,9 @@ quan <- getFeatInt(beta_quan, beta_quan_controls, beta_quan_controls_2)
 # funnorm
 funnorm <- getFeatInt(beta_funnorm, beta_funnorm_controls, beta_funnorm_controls_2)
 
+# raw
+raw <- getFeatInt(beta_raw, beta_raw_controls, beta_raw_controls_2)
+
 # remove uneeded objects
 rm(list=ls(pattern="beta*"))
 
@@ -136,6 +241,7 @@ nrow(quan[quan$sen_batch == 'tor_2',])
 # PCA of each data type and cases vs controls
 ##########
 # functionp needs to take a clinical column, remove others, and plot pcas
+pca_data <- raw
 getPCA <- function(pca_data, 
                    column_name, 
                    name, 
@@ -181,7 +287,7 @@ getPCA <- function(pca_data,
   pca <- prcomp(pca_data[,2:data_length])
   temp <- pca$x[,1]
 
-  # plot data
+  # plot data 4257,  94, 93
   #fill in factors with colors 
   col_vec <- c('black','red' , 'green', 'bisque', 'bisque1', 'bisque2', 'lightblue', 
                'blueviolet', 'brown', 'cyan', 'coral',
@@ -212,7 +318,7 @@ getPCA <- function(pca_data,
 # combine cases and controls and plot based on that
 ##########
 
-
+#####################################################################
 ##########
 # quan
 ##########
@@ -272,6 +378,110 @@ getPCA(quan,
        pca2 = 2)
 
 
+#####################################################################
+##########
+# raw
+##########
+# cases
+getPCA(raw, 
+       'gender', 
+       'PCA raw cases gender',
+       gene_start = 9,
+       case_control = 'cases',
+       pca1 = 1,
+       pca2 = 2)
+
+#controls
+getPCA(raw, 
+       'gender', 
+       'PCA raw controls gender',
+       gene_start = 9,
+       case_control = 'controls',
+       pca1 = 1,
+       pca2 = 2)
+
+
+#cases
+getPCA(raw, 
+       'sen_batch', 
+       'PCA raw cases sen_batch',
+       gene_start = 9,
+       case_control = 'cases',
+       pca1 = 1,
+       pca2 = 2)
+
+#controls
+getPCA(raw, 
+       'sen_batch', 
+       'PCA raw controls sen_batch',
+       gene_start = 9,
+       case_control = 'controls',
+       pca1 = 1,
+       pca2 = 2)
+
+#cases
+getPCA(raw, 
+       'sentrix_id', 
+       'PCA raw cases sentrix_id',
+       gene_start = 9,
+       case_control = 'cases',
+       pca1 = 1,
+       pca2 = 2)
+
+#controls
+getPCA(raw, 
+       'sentrix_id', 
+       'PCA raw controls sentrix_id',
+       gene_start = 9,
+       case_control = 'controls',
+       pca1 = 1,
+       pca2 = 2)
+
+
+##########
+# remove raw outliers
+##########
+
+
+
+#############################
+#cases
+getPCA(funnorm, 
+       'sen_batch', 
+       'PCA funnorm cases sen_batch',
+       gene_start = 9,
+       case_control = 'cases',
+       pca1 = 1,
+       pca2 = 2)
+
+#controls
+getPCA(funnorm, 
+       'sen_batch', 
+       'PCA funnorm controls sen_batch',
+       gene_start = 9,
+       case_control = 'controls',
+       pca1 = 1,
+       pca2 = 2)
+
+#cases
+getPCA(funnorm, 
+       'sentrix_id', 
+       'PCA funnorm cases sentrix_id',
+       gene_start = 9,
+       case_control = 'cases',
+       pca1 = 1,
+       pca2 = 2)
+
+#controls
+getPCA(funnorm, 
+       'sentrix_id', 
+       'PCA funnorm controls sentrix_id',
+       gene_start = 9,
+       case_control = 'controls',
+       pca1 = 1,
+       pca2 = 2)
+
+
 
 
 ##########
@@ -283,7 +493,12 @@ removeOutlier <- function(data, funnorm) {
   #controls outlier
   data <- data[data$ids != '3391',]
   data <- data[data$ids != '3392',]
-
+  data <- data[data$ids != '4257',]
+  data <- data[data$ids != '94',]
+  data <- data[data$ids != '93',]
+  data <- data[data$ids != '2414',]
+  
+  
   return(data)
 }
 
@@ -292,6 +507,9 @@ quan <- removeOutlier(quan, funnorm = F)
 
 # funnorm
 funnorm <- removeOutlier(funnorm, funnorm = F)
+
+# raw
+raw <- removeOutlier(raw, funnorm  = F)
 
 # ##########
 # # create variable to loop through to correct for sentrix_id
@@ -480,10 +698,13 @@ getBatch <- function(data, cases, data_size)
 # cases
 quan_cases_full <- getBatch(quan, cases = T, data_size = 'full')
 funnorm_cases_full <- getBatch(funnorm, cases = T, data_size = 'full')
+raw_cases_full <- getBatch(raw, cases = T, data_size = 'full')
+
 
 # cases
 quan_controls_full <- getBatch(quan, cases = F, data_size = 'full')
 funnorm_controls_full <- getBatch(funnorm, cases = F, data_size = 'full')
+raw_controls_full <- getBatch(raw, cases = F, data_size = 'full')
 
 ##########
 # sub data
@@ -492,33 +713,39 @@ funnorm_controls_full <- getBatch(funnorm, cases = F, data_size = 'full')
 # cases
 quan_cases_sub <- getBatch(quan, cases = T, data_size = 'sub')
 funnorm_cases_sub <- getBatch(funnorm, cases = T, data_size = 'sub')
+raw_cases_sub <- getBatch(raw, cases = T, data_size = 'sub')
 
 # cases
 quan_controls_sub <- getBatch(quan, cases = F, data_size = 'sub')
 funnorm_controls_sub <- getBatch(funnorm, cases = F, data_size = 'sub')
+raw_controls_sub <- getBatch(raw, cases = F, data_size = 'sub')
 
 # remove unneeded data
-rm(quan, funnorm)
+rm(quan, funnorm, raw)
 
 # remove extra column in everything but controls full
 quan_cases_full <- quan_cases_full[, colnames(quan_cases_full) != 'cg13869341']
 funnorm_cases_full <- funnorm_cases_full[, colnames(funnorm_cases_full) != 'cg13869341']
+raw_cases_full <- raw_cases_full[, colnames(raw_cases_full) != 'cg13869341']
 
 # sub
 quan_cases_sub <- quan_cases_sub[, colnames(quan_cases_sub) != 'cg13869341']
 funnorm_cases_sub <- funnorm_cases_sub[, colnames(funnorm_cases_sub) != 'cg13869341']
+raw_cases_sub <- raw_cases_sub[, colnames(raw_cases_sub) != 'cg13869341']
 
 # controls sub
 quan_controls_sub <- quan_controls_sub[, colnames(quan_controls_sub) != 'cg13869341']
 funnorm_controls_sub <- funnorm_controls_sub[, colnames(funnorm_controls_sub) != 'cg13869341']
+raw_controls_sub <- raw_controls_sub[, colnames(raw_controls_sub) != 'cg13869341']
 
-# save.image('/home/benbrew/Desktop/temp_quan_funnorm.RData')
+save.image('/home/benbrew/Desktop/temp_quan_funnorm.RData')
 # load('/home/benbrew/Desktop/temp_quan_funnorm.RData')
 
 ##########
 # rerun pca and cases and controls
 ##########
 
+##############################################################
 ##########
 # quan
 ##########
@@ -640,6 +867,249 @@ getPCA(quan_controls_sub,
 
 
 
+##############################################################
+##########
+# funnorm
+##########
+
+# full
+# cases
+getPCA(funnorm_cases_full, 
+       'gender', 
+       'PCA funnorm cases gender',
+       gene_start = 9,
+       case_control = 'cases',
+       pca1 = 1,
+       pca2 = 2)
+
+#controls
+getPCA(funnorm_controls_full, 
+       'gender', 
+       'PCA funnorm controls gender',
+       gene_start = 9,
+       case_control = 'controls',
+       pca1 = 1,
+       pca2 = 2)
+
+
+#cases
+getPCA(funnorm_cases_full, 
+       'sen_batch', 
+       'PCA funnorm cases sen_batch',
+       gene_start = 9,
+       case_control = 'cases',
+       pca1 = 1,
+       pca2 = 2)
+
+#controls
+getPCA(funnorm_controls_full, 
+       'sen_batch', 
+       'PCA funnorm controls sen_batch',
+       gene_start = 9,
+       case_control = 'controls',
+       pca1 = 1,
+       pca2 = 2)
+
+#cases
+getPCA(funnorm_cases_full, 
+       'sentrix_id', 
+       'PCA funnorm cases sentrix_id',
+       gene_start = 9,
+       case_control = 'cases',
+       pca1 = 1,
+       pca2 = 2)
+
+#controls
+getPCA(funnorm_controls_full, 
+       'sentrix_id', 
+       'PCA funnorm controls sentrix_id',
+       gene_start = 9,
+       case_control = 'controls',
+       pca1 = 1,
+       pca2 = 2)
+
+
+
+
+# sub
+# cases
+getPCA(funnorm_cases_sub, 
+       'gender', 
+       'PCA funnorm cases gender',
+       gene_start = 9,
+       case_control = 'cases',
+       pca1 = 1,
+       pca2 = 2)
+
+#controls
+getPCA(funnorm_controls_sub, 
+       'gender', 
+       'PCA funnorm controls gender',
+       gene_start = 9,
+       case_control = 'controls',
+       pca1 = 1,
+       pca2 = 2)
+
+
+#cases
+getPCA(funnorm_cases_sub, 
+       'sen_batch', 
+       'PCA funnorm cases sen_batch',
+       gene_start = 9,
+       case_control = 'cases',
+       pca1 = 1,
+       pca2 = 2)
+
+#controls
+getPCA(funnorm_controls_sub, 
+       'sen_batch', 
+       'PCA funnorm controls sen_batch',
+       gene_start = 9,
+       case_control = 'controls',
+       pca1 = 1,
+       pca2 = 2)
+
+#cases
+getPCA(funnorm_cases_sub, 
+       'sentrix_id', 
+       'PCA funnorm cases sentrix_id',
+       gene_start = 9,
+       case_control = 'cases',
+       pca1 = 1,
+       pca2 = 2)
+
+#controls
+getPCA(funnorm_controls_sub, 
+       'sentrix_id', 
+       'PCA funnorm controls sentrix_id',
+       gene_start = 9,
+       case_control = 'controls',
+       pca1 = 1,
+       pca2 = 2)
+
+
+##############################################################
+##########
+# raw
+##########
+
+# full
+# cases
+getPCA(raw_cases_full, 
+       'gender', 
+       'PCA raw cases gender',
+       gene_start = 9,
+       case_control = 'cases',
+       pca1 = 1,
+       pca2 = 2)
+
+#controls
+getPCA(raw_controls_full, 
+       'gender', 
+       'PCA raw controls gender',
+       gene_start = 9,
+       case_control = 'controls',
+       pca1 = 1,
+       pca2 = 2)
+
+
+#cases
+getPCA(raw_cases_full, 
+       'sen_batch', 
+       'PCA raw cases sen_batch',
+       gene_start = 9,
+       case_control = 'cases',
+       pca1 = 1,
+       pca2 = 2)
+
+#controls
+getPCA(raw_controls_full, 
+       'sen_batch', 
+       'PCA raw controls sen_batch',
+       gene_start = 9,
+       case_control = 'controls',
+       pca1 = 1,
+       pca2 = 2)
+
+#cases
+getPCA(raw_cases_full, 
+       'sentrix_id', 
+       'PCA raw cases sentrix_id',
+       gene_start = 9,
+       case_control = 'cases',
+       pca1 = 1,
+       pca2 = 2)
+
+#controls
+getPCA(raw_controls_full, 
+       'sentrix_id', 
+       'PCA raw controls sentrix_id',
+       gene_start = 9,
+       case_control = 'controls',
+       pca1 = 1,
+       pca2 = 2)
+
+
+
+
+# sub
+# cases
+getPCA(raw_cases_sub, 
+       'gender', 
+       'PCA raw cases gender',
+       gene_start = 9,
+       case_control = 'cases',
+       pca1 = 1,
+       pca2 = 2)
+
+#controls
+getPCA(raw_controls_sub, 
+       'gender', 
+       'PCA raw controls gender',
+       gene_start = 9,
+       case_control = 'controls',
+       pca1 = 1,
+       pca2 = 2)
+
+
+#cases
+getPCA(raw_cases_sub, 
+       'sen_batch', 
+       'PCA raw cases sen_batch',
+       gene_start = 9,
+       case_control = 'cases',
+       pca1 = 1,
+       pca2 = 2)
+
+#controls
+getPCA(raw_controls_sub, 
+       'sen_batch', 
+       'PCA raw controls sen_batch',
+       gene_start = 9,
+       case_control = 'controls',
+       pca1 = 1,
+       pca2 = 2)
+
+#cases
+getPCA(raw_cases_sub, 
+       'sentrix_id', 
+       'PCA raw cases sentrix_id',
+       gene_start = 9,
+       case_control = 'cases',
+       pca1 = 1,
+       pca2 = 2)
+
+#controls
+getPCA(raw_controls_sub, 
+       'sentrix_id', 
+       'PCA raw controls sentrix_id',
+       gene_start = 9,
+       case_control = 'controls',
+       pca1 = 1,
+       pca2 = 2)
+
+
+
 
 ##########
 # save non batch corrected
@@ -682,4 +1152,24 @@ saveRDS(funnorm_cases_sub, paste0(model_data, '/funnorm_cases_sub.rda'))
 
 # save contorls
 saveRDS(funnorm_controls_sub, paste0(model_data, '/funnorm_controls_sub.rda'))
+
+
+#########
+# raw
+##########
+# full 
+
+# save cases 
+saveRDS(raw_cases_full, paste0(model_data, '/raw_cases_full.rda'))
+
+# save contorls
+saveRDS(raw_controls_full, paste0(model_data, '/raw_controls_full.rda'))
+
+# sub
+
+# save cases 
+saveRDS(raw_cases_sub, paste0(model_data, '/raw_cases_sub.rda'))
+
+# save contorls
+saveRDS(raw_controls_sub, paste0(model_data, '/raw_controls_sub.rda'))
 

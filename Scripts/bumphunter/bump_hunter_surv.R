@@ -26,10 +26,15 @@ quan_cases_full <- readRDS(paste0(model_data, '/quan_cases_full.rda'))
 
 funnorm_cases_full <- readRDS(paste0(model_data, '/funnorm_cases_full.rda'))
 
+raw_cases_full <- readRDS(paste0(model_data, '/raw_cases_full.rda'))
+
+
 # sub
 quan_cases_sub <- readRDS(paste0(model_data, '/quan_cases_sub.rda'))
 
 funnorm_cases_sub <- readRDS(paste0(model_data, '/funnorm_cases_sub.rda'))
+
+raw_cases_sub <- readRDS(paste0(model_data, '/raw_cases_sub.rda'))
 
 
 ##########
@@ -40,10 +45,16 @@ quan_controls_full <- readRDS(paste0(model_data, '/quan_controls_full.rda'))
 
 funnorm_controls_full <- readRDS(paste0(model_data, '/funnorm_controls_full.rda'))
 
+raw_controls_full <- readRDS(paste0(model_data, '/raw_controls_full.rda'))
+
+
 # sub
 quan_controls_sub <- readRDS(paste0(model_data, '/quan_controls_sub.rda'))
 
 funnorm_controls_sub <- readRDS(paste0(model_data, '/funnorm_controls_sub.rda'))
+
+raw_controls_sub <- readRDS(paste0(model_data, '/raw_controls_sub.rda'))
+
 
 # ge cg_locations
 cg_locations <- read.csv(paste0(model_data, '/cg_locations.csv'))

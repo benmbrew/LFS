@@ -7,6 +7,8 @@
 library(minfi)
 library(dplyr)
 
+dat <- read.csv('/home/benbrew/Desktop/m_m.csv')
+
 # Use this https://www.bioconductor.org/help/course-materials/2014/BioC2014/minfi_BioC2014.pdf
 
 ##########
@@ -102,13 +104,18 @@ preprocessMethod <- function(data, preprocess) {
 
   for (dat in 1:length(data)) {
     
+    if (preprocess == 'raw') {
+      Mset[[dat]] <-preprocessRaw(data[[dat]])
+      ratioSet[[dat]] <- ratioConvert(Mset[[dat]], what = 'both', keepCN = T)
+    }
+    
     if (preprocess == 'quan') {
       ratioSet[[dat]] <- preprocessQuantile(data[[dat]], fixOutliers = TRUE,
                                             removeBadSamples = FALSE, badSampleCutoff = 10.5,
                                             quantileNormalize = TRUE, stratified = TRUE,
                                             mergeManifest = FALSE, sex = NULL)
     } else {
-      ratioSet[[dat]] <-preprocessFunnorm(data[[dat]])
+      ratioSet[[dat]] <- preprocessFunnorm(data[[dat]])
       
     }   
 
@@ -224,11 +231,18 @@ beta_quan_controls <- getMethyl(rgSetListControls, control = T, method = 'quan')
 beta_funnorm <- getMethyl(rgSetList, control = F, method = 'funnorm')
 beta_funnorm_controls <- getMethyl(rgSetListControls, control = T, method = 'funnorm')
 
+# raw
+beta_raw <- getMethyl(rgSetList, control = F, method = 'raw')
+beta_raw_controls <- getMethyl(rgSetListControls, control = T, method = 'raw')
+
+
 ##########
 # new variable called sen_batch
 #########
 beta_quan$sen_batch <- ifelse(grepl('9721365183', rownames(beta_quan)), 'mon', 'tor_1')
 beta_funnorm$sen_batch <- ifelse(grepl('9721365183', rownames(beta_funnorm)), 'mon', 'tor_1')
+beta_raw$sen_batch <- ifelse(grepl('9721365183', rownames(beta_raw)), 'mon', 'tor_1')
+
 
 
 # save data
@@ -239,6 +253,9 @@ saveRDS(beta_quan_controls, paste0(methyl_data, '/beta_quan_controls.rda'))
 saveRDS(beta_funnorm, paste0(methyl_data, '/beta_funnorm.rda'))
 saveRDS(beta_funnorm_controls, paste0(methyl_data, '/beta_funnorm_controls.rda'))
 
+# save data
+saveRDS(beta_raw, paste0(methyl_data, '/beta_raw.rda'))
+saveRDS(beta_raw_controls, paste0(methyl_data, '/beta_raw_controls.rda'))
 
 
 
