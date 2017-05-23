@@ -7,35 +7,7 @@
 library(dplyr)
 library(sva)
 
-##########
-# test scale and normalization
-##########
-# temp <- as.data.frame(replicate(10,sample(0:10,1000,rep=TRUE)))
-# 
-# 
-# 
-# temp_scale <- scale(temp)
-# data <- temp
-# testNorm <- function(data) {
-#   
-#   data <- t(data)
-#   # get col statistics
-#   colMean <- apply(data, 1, mean, na.rm=TRUE)
-#   colSd <- apply(data, 1, sd, na.rm=TRUE)
-#   constantInd <- colSd==0
-#   colSd[constantInd] <- 1
-#   colStats <- list(mean=colMean, sd=colSd, ind=constantInd)
-#   
-#   # apply normilization
-#   data  <- (data - colStats$mean) / colStats$sd
-#   # data <- data[!colStats$ind, ]
-#   
-#   data <- t(data)
-#   return(data)
-#   
-# }
-# temp_row <- testNorm(temp)
-# temp_col <- testNorm(temp)
+
 
 ##########
 # Initialize folders
@@ -50,14 +22,6 @@ clin_data <- paste0(data_folder, '/clin_data')
 ##########
 # Read in methylation probe and gene
 ##########
-# quan
-beta_quan <- readRDS(paste0(methyl_data, '/beta_quan.rda'))
-beta_quan_controls <- readRDS(paste0(methyl_data, '/beta_quan_controls.rda'))
-
-# funnorm
-beta_funnorm <- readRDS(paste0(methyl_data, '/beta_funnorm.rda'))
-beta_funnorm_controls <- readRDS(paste0(methyl_data, '/beta_funnorm_controls.rda'))
-
 # raw
 beta_raw <- readRDS(paste0(methyl_data, '/beta_raw.rda'))
 beta_raw_controls <- readRDS(paste0(methyl_data, '/beta_raw_controls.rda'))
@@ -65,63 +29,14 @@ beta_raw_controls <- readRDS(paste0(methyl_data, '/beta_raw_controls.rda'))
 ##########
 # remove id.1
 ##########
-beta_quan_controls$ids.1 <- beta_quan$ids.1 <- beta_funnorm_controls$ids.1 <- beta_funnorm$ids.1 <- 
-  beta_raw_controls$ids.1 <- beta_raw$ids.1 <- NULL
+beta_raw_controls$ids.1 <- beta_raw$ids.1 <- NULL
 
 ##########
 # remove identifier in controls
 ##########
-beta_funnorm_controls$identifier <- beta_quan_controls$identifier <- beta_raw_controls$identifier <- NULL
+beta_raw_controls$identifier <- NULL
 
-##########
-# normalize raw 
-##########
-data <- beta_raw
-controls <- T
-normDat <- function(data, controls) 
-{
-  if(controls){
-    # first get clin dat 
-    clin_dat <- data[, 1:7]
-    
-    # now remove clin part of nov_dat and convert to matrix for scale
-    data <- as.matrix(t(data[, -c(1:7)]))
-    
-
-    stopifnot(!is.na(data))
-  } else {
-    # first get clin dat 
-    clin_dat <- data[, 1:8]
-    
-    # now remove clin part of nov_dat and convert to matrix for scale
-    data <- as.matrix(t(data[, -c(1:8)]))
-  }
-  
-  # data <- apply(data, 2, function(x) as.numeric(x))
-  
-  # get row statistics
-  rowMean <- apply(data, 1, mean, na.rm=TRUE)
-  rowSd <- apply(data, 1, sd, na.rm=TRUE)
-  constantInd <- rowSd==0
-  rowSd[constantInd] <- 1
-  rowStats <- list(mean=rowMean, sd=rowSd, ind=constantInd)
-  
-  # apply normilization
-  data  <- (data - rowStats$mean) / rowStats$sd
-  # data <- data[!rowStats$ind, ]
-  
-  data <- t(data)
-  
-  data <- cbind(clin_dat, data)
-  
-  return(data)
-}
-
-beta_raw <- normDat(beta_raw, controls = F)
-beta_raw_controls <- normDat(beta_raw_controls, controls = T)
-
-
-##########
+##########t
 # make data frames
 ##########
 #quan

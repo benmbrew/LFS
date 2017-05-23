@@ -1,10 +1,6 @@
-##########################################
-# Final model
-# 1) uses data quan_cases, quan_cases_gen, quan_cases_sen, quan_cases_sam, quan_cases_sen_gen, quan_cases_sam_gen
-# 2) Will have function that subsets data, gets residuals, does classification threshold for 48,60,72, and gender. 
-# 3) on training set either select variables through bumphunter or SVa
-# 4) run Reg or Fac
-# 5) RF or ENET
+# test models on this scripts
+
+## This script will run all iterations of regression models 
 
 ##########
 # initialize libraries
@@ -29,155 +25,107 @@ registerDoParallel(1)
 home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
 data_folder <- paste0(project_folder, '/Data')
-mod_data_folder <- paste0(data_folder, '/model_data')
-results_folder <- paste0(project_folder, '/Results')
-quan_folder <- paste0(results_folder, '/quan')
-rand_folder <- paste0(results_folder, '/rand')
-scripts_folder <- paste0(project_folder, '/Scripts')
+model_data <- paste0(data_folder, '/model_data')
 
+##########
+# load all data
+##########
+load(paste0(model_data, '/modal_feat_surv.RData'))
 
-# load gene locations
-cg_locations <- read.csv(paste0(mod_data_folder, '/cg_locations.csv'))
+# remove everything but cases and controls
+# remove cases and controls for now
+rm(list=ls(pattern="even"))
+rm(list=ls(pattern="uneven"))
 
 
 ##########
-# change column names of cg_locations for merging
+# load bh features for surveillance and pred data
 ##########
-cg_locations$X <- NULL
+load(paste0(model_data, '/bh_feat_surv.RData'))
+rm(list=ls(pattern="controls"))
 
-# get functions 
-source(paste0(scripts_folder, '/predict_age/final_functions.R'))
+# load(paste0(model_data, '/bh_feat_surv.RData'))
 
-##########
-# function to run models - subset, get residuals, get categorical, predict with regression and fac. 
-##########
-# data<- quan_cases_sam
-# data_controls <- quan_controls
-# model = 'enet'
-# add in argument for bumphunter, so there can be full models run
-# add in code for gender
-runModels <- function(data,
-                      data_controls,
-                      resid,
-                      mod,
-                      gender,
-                      num_it,
-                      DELTA_BETA_THRESH) 
-  
+# model_dat <- quan_cases_full
+# bh_features <- quan_even_full
+# cases <- T
+# gender <- T
+# cv = 'fold' #other option here is "loo"
+# k <- 4
+# seed_num <- 1
+# i = 1
+
+predAge <- function(model_dat,
+                    bh_features,
+                    classifier,
+                    gender,
+                    k,
+                    seed_num)
+
 {
   
-  if (resid) {
-    
-    # get residuals
-    data <- getResidual(data)
-    controls <- getResidual(data_controls)
-    
-    
-  } else {
-    # get subset 
-    data <- getSubset(data)
-    controls <- getSubset(data_controls)
-    
-  }
-  
-  
-  # get features
-  if(gender) {
-    all_feat <- colnames(data)[c(3,5:ncol(data))]
-    
-  }else {
-    all_feat <- colnames(data)[5:ncol(data)]
-    
-  }
-  
-  ##########
-  # run bumphunter to get features
-  ##########
-  # get balanced data from train
-  dat <- getBal(data, controls)
-  
-  # get bh results
-  bh_dat <- bumpHunter(dat, DELTA_BETA_THRESH = DELTA_BETA_THRESH)
-  
-  # extract probe
-  probe_features <- getProbe(bh_dat, cg_locations)
-  sig <- probe_features[[2]]
-  fwer <- probe_features[[1]]
-  
-  
-  # model_feat <- as.character(sig$probe)
-  model_feat <- as.character(fwer$probe)
-  
-  
-  if(gender) {
-    model_feat <- append('gender', model_feat)
-  } 
-  
-  # intersect model_feat with all_feat
-  int_feat <- intersect(model_feat, all_feat)
-  
-  
-  # get holders
+  # create place list place holders
   model <- list()
-  best_features <- list()
   importance <- list()
   test.predictions <- list()
-  y_test_holder <- list()
-  dims <- list()
+  y.test <- list()
   
+  # get intersection of bh features and real data
+  bh_features <- as.character(unlist(bh_features))
   
-  # split train and test at 70/30 and loop through iterations
-  for(i in 1:num_it) {
+  intersected_feats <- intersect(bh_features, colnames(model_dat))
+  
+  # get bumphunter features
+  model_dat <- model_dat[, c('age_diagnosis', 'age_sample_collection', 'gender',  intersected_feats)]
+  # get features and remove unneeded columns
+  
+  if(gender) {
+    intersected_feats <- append('gender', intersected_feats)
+    model_dat$gender <- as.factor(model_dat$gender)
     
-    # set seed and get training index
-    set.seed(i)
-    train_index <- sample(nrow(data), nrow(data) *.70, replace = F)
-    # creat training data frame
-    dat_train <- data[train_index, ]
+  }
+
+  set.seed(seed_num)
+  # assign folds
+  model_dat$folds <- sample(1:k, nrow(model_dat), replace = T)
+  
+  # now write forloop to 
+  for (i in 1:k) { 
     
-    # create testing data frame 
-    dat_test <- data[-train_index,]
+    # get x 
+    train_index <- !grepl(i, model_dat$folds)
+    test_index <- !train_index
     
-    ##########
-    # get model training and testing data
-    ##########
-    # get training outcome 
-    y_train <- dat_train$age_diagnosis# gets training outcome
-    y_test <- dat_test$age_diagnosis# testing outcome (real y)
+    # get train and test data
+    train_x <- model_dat[train_index, c('age_diagnosis', intersected_feats)]
+    test_x <- model_dat[test_index, c('age_diagnosis', intersected_feats)]
     
-    # get model data 
-    dat_train <- dat_train[, c(int_feat)]
-    dat_test <- dat_test[, int_feat]
+    # get y
+    train_y = as.numeric(train_x$age_diagnosis)
+    test_y = as.numeric(test_x$age_diagnosis)
     
-    dims <- dim(dat_train)
+    # determines how you train the model.
+    NFOLDS =  2
+    fitControl <- trainControl( 
+      method = "repeatedcv",  # could train on boostrap resample, here use repeated cross validation.
+      number = min(10, NFOLDS),
+      repeats = 2,
+      allowParallel = TRUE
+    )
+   
     
-    if(gender) {
-      #make gender binary 1,2
-      dat_train$gender <- ifelse(dat_train$gender == 'M', 1, 0)
-      dat_test$gender <- ifelse(dat_test$gender == 'M', 1, 0)
+    
+    if (classifier == 'rf'){
       
-    }
-    
-    
-    ##########
-    # models
-    ##########
-    if (mod == 'rf') {
-      
-      fitControl <- trainControl( 
-        method = "repeatedcv",  # could train on boostrap resample, here use repeated cross validation.
-        number = 4,      
-        repeats = 1,
-        allowParallel = TRUE
-      )
       
       # mtry: Number of variables randomly sampled as candidates at each split.
       # ntree: Number of trees to grow.
-      mtry <- sqrt(ncol(dat_train))
+      mtry <- sqrt(ncol(train_x))
       tunegrid <- expand.grid(.mtry=mtry)
       
-      model[[i]] <- train(x = dat_train
-                          , y = y_train
+      # train model
+      model[[i]] <- train(x = train_x[, intersected_feats]
+                          , y = train_y
                           , method = "rf"
                           , trControl = fitControl
                           , tuneGrid = tunegrid
@@ -185,20 +133,39 @@ runModels <- function(data,
                           , verbose = FALSE)
       
       temp <- varImp(model[[i]])[[1]]
-      importance <- cbind(rownames(temp), temp$Overall)
+      importance[[i]] <- cbind(rownames(temp), temp$Overall)
       
       
       test.predictions[[i]] <- predict(model[[i]] 
-                                       , newdata = dat_test)
+                                       , newdata = test_x[, intersected_feats])
       
-      y_test_holder[[i]] <- y_test
+      y.test[[i]] <- test_y
       
     }
     
-    if (mod == 'enet') {
+    
+    if(classifier == 'svm'){
+     
+      model[[i]] <- train(x = train_x[, intersected_feats]
+                          , y = train_y
+                          , method = 'svmLinear'
+                          , trControl = fitControl                   
+                          , verbose = FALSE)
+      
+      importance[[i]] <- 'svm_no_import'
+      
+      
+      test.predictions[[i]] <- predict(model[[i]]
+                                       , newdata = test_x[, intersected_feats])
+      
+      y.test[[i]] <- test_y
+      
+    }
+    
+    if(classifier == 'enet'){
       
       N_CV_REPEATS = 2
-      nfolds = 5
+      nfolds = 3
       
       ###### ENET
       # create vector and list to store best alpha on training data. alpha is the parameter that choses the 
@@ -210,13 +177,17 @@ runModels <- function(data,
       # set parameters for training model
       type_family <- 'gaussian'
       
+      # make gender numeric
+      train_x$gender <- as.numeric(train_x$gender)
+      test_x$gender <- as.numeric(test_x$gender)
+      
       # create error matrix for for opitmal alpha that can run in parraellel if you have bigger data 
       # or if you have a high number fo N_CV_REPEATS
       temp.cv_error_matrix <- foreach (temp = 1:N_CV_REPEATS, .combine=rbind, .errorhandling="stop") %do% {      
         for (alpha in 1:length(elastic_net.ALPHA)) # for i in 1:9 - the model will run 9 times
         {      
-          elastic_net.cv_model[[alpha]] = cv.glmnet(x = as.matrix(dat_train)
-                                                    , y =  y_train
+          elastic_net.cv_model[[alpha]] = cv.glmnet(x = as.matrix(train_x[, intersected_feats])
+                                                    , y =  train_y
                                                     , alpha = elastic_net.ALPHA[alpha] # first time with 0.1 and so on
                                                     , type.measure = 'deviance'
                                                     , family = type_family
@@ -250,8 +221,8 @@ runModels <- function(data,
       # usually after one iteration because the nzero variable selected by lambda is greater that 3. if it keeps looping
       # it they are never greater than 1, then the model does not converge. 
       while (temp.non_zero_coeff < 1) { 
-        elastic_net.cv_model = cv.glmnet(as.matrix(dat_train)
-                                         , y_train
+        elastic_net.cv_model = cv.glmnet(x = as.matrix(train_x[, intersected_feats])
+                                         , y =  train_y
                                          , alpha = elastic_net.ALPHA[temp.best_alpha_index]
                                          , type.measure = 'deviance'
                                          , family = type_family
@@ -282,33 +253,52 @@ runModels <- function(data,
         }
       }# while loop ends 
       print(temp.non_zero_coeff)  
-      dims[[i]] <- temp.non_zero_coeff
-      
-      model[[i]] = glmnet(x = as.matrix(dat_train)
-                          ,y =  y_train
+
+      model[[i]] = glmnet(x = as.matrix(train_x[, intersected_feats])
+                          , y =  train_y
                           ,alpha = elastic_net.ALPHA[temp.best_alpha_index]
                           ,standardize=FALSE
                           ,nlambda = 100
                           ,family = type_family)
       
       # This returns 100 prediction with 1-100 lambdas
-      temp_test.predictions <- predict(model[[i]], as.matrix(dat_test),
+      temp_test.predictions <- predict(model[[i]], 
+                                      as.matrix(test_x[, intersected_feats]),
                                        type = 'response')
       
       test.predictions[[i]] <- temp_test.predictions[, temp.min_lambda_index]
       
       importance[[i]] <- coef(model[[i]])
       
-      y_test_holder[[i]] <- y_test
+      y.test[[i]] <- test_y
       
       
     }
     
     print(i)
+    
+    
+
   }
-  
-  return (list(model,test.predictions, y_test_holder,  importance, dims))
+   return(list(y.test, test.predictions, importance, model))
   
 }
+# bh:  even_full, even_full_sig, even_full_fwer,
+#      even_sub_bal, even_sub_bal_sig, even_sub_bal_fwer,
+#      uneven_full, uneven_full_sig, uneven_full_fwer,
+#      uneven_sub, uneven_sub_sig, uneven_sub_full 
 
-cor(unlist(test.predictions), unlist(y_test_holder))
+# data: cases_full, cases_sub
+##########
+# apply model to raw
+##########
+# even, sub_bal
+raw_sub_mod <- predAge(model_dat = raw_cases_full, 
+                        bh_features = raw_even_sub_bal_sig, 
+                        classifier = 'rf', 
+                        gender = T, 
+                        k = 3, 
+                        seed_num = 1)
+
+cor(unlist(raw_sub_mod[[1]]), unlist(raw_sub_mod[[2]]))
+

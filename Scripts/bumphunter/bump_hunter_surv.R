@@ -63,12 +63,12 @@ cg_locations <- read.csv(paste0(model_data, '/cg_locations.csv'))
 ##########
 # remove samples to get balanced age
 ##########
-
+# data_controls <- quan_controls_full
 getBalAge <- function(data_controls, full)
 {
   # # balance age
-  # hist(quan_cases_full$age_sample_collection)
-  # hist(data_controls$age_sample_collection)
+  hist(quan_cases_full$age_sample_collection)
+  hist(data_controls$age_sample_collection)
 
   # remove a few from ranges 100-200, 300-400
   # randomly remove controls that have a less than 50 month age of diganosis to have balanced classes
@@ -96,10 +96,13 @@ getBalAge <- function(data_controls, full)
 # full
 quan_controls_full_bal <- getBalAge(quan_controls_full, full = T)
 funnorm_controls_full_bal <- getBalAge(funnorm_controls_full, full = T)
+raw_controls_full_bal <- getBalAge(raw_controls_full, full = T)
+
 
 # sub
 quan_controls_sub_bal <- getBalAge(quan_controls_sub, full = F)
 funnorm_controls_sub_bal <- getBalAge(funnorm_controls_sub, full = F)
+raw_controls_sub_bal <- getBalAge(raw_controls_sub, full = F)
 
 
 ##########
@@ -107,8 +110,8 @@ funnorm_controls_sub_bal <- getBalAge(funnorm_controls_sub, full = F)
 ##########
 # HERE
 # check histograms  
-dat_cases <- quan_cases_full
-dat_controls <- quan_controls_full_bal
+# dat_cases <- quan_cases_full
+# dat_controls <- quan_controls_full_bal
 # will return one unbalanced, one balanced by age, and balanced by age and counts
 bumpHunterBalanced <- function(dat_cases,
                                dat_controls) {
@@ -173,8 +176,8 @@ bumpHunterBalanced <- function(dat_cases,
   stopifnot(dim(beta)[1] == length(pos))
   
   # set paramenters 
-  DELTA_BETA_THRESH = c(0.10, 0.15, 0.20, 0.25) # DNAm difference threshold
-  NUM_BOOTSTRAPS = 3   # number of randomizations
+  DELTA_BETA_THRESH = .10 # DNAm difference threshold
+  NUM_BOOTSTRAPS = 2   # number of randomizations
   
   # create tab list
   tab <- list()
@@ -204,54 +207,56 @@ bumpHunterBalanced <- function(dat_cases,
 # quantile even
 ##########
 # quan no batch
-even <- bumpHunterBalanced(quan_cases, quan_controls_bal)
+quan_uneven_full <- bumpHunterBalanced(quan_cases_full, quan_controls_full)
 
 # quan gender
-even_gen <- bumpHunterBalanced(quan_cases_gen, quan_controls_gen_bal)
+quan_uneven_sub <- bumpHunterBalanced(quan_cases_sub, quan_controls_sub)
 
 # quan
-even_type <- bumpHunterBalanced(quan_cases_gen, quan_controls_type_bal)
+quan_even_full <- bumpHunterBalanced(quan_cases_full, quan_controls_full_bal)
 
 # quan gender sentrix
-even_gen_sen_type <- bumpHunterBalanced(quan_cases_sen_gen, quan_controls_type_bal)
-
-# quan gender sam
-even_gen_sam_type <- bumpHunterBalanced(quan_cases_sam_gen, quan_controls_type_bal)
-
+quan_even_sub_bal <- bumpHunterBalanced(quan_cases_sub, quan_controls_sub_bal)
 
 ##########
-# quantile uneven
+# funnormtile even
 ##########
-# quan no batch
-uneven <- bumpHunterBalanced(quan_cases, quan_controls)
+# funnorm no batch
+funnorm_uneven_full <- bumpHunterBalanced(funnorm_cases_full, funnorm_controls_full)
 
-# quan gender
-uneven_gen <- bumpHunterBalanced(quan_cases_gen, quan_controls_gen)
+# funnorm gender
+funnorm_uneven_sub <- bumpHunterBalanced(funnorm_cases_sub, funnorm_controls_sub)
 
-# quan
-uneven_type <- bumpHunterBalanced(quan_cases_gen, quan_controls_type)
+# funnorm
+funnorm_even_full <- bumpHunterBalanced(funnorm_cases_full, funnorm_controls_full_bal)
 
-# quan gender sentrix
-uneven_gen_sen_type <- bumpHunterBalanced(quan_cases_sen_gen, quan_controls_type)
-
-# quan gender sam
-uneven_gen_sam_type <- bumpHunterBalanced(quan_cases_sam_gen, quan_controls_type)
-
+# funnorm gender sentrix
+funnorm_even_sub_bal <- bumpHunterBalanced(funnorm_cases_sub, funnorm_controls_sub_bal)
 
 ##########
-# remove non model objects and save
+# rawtile even
 ##########
-rm(quan_cases_gen, quan_controls_gen,
-   quan_cases, quan_controls,
-   quan_cases_sen, quan_cases_sen_gen,
-   quan_cases_sam_gen, quan_cases_sam,
-   quan_controls, quan_controls_bal, 
-   quan_controls_gen, quan_controls_gen_bal,
-   quan_controls_type, quan_controls_type_bal,
-   cg_locations)
+# raw no batch
+raw_uneven_full <- bumpHunterBalanced(raw_cases_full, raw_controls_full)
+
+# raw gender
+raw_uneven_sub <- bumpHunterBalanced(raw_cases_sub, raw_controls_sub)
+
+# raw
+raw_even_full <- bumpHunterBalanced(raw_cases_full, raw_controls_full_bal)
+
+# raw gender sentrix
+raw_even_sub_bal <- bumpHunterBalanced(raw_cases_sub, raw_controls_sub_bal)
+
+###########
+# rempve cases and controls
+###########
+rm(list=ls(pattern="cases"))
+rm(list=ls(pattern="controls"))
+
 
 ###########
 # save image of bh_features
 ###########
-save.image(paste0(model_data, '/modal_feat.RData'))
+save.image(paste0(model_data, '/modal_feat_surv.RData'))
 
