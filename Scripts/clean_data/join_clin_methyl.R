@@ -39,7 +39,6 @@ beta_raw_controls <- readRDS(paste0(methyl_data, '/beta_raw_controls.rda'))
 ##########
 # make data frames
 ##########
-
 #raw
 beta_raw <- as.data.frame(beta_raw, stringsAsFactors = F)
 beta_raw_controls <- as.data.frame(beta_raw_controls, stringAsFactors = F)
@@ -235,21 +234,6 @@ beta_raw <- relevelFactor(beta_raw)
 # 2nd do controls
 ##########
 
-# quan
-# first clean idss
-beta_quan_controls <- cleanids(beta_quan_controls)
-
-# second join data
-beta_quan_controls <- joinData(beta_quan_controls, control = T)
-
-# funnorm
-# first clean idss
-beta_funnorm_controls <- cleanids(beta_funnorm_controls)
-
-# second join data
-beta_funnorm_controls <- joinData(beta_funnorm_controls, control = T)
-
-# raw
 # first clean idss
 beta_raw_controls <- cleanids(beta_raw_controls)
 
@@ -260,19 +244,7 @@ beta_raw_controls <- joinData(beta_raw_controls, control = T)
 #########
 # save data
 #########
-#quan
-saveRDS(beta_quan, paste0(methyl_data, '/beta_quan.rda'))
 
-
-saveRDS(beta_quan_controls, paste0(methyl_data, '/beta_quan_controls.rda'))
-
-#funnorm
-saveRDS(beta_funnorm, paste0(methyl_data, '/beta_funnorm.rda'))
-
-
-saveRDS(beta_funnorm_controls, paste0(methyl_data, '/beta_funnorm_controls.rda'))
-
-#raw
 saveRDS(beta_raw, paste0(methyl_data, '/beta_raw.rda'))
 
 

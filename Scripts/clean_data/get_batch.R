@@ -6,8 +6,7 @@
 ##########
 library(dplyr)
 library(sva)
-
-
+library(impute)
 
 ##########
 # Initialize folders
@@ -39,18 +38,75 @@ beta_raw_controls$identifier <- NULL
 ##########t
 # make data frames
 ##########
-#quan
-beta_quan <- as.data.frame(beta_quan, stringsAsFactors = F)
-beta_quan_controls <- as.data.frame(beta_quan_controls, stringAsFactors = F)
-
-#funnorm
-beta_funnorm <- as.data.frame(beta_funnorm, stringsAsFactors = F)
-beta_funnorm_controls <- as.data.frame(beta_funnorm_controls, stringAsFactors = F)
-
 #raw
 beta_raw <- as.data.frame(beta_raw, stringsAsFactors = F)
 beta_raw_controls <- as.data.frame(beta_raw_controls, stringAsFactors = F)
 
+##########
+# noramlize data after subsetting featres
+##########
+
+# data_cases <- beta_raw[1:20, 1:30]
+# data_controls <- beta_raw_controls[1:20, 1:30]
+normalizeDat <- function(data_cases, data_controls)
+{
+  features <- names(data_cases)[9:ncol(data_cases)]
+  features_controls <- names(data_controls)[8:ncol(data_controls)]
+
+  data_controls$sen_batch <- 'tor_2'
+  
+  
+  intersect_features <- intersect(features, features_controls)
+  
+  data_cases <- data_cases[, c('ids', 'p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses', 
+                   'age_sample_collection' ,'gender', 'sentrix_id', 'sen_batch', intersect_features)]
+  
+  data_controls <- data_controls[, c('ids', 'p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses', 
+                                     'age_sample_collection' ,'gender', 'sentrix_id', 'sen_batch', intersect_features)]
+  
+  scaleDat <- function(dat) {
+    
+    clin_dat <- dat[, c(1:8)]
+    dat <- t(dat[, c(9:ncol(dat))])
+    # get row statistics
+    rowMean <- apply(dat, 1, mean, na.rm=TRUE)
+    rowSd <- apply(dat, 1, sd, na.rm=TRUE)
+    # constantInd <- rowSd==0
+    # rowSd[constantInd] <- 1
+    rowStats <- list(mean=rowMean, sd=rowSd)
+    
+    # apply normilization
+    dat  <- (dat - rowStats$mean) / rowStats$sd
+    
+    # make matrix
+    dat <- as.matrix(dat)
+
+    # impute with knn
+    dat_knn <-  impute.knn(dat, k = 10)$data
+    
+    # transpose 
+    dat_knn <- t(dat_knn)
+    
+    # get clin data back and return final data
+    final_dat <- cbind(clin_dat, dat_knn)
+    
+    return(final_dat)
+  }
+  
+  # apply function
+  data_cases <- scaleDat(data_cases)
+  data_controls <- scaleDat(data_controls)
+  
+  
+
+  
+  return(list(data_cases, data_controls))
+}
+
+norm_dat <- normalizeDat(beta_raw, beta_raw_controls)
+cases <- norm_dat[[1]]
+controls <- norm_dat[[2]]
+rm(norm_dat, beta_raw, beta_raw_controls)
 
 ##########
 # remove cancers from controls
@@ -62,9 +118,7 @@ removeCancer <- function(data_controls)
   return(data_controls)
 }
 
-beta_quan_controls <- removeCancer(beta_quan_controls)
-beta_funnorm_controls <- removeCancer(beta_funnorm_controls)
-beta_raw_controls <- removeCancer(beta_raw_controls)
+controls <- removeCancer(controls)
 
 ##########
 # get extra controls
@@ -76,9 +130,9 @@ getExtraCon <- function(data)
   data <- data[!is.na(data$age_sample_collection),]
   return(data)
 }
-beta_quan_controls_2 <- getExtraCon(beta_quan)
-beta_funnorm_controls_2 <- getExtraCon(beta_funnorm)
-beta_raw_controls_2 <- getExtraCon(beta_raw)
+
+# extra controls
+controls_2 <- getExtraCon(cases)
 
 
 ##########
@@ -92,94 +146,36 @@ getModData <- function(data)
   return(data)
 }
 
-# quan
-beta_quan <- getModData(beta_quan)
-
 # funnorm
-beta_funnorm <- getModData(beta_funnorm)
-
-# funnorm
-beta_raw <- getModData(beta_raw)
+cases <- getModData(cases)
 
 
 ##########
 # get intersection of controls and normal
 ##########
-# data <- beta_quan
-# data_controls <- beta_quan_controls
-# data_controls_2 <- beta_quan_controls_2
-
-getFeatInt <- function(data, data_controls, data_controls_2)
-{
-  features <- names(data)[9:ncol(data)]
-  features_controls <- names(data_controls)[8:ncol(data_controls)]
-  features_controls_2 <- names(data_controls_2)[9:ncol(data_controls_2)]
-  
-  data_controls$sen_batch <- 'tor_2'
-  
-  
-  intersect_features <- Reduce(intersect, list(features, features_controls, features_controls_2))
-  
-  data <- data[, c('ids', 'p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses', 
-                   'age_sample_collection' ,'gender', 'sentrix_id', 'sen_batch', intersect_features)]
-  
-  data_controls <- data_controls[, c('ids', 'p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses', 
-                                     'age_sample_collection' ,'gender', 'sentrix_id', 'sen_batch', intersect_features)]
-  
-  data_controls_2 <- data_controls_2[, c('ids', 'p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses', 
-                                     'age_sample_collection' ,'gender', 'sentrix_id', 'sen_batch', intersect_features)]
-  
-  data <- rbind(data, data_controls, data_controls_2)
-  
-  data <- data[!duplicated(data$ids),]
-
-  return(data)
-  
-}
-
-# quan
-quan <- getFeatInt(beta_quan, beta_quan_controls, beta_quan_controls_2)
-
-# funnorm
-funnorm <- getFeatInt(beta_funnorm, beta_funnorm_controls, beta_funnorm_controls_2)
-
 # raw
-raw <- getFeatInt(beta_raw, beta_raw_controls, beta_raw_controls_2)
+dat <- rbind(cases, controls, controls_2)
 
-# remove uneeded objects
-rm(list=ls(pattern="beta*"))
-
-nrow(quan[quan$sen_batch == 'tor_1',])
-nrow(quan[quan$sen_batch == 'tor_2',])
+stopifnot(all(!is.na(dat[, 9:ncol(dat)])))
 
 ########## 
 # PCA of each data type and cases vs controls
-##########
+# ##########
+# pca_data <- cases
+# column_name <- 'gender'
+# name <- 'l'
+# gene_start <- 9
+# pca1<- 'x'
+# pca2<- 'y'
 # functionp needs to take a clinical column, remove others, and plot pcas
-pca_data <- raw
 getPCA <- function(pca_data, 
                    column_name, 
                    name, 
                    gene_start, 
-                   case_control,
-                   batch,
                    pca1,
                    pca2) 
 {
   
-  if (case_control == "cases") {
-    
-    pca_data <- pca_data[!grepl('Unaffected', pca_data$cancer_diagnosis_diagnoses),]
-    rownames(pca_data) <-pca_data$ids
-    
-    
-  } 
-  if (case_control == "controls") {
-    
-    pca_data <- pca_data[grepl('Unaffected', pca_data$cancer_diagnosis_diagnoses),]
-    rownames(pca_data) <-pca_data$ids
-    
-  } 
   
   pca_data[, column_name] <- as.factor(pca_data[, column_name])
   
@@ -233,266 +229,93 @@ getPCA <- function(pca_data,
 # combine cases and controls and plot based on that
 ##########
 
-#####################################################################
-##########
-# quan
-##########
+#########
 # cases
-getPCA(quan, 
+#########
+
+# gender 
+getPCA(cases, 
        'gender', 
-       'PCA quan cases gender',
+       'PCA cases gender',
        gene_start = 9,
-       case_control = 'cases',
        pca1 = 1,
        pca2 = 2)
 
-#controls
-getPCA(quan, 
+#cases
+getPCA(cases, 
+       'sen_batch', 
+       'PCA cases sen_batch',
+       gene_start = 9,
+       pca1 = 1,
+       pca2 = 2)
+
+
+#cases
+getPCA(cases, 
+       'sentrix_id', 
+       'PCA cases sentrix_id',
+       gene_start = 9,
+       pca1 = 1,
+       pca2 = 2)
+
+#########
+# controls
+#########
+
+# gender 
+getPCA(controls, 
        'gender', 
-       'PCA quan controls gender',
+       'PCA controls gender',
        gene_start = 9,
-       case_control = 'controls',
        pca1 = 1,
        pca2 = 2)
 
-
-#cases
-getPCA(quan, 
+#controls
+getPCA(controls, 
        'sen_batch', 
-       'PCA quan cases sen_batch',
+       'PCA controls sen_batch',
        gene_start = 9,
-       case_control = 'cases',
        pca1 = 1,
        pca2 = 2)
+
+
 
 #controls
-getPCA(quan, 
-       'sen_batch', 
-       'PCA quan controls sen_batch',
-       gene_start = 9,
-       case_control = 'controls',
-       pca1 = 1,
-       pca2 = 2)
-
-#cases
-getPCA(quan, 
+getPCA(controls, 
        'sentrix_id', 
-       'PCA quan cases sentrix_id',
+       'PCA controls sentrix_id',
        gene_start = 9,
-       case_control = 'cases',
        pca1 = 1,
        pca2 = 2)
-
-#controls
-getPCA(quan, 
-       'sentrix_id', 
-       'PCA quan controls sentrix_id',
-       gene_start = 9,
-       case_control = 'controls',
-       pca1 = 1,
-       pca2 = 2)
-
-
-#####################################################################
-##########
-# raw
-##########
-# cases
-getPCA(raw, 
-       'gender', 
-       'PCA raw cases gender',
-       gene_start = 9,
-       case_control = 'cases',
-       pca1 = 1,
-       pca2 = 2)
-
-#controls
-getPCA(raw, 
-       'gender', 
-       'PCA raw controls gender',
-       gene_start = 9,
-       case_control = 'controls',
-       pca1 = 1,
-       pca2 = 2)
-
-
-#cases
-getPCA(raw, 
-       'sen_batch', 
-       'PCA raw cases sen_batch',
-       gene_start = 9,
-       case_control = 'cases',
-       pca1 = 1,
-       pca2 = 2)
-
-#controls
-getPCA(raw, 
-       'sen_batch', 
-       'PCA raw controls sen_batch',
-       gene_start = 9,
-       case_control = 'controls',
-       pca1 = 1,
-       pca2 = 2)
-
-#cases
-getPCA(raw, 
-       'sentrix_id', 
-       'PCA raw cases sentrix_id',
-       gene_start = 9,
-       case_control = 'cases',
-       pca1 = 1,
-       pca2 = 2)
-
-#controls
-getPCA(raw, 
-       'sentrix_id', 
-       'PCA raw controls sentrix_id',
-       gene_start = 9,
-       case_control = 'controls',
-       pca1 = 1,
-       pca2 = 2)
-
-
-##########
-# remove raw outliers
-##########
-
-
-
-#############################
-#cases
-getPCA(funnorm, 
-       'sen_batch', 
-       'PCA funnorm cases sen_batch',
-       gene_start = 9,
-       case_control = 'cases',
-       pca1 = 1,
-       pca2 = 2)
-
-#controls
-getPCA(funnorm, 
-       'sen_batch', 
-       'PCA funnorm controls sen_batch',
-       gene_start = 9,
-       case_control = 'controls',
-       pca1 = 1,
-       pca2 = 2)
-
-#cases
-getPCA(funnorm, 
-       'sentrix_id', 
-       'PCA funnorm cases sentrix_id',
-       gene_start = 9,
-       case_control = 'cases',
-       pca1 = 1,
-       pca2 = 2)
-
-#controls
-getPCA(funnorm, 
-       'sentrix_id', 
-       'PCA funnorm controls sentrix_id',
-       gene_start = 9,
-       case_control = 'controls',
-       pca1 = 1,
-       pca2 = 2)
-
-
-
 
 ##########
 # remove outliers  4257 cases, 3391, 3392 controls
 ##########
-removeOutlier <- function(data, funnorm) {
+removeOutlier <- function(data) {
   
 
   #controls outlier
   data <- data[data$ids != '3391',]
   data <- data[data$ids != '3392',]
-  data <- data[data$ids != '4257',]
-  data <- data[data$ids != '94',]
-  data <- data[data$ids != '93',]
-  data <- data[data$ids != '2414',]
+  # data <- data[data$ids != '4257',]
+  # data <- data[data$ids != '94',]
+  # data <- data[data$ids != '93',]
+  # data <- data[data$ids != '2414',]
   
   
   return(data)
 }
 
-# quan
-quan <- removeOutlier(quan, funnorm = F)
-
-# funnorm
-funnorm <- removeOutlier(funnorm, funnorm = F)
-
 # raw
-raw <- removeOutlier(raw, funnorm  = F)
-
-# ##########
-# # create variable to loop through to correct for sentrix_id
-# ##########
-# rmSentrixBatch <- function(data) 
-# {
-#   data_types <- unique(data$sen_batch)
-#   
-#   result_list <- list()
-#   
-#   for(i in data_types) {
-#     # get sub data
-#     sub_data <- data[data$sen_batch == i,]
-#     
-#     batch_indicator <- as.factor(as.character(sub_data$sentrix_id))
-#     
-#     # get columns
-#     gender <- sub_data$gender
-#     sentrix_id <- sub_data$sentrix_id
-#     sen_batch <- sub_data$sen_batch
-#     ids <- sub_data$ids
-#     sample_collection <- sub_data$age_sample_collection
-#     diagnosis <- sub_data$age_diagnosis
-#     p53 <- sub_data$p53_germline
-#     cancer_diagnosis <- sub_data$cancer_diagnosis_diagnoses
-#     # put model ids in rownames and remove columns
-#     mat_sub_data <- sub_data[, 9:ncol(sub_data)]
-#     # get features 
-#     features <- colnames(mat_sub_data)
-#     mat_sub_data <- t(mat_sub_data)
-#     
-#     # get intercept
-#     modcombat <- model.matrix(~1, data = sub_data)
-#     combat <- ComBat(dat = mat_sub_data, batch = batch_indicator, mod = modcombat, par.prior=TRUE, prior.plots=FALSE)
-#     
-#     # transpose and add back columns
-#     final_dat <- as.data.frame(t(combat))
-#     final_dat$gender <- gender
-#     final_dat$sen_batch <- sen_batch
-#     final_dat$ids <- ids
-#     final_dat$age_sample_collection <- sample_collection
-#     final_dat$age_diagnosis <- diagnosis
-#     final_dat$p53_germline <- p53
-#     final_dat$sentrix_id <- sentrix_id
-#     final_dat$cancer_diagnosis_diagnoses <- cancer_diagnosis
-#     final_dat <- final_dat[, c('ids', 'gender', 'age_sample_collection',
-#                                'age_diagnosis','cancer_diagnosis_diagnoses' ,'p53_germline', 'sen_batch', 'sentrix_id',features)]
-#     rownames(final_dat) <- NULL
-#     
-#     result_list[[data_types]] <- final_dat
-#     
-#     print(data_types)
-# 
-#     
-#   }
-#   
-#   return(result_list)
-#   
-# }
-# 
-# quan <- rmSentrixBatch(quan)
-# 
-# funnorm <- rmSentrixBatch(funnorm)
-# 
+cases <- removeOutlier(cases, funnorm  = F)
+controls <- removeOutlier(controls, funnorm  = F)
+controls_2 <- removeOutlier(controls_2, funnorm  = F)
 
 ##########
 # batch
 ##########
+
+# HERE
 getBatch <- function(data, cases, data_size)
 {
   

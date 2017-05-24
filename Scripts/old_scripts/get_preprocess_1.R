@@ -163,8 +163,13 @@ getIdName <- function(data) {
   sub_ids <- unlist(last_digits)
   sub_ids <- gsub('RD-', '', sub_ids)
   data$ids <- sub_ids
-  data$sentrix_position <- data$pool_id <- data$sample_group <- data$sample_plate <- data$sample_well <- 
-  data$sample_name <- data$identifier <- NULL
+  data$sentrix_position <- NULL
+  data$pool_id <- NULL
+  data$sample_group <- NULL
+  data$sample_plate <- NULL
+  data$sample_well <- NULL
+  data$sample_name <- NULL
+  data$identifier <- NULL
   return(data)
   
 }
@@ -190,17 +195,10 @@ getMethyl <- function(data_list,control, method) {
     beta_methyl <- getIdName(beta_methyl)
     # m_methyl <- getIdName(m_methyl)
     # cn_methyl <- getIdName(cn_methyl)
-    
-    # make data frame
-    beta_methyl <- as.data.frame(beta_methyl, stringsAsFactors = F)
-    
   } else {
     
     # find ids
     beta_methyl <- findIds(beta_methyl, id_map_control)
-    
-    # make data frame
-    beta_methyl <- as.data.frame(beta_methyl, stringsAsFactors = F)
     
     # m_methyl <- findIds(m_methyl, id_map_control)
     # cn_methyl <- findIds(cn_methyl, id_map_control)
@@ -218,18 +216,23 @@ getMethyl <- function(data_list,control, method) {
 beta_raw <- getMethyl(rgSetList, control = F, method = 'raw')
 beta_raw_controls <- getMethyl(rgSetListControls, control = T, method = 'raw')
 
-##########
-# normalize, get overlapping column names
-##########
+# scale betas
+beta_raw <- scale(beta_raw)
+beta_raw_controls <- scale(beta_raw_controls)
+
+
 
 
 ##########
 # new variable called sen_batch
 #########
+
 beta_raw$sen_batch <- ifelse(grepl('9721365183', rownames(beta_raw)), 'mon', 'tor_1')
 
 # save data
 saveRDS(beta_raw, paste0(methyl_data, '/beta_raw.rda'))
 saveRDS(beta_raw_controls, paste0(methyl_data, '/beta_raw_controls.rda'))
+
+
 
 
