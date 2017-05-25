@@ -218,15 +218,12 @@ getMethyl <- function(data_list,control, method) {
 beta_raw <- getMethyl(rgSetList, control = F, method = 'raw')
 beta_raw_controls <- getMethyl(rgSetListControls, control = T, method = 'raw')
 
-##########
-# normalize, get overlapping column names
-##########
-
 
 ##########
 # new variable called sen_batch
-#########
+##########
 beta_raw$sen_batch <- ifelse(grepl('9721365183', rownames(beta_raw)), 'mon', 'tor_1')
+
 
 # save data
 saveRDS(beta_raw, paste0(methyl_data, '/beta_raw.rda'))

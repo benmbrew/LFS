@@ -21,54 +21,39 @@ clin_data <- paste0(data_folder, '/clin_data')
 ##########
 # load cases 
 ##########
-# full
-quan_cases_full <- readRDS(paste0(model_data, '/quan_cases_full.rda'))
 
-funnorm_cases_full <- readRDS(paste0(model_data, '/funnorm_cases_full.rda'))
+# load
+cases <- readRDS(paste0(model_data, '/cases.rda'))
 
-raw_cases_full <- readRDS(paste0(model_data, '/raw_cases_full.rda'))
-
-
-# sub
-quan_cases_sub <- readRDS(paste0(model_data, '/quan_cases_sub.rda'))
-
-funnorm_cases_sub <- readRDS(paste0(model_data, '/funnorm_cases_sub.rda'))
-
-raw_cases_sub <- readRDS(paste0(model_data, '/raw_cases_sub.rda'))
-
+cases_sub <- readRDS(paste0(model_data, '/cases_sub.rda'))
 
 ##########
 # load controls 
 ##########
-# full
-quan_controls_full <- readRDS(paste0(model_data, '/quan_controls_full.rda'))
 
-funnorm_controls_full <- readRDS(paste0(model_data, '/funnorm_controls_full.rda'))
+#load
+controls <- readRDS(paste0(model_data, '/controls.rda'))
 
-raw_controls_full <- readRDS(paste0(model_data, '/raw_controls_full.rda'))
+controls_full <- readRDS(paste0(model_data, '/controls_full.rda'))
 
-
-# sub
-quan_controls_sub <- readRDS(paste0(model_data, '/quan_controls_sub.rda'))
-
-funnorm_controls_sub <- readRDS(paste0(model_data, '/funnorm_controls_sub.rda'))
-
-raw_controls_sub <- readRDS(paste0(model_data, '/raw_controls_sub.rda'))
-
+controls_wt <- readRDS(paste0(model_data, '/controls_wt.rda'))
 
 # ge cg_locations
 cg_locations <- read.csv(paste0(model_data, '/cg_locations.csv'))
+
+##########
+# columns arent same
+##########
 
 
 ##########
 # remove samples to get balanced age
 ##########
-# data_controls <- quan_controls_full
 getBalAge <- function(data_controls, full)
 {
-  # # balance age
-  hist(quan_cases_full$age_sample_collection)
-  hist(data_controls$age_sample_collection)
+  # # # balance age
+  # hist(cases$age_sample_collection)
+  # hist(data_controls$age_sample_collection)
 
   # remove a few from ranges 100-200, 300-400
   # randomly remove controls that have a less than 50 month age of diganosis to have balanced classes
@@ -76,7 +61,7 @@ getBalAge <- function(data_controls, full)
                        (data_controls$age_sample_collection >= 300 & data_controls$age_sample_collection <= 400))
   
   if(full) {
-    remove_index <- sample(remove_index, 13, replace = F)
+    remove_index <- sample(remove_index, 15, replace = F)
     
   } else {
     remove_index <- sample(remove_index, 10, replace = F)
@@ -94,15 +79,10 @@ getBalAge <- function(data_controls, full)
 ##########
 
 # full
-quan_controls_full_bal <- getBalAge(quan_controls_full, full = T)
-funnorm_controls_full_bal <- getBalAge(funnorm_controls_full, full = T)
-raw_controls_full_bal <- getBalAge(raw_controls_full, full = T)
-
+controls_full_bal <- getBalAge(controls_full, full = T)
 
 # sub
-quan_controls_sub_bal <- getBalAge(quan_controls_sub, full = F)
-funnorm_controls_sub_bal <- getBalAge(funnorm_controls_sub, full = F)
-raw_controls_sub_bal <- getBalAge(raw_controls_sub, full = F)
+controls_bal <- getBalAge(controls, full = F)
 
 
 ##########
@@ -182,7 +162,7 @@ bumpHunterBalanced <- function(dat_cases,
   # create tab list
   tab <- list()
   bump_hunter_results <- list()
-  for(i in 1:length(DELTA_BETA_THRESH)) {
+  for (i in 1:length(DELTA_BETA_THRESH)) {
     tab[[i]] <- bumphunter(beta, 
                            designMatrix, 
                            chr = chr, 
@@ -204,49 +184,24 @@ bumpHunterBalanced <- function(dat_cases,
 
 
 ##########
-# quantile even
+# controls full
 ##########
-# quan no batch
-quan_uneven_full <- bumpHunterBalanced(quan_cases_full, quan_controls_full)
 
-# quan gender
-quan_uneven_sub <- bumpHunterBalanced(quan_cases_sub, quan_controls_sub)
+# all cases
+full_full <-  bumpHunterBalanced(cases, controls_full_bal)
 
-# quan
-quan_even_full <- bumpHunterBalanced(quan_cases_full, quan_controls_full_bal)
+# sub cases
+sub_full <- bumpHunterBalanced(cases_sub, controls_full_bal)
 
-# quan gender sentrix
-quan_even_sub_bal <- bumpHunterBalanced(quan_cases_sub, quan_controls_sub_bal)
+# controls 
 
-##########
-# funnormtile even
-##########
-# funnorm no batch
-funnorm_uneven_full <- bumpHunterBalanced(funnorm_cases_full, funnorm_controls_full)
+# all cases
+full_sub <- bumpHunterBalanced(cases, controls_bal)
 
-# funnorm gender
-funnorm_uneven_sub <- bumpHunterBalanced(funnorm_cases_sub, funnorm_controls_sub)
+# sub cases
+sub_sub<- bumpHunterBalanced(cases_sub, controls_bal)
 
-# funnorm
-funnorm_even_full <- bumpHunterBalanced(funnorm_cases_full, funnorm_controls_full_bal)
 
-# funnorm gender sentrix
-funnorm_even_sub_bal <- bumpHunterBalanced(funnorm_cases_sub, funnorm_controls_sub_bal)
-
-##########
-# rawtile even
-##########
-# raw no batch
-raw_uneven_full <- bumpHunterBalanced(raw_cases_full, raw_controls_full)
-
-# raw gender
-raw_uneven_sub <- bumpHunterBalanced(raw_cases_sub, raw_controls_sub)
-
-# raw
-raw_even_full <- bumpHunterBalanced(raw_cases_full, raw_controls_full_bal)
-
-# raw gender sentrix
-raw_even_sub_bal <- bumpHunterBalanced(raw_cases_sub, raw_controls_sub_bal)
 
 ###########
 # rempve cases and controls
@@ -258,5 +213,5 @@ rm(list=ls(pattern="controls"))
 ###########
 # save image of bh_features
 ###########
-save.image(paste0(model_data, '/modal_feat_surv.RData'))
+save.image(paste0(model_data, '/modal_feat_surv_10.RData'))
 
