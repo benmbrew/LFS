@@ -7,6 +7,8 @@
 library(minfi)
 library(bumphunter)
 library(dplyr)
+library(dgof)
+library(graphics)
 
 ##########
 # Initialize folders
@@ -36,22 +38,18 @@ controls <- readRDS(paste0(model_data, '/controls.rda'))
 
 controls_full <- readRDS(paste0(model_data, '/controls_full.rda'))
 
-controls_wt <- readRDS(paste0(model_data, '/controls_wt.rda'))
-
 # ge cg_locations
 cg_locations <- read.csv(paste0(model_data, '/cg_locations.csv'))
-
-##########
-# columns arent same
-##########
 
 
 ##########
 # remove samples to get balanced age
 ##########
+# data_controls <- controls_wt
 getBalAge <- function(data_controls, full)
 {
-  # # # balance age
+
+  # # # # balance age
   # hist(cases$age_sample_collection)
   # hist(data_controls$age_sample_collection)
 
@@ -61,10 +59,10 @@ getBalAge <- function(data_controls, full)
                        (data_controls$age_sample_collection >= 300 & data_controls$age_sample_collection <= 400))
   
   if(full) {
-    remove_index <- sample(remove_index, 15, replace = F)
+    remove_index <- sample(remove_index, 8, replace = F)
     
   } else {
-    remove_index <- sample(remove_index, 10, replace = F)
+    remove_index <- sample(remove_index, 2, replace = F)
     
   }
   
@@ -73,6 +71,8 @@ getBalAge <- function(data_controls, full)
   return(data_controls)
   
 }
+
+
 
 ##########
 # get balanced ages for each control group
@@ -83,7 +83,6 @@ controls_full_bal <- getBalAge(controls_full, full = T)
 
 # sub
 controls_bal <- getBalAge(controls, full = F)
-
 
 ##########
 # function that takes LFS patients and run balanced and unbalanced bumphunter on cancer and controls
@@ -214,4 +213,5 @@ rm(list=ls(pattern="controls"))
 # save image of bh_features
 ###########
 save.image(paste0(model_data, '/modal_feat_surv_10.RData'))
+
 

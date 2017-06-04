@@ -29,12 +29,16 @@ bumphunter_data <- paste0(data_folder, '/bumphunter_data')
 clin_data <- paste0(data_folder, '/clin_data')
 
 ##########
-# Read in methylation probe and gene
+# Read in methylation probe
 ##########
-
 # raw
 beta_raw <- readRDS(paste0(methyl_data, '/beta_raw.rda'))
 beta_raw_controls <- readRDS(paste0(methyl_data, '/beta_raw_controls.rda'))
+
+##########
+# read in methylation for validation set
+##########
+beta_raw_valid <- readRDS(paste0(methyl_data, '/valid_raw.rda'))
 
 ##########
 # make data frames
@@ -42,7 +46,12 @@ beta_raw_controls <- readRDS(paste0(methyl_data, '/beta_raw_controls.rda'))
 #raw
 beta_raw <- as.data.frame(beta_raw, stringsAsFactors = F)
 beta_raw_controls <- as.data.frame(beta_raw_controls, stringAsFactors = F)
+beta_raw_valid <- as.data.frame(beta_raw_valid, stringAsFactors = F)
 
+##########
+# new variable called sen_batch
+##########
+beta_raw$sen_batch <- ifelse(grepl('9721365183', rownames(beta_raw)), 'mon', 'tor_1')
 
 ##########
 # read in clinical data
@@ -55,14 +64,19 @@ clin$ids <-  gsub('A|B|_|-', '', clin$blood_dna_malkin_lab_)
 ##########
 # function to clean ids names and get methyl_indicator for clin
 ##########
-getMethylVar <- function(dat_cases, dat_controls) {
+# dat_cases <- beta_raw
+# dat_controls <- beta_raw_controls
+# dat_valid <- beta_raw_valid
+getMethylVar <- function(dat_cases, dat_controls, dat_vadlid) {
   
   # get idss from cases and controls
   cases_names <- as.character(dat_cases$ids)
   controls_names <- as.character(dat_controls$ids)
+  valid_names <- as.character(dat_valid$ids)
   
   # combine idss
   methylation_names <- append(cases_names, controls_names)
+  methylation_names <- append(methylation_names, valid_names)
   
   # remove 'A' and '_' in methylation names
   methylation_names <- gsub('A|B|_|-', '', methylation_names)
@@ -125,11 +139,11 @@ getIds <- function(cg_locations) {
 }
 
 # function that takes each methylation and merges with clinical - keep ids, family, p53 status, age data
-joinData <- function(data, control) {
+joinData <- function(data, control, valid) {
   
   # get intersection of clin idss and data idss
   intersected_ids <- intersect(data$ids, clin$ids)
-  features <- colnames(data)[1:(length(colnames(data)) - 2)]
+  features <- colnames(data)[1:(length(colnames(data)) - 3)]
   
   # loop to combine idsentifiers, without merging large table
   data$p53_germline <- NA
@@ -159,9 +173,14 @@ joinData <- function(data, control) {
     data <- data[!duplicated(data$tm_donor_),]
     # data <- data[!is.na(data$age_diagnosis),]
     # data <- data[!is.na(data$age_sample_collection), ]
-    
-    data <- data[, c('ids', 'p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses',
-                     'age_sample_collection', 'gender','sentrix_id','sen_batch', features)]
+    if(valid) {
+      data <- data[, c('ids', 'p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses',
+                       'age_sample_collection', 'gender','sentrix_id', features)]
+    } else {
+      data <- data[, c('ids', 'p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses',
+                       'age_sample_collection', 'gender','sentrix_id','sen_batch', features)]
+    }
+   
   } else {
     
     for (i in intersected_ids) {
@@ -225,7 +244,7 @@ beta_raw <- cleanids(beta_raw)
 options(warn=1)
 
 # second join data
-beta_raw <- joinData(beta_raw, control = F)
+beta_raw <- joinData(beta_raw, control = F, valid = F)
 
 # thrids relevel factors
 beta_raw <- relevelFactor(beta_raw)
@@ -234,11 +253,25 @@ beta_raw <- relevelFactor(beta_raw)
 # 2nd do controls
 ##########
 
-# first clean idss
+# first clean ids
 beta_raw_controls <- cleanids(beta_raw_controls)
 
 # second join data
-beta_raw_controls <- joinData(beta_raw_controls, control = T)
+beta_raw_controls <- joinData(beta_raw_controls, control = T, valid = F)
+
+#########
+# 3rd do validation
+##########
+
+# first clean ids
+beta_raw_valid <- cleanids(beta_raw_valid)
+
+# second join data
+beta_raw_valid <- joinData(beta_raw_valid, control = F, valid = T)
+
+# thrids relevel factors
+beta_raw_valid <- relevelFactor(beta_raw_valid)
+
 
 
 #########
@@ -247,6 +280,8 @@ beta_raw_controls <- joinData(beta_raw_controls, control = T)
 
 saveRDS(beta_raw, paste0(methyl_data, '/beta_raw.rda'))
 
-
 saveRDS(beta_raw_controls, paste0(methyl_data, '/beta_raw_controls.rda'))
+
+saveRDS(beta_raw_valid, paste0(methyl_data, '/beta_raw_valid.rda'))
+
 

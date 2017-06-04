@@ -24,6 +24,7 @@ clin_data <- paste0(data_folder, '/clin_data')
 # raw
 beta_raw <- readRDS(paste0(methyl_data, '/beta_raw.rda'))
 beta_raw_controls <- readRDS(paste0(methyl_data, '/beta_raw_controls.rda'))
+beta_raw_valid <- readRDS(paste0(methyl_data, '/beta_raw_valid.rda'))
 
 ##########
 # remove id.1
@@ -41,14 +42,15 @@ beta_raw_controls$identifier <- NULL
 #raw
 beta_raw <- as.data.frame(beta_raw, stringsAsFactors = F)
 beta_raw_controls <- as.data.frame(beta_raw_controls, stringAsFactors = F)
+beta_raw_valid <- as.data.frame(beta_raw_valid, stringAsFactors = F)
 
 ##########
 # noramlize data after subsetting featres
 ##########
 
-data_cases <- beta_raw
-data_controls <- beta_raw_controls
-normalizeDat <- function(data_cases, data_controls, data_wt)
+# data_cases <- beta_raw
+# data_controls <- beta_raw_controls
+normalizeDat <- function(data_cases, data_controls)
 {
   features <- names(data_cases)[9:ncol(data_cases)]
   features_controls <- names(data_controls)[8:ncol(data_controls)]
@@ -99,7 +101,7 @@ normalizeDat <- function(data_cases, data_controls, data_wt)
   return(list(data_cases, data_controls))
 }
 
-norm_dat <- normalizeDat(beta_raw, beta_raw_controls, beta_wt_non)
+norm_dat <- normalizeDat(beta_raw, beta_raw_controls)
 cases <- norm_dat[[1]]
 controls <- norm_dat[[2]]
 rm(norm_dat, beta_raw, beta_raw_controls)
@@ -161,12 +163,12 @@ cases_sub <- cases[!grepl('mon', cases$sen_batch),]
 ########## 
 # PCA of each data type and cases vs controls
 # ##########
-pca_data <- controls_wt
-column_name <- 'gender'
-name <- 'l'
-gene_start <- 9
-pca1<- 'x'
-pca2<- 'y'
+# pca_data <- controls_wt
+# column_name <- 'gender'
+# name <- 'l'
+# gene_start <- 9
+# pca1<- 'x'
+# pca2<- 'y'
 # functionp needs to take a clinical column, remove others, and plot pcas
 getPCA <- function(pca_data, 
                    column_name, 

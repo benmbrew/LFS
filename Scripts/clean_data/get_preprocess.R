@@ -155,7 +155,6 @@ findIds <- function(data_methyl, id_map) {
 ##########
 # Function that gets malkin id from sample_name
 ##########
-
 getIdName <- function(data) {
   
   column_split <- strsplit(as.character(data$ids), '#')
@@ -163,14 +162,14 @@ getIdName <- function(data) {
   sub_ids <- unlist(last_digits)
   sub_ids <- gsub('RD-', '', sub_ids)
   data$ids <- sub_ids
-  data$sentrix_position <- data$pool_id <- data$sample_group <- data$sample_plate <- data$sample_well <- 
-  data$sample_name <- data$identifier <- NULL
+  data$identifier <- NULL
   return(data)
   
 }
 ##########
 # Main function that specifies a preprocessing method and get beta
 ##########
+data_list <- rgSetList
 getMethyl <- function(data_list,control, method) {
   
   processed_list <-preprocessMethod(data_list, preprocess = method)
@@ -220,9 +219,10 @@ beta_raw_controls <- getMethyl(rgSetListControls, control = T, method = 'raw')
 
 
 ##########
-# new variable called sen_batch
+# remove ch from cases and controls 
 ##########
-beta_raw$sen_batch <- ifelse(grepl('9721365183', rownames(beta_raw)), 'mon', 'tor_1')
+beta_raw <- beta_raw[, !grepl('ch', colnames(beta_raw))]
+beta_raw_controls <- beta_raw_controls[, !grepl('ch', colnames(beta_raw_controls))]
 
 
 # save data

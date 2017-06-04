@@ -28,39 +28,50 @@ data_folder <- paste0(project_folder, '/Data')
 model_data <- paste0(data_folder, '/model_data')
 
 ##########
-# load all data
+# load cases 
 ##########
-load(paste0(model_data, '/modal_feat_surv.RData'))
 
-# remove everything but cases and controls
-# remove cases and controls for now
-rm(list=ls(pattern="even"))
-rm(list=ls(pattern="uneven"))
+# load
+cases <- readRDS(paste0(model_data, '/cases.rda'))
 
+cases_sub <- readRDS(paste0(model_data, '/cases_sub.rda'))
 
 ##########
-# load bh features for surveillance and pred data
+# load controls 
 ##########
-load(paste0(model_data, '/bh_feat_surv.RData'))
-rm(list=ls(pattern="controls"))
 
-# load(paste0(model_data, '/bh_feat_surv.RData'))
+#load
+controls <- readRDS(paste0(model_data, '/controls.rda'))
 
-# model_dat <- quan_cases_full
-# bh_features <- quan_even_full
+controls_full <- readRDS(paste0(model_data, '/controls_full.rda'))
+
+
+##########
+# load surveillance features or prediction features
+##########
+load(paste0(model_data, '/surv_30.RData'))
+# load(paste0(model_data, '/pred_30.RData'))
+
+
+
+
+# model_dat <- cases_sub
+# bh_features <- pred_bal_30_fwer
 # cases <- T
 # gender <- T
 # cv = 'fold' #other option here is "loo"
 # k <- 4
 # seed_num <- 1
 # i = 1
+# rand <- T
 
 predAge <- function(model_dat,
                     bh_features,
                     classifier,
                     gender,
                     k,
-                    seed_num)
+                    seed_num,
+                    rand)
 
 {
   
@@ -70,15 +81,26 @@ predAge <- function(model_dat,
   test.predictions <- list()
   y.test <- list()
   
-  # get intersection of bh features and real data
-  bh_features <- as.character(unlist(bh_features))
+  # get features and remove unneeded columns
+  if(rand){
+    all_feat <- colnames(model_dat)[9:ncol(model_dat)]
+    intersected_feats <- sample(all_feat, nrow(bh_features))
+    
+    # remove 'ch' columns
+    intersected_feats <- intersected_feats[!grepl('ch', intersected_feats)]
+  } else {
+    # get intersection of bh features and real data
+    bh_features <- as.character(unlist(bh_features))
+    
+    intersected_feats <- intersect(bh_features, colnames(model_dat))
+  }
   
-  intersected_feats <- intersect(bh_features, colnames(model_dat))
+ 
   
   # get bumphunter features
   model_dat <- model_dat[, c('age_diagnosis', 'age_sample_collection', 'gender',  intersected_feats)]
-  # get features and remove unneeded columns
   
+  # 
   if(gender) {
     intersected_feats <- append('gender', intersected_feats)
     model_dat$gender <- as.factor(model_dat$gender)
@@ -177,9 +199,12 @@ predAge <- function(model_dat,
       # set parameters for training model
       type_family <- 'gaussian'
       
-      # make gender numeric
-      train_x$gender <- as.numeric(train_x$gender)
-      test_x$gender <- as.numeric(test_x$gender)
+      if(gender){
+        # make gender numeric
+        train_x$gender <- as.numeric(train_x$gender)
+        test_x$gender <- as.numeric(test_x$gender)
+      }
+     
       
       # create error matrix for for opitmal alpha that can run in parraellel if you have bigger data 
       # or if you have a high number fo N_CV_REPEATS
@@ -290,15 +315,18 @@ predAge <- function(model_dat,
 
 # data: cases_full, cases_sub
 ##########
-# apply model to raw
+# cases 
 ##########
 # even, sub_bal
-raw_sub_mod <- predAge(model_dat = raw_cases_full, 
-                        bh_features = raw_even_sub_bal_sig, 
-                        classifier = 'rf', 
-                        gender = T, 
-                        k = 3, 
-                        seed_num = 1)
+cases_ff_all_10_mod <- predAge(model_dat = cases, 
+                               bh_features = surv_ff_30_all, 
+                               classifier = 'enet', 
+                               gender = T, 
+                               k = 3, 
+                               seed_num = 1,
+                               rand = T)
 
-cor(unlist(raw_sub_mod[[1]]), unlist(raw_sub_mod[[2]]))
+#
 
+cor(unlist(cases_ff_all_10_mod[[1]]), unlist(cases_ff_all_10_mod[[2]]))
+cases_ff_all_30_mod
