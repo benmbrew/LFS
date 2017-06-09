@@ -93,6 +93,13 @@ preprocessMethod <- function(data, preprocess) {
       ratioSet[[dat]] <- ratioConvert(Mset[[dat]], what = 'both', keepCN = T)
     }
     
+    if (preprocess == 'quan') {
+      ratioSet[[dat]] <- preprocessQuantile(data[[dat]], fixOutliers = TRUE,
+                                            removeBadSamples = TRUE, badSampleCutoff = 10.5,
+                                            quantileNormalize = TRUE, stratified = TRUE,
+                                            mergeManifest = FALSE, sex = NULL)
+    }
+    
     
     gset[[dat]] <- mapToGenome(ratioSet[[dat]]) 
     beta[[dat]] <- getBeta(gset[[dat]])
@@ -103,6 +110,8 @@ preprocessMethod <- function(data, preprocess) {
 }
 
 rgSet <- preprocessMethod(rgSetList, preprocess = 'raw')
+rgSetQuan <- preprocessMethod(rgSetList, preprocess = 'quan')
+
 
 
 ##########
@@ -118,6 +127,8 @@ combineList <- function(list) {
 }
 
 raw_dat <- combineList(rgSet)
+quan_dat <- combineList(rgSetQuan)
+
 
 ##########
 # Function that combines methylation matrices with id_map, to get ids for methylation
@@ -142,9 +153,10 @@ findIds <- function(data_methyl, id_map) {
 }
 
 data_methyl <- findIds(raw_dat, id_map)
+data_methyl_quan <- findIds(quan_dat, id_map)
 
-# remove 'ch'
-data_methyl <- data_methyl[, !grepl('ch', colnames(data_methyl))]
 
 # save data 
 saveRDS(data_methyl, paste0(methyl_data, '/valid_raw.rda'))
+saveRDS(data_methyl_quan, paste0(methyl_data, '/valid_quan.rda'))
+

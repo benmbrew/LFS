@@ -26,15 +26,25 @@ beta_raw <- readRDS(paste0(methyl_data, '/beta_raw.rda'))
 beta_raw_controls <- readRDS(paste0(methyl_data, '/beta_raw_controls.rda'))
 beta_raw_valid <- readRDS(paste0(methyl_data, '/beta_raw_valid.rda'))
 
+# quan
+beta_quan <- readRDS(paste0(methyl_data, '/beta_quan.rda'))
+beta_quan_controls <- readRDS(paste0(methyl_data, '/beta_quan_controls.rda'))
+beta_quan_valid <- readRDS(paste0(methyl_data, '/beta_quan_valid.rda'))
+
+
 ##########
 # remove id.1
 ##########
 beta_raw_controls$ids.1 <- beta_raw$ids.1 <-NULL
+beta_quan_controls$ids.1 <- beta_quan$ids.1 <-NULL
+
 
 ##########
 # remove identifier in controls
 ##########
 beta_raw_controls$identifier <- NULL
+beta_quan_controls$identifier <- NULL
+
 
 ##########t
 # make data frames
@@ -44,17 +54,24 @@ beta_raw <- as.data.frame(beta_raw, stringsAsFactors = F)
 beta_raw_controls <- as.data.frame(beta_raw_controls, stringAsFactors = F)
 beta_raw_valid <- as.data.frame(beta_raw_valid, stringAsFactors = F)
 
+#quan
+beta_quan <- as.data.frame(beta_quan, stringsAsFactors = F)
+beta_quan_controls <- as.data.frame(beta_quan_controls, stringAsFactors = F)
+beta_quan_valid <- as.data.frame(beta_quan_valid, stringAsFactors = F)
+
 ##########
 # noramlize data after subsetting featres
 ##########
 
 # data_cases <- beta_raw
 # data_controls <- beta_raw_controls
-normalizeDat <- function(data_cases, data_controls)
+normalizeDat <- function(data_cases, data_controls, data_valid, preprocess)
 {
   features <- names(data_cases)[9:ncol(data_cases)]
   features_controls <- names(data_controls)[8:ncol(data_controls)]
+  features_valid <- names(data_valid)[8:ncol(data_valid)]
   data_controls$sen_batch <- 'tor_2'
+  data_valid$sen_batch <- 'tor_3'
   
   
   intersect_features <- intersect(features, features_controls)
@@ -64,53 +81,84 @@ normalizeDat <- function(data_cases, data_controls)
   data_controls <- data_controls[, c('ids', 'p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses', 
                                      'age_sample_collection' ,'gender', 'sentrix_id', 'sen_batch', intersect_features)]
   
-  scaleDat <- function(dat) {
-    
-    clin_dat <- dat[, c(1:8)]
-    dat <- t(dat[, c(9:ncol(dat))])
-    # get row statistics
-    rowMean <- apply(dat, 1, mean, na.rm=TRUE)
-    rowSd <- apply(dat, 1, sd, na.rm=TRUE)
-    # constantInd <- rowSd==0
-    # rowSd[constantInd] <- 1
-    rowStats <- list(mean=rowMean, sd=rowSd)
-    
-    # apply normilization
-    dat  <- (dat - rowStats$mean) / rowStats$sd
-    
-    # make matrix
-    dat <- as.matrix(dat)
-
-    # impute with knn
-    dat_knn <-  impute.knn(dat, k = 10)$data
-    
-    # transpose 
-    dat_knn <- t(dat_knn)
-    
-    # get clin data back and return final data
-    final_dat <- cbind(clin_dat, dat_knn)
-    
-    return(final_dat)
-  }
+  data_valid <- data_valid[, c('ids', 'p53_germline', 'age_diagnosis', 'cancer_diagnosis_diagnoses', 
+                                     'age_sample_collection' ,'gender', 'sentrix_id', 'sen_batch', intersect_features)]
   
-  # apply function
-  data_cases <- scaleDat(data_cases)
-  data_controls <- scaleDat(data_controls)
+  if(preprocess == 'raw') {
+    scaleDat <- function(dat) {
+      
+      clin_dat <- dat[, c(1:8)]
+      dat <- t(dat[, c(9:ncol(dat))])
+      # get row statistics
+      rowMean <- apply(dat, 1, mean, na.rm=TRUE)
+      rowSd <- apply(dat, 1, sd, na.rm=TRUE)
+      # constantInd <- rowSd==0
+      # rowSd[constantInd] <- 1
+      rowStats <- list(mean=rowMean, sd=rowSd)
+      
+      # apply normilization
+      dat  <- (dat - rowStats$mean) / rowStats$sd
+      
+      # make matrix
+      dat <- as.matrix(dat)
+      
+      # impute with knn
+      dat_knn <-  impute.knn(dat, k = 10)$data
+      
+      # transpose 
+      dat_knn <- t(dat_knn)
+      
+      # get clin data back and return final data
+      final_dat <- cbind(clin_dat, dat_knn)
+      
+      return(final_dat)
+    }
+    
+    # apply function
+    data_cases <- scaleDat(data_cases)
+    data_controls <- scaleDat(data_controls)
+    data_valid <- scaleDat(data_valid)
+    
+  } 
+   
 
-  
-  return(list(data_cases, data_controls))
+  return(list(data_cases, data_controls, data_valid))
 }
 
-norm_dat <- normalizeDat(beta_raw, beta_raw_controls)
+# raw
+norm_dat <- normalizeDat(beta_raw, 
+                         beta_raw_controls, 
+                         beta_raw_valid,
+                         preprocess = 'raw')
 cases <- norm_dat[[1]]
 controls <- norm_dat[[2]]
-rm(norm_dat, beta_raw, beta_raw_controls)
+valid <- norm_dat[[3]]
+rm(norm_dat, beta_raw, beta_raw_controls, beta_raw_valid)
+
+# quan
+norm_dat <- normalizeDat(beta_quan, 
+                         beta_quan_controls, 
+                         beta_quan_valid,
+                         preprocess = 'quan')
+cases_quan <- norm_dat[[1]]
+controls_quan <- norm_dat[[2]]
+valid_quan <- norm_dat[[3]]
+rm(norm_dat, beta_quan, beta_quan_controls, beta_quan_valid)
+
+
+
+# load('/home/benbrew/Desktop/valid_temp.RData')
 
 ##########
 # get WT no cancer
 ##########
+
+# raw
 controls_wt <- cases[which(cases$cancer_diagnosis_diagnoses == 'Unaffected' & 
                                 cases$p53_germline == 'WT'),]
+
+controls_wt_quan <- cases_quan[which(cases_quan$cancer_diagnosis_diagnoses == 'Unaffected' & 
+                             cases_quan$p53_germline == 'WT'),]
 
 ##########
 # remove cancers from controls
@@ -122,7 +170,11 @@ removeCancer <- function(data_controls)
   return(data_controls)
 }
 
+# raw
 controls <- removeCancer(controls)
+
+# quan
+controls_quan <- removeCancer(controls_quan)
 
 ##########
 # get extra controls
@@ -138,9 +190,16 @@ getExtraCon <- function(data)
 # extra controls
 controls_2 <- getExtraCon(cases)
 
+# extra controls quan
+controls_2_quan <- getExtraCon(cases_quan)
+
 # combine controls and controls_2 for full_controls
 controls_full <- rbind(controls, controls_2)
 rm(controls_2)
+
+# combine controls and controls_2 for full_controls for quan
+controls_full_quan <- rbind(controls_quan, controls_2_quan)
+rm(controls_2_quan)
 
 ##########
 # get model data 
@@ -153,11 +212,18 @@ getModData <- function(data)
   return(data)
 }
 
-# funnorm
+# raw
 cases <- getModData(cases)
 
-# get sub cases
+# sub raw
 cases_sub <- cases[!grepl('mon', cases$sen_batch),]
+
+
+# quan
+cases_quan <- getModData(cases_quan)
+
+# sub quan
+cases_sub_quan <- cases_quan[!grepl('mon', cases_quan$sen_batch),]
 
 
 ########## 
@@ -233,7 +299,7 @@ getPCA <- function(pca_data,
 #########
 
 # gender 
-getPCA(cases, 
+getPCA(cases_quan, 
        'gender', 
        'PCA cases gender',
        gene_start = 9,
@@ -241,7 +307,7 @@ getPCA(cases,
        pca2 = 2)
 
 #cases
-getPCA(cases, 
+getPCA(cases_quan, 
        'sen_batch', 
        'PCA cases sen_batch',
        gene_start = 9,
@@ -250,7 +316,7 @@ getPCA(cases,
 
 
 #cases
-getPCA(cases, 
+getPCA(cases_quan, 
        'sentrix_id', 
        'PCA cases sentrix_id',
        gene_start = 9,
@@ -263,7 +329,7 @@ getPCA(cases,
 #########
 
 # gender 
-getPCA(cases_sub, 
+getPCA(cases_sub_quan, 
        'gender', 
        'PCA cases_sub gender',
        gene_start = 9,
@@ -271,7 +337,7 @@ getPCA(cases_sub,
        pca2 = 2)
 
 #cases_full
-getPCA(cases_sub, 
+getPCA(cases_sub_quan, 
        'sen_batch', 
        'PCA cases_sub sen_batch',
        gene_start = 9,
@@ -280,7 +346,7 @@ getPCA(cases_sub,
 
 
 #cases_full
-getPCA(cases_sub, 
+getPCA(cases_sub_quan, 
        'sentrix_id', 
        'PCA cases_sub sentrix_id',
        gene_start = 9,
@@ -288,11 +354,42 @@ getPCA(cases_sub,
        pca2 = 2)
 
 #########
+# valid
+#########
+
+# gender 
+getPCA(valid_quan, 
+       'gender', 
+       'PCA valid gender',
+       gene_start = 9,
+       pca1 = 1,
+       pca2 = 2)
+
+#valid
+getPCA(valid_quan, 
+       'sen_batch', 
+       'PCA valid sen_batch',
+       gene_start = 9,
+       pca1 = 1,
+       pca2 = 2)
+
+
+#valid
+getPCA(pca_data = valid_quan, 
+       column_name = 'sentrix_id',
+       name = 'PCA valid sentrix_id',
+       gene_start = 9,
+       pca1 = 1,
+       pca2 = 2)
+
+
+
+#########
 # controls
 #########
 
 # gender 
-getPCA(controls, 
+getPCA(controls_quan, 
        'gender', 
        'PCA controls gender',
        gene_start = 9,
@@ -300,7 +397,7 @@ getPCA(controls,
        pca2 = 2)
 
 #controls
-getPCA(controls, 
+getPCA(controls_quan, 
        'sen_batch', 
        'PCA controls sen_batch',
        gene_start = 9,
@@ -310,7 +407,7 @@ getPCA(controls,
 
 
 #controls
-getPCA(controls, 
+getPCA(controls_quan, 
        'sentrix_id', 
        'PCA controls sentrix_id',
        gene_start = 9,
@@ -322,7 +419,7 @@ getPCA(controls,
 #########
 
 # gender 
-getPCA(controls_full, 
+getPCA(controls_full_quan, 
        'gender', 
        'PCA controls_full gender',
        gene_start = 9,
@@ -330,7 +427,7 @@ getPCA(controls_full,
        pca2 = 2)
 
 #controls
-getPCA(controls_full, 
+getPCA(controls_full_quan, 
        'sen_batch', 
        'PCA controls_full sen_batch',
        gene_start = 9,
@@ -340,7 +437,7 @@ getPCA(controls_full,
 
 
 #controls
-getPCA(controls_full, 
+getPCA(controls_full_quan, 
        'sentrix_id', 
        'PCA controls_full sentrix_id',
        gene_start = 9,
@@ -352,7 +449,7 @@ getPCA(controls_full,
 #########
 
 # gender 
-getPCA(controls_wt, 
+getPCA(controls_wt_quan, 
        'gender', 
        'PCA controls_wt gender',
        gene_start = 9,
@@ -360,7 +457,7 @@ getPCA(controls_wt,
        pca2 = 2)
 
 #controls
-getPCA(controls_wt, 
+getPCA(controls_wt_quan, 
        'sen_batch', 
        'PCA controls_wt sen_batch',
        gene_start = 9,
@@ -370,7 +467,7 @@ getPCA(controls_wt,
 
 
 #controls
-getPCA(controls_wt, 
+getPCA(controls_wt_quan, 
        'sentrix_id', 
        'PCA controls_wt sentrix_id',
        gene_start = 9,
@@ -380,7 +477,11 @@ getPCA(controls_wt,
 ##########
 # remove outliers  4257 cases, 3391, 3392 controls
 ##########
-removeOutlier <- function(data, wt) {
+# "201046420226_R01C01"
+# data <- valid
+# val <- T
+# wt <- F
+removeOutlier <- function(data, wt, val) {
   
 
   #controls outlier
@@ -389,6 +490,11 @@ removeOutlier <- function(data, wt) {
   
   if(wt) {
     data <- data[data$ids != '2564',]
+    
+  }
+  
+  if(val){
+    data <- data[data$ids != '3540',]
     
   }
   
@@ -402,10 +508,19 @@ removeOutlier <- function(data, wt) {
 }
 
 # raw
-cases <- removeOutlier(cases, wt = F)
-controls <- removeOutlier(controls, wt = F)
-controls_full <- removeOutlier(controls_full, wt = F)
-controls_wt <- removeOutlier(controls_wt, wt = T)
+cases <- removeOutlier(cases, wt = F, val = F)
+controls <- removeOutlier(controls, wt = F, val = F)
+controls_full <- removeOutlier(controls_full, wt = F, val = F)
+controls_wt <- removeOutlier(controls_wt, wt = T, val = F)
+valid <- removeOutlier(valid, wt = F, val = T)
+
+# quan - cases are ok. controls have two and controls_wt have one
+controls_quan <- removeOutlier(controls_quan, wt = F, val = F)
+controls_full_quan <- removeOutlier(controls_full_quan, wt = F, val = F)
+controls_wt_quan <- removeOutlier(controls_wt_quan, wt = T, val = F)
+
+
+
 
 ##########
 # batch
@@ -563,11 +678,15 @@ controls_wt <- removeOutlier(controls_wt, wt = T)
 # full 
 ##########
 
+# raw
 # save cases 
 saveRDS(cases, paste0(model_data, '/cases.rda'))
 
 # save contorls
 saveRDS(controls, paste0(model_data, '/controls.rda'))
+
+# save valid
+saveRDS(valid, paste0(model_data, '/valid.rda'))
 
 # sub
 
@@ -579,6 +698,27 @@ saveRDS(controls_full, paste0(model_data, '/controls_full.rda'))
 
 # save controls wt
 saveRDS(controls_wt, paste0(model_data, '/controls_wt.rda'))
+
+#quan
+# save cases 
+saveRDS(cases_quan, paste0(model_data, '/cases_quan.rda'))
+
+# save contorls
+saveRDS(controls_quan, paste0(model_data, '/controls_quan.rda'))
+
+# save valid
+saveRDS(valid_quan, paste0(model_data, '/valid_quan.rda'))
+
+# sub
+
+# save cases 
+saveRDS(cases_sub_quan, paste0(model_data, '/cases_sub_quan.rda'))
+
+# save contorls
+saveRDS(controls_full_quan, paste0(model_data, '/controls_full_quan.rda'))
+
+# save controls wt
+saveRDS(controls_wt_quan, paste0(model_data, '/controls_wt_quan.rda'))
 
 
 

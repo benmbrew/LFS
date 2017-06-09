@@ -32,70 +32,75 @@ model_data <- paste0(data_folder, '/model_data')
 ##########
 
 # load
-cases <- readRDS(paste0(model_data, '/cases.rda'))
+cases_quan <- readRDS(paste0(model_data, '/cases_quan.rda'))
 
-cases_sub <- readRDS(paste0(model_data, '/cases_sub.rda'))
+cases_sub_quan <- readRDS(paste0(model_data, '/cases_sub_quan.rda'))
+
+valid_quan <- readRDS(paste0(model_data, '/valid_quan.rda'))
+
 
 ##########
 # load controls 
 ##########
 
 #load
-controls <- readRDS(paste0(model_data, '/controls.rda'))
+controls_quan <- readRDS(paste0(model_data, '/controls_quan.rda'))
 
-controls_full <- readRDS(paste0(model_data, '/controls_full.rda'))
+controls_full_quan <- readRDS(paste0(model_data, '/controls_full_quan.rda'))
+
+##########
+# check similarity of test data - names, structure
+##########
+# str(valid)
+# str(cases)
 
 
 ##########
 # load surveillance features or prediction features
 ##########
+load(paste0(model_data, '/surv_10.RData'))
+load(paste0(model_data, '/surv_20.RData'))
 load(paste0(model_data, '/surv_30.RData'))
-# load(paste0(model_data, '/pred_30.RData'))
 
-
+load(paste0(model_data, '/pred_10.RData'))
+load(paste0(model_data, '/pred_20.RData'))
+load(paste0(model_data, '/pred_30.RData'))
 
 
 # model_dat <- cases_sub
-# bh_features <- pred_bal_30_fwer
-# cases <- T
+# bh_features <- pred_bal_20_fwer
+# classifier <- 'enet'
 # gender <- T
-# cv = 'fold' #other option here is "loo"
 # k <- 4
 # seed_num <- 1
 # i = 1
-# rand <- T
+# valid_dat <- valid
+# controls_dat <- controls
 
 predAge <- function(model_dat,
-                    bh_features,
+                    controls_dat,
+                    valid_dat,
                     classifier,
+                    bh_features,
                     gender,
                     k,
-                    seed_num,
-                    rand)
+                    seed_num)
 
 {
   
   # create place list place holders
   model <- list()
   importance <- list()
-  test.predictions <- list()
-  y.test <- list()
+  cases_cor <- list()
+  controls_cor <- list()
+  valid_cor <- list()
+  alpha <- list()
   
-  # get features and remove unneeded columns
-  if(rand){
-    all_feat <- colnames(model_dat)[9:ncol(model_dat)]
-    intersected_feats <- sample(all_feat, nrow(bh_features))
-    
-    # remove 'ch' columns
-    intersected_feats <- intersected_feats[!grepl('ch', intersected_feats)]
-  } else {
-    # get intersection of bh features and real data
-    bh_features <- as.character(unlist(bh_features))
-    
-    intersected_feats <- intersect(bh_features, colnames(model_dat))
-  }
   
- 
+  # get intersection of bh features and real data
+  bh_features <- as.character(unlist(bh_features))
+  
+  intersected_feats <- intersect(bh_features, colnames(model_dat))
   
   # get bumphunter features
   model_dat <- model_dat[, c('age_diagnosis', 'age_sample_collection', 'gender',  intersected_feats)]
@@ -104,6 +109,8 @@ predAge <- function(model_dat,
   if(gender) {
     intersected_feats <- append('gender', intersected_feats)
     model_dat$gender <- as.factor(model_dat$gender)
+    controls_dat$gender <- as.factor(controls_dat$gender)
+    valid_dat$gender <- as.factor(valid_dat$gender)
     
   }
 
@@ -121,24 +128,26 @@ predAge <- function(model_dat,
     # get train and test data
     train_x <- model_dat[train_index, c('age_diagnosis', intersected_feats)]
     test_x <- model_dat[test_index, c('age_diagnosis', intersected_feats)]
+    test_x_controls <- controls_dat[, c('age_sample_collection', intersected_feats)]
+    test_x_valid <- valid_dat[, c('age_diagnosis', intersected_feats)]
+    
     
     # get y
     train_y = as.numeric(train_x$age_diagnosis)
     test_y = as.numeric(test_x$age_diagnosis)
-    
-    # determines how you train the model.
-    NFOLDS =  2
-    fitControl <- trainControl( 
-      method = "repeatedcv",  # could train on boostrap resample, here use repeated cross validation.
-      number = min(10, NFOLDS),
-      repeats = 2,
-      allowParallel = TRUE
-    )
-   
-    
+    test_y_controls <- as.numeric(test_x_controls$age_sample_collection)
+    test_y_valid <- as.numeric(test_x_valid$age_diagnosis)
     
     if (classifier == 'rf'){
       
+      # determines how you train the model.
+      NFOLDS =  3
+      fitControl <- trainControl( 
+        method = "repeatedcv",  # could train on boostrap resample, here use repeated cross validation.
+        number = min(10, NFOLDS),
+        repeats = 3,
+        allowParallel = TRUE
+      )
       
       # mtry: Number of variables randomly sampled as candidates at each split.
       # ntree: Number of trees to grow.
@@ -158,35 +167,28 @@ predAge <- function(model_dat,
       importance[[i]] <- cbind(rownames(temp), temp$Overall)
       
       
-      test.predictions[[i]] <- predict(model[[i]] 
-                                       , newdata = test_x[, intersected_feats])
+      test.predictions  <- predict(model[[i]] 
+                                    , newdata = test_x[, intersected_feats])
       
-      y.test[[i]] <- test_y
+      # get controls
+      test.predictions_controls <- predict(model[[i]], 
+                                           test_x_controls[, intersected_feats])
       
-    }
-    
-    
-    if(classifier == 'svm'){
-     
-      model[[i]] <- train(x = train_x[, intersected_feats]
-                          , y = train_y
-                          , method = 'svmLinear'
-                          , trControl = fitControl                   
-                          , verbose = FALSE)
+      # get valid
+      test.predictions_valid <- predict(model[[i]], 
+                                           test_x_valid[, intersected_feats])
       
-      importance[[i]] <- 'svm_no_import'
+      cases_cor[[i]] <- cor(test_y, test.predictions)
       
+      # for each iteration, this should always be the same.
+      controls_cor[[i]] <- cor(test_y_controls, test.predictions_controls)
       
-      test.predictions[[i]] <- predict(model[[i]]
-                                       , newdata = test_x[, intersected_feats])
-      
-      y.test[[i]] <- test_y
+      valid_cor[[i]] <- cor(test_y_valid, test.predictions_valid)
       
     }
     
-    if(classifier == 'enet'){
-      
-      N_CV_REPEATS = 2
+    if (classifier == 'enet') {
+      N_CV_REPEATS = 3
       nfolds = 3
       
       ###### ENET
@@ -204,7 +206,7 @@ predAge <- function(model_dat,
         train_x$gender <- as.numeric(train_x$gender)
         test_x$gender <- as.numeric(test_x$gender)
       }
-     
+      
       
       # create error matrix for for opitmal alpha that can run in parraellel if you have bigger data 
       # or if you have a high number fo N_CV_REPEATS
@@ -239,7 +241,7 @@ predAge <- function(model_dat,
       # get index of best alpha (lowest error) - alpha is values 0.1-0.9
       temp.best_alpha_index = which(min(temp.cv_error_mean) == temp.cv_error_mean)[length(which(min(temp.cv_error_mean) == temp.cv_error_mean))] 
       print(paste("Best ALPHA:", elastic_net.ALPHA[temp.best_alpha_index])) # print the value for alpha
-      
+      best_alpha <- elastic_net.ALPHA[temp.best_alpha_index]
       temp.non_zero_coeff = 0
       temp.loop_count = 0
       # loop runs initially because temp.non_zero coefficient <3 and then stops 
@@ -278,7 +280,7 @@ predAge <- function(model_dat,
         }
       }# while loop ends 
       print(temp.non_zero_coeff)  
-
+      
       model[[i]] = glmnet(x = as.matrix(train_x[, intersected_feats])
                           , y =  train_y
                           ,alpha = elastic_net.ALPHA[temp.best_alpha_index]
@@ -288,45 +290,611 @@ predAge <- function(model_dat,
       
       # This returns 100 prediction with 1-100 lambdas
       temp_test.predictions <- predict(model[[i]], 
-                                      as.matrix(test_x[, intersected_feats]),
+                                       data.matrix(test_x[, intersected_feats]),
                                        type = 'response')
       
-      test.predictions[[i]] <- temp_test.predictions[, temp.min_lambda_index]
+      
+      
+      test.predictions <- temp_test.predictions[, temp.min_lambda_index]
+      
+      # get controls
+      temp_test.predictions_controls <- predict(model[[i]], 
+                                                data.matrix(test_x_controls[, intersected_feats]),
+                                                type = 'response')
+      
+      
+      
+      test.predictions_controls <- temp_test.predictions_controls[, temp.min_lambda_index]
+      
+      
+      # get validation
+      temp_test.predictions_valid <- predict(model[[i]], 
+                                             data.matrix(valid_dat[, intersected_feats]),
+                                             type = 'response')
+      
+      
+      
+      test.predictions_valid  <- temp_test.predictions_valid[, temp.min_lambda_index]
       
       importance[[i]] <- coef(model[[i]])
       
-      y.test[[i]] <- test_y
+      cases_cor[[i]] <- cor(test_y, test.predictions)
       
+      # for each iteration, this should always be the same.
+      controls_cor[[i]] <- cor(test_y_controls, test.predictions_controls)
       
+      valid_cor[[i]] <- cor(test_y_valid, test.predictions_valid)
+      
+      alpha[[i]] <- best_alpha
     }
     
+      
+    
     print(i)
-    
-    
 
   }
-   return(list(y.test, test.predictions, importance, model))
   
+  # get mean correlations in list
+  mean_cor_cases <- mean(unlist(cases_cor))
+  mean_cor_controls <- mean(unlist(controls_cor))
+  mean_cor_valid <- mean(unlist(valid_cor))
+  
+ 
+  
+  if(classifier == 'enet') {
+    mean_alpha <- mean(unlist(alpha))
+    
+    result_table <- data.frame(mean_cor_cases = mean_cor_cases,
+                               mean_cor_controls = mean_cor_controls,
+                               mean_cor_valid = mean_cor_valid,
+                               mean_alpha)
+
+  } else {
+    result_table <- data.frame(mean_cor_cases = mean_cor_cases,
+                               mean_cor_controls = mean_cor_controls,
+                               mean_cor_valid = mean_cor_valid)
+  }
+  
+  return(list(result_table, importance, model))
 }
-# bh:  even_full, even_full_sig, even_full_fwer,
-#      even_sub_bal, even_sub_bal_sig, even_sub_bal_fwer,
-#      uneven_full, uneven_full_sig, uneven_full_fwer,
-#      uneven_sub, uneven_sub_sig, uneven_sub_full 
 
-# data: cases_full, cases_sub
+############################################################
+# surv
 ##########
-# cases 
+# full, sub, 
 ##########
-# even, sub_bal
-cases_ff_all_10_mod <- predAge(model_dat = cases, 
-                               bh_features = surv_ff_30_all, 
-                               classifier = 'enet', 
-                               gender = T, 
-                               k = 3, 
-                               seed_num = 1,
-                               rand = T)
 
-#
+# full, sub, enet, 10, all, gender
+f_s_surve_10_all <- predAge(model_dat = cases_quan, 
+                            controls_dat = controls_full_quan, 
+                            valid_dat = valid_quan, 
+                            classifier = 'enet', 
+                            bh_features = surv_ff_20_all, 
+                            gender = F,
+                            k = 4,
+                            seed_num = 2)
 
-cor(unlist(cases_ff_all_10_mod[[1]]), unlist(cases_ff_all_10_mod[[2]]))
-cases_ff_all_30_mod
+f_s_surve_10_all[[1]]
+#83 66 81
+# full, sub, enet, 10, all, gender
+f_s_surve_10_all_1 <- predAge(model_dat = cases_quan, 
+                            controls_dat = controls_full_quan, 
+                            valid_dat = valid_quan, 
+                            classifier = 'enet', 
+                            bh_features = surv_ff_20_sig, 
+                            gender = F,
+                            k = 4,
+                            seed_num = 2)
+
+f_s_surve_10_all_1[[1]]
+# 85 68 82
+
+# full, sub, enet, 10, all, gender
+f_s_surve_10_all_2 <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_full_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'enet', 
+                              bh_features = surv_ff_30_all, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_surve_10_all_2[[1]]
+
+# 77 64 75
+# full, sub, enet, 10, all, gender
+f_s_surve_10_all_3 <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_full_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'enet', 
+                              bh_features = surv_ff_30_sig, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_surve_10_all_3[[1]]
+# 84 74 79
+
+# full, sub, enet, 10, all, gender
+f_s_surve_10_all_4 <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'enet', 
+                              bh_features = surv_fs_10_all, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_surve_10_all_4[[1]]
+# 
+
+# full, sub, enet, 10, all, gender
+f_s_surve_10_all_5 <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'enet', 
+                              bh_features = surv_fs_10_sig, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_surve_10_all_5[[1]]
+
+# full, sub, enet, 10, all, gender
+f_s_surve_10_all_6 <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'enet', 
+                              bh_features = surv_fs_20_all, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_surve_10_all_6[[1]]
+# 80 63 75
+
+# full, sub, enet, 10, all, gender
+f_s_surve_10_all_7 <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'enet', 
+                              bh_features = surv_fs_20_sig, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_surve_10_all_7[[1]]
+# 86 71 75
+
+# full, sub, enet, 10, all, gender
+f_s_surve_10_all_8 <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'enet', 
+                              bh_features = surv_fs_30_all, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_surve_10_all_8[[1]]
+
+# full, sub, enet, 10, all, gender
+f_s_surve_10_all_9 <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'enet', 
+                              bh_features = surv_fs_30_sig, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_surve_10_all_9[[1]]
+
+
+
+############################################################
+# pred
+##########
+# full, sub, 
+##########
+
+# full, sub, enet, 10, all, gender
+f_s_prede_10_all <- predAge(model_dat = cases_quan, 
+                            controls_dat = controls_full_quan, 
+                            valid_dat = valid_quan, 
+                            classifier = 'enet', 
+                            bh_features = pred_bal_full_10_sig, 
+                            gender = F,
+                            k = 4,
+                            seed_num = 2)
+
+f_s_prede_10_all[[1]]
+# 88 83 88
+
+# full, sub, enet, 10, all, gender
+f_s_prede_10_all_1 <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_full_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'enet', 
+                              bh_features = pred_bal_full_20_all, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_prede_10_all_1[[1]]
+# 90 84 85
+
+# full, sub, enet, 10, all, gender
+f_s_prede_10_all_2 <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_full_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'enet', 
+                              bh_features = pred_bal_full_20_sig, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_prede_10_all_2[[1]]
+# 88 82 86
+
+
+# full, sub, enet, 10, all, gender
+f_s_prede_10_all_3 <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_full_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'enet', 
+                              bh_features = pred_bal_full_30_all, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_prede_10_all_3[[1]]
+# 89 86 86
+
+# full, sub, enet, 10, all, gender
+f_s_prede_10_all_4 <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'enet', 
+                              bh_features = pred_bal_10_sig, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_prede_10_all_4[[1]]
+# 90 83 87
+
+# full, sub, enet, 10, all, gender
+f_s_prede_10_all_5 <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'enet', 
+                              bh_features = pred_bal_20_all, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_prede_10_all_5[[1]]
+# 89 83 84
+
+# full, sub, enet, 10, all, gender
+f_s_prede_10_all_6 <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'enet', 
+                              bh_features = pred_bal_20_sig, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_prede_10_all_6[[1]]
+# 91 83 88
+
+# full, sub, enet, 10, all, gender
+f_s_prede_10_all_7 <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'enet', 
+                              bh_features = pred_bal_30_all, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_prede_10_all_7[[1]]
+# 89 87 85
+
+# full, sub, enet, 10, all, gender
+f_s_prede_10_all_8 <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'enet', 
+                              bh_features = pred_bal_full_30_sig, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_prede_10_all_8[[1]]
+
+# full, sub, enet, 10, all, gender
+f_s_prede_10_all_9 <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'enet', 
+                              bh_features = pred_bal_20_fwer, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_prede_10_all_9[[1]]
+
+########
+# Random forest
+
+############################################################
+# surv
+##########
+# full, sub, 
+##########
+
+# full, sub, rf, 10, all, gender
+f_s_surve_10_all_rf <- predAge(model_dat = cases_quan, 
+                            controls_dat = controls_full_quan, 
+                            valid_dat = valid_quan, 
+                            classifier = 'rf', 
+                            bh_features = surv_ff_20_all, 
+                            gender = F,
+                            k = 4,
+                            seed_num = 2)
+
+f_s_surve_10_all_rf[[1]]
+#83 66 81
+# full, sub, rf, 10, all, gender
+f_s_surve_10_all_1_rf <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_full_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'rf', 
+                              bh_features = surv_ff_20_sig, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_surve_10_all_1_rf[[1]]
+# 85 68 82
+
+# full, sub, rf, 10, all, gender
+f_s_surve_10_all_2_rf <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_full_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'rf', 
+                              bh_features = surv_ff_30_all, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_surve_10_all_2_rf[[1]]
+
+# 77 64 75
+# full, sub, rf, 10, all, gender
+f_s_surve_10_all_3_rf <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_full_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'rf', 
+                              bh_features = surv_ff_30_sig, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_surve_10_all_3_rf[[1]]
+# 84 74 79
+
+# full, sub, rf, 10, all, gender
+f_s_surve_10_all_4_rf <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'rf', 
+                              bh_features = surv_fs_10_all, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_surve_10_all_4_rf[[1]]
+# 
+
+# full, sub, rf, 10, all, gender
+f_s_surve_10_all_5_rf <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'rf', 
+                              bh_features = surv_fs_10_sig, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_surve_10_all_5_rf[[1]]
+
+# full, sub, rf, 10, all, gender
+f_s_surve_10_all_6_rf <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'rf', 
+                              bh_features = surv_fs_20_all, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_surve_10_all_6_rf[[1]]
+# 80 63 75
+
+# full, sub, rf, 10, all, gender
+f_s_surve_10_all_7_rf <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'rf', 
+                              bh_features = surv_fs_20_sig, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_surve_10_all_7_rf[[1]]
+# 86 71 75
+
+# full, sub, rf, 10, all, gender
+f_s_surve_10_all_8_rf <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'rf', 
+                              bh_features = surv_fs_30_all, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_surve_10_all_8_rf[[1]]
+
+# full, sub, rf, 10, all, gender
+f_s_surve_10_all_9_rf <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'rf', 
+                              bh_features = surv_fs_30_sig, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_surve_10_all_9_rf[[1]]
+
+
+
+############################################################
+# pred
+##########
+# full, sub, 
+##########
+
+# full, sub, rf, 10, all, gender
+f_s_prede_10_all_rf <- predAge(model_dat = cases_quan, 
+                            controls_dat = controls_full_quan, 
+                            valid_dat = valid_quan, 
+                            classifier = 'rf', 
+                            bh_features = pred_bal_full_10_sig, 
+                            gender = F,
+                            k = 4,
+                            seed_num = 2)
+
+f_s_prede_10_all_rf[[1]]
+# 88 83 88
+
+# full, sub, rf, 10, all, gender
+f_s_prede_10_all_1_rf <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_full_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'rf', 
+                              bh_features = pred_bal_full_20_all, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_prede_10_all_1_rf[[1]]
+# 90 84 85
+
+# full, sub, rf, 10, all, gender
+f_s_prede_10_all_2_rf <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_full_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'rf', 
+                              bh_features = pred_bal_full_20_sig, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_prede_10_all_2_rf[[1]]
+# 88 82 86
+
+
+# full, sub, rf, 10, all, gender
+f_s_prede_10_all_3_rf <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_full_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'rf', 
+                              bh_features = pred_bal_full_30_all, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_prede_10_all_3_rf[[1]]
+# 89 86 86
+
+# full, sub, rf, 10, all, gender
+f_s_prede_10_all_4_rf <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'rf', 
+                              bh_features = pred_bal_10_sig, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_prede_10_all_4_rf[[1]]
+# 90 83 87
+
+# full, sub, rf, 10, all, gender
+f_s_prede_10_all_5_rf <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'rf', 
+                              bh_features = pred_bal_20_all, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_prede_10_all_5_rf[[1]]
+# 89 83 84
+
+# full, sub, rf, 10, all, gender
+f_s_prede_10_all_6_rf <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'rf', 
+                              bh_features = pred_bal_20_sig, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_prede_10_all_6_rf[[1]]
+# 91 83 88
+
+# full, sub, rf, 10, all, gender
+f_s_prede_10_all_7_rf <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'rf', 
+                              bh_features = pred_bal_30_all, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_prede_10_all_7_rf[[1]]
+# 89 87 85
+
+# full, sub, rf, 10, all, gender
+f_s_prede_10_all_8_rf <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'rf', 
+                              bh_features = pred_bal_full_30_sig, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_prede_10_all_8_rf[[1]]
+
+# full, sub, rf, 10, all, gender
+f_s_prede_10_all_9_rf <- predAge(model_dat = cases_quan, 
+                              controls_dat = controls_quan, 
+                              valid_dat = valid_quan, 
+                              classifier = 'rf', 
+                              bh_features = pred_bal_20_fwer, 
+                              gender = F,
+                              k = 4,
+                              seed_num = 2)
+
+f_s_prede_10_all_9_rf[[1]]

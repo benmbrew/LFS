@@ -108,6 +108,8 @@ preprocessMethod <- function(data, preprocess) {
       ratioSet[[dat]] <- ratioConvert(Mset[[dat]], what = 'both', keepCN = T)
     }
     
+    if (preprocess == 'quan')
+    
 
     gset[[dat]] <- mapToGenome(ratioSet[[dat]]) 
     beta[[dat]] <- getBeta(gset[[dat]])

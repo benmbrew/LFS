@@ -35,10 +35,16 @@ clin_data <- paste0(data_folder, '/clin_data')
 beta_raw <- readRDS(paste0(methyl_data, '/beta_raw.rda'))
 beta_raw_controls <- readRDS(paste0(methyl_data, '/beta_raw_controls.rda'))
 
+# quan
+beta_quan <- readRDS(paste0(methyl_data, '/beta_quan.rda'))
+beta_quan_controls <- readRDS(paste0(methyl_data, '/beta_quan_controls.rda'))
+
 ##########
 # read in methylation for validation set
 ##########
 beta_raw_valid <- readRDS(paste0(methyl_data, '/valid_raw.rda'))
+beta_quan_valid <- readRDS(paste0(methyl_data, '/valid_quan.rda'))
+
 
 ##########
 # make data frames
@@ -48,10 +54,18 @@ beta_raw <- as.data.frame(beta_raw, stringsAsFactors = F)
 beta_raw_controls <- as.data.frame(beta_raw_controls, stringAsFactors = F)
 beta_raw_valid <- as.data.frame(beta_raw_valid, stringAsFactors = F)
 
+#quan
+beta_quan <- as.data.frame(beta_quan, stringsAsFactors = F)
+beta_quan_controls <- as.data.frame(beta_quan_controls, stringAsFactors = F)
+beta_quan_valid <- as.data.frame(beta_quan_valid, stringAsFactors = F)
+
+
 ##########
 # new variable called sen_batch
 ##########
 beta_raw$sen_batch <- ifelse(grepl('9721365183', rownames(beta_raw)), 'mon', 'tor_1')
+beta_quan$sen_batch <- ifelse(grepl('9721365183', rownames(beta_quan)), 'mon', 'tor_1')
+
 
 ##########
 # read in clinical data
@@ -235,8 +249,6 @@ relevelFactor <- function (data) {
 # First do cases
 ##########
 
-# quan
-
 # raw
 # first clean idss
 beta_raw <- cleanids(beta_raw)
@@ -249,20 +261,41 @@ beta_raw <- joinData(beta_raw, control = F, valid = F)
 # thrids relevel factors
 beta_raw <- relevelFactor(beta_raw)
 
+#quan
+# first clean idss
+beta_quan <- cleanids(beta_quan)
+
+options(warn=1)
+
+# second join data
+beta_quan <- joinData(beta_quan, control = F, valid = F)
+
+# thrids relevel factors
+beta_quan <- relevelFactor(beta_quan)
+
 #########
 # 2nd do controls
 ##########
 
+# raw
 # first clean ids
 beta_raw_controls <- cleanids(beta_raw_controls)
 
 # second join data
 beta_raw_controls <- joinData(beta_raw_controls, control = T, valid = F)
 
+# quan
+# first clean ids
+beta_quan_controls <- cleanids(beta_quan_controls)
+
+# second join data
+beta_quan_controls <- joinData(beta_quan_controls, control = T, valid = F)
+
 #########
 # 3rd do validation
 ##########
 
+# raw
 # first clean ids
 beta_raw_valid <- cleanids(beta_raw_valid)
 
@@ -273,15 +306,35 @@ beta_raw_valid <- joinData(beta_raw_valid, control = F, valid = T)
 beta_raw_valid <- relevelFactor(beta_raw_valid)
 
 
+# quan
+# first clean ids
+beta_quan_valid <- cleanids(beta_quan_valid)
+
+# second join data
+beta_quan_valid <- joinData(beta_quan_valid, control = F, valid = T)
+
+# thrids relevel factors
+beta_quan_valid <- relevelFactor(beta_quan_valid)
+
+
 
 #########
 # save data
 #########
 
+# raw
 saveRDS(beta_raw, paste0(methyl_data, '/beta_raw.rda'))
 
 saveRDS(beta_raw_controls, paste0(methyl_data, '/beta_raw_controls.rda'))
 
 saveRDS(beta_raw_valid, paste0(methyl_data, '/beta_raw_valid.rda'))
+
+
+# quan
+saveRDS(beta_quan, paste0(methyl_data, '/beta_quan.rda'))
+
+saveRDS(beta_quan_controls, paste0(methyl_data, '/beta_quan_controls.rda'))
+
+saveRDS(beta_quan_valid, paste0(methyl_data, '/beta_quan_valid.rda'))
 
 

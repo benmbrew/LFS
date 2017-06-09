@@ -108,6 +108,13 @@ preprocessMethod <- function(data, preprocess) {
       ratioSet[[dat]] <- ratioConvert(Mset[[dat]], what = 'both', keepCN = T)
     }
     
+    if (preprocess == 'quan') {
+      ratioSet[[dat]] <- preprocessQuantile(data[[dat]], fixOutliers = TRUE,
+                                            removeBadSamples = TRUE, badSampleCutoff = 10.5,
+                                            quantileNormalize = TRUE, stratified = TRUE,
+                                            mergeManifest = FALSE, sex = NULL)
+    }
+    
 
     gset[[dat]] <- mapToGenome(ratioSet[[dat]]) 
     beta[[dat]] <- getBeta(gset[[dat]])
@@ -217,16 +224,32 @@ getMethyl <- function(data_list,control, method) {
 beta_raw <- getMethyl(rgSetList, control = F, method = 'raw')
 beta_raw_controls <- getMethyl(rgSetListControls, control = T, method = 'raw')
 
+# quan
+beta_quan <- getMethyl(rgSetList, control = F, method = 'quan')
+beta_quan_controls <- getMethyl(rgSetListControls, control = T, method = 'quan')
+
 
 ##########
 # remove ch from cases and controls 
 ##########
+# raw
 beta_raw <- beta_raw[, !grepl('ch', colnames(beta_raw))]
 beta_raw_controls <- beta_raw_controls[, !grepl('ch', colnames(beta_raw_controls))]
 
+# quan
+beta_quan <- beta_quan[, !grepl('ch', colnames(beta_quan))]
+beta_quan_controls <- beta_quan_controls[, !grepl('ch', colnames(beta_quan_controls))]
+
+
 
 # save data
+
+# raw
 saveRDS(beta_raw, paste0(methyl_data, '/beta_raw.rda'))
 saveRDS(beta_raw_controls, paste0(methyl_data, '/beta_raw_controls.rda'))
+
+# quan
+saveRDS(beta_quan, paste0(methyl_data, '/beta_quan.rda'))
+saveRDS(beta_quan_controls, paste0(methyl_data, '/beta_quan_controls.rda'))
 
 
