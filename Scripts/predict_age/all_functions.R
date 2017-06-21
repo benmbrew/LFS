@@ -300,3 +300,387 @@ getPCA <- function(pca_data,
   
   return(plot)
 }
+
+
+##########
+# remove outliers  4257 cases, 3391, 3392 controls
+##########
+# "201046420226_R01C01"
+# data <- valid
+# val <- T
+# wt <- F
+removeOutlier <- function(data, wt, val) {
+  
+  
+  #controls outlier
+  data <- data[data$ids != '3391',]
+  data <- data[data$ids != '3392',]
+  
+  if(wt) {
+    data <- data[data$ids != '2564',]
+    
+  }
+  
+  if(val){
+    data <- data[data$ids != '3540',]
+    
+  }
+  
+  # data <- data[data$ids != '4257',]
+  # data <- data[data$ids != '94',]
+  # data <- data[data$ids != '93',]
+  # data <- data[data$ids != '2414',]
+  
+  
+  return(data)
+}
+
+# data_controls <- controls_wt
+getBalAge <- function(data_controls, full)
+{
+  
+  # # # # balance age
+  # hist(cases$age_sample_collection)
+  # hist(data_controls$age_sample_collection)
+  
+  # remove a few from ranges 100-200, 300-400
+  # randomly remove controls that have a less than 50 month age of diganosis to have balanced classes
+  remove_index <- which((data_controls$age_sample_collection >= 100 & data_controls$age_sample_collection <= 250) |
+                          (data_controls$age_sample_collection >= 300 & data_controls$age_sample_collection <= 400))
+  
+  if(full) {
+    remove_index <- sample(remove_index, 8, replace = F)
+    
+  } else {
+    remove_index <- sample(remove_index, 2, replace = F)
+    
+  }
+  
+  data_controls <- data_controls[-remove_index,]
+  
+  return(data_controls)
+  
+}
+
+
+bumpHunterSurv <- function(dat_cases,
+                           dat_controls) 
+{
+  
+  
+  # combine data
+  dat <- rbind(dat_cases, dat_controls)
+  
+  
+  ##########
+  # get clinical dat 
+  ##########
+  bump_clin <- dat[,1:4]
+  
+  # recode type
+  dat$type <- ifelse(grepl('Unaffected', dat$cancer_diagnosis_diagnoses), 'controls', 'cases')
+  
+  ##########
+  # get indicator and put into design matrix with intercept 1
+  #########
+  indicator_vector <- as.factor(dat$type)
+  designMatrix <- cbind(rep(1, nrow(dat)), indicator_vector)
+  designMatrix <- as.matrix(designMatrix)
+  
+  ##########
+  # Get genetic locations
+  ##########
+  dat$p53_germline <- dat$age_diagnosis <- dat$cancer_diagnosis_diagnoses <- dat$ids <- dat$batch <- 
+    dat$age_sample_collection <- dat$id <- dat$type <- dat$gender <-  dat$sentrix_id <-  NULL
+  # transpose methylation to join with cg_locations to get genetic location vector.
+  dat <- as.data.frame(t(dat), stringsAsFactors = F)
+  
+  # make probe a column in methyl
+  dat$probe <- rownames(dat)
+  rownames(dat) <- NULL
+  
+  # inner join methyl and cg_locations by probe
+  methyl_cg <- inner_join(dat, cg_locations, by = 'probe')
+  
+  # get chr and pos vector 
+  chr <- methyl_cg$seqnames
+  pos <- methyl_cg$start
+  
+  # create beta matrix
+  beta <- methyl_cg[, 1:(ncol(methyl_cg) - 6)]
+  
+  # make beta numeric 
+  for (i in 1:ncol(beta)) {
+    beta[,i] <- as.numeric(beta[,i])
+    print(i)
+  } 
+  
+  beta <- as.matrix(beta)
+  
+  ##########
+  # Run bumphunter
+  ##########
+  
+  # check dimensions 
+  stopifnot(dim(beta)[2] == dim(designMatrix)[1])
+  stopifnot(dim(beta)[1] == length(chr))
+  stopifnot(dim(beta)[1] == length(pos))
+  
+  # set paramenters 
+  DELTA_BETA_THRESH = .05 # DNAm difference threshold
+  NUM_BOOTSTRAPS = 2   # number of randomizations
+  
+  # create tab list
+  tab <- list()
+  bump_hunter_results <- list()
+  for (i in 1:length(DELTA_BETA_THRESH)) {
+    tab[[i]] <- bumphunter(beta, 
+                           designMatrix, 
+                           chr = chr, 
+                           pos = pos,
+                           nullMethod = "bootstrap",
+                           cutoff = DELTA_BETA_THRESH,
+                           B = NUM_BOOTSTRAPS,
+                           type = "Beta")
+    
+    bump_hunter_results[[i]] <- tab[[i]]$table
+    bump_hunter_results[[i]]$run <- DELTA_BETA_THRESH[i]
+  }
+  
+  bh_results <- do.call(rbind, bump_hunter_results)
+  
+  return(bh_results)
+  
+}
+
+getFolds <- function(model_dat){
+  # assign folds
+  model_dat$folds <- sample(1:k, nrow(model_dat), replace = T)
+  
+  return(model_dat)
+}
+
+
+
+getProbe <- function(data) {
+  
+  results <- list()
+  results_data <- list()
+  colnames(cg_locations) <- paste0(colnames(cg_locations), '_', 'rgSet')
+  
+  
+  # first make seqnames in cg_locations and chr in tab character vectors for identification
+  cg_locations$seqnames_rgSet <- as.character(cg_locations$seqnames_rgSet)
+  data$chr <- as.character(data$chr)
+  
+  # use sql data table to merger validators with model_data based on age range
+  result = sqldf("select * from cg_locations
+                 inner join data
+                 on cg_locations.start_rgSet between data.start and data.end")
+  
+  # keep only necessary columns
+  result <- result[, c('chr' , 'start_rgSet','end_rgSet', 'probe_rgSet', 'p.value', 'fwer', 'run')]
+  
+  # rename cols
+  colnames(result) <- c('chr', 'start', 'end', 'probe', 'p.value', 'fwer', 'run')
+  
+  # get sig results
+  result_sig <- result[result$p.value < 0.05,]
+  
+  # get fwer results
+  result_fwer <- result[result$fwer == 0,]
+  
+  return(list(result, result_sig, result_fwer))
+  
+}
+
+getRun <- function(data, run_num)
+{
+  data <- data[data$run == run_num,]
+  data <- data[!duplicated(data$probe),]
+  data_feat <- as.data.frame(as.character(data$probe))
+  return(data_feat)
+}
+
+# 
+# training_dat <- betaCases[train_index,]
+# test_dat <- betaCases[test_index,]
+# valid_dat <- betaValid
+# controls_dat <- betaControls
+# bh_features <- bh_feat_all
+
+runEnet <- function(training_dat, 
+                    test_dat,
+                    controls_dat,
+                    valid_dat,
+                    bh_features) 
+{
+  # # create place list place holders
+  # model <- list()
+  # importance <- list()
+  # cases_cor <- list()
+  # controls_cor <- list()
+  # valid_cor <- list()
+  # alpha <- list()
+  # 
+
+  # get intersection of bh features and real data
+  bh_features <- as.character(unlist(bh_features))
+  
+  intersected_feats <- intersect(bh_features, colnames(training_dat))
+  
+  if(gender) {
+    
+    intersected_feats <- append('gender', intersected_feats)
+    training_dat$gender <- as.factor(training_dat$gender)
+    controls_dat$gender <- as.factor(controls_dat$gender)
+    valid_dat$gender <- as.factor(valid_dat$gender)
+    
+  }
+  
+  # # get y
+  train_y <- as.numeric(training_dat$age_diagnosis)
+  test_y <- as.numeric(test_dat$age_diagnosis)
+  test_y_controls <- as.numeric(controls_dat$age_sample_collection)
+  test_y_valid <- as.numeric(valid_dat$age_diagnosis)
+  
+  # get bumphunter features
+  training_dat <- training_dat[, intersected_feats]
+  test_dat <- test_dat[, intersected_feats]
+  controls_dat <- controls_dat[, intersected_feats]
+  valid_dat <- valid_dat[, intersected_feats]
+  
+  N_CV_REPEATS = 3
+  nfolds = 3
+  
+  ###### ENET
+  # create vector and list to store best alpha on training data. alpha is the parameter that choses the 
+  # the optimal proportion lambda, the tuning parameter for L1 (ridge) and L2 (lasso)
+  elastic_net.cv_error = vector()
+  elastic_net.cv_model = list()
+  elastic_net.ALPHA <- c(1:9) / 10 # creates possible alpha values for model to choose from
+  
+  # set parameters for training model
+  type_family <- 'gaussian'
+  
+  # create error matrix for for opitmal alpha that can run in parraellel if you have bigger data 
+  # or if you have a high number fo N_CV_REPEATS
+  temp.cv_error_matrix <- foreach (temp = 1:N_CV_REPEATS, .combine=rbind, .errorhandling="stop") %do% {      
+    for (alpha in 1:length(elastic_net.ALPHA)) # for i in 1:9 - the model will run 9 times
+    {      
+      elastic_net.cv_model[[alpha]] = cv.glmnet(x = as.matrix(training_dat)
+                                                , y =  train_y
+                                                , alpha = elastic_net.ALPHA[alpha] # first time with 0.1 and so on
+                                                , type.measure = 'deviance'
+                                                , family = type_family
+                                                , standardize = FALSE 
+                                                , nfolds = nfolds 
+                                                , nlambda = 10
+                                                , parallel = TRUE
+      )
+      elastic_net.cv_error[alpha] = min(elastic_net.cv_model[[alpha]]$cvm)
+    }
+    elastic_net.cv_error # stores 9 errors    
+  }
+  
+  if (N_CV_REPEATS == 1) {
+    temp.cv_error_mean = temp.cv_error_matrix
+  } else {
+    temp.cv_error_mean = apply(temp.cv_error_matrix, 2, mean) # take the mean of the 5 iterations  
+    # as your value for alpha
+  }
+  
+  # stop if you did not recover error for any models 
+  stopifnot(length(temp.cv_error_mean) == length(elastic_net.ALPHA))
+  
+  # get index of best alpha (lowest error) - alpha is values 0.1-0.9
+  temp.best_alpha_index = which(min(temp.cv_error_mean) == temp.cv_error_mean)[length(which(min(temp.cv_error_mean) == temp.cv_error_mean))] 
+  print(paste("Best ALPHA:", elastic_net.ALPHA[temp.best_alpha_index])) # print the value for alpha
+  best_alpha <- elastic_net.ALPHA[temp.best_alpha_index]
+  temp.non_zero_coeff = 0
+  temp.loop_count = 0
+  # loop runs initially because temp.non_zero coefficient <3 and then stops 
+  # usually after one iteration because the nzero variable selected by lambda is greater that 3. if it keeps looping
+  # it they are never greater than 1, then the model does not converge. 
+  while (temp.non_zero_coeff < 1) { 
+    elastic_net.cv_model = cv.glmnet(x = as.matrix(training_dat)
+                                     , y =  train_y
+                                     , alpha = elastic_net.ALPHA[temp.best_alpha_index]
+                                     , type.measure = 'deviance'
+                                     , family = type_family
+                                     , standardize=FALSE
+                                     , nlambda = 100
+                                     , nfolds = nfolds
+                                     , parallel = TRUE
+    )
+    
+    # get optimal lambda - the tuning parameter for ridge and lasso
+    # THIS IS IMPORTANT BECAUSE WHEN YOU TRAIN THE MODEL ON 100 SEPERATE VALUES OF LAMBDA
+    # AND WHEN YOU TEST THE MODEL IT WILL RETURN PREDCITION FOR ALL THOSE VALUES (1-100). YOU NEED TO 
+    # GRAB THE PREDICTION WITH SAME LAMBDA THAT YOU TRAINED ON. ITS ALL IN THE CODE, BUT JUST WANTED TO 
+    # GIVE YOU REASONS
+    temp.min_lambda_index = which(elastic_net.cv_model$lambda == elastic_net.cv_model$lambda.min) 
+    
+    # # number of non zero coefficients at that lambda    
+    temp.non_zero_coeff = elastic_net.cv_model$nzero[temp.min_lambda_index] 
+    temp.loop_count = temp.loop_count + 1
+    
+    # set seed for next loop iteration
+    as.numeric(Sys.time())-> t 
+    set.seed((t - floor(t)) * 1e8 -> seed) 
+    if (temp.loop_count > 10) {
+      print("diverged")
+      temp.min_lambda_index = 50 # if it loops more than 5 times, then model did not converge
+      break
+    }
+  }# while loop ends 
+  print(temp.non_zero_coeff)  
+  
+          model = glmnet(x = as.matrix(training_dat)
+                      , y =  train_y
+                      ,alpha = elastic_net.ALPHA[temp.best_alpha_index]
+                      ,standardize=FALSE
+                      ,nlambda = 100
+                      ,family = type_family)
+  
+  # This returns 100 prediction with 1-100 lambdas
+  temp_test.predictions <- predict(model, 
+                                   data.matrix(test_dat),
+                                   type = 'response')
+  
+  
+  
+  test.predictions <- temp_test.predictions[, temp.min_lambda_index]
+  
+  # get controls
+  temp_test.predictions_controls <- predict(model, 
+                                            data.matrix(controls_dat),
+                                            type = 'response')
+  
+  
+  
+  test.predictions_controls <- temp_test.predictions_controls[, temp.min_lambda_index]
+  
+  
+  # get validation
+  temp_test.predictions_valid <- predict(model, 
+                                         data.matrix(valid_dat),
+                                         type = 'response')
+  
+  
+  
+  test.predictions_valid  <- temp_test.predictions_valid[, temp.min_lambda_index]
+  
+  importance <- coef(model)
+  
+  cases_cor  <- cor(test_y, test.predictions)
+  
+  # for each iteration, this should always be the same.
+  controls_cor <- cor(test_y_controls, test.predictions_controls)
+  
+  valid_cor  <- cor(test_y_valid, test.predictions_valid)
+  
+  alpha  <- best_alpha
+  #
+
+}

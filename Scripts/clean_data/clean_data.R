@@ -50,6 +50,8 @@ method = 'quan'
 ##########
 # read in cg locations (which is generated later in this script)
 ##########
+cg_locations <- read.csv(paste0(model_data, '/cg_locations.csv'))
+
 
 ##########
 # read in clinical data
@@ -121,6 +123,11 @@ betaCases <- preprocessMethod(rgCases, preprocess = method)
 betaControls <- preprocessMethod(rgControls, preprocess = method)
 betaValid <- preprocessMethod(rgValid, preprocess = method)
 
+# save.image('/home/benbrew/Desktop/temp_clean.RData')
+# load('/home/benbrew/Desktop/temp_clean.RData')
+
+# getwd()
+
 ###########
 # fix id functions
 ###########
@@ -156,12 +163,13 @@ betaValid <- cleanIds(betaValid)
 # join data to clinical 
 betaCases <- joinData(betaCases, control = F)
 betaControls <- joinData(betaControls, control = T)
-betaValid <- joinData(betaValid, control = T)
+betaValid <- joinData(betaValid, control = F)
 
 ##########
 # get controls wild type- that is WT non cancer
 ##########
-betaControlsWT <- betaCases[which(betaCases$cancer_diagnosis_diagnoses == 'Unaffected' & betaCases$p53_germline == 'WT'),]
+betaControlsWT <- betaCases[which(betaCases$cancer_diagnosis_diagnoses == 'Unaffected' & 
+                                    betaCases$p53_germline == 'WT'),]
 
 ##########
 # remove cancers from controls data
@@ -185,5 +193,59 @@ betaCases <- getModData(betaCases)
 # betaValid <- readRDS(paste0(model_data, '/betaValid', method,'.rda'))
 
 
-
-
+# ##########
+# # plot pca for all three data types by gender, sentrix_id 
+# ##########
+# 
+# # cases, gender
+# getPCA(pca_data = betaCases, 
+#        column_name = 'gender', 
+#        name = 'betaCases gender', 
+#        gene_start = 8,
+#        pca1 = 1,
+#        pca2 = 2)
+# 
+# # cases, sentrix_id
+# getPCA(pca_data = betaCases, 
+#        column_name = 'sentrix_id', 
+#        name = 'betaCases sentrix_id', 
+#        gene_start = 8,
+#        pca1 = 1,
+#        pca2 = 2)
+# 
+# # Controls, gender
+# getPCA(pca_data = betaControls, 
+#        column_name = 'gender', 
+#        name = 'betaControls gender', 
+#        gene_start = 8,
+#        pca1 = 1,
+#        pca2 = 2)
+# 
+# # Controls, sentrix_id
+# getPCA(pca_data = betaControls, 
+#        column_name = 'sentrix_id', 
+#        name = 'betaControls sentrix_id', 
+#        gene_start = 8, 
+#        pca1 = 1,
+#        pca2 = 2)
+# 
+# # Valid, gender
+# getPCA(pca_data = betaValid, 
+#        column_name = 'gender', 
+#        name = 'betaValid gender', 
+#        gene_start = 8,
+#        pca1 = 1,
+#        pca2 = 2)
+# 
+# # Valid, sentrix_id
+# getPCA(pca_data = betaValid, 
+#        column_name = 'sentrix_id', 
+#        name = 'betaValid sentrix_id', 
+#        gene_start = 8,
+#        pca1 = 1,
+#        pca2 = 2)
+# 
+# 
+# 
+# 
+# 
