@@ -37,16 +37,20 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 # fixed variables
 ##########
-method = 'quan'
-k = 5
-seed_num = 0.2
+method = 'raw'
+k = 4
+seed_num = 1
 
 ##########
 # load data
 ##########
 betaCases <- readRDS(paste0(model_data, '/betaCases', method,'.rda'))
 betaControls <- readRDS(paste0(model_data, '/betaControls', method,'.rda'))
+betaControlsOld <- readRDS(paste0(model_data, '/betaControlsOld', method,'.rda'))
 betaValid <- readRDS(paste0(model_data, '/betaValid', method,'.rda'))
+# 
+# # # TEMP
+# betaCases <- betaCases[!grepl('9721365183', betaCases$sentrix_id),]
 
 # load cg_locations
 cg_locations <- read.csv(paste0(model_data, 
@@ -74,12 +78,26 @@ betaControls <- betaControls[, c('age_diagnosis',
                                  'cancer_diagnosis_diagnoses', 
                                  'gender', 
                                 intersect_names)]
+
+# controls
+betaControlsOld <- betaControlsOld[, c('age_diagnosis', 
+                                 'age_sample_collection', 
+                                 'cancer_diagnosis_diagnoses', 
+                                 'gender', 
+                                 intersect_names)]
 #validation
 betaValid <- betaValid[, c('age_diagnosis', 
                            'age_sample_collection', 
                            'cancer_diagnosis_diagnoses', 
                            'gender', 
                           intersect_names)]
+
+#TEMP
+betaControlsFull <- rbind(betaControls, betaControlsOld)
+
+# remove na in sample collection and duplicate ids
+betaControlsFull <- betaControlsFull[!is.na(betaControlsFull$age_sample_collection),]
+
 
 ###########################################################################
 # Next part of the pipline selects regions of the genome that are most differentially methylated 
@@ -106,20 +124,25 @@ trainTest <- function(betaCases,
     # get x 
     train_index <- !grepl(i, betaCases$folds)
     test_index <- !train_index
-    
+  
+    # high pvalue, no evidence they are different
+    print(testKS(betaCases$age_sample_collection[train_index], betaControls$age_sample_collection)$p.value)
+
     # use bumphunter surveillance function to get first set of regions
     bh_feat[[i]] <- bumpHunterSurv(dat_cases = betaCases[train_index,], dat_controls = betaControls)
-    
+   
     # get probes with regions
     bh_feat_3 <- getProbe(bh_feat[[i]])
     
     # get all data sets from bh_feat_3
-     bh_feat_all <- getRun(bh_feat_3[[1]], run_num = .10)
+    bh_feat_all <- getRun(bh_feat_3[[2]], run_num = .10)
     # bh_feat_sig <- getRun(bh_feat_3[[2]], run_num = seed_num)
     # bh_feat_fwer <- getRun(bh_feat_3[[3]], run_num = seed_num)
     
     # save.image('/home/benbrew/Desktop/temp_pipeline_model.RData')
-    load('/home/benbrew/Desktop/temp_pipeline_model.RData')
+    # load('/home/benbrew/Desktop/temp_pipeline_model.RData')
+    
+   
     
     
   }

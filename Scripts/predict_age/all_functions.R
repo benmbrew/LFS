@@ -22,6 +22,10 @@ cleanIdMap <- function(data, valid) {
 ##########
 preprocessMethod <- function(data, preprocess) {
   
+  if (preprocess == 'raw') {
+    Mset <- preprocessRaw(data)
+    ratioSet <- ratioConvert(Mset, what = 'both', keepCN = T)
+  }
   
   if (preprocess == 'quan') {
     ratioSet   <- preprocessQuantile(data, fixOutliers = TRUE,
@@ -45,6 +49,33 @@ preprocessMethod <- function(data, preprocess) {
   
 }
 
+##########
+# impute and scale for raw data
+##########
+scaleImputeDat <- function(dat) {
+  
+  # get row statistics
+  rowMean <- apply(dat, 1, mean, na.rm=TRUE)
+  rowSd <- apply(dat, 1, sd, na.rm=TRUE)
+  # constantInd <- rowSd==0
+  # rowSd[constantInd] <- 1
+  rowStats <- list(mean=rowMean, sd=rowSd)
+  
+  # apply normilization
+  dat  <- (dat - rowStats$mean) / rowStats$sd
+  
+  # make matrix
+  dat <- as.matrix(dat)
+  
+  # impute with knn
+  dat_knn <-  impute.knn(dat, k = 10)$data
+  
+ 
+  # get clin data back and return final data
+  final_dat <- dat_knn
+  
+  return(final_dat)
+}
 
 
 ##########
@@ -157,6 +188,7 @@ getIds <- function(cg_locations) {
   return(cg_locations)
 }
 
+# data <- betaControls
 # function that takes each methylation and merges with clinical - keep ids, family, p53 status, age data
 joinData <- function(data, control) {
   
@@ -427,8 +459,8 @@ bumpHunterSurv <- function(dat_cases,
   stopifnot(dim(beta)[1] == length(pos))
   
   # set paramenters 
-  DELTA_BETA_THRESH = .05 # DNAm difference threshold
-  NUM_BOOTSTRAPS = 2   # number of randomizations
+  DELTA_BETA_THRESH = .20 # DNAm difference threshold
+  NUM_BOOTSTRAPS = 3   # number of randomizations
   
   # create tab list
   tab <- list()
@@ -502,12 +534,23 @@ getRun <- function(data, run_num)
   return(data_feat)
 }
 
-# 
-# training_dat <- betaCases[train_index,]
-# test_dat <- betaCases[test_index,]
-# valid_dat <- betaValid
-# controls_dat <- betaControls
-# bh_features <- bh_feat_all
+
+testKS <- function(x, y)
+{
+  y <- y[!is.na(y)]
+  x <- x[!is.na(x)]
+  
+  # Do x and y come from the same distribution?
+  ks.test(jitter(x), jitter(y), alternative = 'two.sided')
+  
+}
+
+# # #
+training_dat <- betaCases[train_index,]
+test_dat <- betaCases[test_index,]
+valid_dat <- betaValid
+controls_dat <- betaControls
+bh_features <- bh_feat_all
 
 runEnet <- function(training_dat, 
                     test_dat,
@@ -532,9 +575,10 @@ runEnet <- function(training_dat,
   if(gender) {
     
     intersected_feats <- append('gender', intersected_feats)
-    training_dat$gender <- as.factor(training_dat$gender)
-    controls_dat$gender <- as.factor(controls_dat$gender)
-    valid_dat$gender <- as.factor(valid_dat$gender)
+    training_dat$gender <- as.numeric(as.factor(training_dat$gender))
+    test_dat$gender <- as.numeric(as.factor(test_dat$gender))
+    controls_dat$gender <- as.numeric(as.factor(controls_dat$gender))
+    valid_dat$gender <- as.numeric(as.factor(valid_dat$gender))
     
   }
   

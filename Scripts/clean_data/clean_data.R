@@ -42,7 +42,7 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 # fixed variables
 ##########
-method = 'quan'
+method = 'raw'
 
 #################################################################################
 # Load id_map, which has ids to merge with methylation - do for cases and controls
@@ -122,14 +122,21 @@ rgValid <- read.metharray.exp(idat_data_valid)
 betaCases <- preprocessMethod(rgCases, preprocess = method)
 betaControls <- preprocessMethod(rgControls, preprocess = method)
 betaValid <- preprocessMethod(rgValid, preprocess = method)
-
-# save.image('/home/benbrew/Desktop/temp_clean.RData')
-# load('/home/benbrew/Desktop/temp_clean.RData')
-
 # getwd()
 
+# save.image('/home/benbrew/Desktop/temp_raw.RData')
+# load('/home/benbrew/Desktop/temp_raw.RData')
+
 ###########
-# fix id functions
+# scale and impute
+###########
+betaCases <- scaleImputeDat(dat = betaCases)
+betaControls <- scaleImputeDat(dat = betaControls)
+betaValid <- scaleImputeDat(dat = betaValid)
+
+
+###########
+# id functions
 ###########
 # cases
 betaCases <- findIds(betaCases, id_map = id_map)
@@ -165,6 +172,7 @@ betaCases <- joinData(betaCases, control = F)
 betaControls <- joinData(betaControls, control = T)
 betaValid <- joinData(betaValid, control = F)
 
+
 ##########
 # get controls wild type- that is WT non cancer
 ##########
@@ -172,21 +180,37 @@ betaControlsWT <- betaCases[which(betaCases$cancer_diagnosis_diagnoses == 'Unaff
                                     betaCases$p53_germline == 'WT'),]
 
 ##########
+# get old controls
+##########
+betaControlsOld <- betaCases[which(betaCases$cancer_diagnosis_diagnoses == 'Unaffected' &
+                                     betaCases$p53_germline == 'Mut'),]
+
+
+##########
 # remove cancers from controls data
 ##########
 betaControls <- removeCancer(betaControls)
+betaControlsOld <- removeCancer(betaControlsOld)
+
 
 ##########
 # get model dat
 ##########
 betaCases <- getModData(betaCases)
 
+# save.image('/home/benbrew/Desktop/temp_clean_funnorm.RData')
+# load('/home/benbrew/Desktop/temp_clean_funnorm.RData')
 
+betaCases <- betaCases[, !grepl('ch', colnames(betaCases))]
+betaControls <- betaControls[, !grepl('ch', colnames(betaControls))]
+betaControlsOld <- betaControlsOld[, !grepl('ch', colnames(betaControlsOld))]
+betaValid <- betaValid[, !grepl('ch', colnames(betaValid))]
 
-# # save each dataset
-# saveRDS(betaCases, paste0(model_data, '/betaCases', method,'.rda'))
-# saveRDS(betaControls, paste0(model_data, '/betaControls', method,'.rda'))
-# saveRDS(betaValid, paste0(model_data, '/betaValid', method,'.rda'))
+# save each dataset
+saveRDS(betaCases, paste0(model_data, '/betaCases', method,'.rda'))
+saveRDS(betaControls, paste0(model_data, '/betaControls', method,'.rda'))
+saveRDS(betaControlsOld, paste0(model_data, '/betaControlsOld', method,'.rda'))
+saveRDS(betaValid, paste0(model_data, '/betaValid', method,'.rda'))
 # 
 # betaCases <- readRDS(paste0(model_data, '/betaCases', method,'.rda'))
 # betaControls <- readRDS(paste0(model_data, '/betaControls', method,'.rda'))
@@ -197,55 +221,55 @@ betaCases <- getModData(betaCases)
 # # plot pca for all three data types by gender, sentrix_id 
 # ##########
 # 
-# # cases, gender
-# getPCA(pca_data = betaCases, 
-#        column_name = 'gender', 
-#        name = 'betaCases gender', 
-#        gene_start = 8,
-#        pca1 = 1,
-#        pca2 = 2)
-# 
-# # cases, sentrix_id
-# getPCA(pca_data = betaCases, 
-#        column_name = 'sentrix_id', 
-#        name = 'betaCases sentrix_id', 
-#        gene_start = 8,
-#        pca1 = 1,
-#        pca2 = 2)
-# 
-# # Controls, gender
-# getPCA(pca_data = betaControls, 
-#        column_name = 'gender', 
-#        name = 'betaControls gender', 
-#        gene_start = 8,
-#        pca1 = 1,
-#        pca2 = 2)
-# 
-# # Controls, sentrix_id
-# getPCA(pca_data = betaControls, 
-#        column_name = 'sentrix_id', 
-#        name = 'betaControls sentrix_id', 
-#        gene_start = 8, 
-#        pca1 = 1,
-#        pca2 = 2)
-# 
-# # Valid, gender
-# getPCA(pca_data = betaValid, 
-#        column_name = 'gender', 
-#        name = 'betaValid gender', 
-#        gene_start = 8,
-#        pca1 = 1,
-#        pca2 = 2)
-# 
-# # Valid, sentrix_id
-# getPCA(pca_data = betaValid, 
-#        column_name = 'sentrix_id', 
-#        name = 'betaValid sentrix_id', 
-#        gene_start = 8,
-#        pca1 = 1,
-#        pca2 = 2)
-# 
-# 
+# cases, gender
+getPCA(pca_data = betaCases,
+       column_name = 'gender',
+       name = 'betaCases gender',
+       gene_start = 8,
+       pca1 = 1,
+       pca2 = 2)
+
+# cases, sentrix_id
+getPCA(pca_data = betaCases,
+       column_name = 'sentrix_id',
+       name = 'betaCases sentrix_id',
+       gene_start = 8,
+       pca1 = 1,
+       pca2 = 2)
+
+# Controls, gender
+getPCA(pca_data = betaControls,
+       column_name = 'gender',
+       name = 'betaControls gender',
+       gene_start = 8,
+       pca1 = 1,
+       pca2 = 2)
+
+# Controls, sentrix_id
+getPCA(pca_data = betaControls,
+       column_name = 'sentrix_id',
+       name = 'betaControls sentrix_id',
+       gene_start = 8,
+       pca1 = 1,
+       pca2 = 2)
+
+# Valid, gender
+getPCA(pca_data = betaValid,
+       column_name = 'gender',
+       name = 'betaValid gender',
+       gene_start = 8,
+       pca1 = 1,
+       pca2 = 2)
+
+# Valid, sentrix_id
+getPCA(pca_data = betaValid,
+       column_name = 'sentrix_id',
+       name = 'betaValid sentrix_id',
+       gene_start = 8,
+       pca1 = 1,
+       pca2 = 2)
+
+
 # 
 # 
 # 
