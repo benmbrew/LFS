@@ -719,65 +719,119 @@ runEnet <- function(training_dat,
 
 
 }
+training_dat = cases[train_index,]
+test_dat = cases[test_index,]
+bh_features = bh_feat_sig
+gender = T
+cutoff = 48
 
-
-##########
-# test model
-# ##########
-# cases_dat <- betaCases
-# controls_dat <- betaControls
-# controls_dat_full <- betaControlsFull
-# valid_dat <- betaValid
-# bh_features <- bh_feat_tot 
-
-testModel <- function(cases_dat,
-                      controls_dat,
-                      valid_dat,
-                      bh_features,
-                      alpha)
+runEnetFac <- function(training_dat, 
+                       test_dat,
+                       bh_features,
+                       gender,
+                       cutoff) 
 {
   
   # get intersection of bh features and real data
   bh_features <- as.character(unlist(bh_features))
   
-  intersected_feats <- intersect(bh_features, colnames(cases_dat))
-
-  intersected_feats <- append('gender', intersected_feats)
-  cases_dat$gender <- as.numeric(as.factor(cases_dat$gender))
-  controls_dat$gender <- as.numeric(as.factor(controls_dat$gender))
-  valid_dat$gender <- as.numeric(as.factor(valid_dat$gender))
+  intersected_feats <- intersect(bh_features, colnames(training_dat))
   
-  # get y
-  train_y <- as.numeric(cases_dat$age_diagnosis)
-  test_y_controls <- as.numeric(controls_dat$age_sample_collection)
-  test_y_valid <- as.numeric(valid_dat$age_diagnosis)
+  if(gender) {
+    
+    intersected_feats <- append('gender', intersected_feats)
+    training_dat$gender <- as.numeric(as.factor(training_dat$gender))
+    test_dat$gender <- as.numeric(as.factor(test_dat$gender))
+    # controls_dat$gender <- as.numeric(as.factor(controls_dat$gender))
+    # valid_dat$gender <- as.numeric(as.factor(valid_dat$gender))
+    
+  }
+  
+
+  # # get y
+  train_y <- factor(ifelse(training_dat$age_diagnosis <= cutoff, 'yes', 'no'), levels = c('yes', 'no'))
+  test_y <- factor(ifelse(test_dat$age_diagnosis <= cutoff, 'yes', 'no'), levels = c('yes', 'no'))
+  
+
+  # test_y_controls <- as.numeric(controls_dat$age_sample_collection)
+  # test_y_valid <- as.numeric(valid_dat$age_diagnosis)
   
   # get bumphunter features
-  cases_dat <- cases_dat[, intersected_feats]
-  controls_dat <- controls_dat[, intersected_feats]
-  valid_dat <- valid_dat[, intersected_feats]
+  training_dat <- training_dat[, intersected_feats]
+  test_dat <- test_dat[, intersected_feats]
+  # controls_dat <- controls_dat[, intersected_feats]
+  # valid_dat <- valid_dat[, intersected_feats]
   
   N_CV_REPEATS = 2
   nfolds = 3
   
+  ###### ENET
+  # create vector and list to store best alpha on training data. alpha is the parameter that choses the 
+  # the optimal proportion lambda, the tuning parameter for L1 (ridge) and L2 (lasso)
+  elastic_net.cv_error = vector()
+  elastic_net.cv_model = list()
+  elastic_net.ALPHA <- c(1:9) / 10 # creates possible alpha values for model to choose from
+  
+  # set parameters for training model
+  type_family <- 'binomial'
+  type_measure <- 'auc'
+  
+  # create error matrix for for opitmal alpha that can run in parraellel if you have bigger data 
+  # or if you have a high number fo N_CV_REPEATS
+  temp.cv_error_matrix <- foreach (temp = 1:N_CV_REPEATS, .combine=rbind, .errorhandling="stop") %do% {      
+    for (alpha in 1:length(elastic_net.ALPHA)) # for i in 1:9 - the model will run 9 times
+    {      
+      elastic_net.cv_model[[alpha]] = cv.glmnet(x = as.matrix(training_dat)
+                                                , y =  train_y
+                                                , alpha = elastic_net.ALPHA[alpha] # first time with 0.1 and so on
+                                                , type.measure = type_measure
+                                                , family = type_family
+                                                , standardize = FALSE 
+                                                , nfolds = nfolds 
+                                                , nlambda = 10
+                                                , parallel = TRUE
+      )
+      elastic_net.cv_error[alpha] = min(elastic_net.cv_model[[alpha]]$cvm)
+    }
+    elastic_net.cv_error # stores 9 errors    
+  }
+  
+  if (N_CV_REPEATS == 1) {
+    temp.cv_error_mean = temp.cv_error_matrix
+  } else {
+    temp.cv_error_mean = apply(temp.cv_error_matrix, 2, mean) # take the mean of the 5 iterations  
+    # as your value for alpha
+  }
+  
+  # stop if you did not recover error for any models 
+  stopifnot(length(temp.cv_error_mean) == length(elastic_net.ALPHA))
+  
+  # get index of best alpha (lowest error) - alpha is values 0.1-0.9
+  temp.best_alpha_index = which(min(temp.cv_error_mean) == temp.cv_error_mean)[length(which(min(temp.cv_error_mean) == temp.cv_error_mean))] 
+  print(paste("Best ALPHA:", elastic_net.ALPHA[temp.best_alpha_index])) # print the value for alpha
+  best_alpha <- elastic_net.ALPHA[temp.best_alpha_index]
   temp.non_zero_coeff = 0
   temp.loop_count = 0
   # loop runs initially because temp.non_zero coefficient <3 and then stops 
   # usually after one iteration because the nzero variable selected by lambda is greater that 3. if it keeps looping
   # it they are never greater than 1, then the model does not converge. 
   while (temp.non_zero_coeff < 1) { 
-    elastic_net.cv_model = cv.glmnet(x = as.matrix(cases_dat)
+    elastic_net.cv_model = cv.glmnet(x = as.matrix(training_dat)
                                      , y =  train_y
-                                     , alpha = alpha
-                                     , type.measure = 'deviance'
-                                     , family = 'gaussian'
+                                     , alpha = elastic_net.ALPHA[temp.best_alpha_index]
+                                     , type.measure = type_measure
+                                     , family = type_family
                                      , standardize=FALSE
                                      , nlambda = 100
                                      , nfolds = nfolds
                                      , parallel = TRUE
     )
     
-  
+    # get optimal lambda - the tuning parameter for ridge and lasso
+    # THIS IS IMPORTANT BECAUSE WHEN YOU TRAIN THE MODEL ON 100 SEPERATE VALUES OF LAMBDA
+    # AND WHEN YOU TEST THE MODEL IT WILL RETURN PREDCITION FOR ALL THOSE VALUES (1-100). YOU NEED TO 
+    # GRAB THE PREDICTION WITH SAME LAMBDA THAT YOU TRAINED ON. ITS ALL IN THE CODE, BUT JUST WANTED TO 
+    # GIVE YOU REASONS
     temp.min_lambda_index = which(elastic_net.cv_model$lambda == elastic_net.cv_model$lambda.min) 
     
     # # number of non zero coefficients at that lambda    
@@ -795,10 +849,9 @@ testModel <- function(cases_dat,
   }# while loop ends 
   print(temp.non_zero_coeff)  
   
-  
-  model  = glmnet(x = as.matrix(cases_dat)
+  model  = glmnet(x = as.matrix(training_dat)
                   , y =  train_y
-                  ,alpha = alpha
+                  ,alpha = elastic_net.ALPHA[temp.best_alpha_index]
                   ,standardize=FALSE
                   ,nlambda = 100
                   ,family = type_family)
@@ -806,45 +859,23 @@ testModel <- function(cases_dat,
   # This returns 100 prediction with 1-100 lambdas
   temp_test.predictions <- predict(model, 
                                    data.matrix(test_dat),
-                                   type = 'response')
-  
+                                   type = 'class')
   
   
   test.predictions <- temp_test.predictions[, temp.min_lambda_index]
-  
-  # # get controls
-  # temp_test.predictions_controls <- predict(model, 
-  #                                           data.matrix(controls_dat),
-  #                                           type = 'response')
-  # 
-  # 
-  # 
-  # test.predictions_controls <- temp_test.predictions_controls[, temp.min_lambda_index]
-  # 
-  # 
-  # # get validation
-  # temp_test.predictions_valid <- predict(model, 
-  #                                        data.matrix(valid_dat),
-  #                                        type = 'response')
-  # 
-  # 
-  # 
-  # test.predictions_valid  <- temp_test.predictions_valid[, temp.min_lambda_index]
-  # 
+  test.predictions <- factor(test.predictions, levels = c('yes', 'no'))
+
+  test_stats <- confusionMatrix(test_y, test.predictions)
   importance <- coef(model)
   
   lambda_value <- elastic_net.cv_model$lambda.min
   
-  cases_cor  <- cor(test_y, test.predictions)
-  
-  # # for each iteration, this should always be the same.
-  # controls_cor <- cor(test_y_controls, test.predictions_controls)
-  # 
-  # valid_cor  <- cor(test_y_valid, test.predictions_valid)
-  
   alpha  <- best_alpha
   
-  return(list(alpha, lambda_value, importance, cases_cor, model))
-
+  return(list(alpha, lambda_value, importance, test_stats, model))
+  
   
 }
+
+
+
