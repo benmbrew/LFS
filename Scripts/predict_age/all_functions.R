@@ -485,8 +485,9 @@ bumpHunterSurv <- function(dat_cases,
   
 }
 
-getFolds <- function(model_dat){
+getFolds <- function(model_dat, seed_number, k_num){
   # assign folds
+  set.seed(seed_number)
   model_dat$folds <- sample(1:k, nrow(model_dat), replace = T)
   
   return(model_dat)
@@ -546,26 +547,12 @@ testKS <- function(x, y)
 }
 
 # # #
-training_dat <- betaCases[train_index,]
-test_dat <- betaCases[test_index,]
-valid_dat <- betaValid
-controls_dat <- betaControls
-bh_features <- bh_feat_all
 
 runEnet <- function(training_dat, 
                     test_dat,
-                    controls_dat,
-                    valid_dat,
-                    bh_features) 
+                    bh_features,
+                    gender) 
 {
-  # # create place list place holders
-  # model <- list()
-  # importance <- list()
-  # cases_cor <- list()
-  # controls_cor <- list()
-  # valid_cor <- list()
-  # alpha <- list()
-  # 
 
   # get intersection of bh features and real data
   bh_features <- as.character(unlist(bh_features))
@@ -577,24 +564,24 @@ runEnet <- function(training_dat,
     intersected_feats <- append('gender', intersected_feats)
     training_dat$gender <- as.numeric(as.factor(training_dat$gender))
     test_dat$gender <- as.numeric(as.factor(test_dat$gender))
-    controls_dat$gender <- as.numeric(as.factor(controls_dat$gender))
-    valid_dat$gender <- as.numeric(as.factor(valid_dat$gender))
+    # controls_dat$gender <- as.numeric(as.factor(controls_dat$gender))
+    # valid_dat$gender <- as.numeric(as.factor(valid_dat$gender))
     
   }
   
   # # get y
   train_y <- as.numeric(training_dat$age_diagnosis)
   test_y <- as.numeric(test_dat$age_diagnosis)
-  test_y_controls <- as.numeric(controls_dat$age_sample_collection)
-  test_y_valid <- as.numeric(valid_dat$age_diagnosis)
+  # test_y_controls <- as.numeric(controls_dat$age_sample_collection)
+  # test_y_valid <- as.numeric(valid_dat$age_diagnosis)
   
   # get bumphunter features
   training_dat <- training_dat[, intersected_feats]
   test_dat <- test_dat[, intersected_feats]
-  controls_dat <- controls_dat[, intersected_feats]
-  valid_dat <- valid_dat[, intersected_feats]
+  # controls_dat <- controls_dat[, intersected_feats]
+  # valid_dat <- valid_dat[, intersected_feats]
   
-  N_CV_REPEATS = 3
+  N_CV_REPEATS = 2
   nfolds = 3
   
   ###### ENET
@@ -680,7 +667,7 @@ runEnet <- function(training_dat,
   }# while loop ends 
   print(temp.non_zero_coeff)  
   
-          model = glmnet(x = as.matrix(training_dat)
+          model  = glmnet(x = as.matrix(training_dat)
                       , y =  train_y
                       ,alpha = elastic_net.ALPHA[temp.best_alpha_index]
                       ,standardize=FALSE
@@ -696,35 +683,168 @@ runEnet <- function(training_dat,
   
   test.predictions <- temp_test.predictions[, temp.min_lambda_index]
   
-  # get controls
-  temp_test.predictions_controls <- predict(model, 
-                                            data.matrix(controls_dat),
-                                            type = 'response')
-  
-  
-  
-  test.predictions_controls <- temp_test.predictions_controls[, temp.min_lambda_index]
-  
-  
-  # get validation
-  temp_test.predictions_valid <- predict(model, 
-                                         data.matrix(valid_dat),
-                                         type = 'response')
-  
-  
-  
-  test.predictions_valid  <- temp_test.predictions_valid[, temp.min_lambda_index]
-  
+  # # get controls
+  # temp_test.predictions_controls <- predict(model, 
+  #                                           data.matrix(controls_dat),
+  #                                           type = 'response')
+  # 
+  # 
+  # 
+  # test.predictions_controls <- temp_test.predictions_controls[, temp.min_lambda_index]
+  # 
+  # 
+  # # get validation
+  # temp_test.predictions_valid <- predict(model, 
+  #                                        data.matrix(valid_dat),
+  #                                        type = 'response')
+  # 
+  # 
+  # 
+  # test.predictions_valid  <- temp_test.predictions_valid[, temp.min_lambda_index]
+  # 
   importance <- coef(model)
+  
+  lambda_value <- elastic_net.cv_model$lambda.min
   
   cases_cor  <- cor(test_y, test.predictions)
   
-  # for each iteration, this should always be the same.
-  controls_cor <- cor(test_y_controls, test.predictions_controls)
-  
-  valid_cor  <- cor(test_y_valid, test.predictions_valid)
+  # # for each iteration, this should always be the same.
+  # controls_cor <- cor(test_y_controls, test.predictions_controls)
+  # 
+  # valid_cor  <- cor(test_y_valid, test.predictions_valid)
   
   alpha  <- best_alpha
-  #
+  
+  return(list(alpha, lambda_value, importance, cases_cor, model))
 
+
+}
+
+
+##########
+# test model
+# ##########
+# cases_dat <- betaCases
+# controls_dat <- betaControls
+# controls_dat_full <- betaControlsFull
+# valid_dat <- betaValid
+# bh_features <- bh_feat_tot 
+
+testModel <- function(cases_dat,
+                      controls_dat,
+                      valid_dat,
+                      bh_features,
+                      alpha)
+{
+  
+  # get intersection of bh features and real data
+  bh_features <- as.character(unlist(bh_features))
+  
+  intersected_feats <- intersect(bh_features, colnames(cases_dat))
+
+  intersected_feats <- append('gender', intersected_feats)
+  cases_dat$gender <- as.numeric(as.factor(cases_dat$gender))
+  controls_dat$gender <- as.numeric(as.factor(controls_dat$gender))
+  valid_dat$gender <- as.numeric(as.factor(valid_dat$gender))
+  
+  # get y
+  train_y <- as.numeric(cases_dat$age_diagnosis)
+  test_y_controls <- as.numeric(controls_dat$age_sample_collection)
+  test_y_valid <- as.numeric(valid_dat$age_diagnosis)
+  
+  # get bumphunter features
+  cases_dat <- cases_dat[, intersected_feats]
+  controls_dat <- controls_dat[, intersected_feats]
+  valid_dat <- valid_dat[, intersected_feats]
+  
+  N_CV_REPEATS = 2
+  nfolds = 3
+  
+  temp.non_zero_coeff = 0
+  temp.loop_count = 0
+  # loop runs initially because temp.non_zero coefficient <3 and then stops 
+  # usually after one iteration because the nzero variable selected by lambda is greater that 3. if it keeps looping
+  # it they are never greater than 1, then the model does not converge. 
+  while (temp.non_zero_coeff < 1) { 
+    elastic_net.cv_model = cv.glmnet(x = as.matrix(cases_dat)
+                                     , y =  train_y
+                                     , alpha = alpha
+                                     , type.measure = 'deviance'
+                                     , family = 'gaussian'
+                                     , standardize=FALSE
+                                     , nlambda = 100
+                                     , nfolds = nfolds
+                                     , parallel = TRUE
+    )
+    
+  
+    temp.min_lambda_index = which(elastic_net.cv_model$lambda == elastic_net.cv_model$lambda.min) 
+    
+    # # number of non zero coefficients at that lambda    
+    temp.non_zero_coeff = elastic_net.cv_model$nzero[temp.min_lambda_index] 
+    temp.loop_count = temp.loop_count + 1
+    
+    # set seed for next loop iteration
+    as.numeric(Sys.time())-> t 
+    set.seed((t - floor(t)) * 1e8 -> seed) 
+    if (temp.loop_count > 10) {
+      print("diverged")
+      temp.min_lambda_index = 50 # if it loops more than 5 times, then model did not converge
+      break
+    }
+  }# while loop ends 
+  print(temp.non_zero_coeff)  
+  
+  
+  model  = glmnet(x = as.matrix(cases_dat)
+                  , y =  train_y
+                  ,alpha = alpha
+                  ,standardize=FALSE
+                  ,nlambda = 100
+                  ,family = type_family)
+  
+  # This returns 100 prediction with 1-100 lambdas
+  temp_test.predictions <- predict(model, 
+                                   data.matrix(test_dat),
+                                   type = 'response')
+  
+  
+  
+  test.predictions <- temp_test.predictions[, temp.min_lambda_index]
+  
+  # # get controls
+  # temp_test.predictions_controls <- predict(model, 
+  #                                           data.matrix(controls_dat),
+  #                                           type = 'response')
+  # 
+  # 
+  # 
+  # test.predictions_controls <- temp_test.predictions_controls[, temp.min_lambda_index]
+  # 
+  # 
+  # # get validation
+  # temp_test.predictions_valid <- predict(model, 
+  #                                        data.matrix(valid_dat),
+  #                                        type = 'response')
+  # 
+  # 
+  # 
+  # test.predictions_valid  <- temp_test.predictions_valid[, temp.min_lambda_index]
+  # 
+  importance <- coef(model)
+  
+  lambda_value <- elastic_net.cv_model$lambda.min
+  
+  cases_cor  <- cor(test_y, test.predictions)
+  
+  # # for each iteration, this should always be the same.
+  # controls_cor <- cor(test_y_controls, test.predictions_controls)
+  # 
+  # valid_cor  <- cor(test_y_valid, test.predictions_valid)
+  
+  alpha  <- best_alpha
+  
+  return(list(alpha, lambda_value, importance, cases_cor, model))
+
+  
 }

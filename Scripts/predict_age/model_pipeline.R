@@ -1,3 +1,10 @@
+#!/hpf/tools/centos6/R/3.2.3/bin/Rscript
+
+# Script to evaluate the how each imputation method affects the
+# performance of the clustering methods
+
+argv <- as.numeric(commandArgs(T))
+
 ##########
 # This script will get cleaned data from data saved in clean_data.R
 # this will be the modeling pipeline script where we select features on 
@@ -23,7 +30,7 @@ registerDoParallel(1)
 ##########
 # initialize folders
 ##########
-home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
+home_folder <- '/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
 data_folder <- paste0(project_folder, '/Data')
 methyl_data <- paste0(data_folder, '/methyl_data')
@@ -39,7 +46,9 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 method = 'raw'
 k = 4
-seed_num = 1
+
+seed_num <- argv[1]
+
 
 ##########
 # load data
@@ -92,11 +101,11 @@ betaValid <- betaValid[, c('age_diagnosis',
                            'gender', 
                           intersect_names)]
 
-#TEMP
-betaControlsFull <- rbind(betaControls, betaControlsOld)
-
-# remove na in sample collection and duplicate ids
-betaControlsFull <- betaControlsFull[!is.na(betaControlsFull$age_sample_collection),]
+# #TEMP
+# betaControlsFull <- rbind(betaControls, betaControlsOld)
+# 
+# # remove na in sample collection and duplicate ids
+# betaControlsFull <- betaControlsFull[!is.na(betaControlsFull$age_sample_collection),]
 
 
 ###########################################################################
@@ -104,51 +113,72 @@ betaControlsFull <- betaControlsFull[!is.na(betaControlsFull$age_sample_collecti
 # between 2 groups
 
 # get a column for each dataset indicating the fold
-betaCases <- getFolds(betaCases)
-betaControls <- getFolds(betaControls)
-betaValid <- getFolds(betaValid)
+betaCases <- getFolds(betaCases, seed_number = seed_num, k_num = k)
+betaControls <- getFolds(betaControls, seed_number = seed_num, k_num = k)
+betaValid <- getFolds(betaValid, seed_number = seed_num, k_num = k)
+
+betaCases <- betaCases[, c(1:3000, ncol(betaCases))]
+betaControls <- betaControls[, c(1:3000, ncol(betaControls))]
 
 
-trainTest <- function(betaCases, 
-                      betaControls, 
-                      betaValid, 
+trainTest <- function(cases, 
+                      controls, 
                       k) 
 {
   
   # list to store results
   bh_feat <- list()
+  cor_score <- list()
+  alpha_score <- list()
+  lambda_num <- list()
+  import <- list()
+  models <- list()
   
   # now write forloop to 
   for (i in 1:k) {
 
     # get x 
-    train_index <- !grepl(i, betaCases$folds)
+    train_index <- !grepl(i, cases$folds)
     test_index <- !train_index
   
     # high pvalue, no evidence they are different
-    print(testKS(betaCases$age_sample_collection[train_index], betaControls$age_sample_collection)$p.value)
+    # print(testKS(cases$age_sample_collection[train_index], controls$age_sample_collection)$p.value)
 
     # use bumphunter surveillance function to get first set of regions
-    bh_feat[[i]] <- bumpHunterSurv(dat_cases = betaCases[train_index,], dat_controls = betaControls)
+    bh_feat[[i]] <- bumpHunterSurv(dat_cases = cases[train_index,], dat_controls = controls)
    
     # get probes with regions
     bh_feat_3 <- getProbe(bh_feat[[i]])
     
     # get all data sets from bh_feat_3
-    bh_feat_all <- getRun(bh_feat_3[[2]], run_num = .10)
-    # bh_feat_sig <- getRun(bh_feat_3[[2]], run_num = seed_num)
+    # bh_feat_all <- getRun(bh_feat_3[[1]], run_num = .20)
+    bh_feat_sig <- getRun(bh_feat_3[[2]], run_num = .20)
     # bh_feat_fwer <- getRun(bh_feat_3[[3]], run_num = seed_num)
     
-    # save.image('/home/benbrew/Desktop/temp_pipeline_model.RData')
+    mod_result <- runEnet(training_dat = cases[train_index,], 
+                          test_dat = cases[test_index,], 
+                          bh_features = bh_feat_sig,
+                          gender = T)
+    
+    
+    alpha_score[[i]] <- mod_result[[1]]
+    lambda_num[[i]] <- mod_result[[2]]
+    import[[i]] <- mod_result[[3]]
+    cor_score[[i]] <- mod_result[[4]]
+    models[[i]] <- mod_result[[5]]
+    
+    #  # save.image('/home/benbrew/Desktop/temp_pipeline_model.RData')
     # load('/home/benbrew/Desktop/temp_pipeline_model.RData')
-    
-   
-    
     
   }
   
+  return(list(alpha_score, lambda_num, import, cor_score, models))
+  
 }
-  
-  
 
+mod_results <- trainTest(cases = betaCases,
+                         controls = betaControls,
+                         k = 4)
+
+saveRDS(mod_results, paste0('/hpf/largeprojects/agoldenb/ben/Projects/LFS/train_test', '_' ,seed_num))
 

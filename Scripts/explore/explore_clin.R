@@ -25,6 +25,12 @@ clin$cancer_diagnosis_diagnoses <- trimws(clin$cancer_diagnosis_diagnoses, which
 clin$p53_germline <- trimws(clin$p53_germline, which = 'both')
 
 ##########
+# how many familes
+##########
+temp.fam <- clin[!is.na(clin$family_name),]
+length(unique(temp.fam))
+
+##########
 # temp.counts 
 ##########
 temp.dup <- clin[!duplicated(clin$id),]

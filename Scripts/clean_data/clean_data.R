@@ -206,6 +206,13 @@ betaControls <- betaControls[, !grepl('ch', colnames(betaControls))]
 betaControlsOld <- betaControlsOld[, !grepl('ch', colnames(betaControlsOld))]
 betaValid <- betaValid[, !grepl('ch', colnames(betaValid))]
 
+##########
+# remove outliers
+##########
+betaControls <- removeOutlier(betaControls, wt = F, val = F)
+betaValid <- removeOutlier(betaControls, wt = F, val = T)
+
+
 # save each dataset
 saveRDS(betaCases, paste0(model_data, '/betaCases', method,'.rda'))
 saveRDS(betaControls, paste0(model_data, '/betaControls', method,'.rda'))
