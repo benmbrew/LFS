@@ -303,9 +303,7 @@ getPCA <- function(pca_data,
   # run pca
   data_length <- ncol(pca_data)
   pca <- prcomp(pca_data[,2:data_length])
-  temp <- pca$x[,1]
-  
-  temp
+
   
   # plot data 4257,  94, 93
   #fill in factors with colors 
@@ -342,8 +340,7 @@ getPCA <- function(pca_data,
 # val <- T
 # wt <- F
 removeOutlier <- function(data, wt, val) {
-  
-  
+
   #controls outlier
   data <- data[data$ids != '3391',]
   data <- data[data$ids != '3392',]
@@ -357,6 +354,7 @@ removeOutlier <- function(data, wt, val) {
     data <- data[data$ids != '3540',]
     
   }
+
   
   # data <- data[data$ids != '4257',]
   # data <- data[data$ids != '94',]
@@ -485,6 +483,108 @@ bumpHunterSurv <- function(dat_cases,
   
 }
 
+###########
+# bumphunter for predictions - WT controls, p53 contorls
+###########
+bumpHunterPred <- function(dat_controls_wt,
+                           dat_controls_mut) 
+{
+  
+  
+  # add columns indicating p53 status (in place of age of diagnosis
+  dat_controls_wt$age_diagnosis <- 'WT'
+  dat_controls_mut$age_diagnosis <- 'MUT'
+  
+  
+  # combine data
+  dat <- rbind(dat_controls_wt, dat_controls_mut)
+  
+  # change variable name for age of diagnosis
+  colnames(dat)[1] <- 'status'
+  
+  ##########
+  # get clinical dat 
+  ##########
+  bump_clin <- dat[,1:4]
+  
+  
+  ##########
+  # get indicator and put into design matrix with intercept 1
+  #########
+  indicator_vector <- as.factor(dat$status)
+  designMatrix <- cbind(rep(1, nrow(dat)), indicator_vector)
+  designMatrix <- as.matrix(designMatrix)
+  
+  ##########
+  # Get genetic locations
+  ##########
+  dat$p53_germline <- dat$age_diagnosis <- dat$cancer_diagnosis_diagnoses <- dat$ids <- dat$batch <- 
+    dat$age_sample_collection <- dat$id <- dat$status <- dat$gender <-  dat$sentrix_id <-  NULL
+  # transpose methylation to join with cg_locations to get genetic location vector.
+  dat <- as.data.frame(t(dat), stringsAsFactors = F)
+  
+  # make probe a column in methyl
+  dat$probe <- rownames(dat)
+  rownames(dat) <- NULL
+  
+  # inner join methyl and cg_locations by probe
+  methyl_cg <- inner_join(dat, cg_locations, by = 'probe')
+  
+  # get chr and pos vector 
+  chr <- methyl_cg$seqnames
+  pos <- methyl_cg$start
+  
+  # create beta matrix
+  beta <- methyl_cg[, 1:(ncol(methyl_cg) - 6)]
+  
+  # make beta numeric 
+  for (i in 1:ncol(beta)) {
+    beta[,i] <- as.numeric(beta[,i])
+    print(i)
+  } 
+  
+  beta <- as.matrix(beta)
+  
+  ##########
+  # Run bumphunter
+  ##########
+  
+  # check dimensions 
+  stopifnot(dim(beta)[2] == dim(designMatrix)[1])
+  stopifnot(dim(beta)[1] == length(chr))
+  stopifnot(dim(beta)[1] == length(pos))
+  
+  # set paramenters 
+  DELTA_BETA_THRESH = .20 # DNAm difference threshold
+  NUM_BOOTSTRAPS = 3   # number of randomizations
+  
+  # create tab list
+  tab <- list()
+  bump_hunter_results <- list()
+  for (i in 1:length(DELTA_BETA_THRESH)) {
+    tab[[i]] <- bumphunter(beta, 
+                           designMatrix, 
+                           chr = chr, 
+                           pos = pos,
+                           nullMethod = "bootstrap",
+                           cutoff = DELTA_BETA_THRESH,
+                           B = NUM_BOOTSTRAPS,
+                           type = "Beta")
+    
+    bump_hunter_results[[i]] <- tab[[i]]$table
+    bump_hunter_results[[i]]$run <- DELTA_BETA_THRESH[i]
+  }
+  
+  bh_results <- do.call(rbind, bump_hunter_results)
+  
+  return(bh_results)
+  
+}
+
+
+##########
+# generate folds and set the seed for random samplings - referenced in arg[]
+##########
 getFolds <- function(model_dat, seed_number, k_num){
   # assign folds
   set.seed(seed_number)

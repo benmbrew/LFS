@@ -49,6 +49,7 @@ method = 'raw'
 k = 4
 age = 48
 seed_num <- 1
+bh_method <- 'pred'
 seed_num <- argv[1]
 
 
@@ -58,6 +59,7 @@ seed_num <- argv[1]
 ##########
 betaCases <- readRDS(paste0(model_data, '/betaCases', method,'.rda'))
 betaControls <- readRDS(paste0(model_data, '/betaControls', method,'.rda'))
+betaControlsWT <- readRDS(paste0(model_data, '/betaControlsWT', method,'.rda'))
 betaControlsOld <- readRDS(paste0(model_data, '/betaControlsOld', method,'.rda'))
 betaValid <- readRDS(paste0(model_data, '/betaValid', method,'.rda'))
 # 
@@ -91,6 +93,13 @@ betaControls <- betaControls[, c('age_diagnosis',
                                  'gender', 
                                  intersect_names)]
 
+# controls wild type
+betaControlsWT <- betaControlsWT[, c('age_diagnosis', 
+                                     'age_sample_collection', 
+                                     'cancer_diagnosis_diagnoses', 
+                                     'gender', 
+                                     intersect_names)]
+
 # controls
 betaControlsOld <- betaControlsOld[, c('age_diagnosis', 
                                        'age_sample_collection', 
@@ -118,16 +127,20 @@ betaValid <- betaValid[, c('age_diagnosis',
 # get a column for each dataset indicating the fold
 betaCases <- getFolds(betaCases, seed_number = seed_num, k_num = k)
 betaControls <- getFolds(betaControls, seed_number = seed_num, k_num = k)
+betaControlsWT <- getFolds(betaControlsWT, seed_number = seed_num, k_num = k)
 betaValid <- getFolds(betaValid, seed_number = seed_num, k_num = k)
 
 betaCases <- betaCases[, c(1:3000, ncol(betaCases))]
 betaControls <- betaControls[, c(1:3000, ncol(betaControls))]
+betaControlsWT <- betaControlsWT[, c(1:3000, ncol(betaControlsWT))]
+
 
 
 trainTestFac <- function(cases, 
-                         controls, 
-                         age_cutoff,
+                         controls,
+                         controls_wt,
                          bh_type,
+                         age_cutoff,
                          k) 
 {
   
@@ -187,9 +200,12 @@ trainTestFac <- function(cases,
 
 mod_results <- trainTestFac(cases = betaCases,
                             controls = betaControls,
+                            controls_wt = betaControlsWT,
+                            bh_type = bh_method,
                             age_cutoff = age,
                             k = 4)
 
-saveRDS(mod_results, paste0('/hpf/largeprojects/agoldenb/ben/Projects/LFS/train_test', '_' ,
+saveRDS(mod_results, paste0('/hpf/largeprojects/agoldenb/ben/Projects/LFS/Scripts/
+                            predict_age/Results/class_results/train_test', '_' , bh_method, '_',
                             seed_num, '_' ,age,'.rds'))
 

@@ -203,6 +203,7 @@ betaCases <- getModData(betaCases)
 
 betaCases <- betaCases[, !grepl('ch', colnames(betaCases))]
 betaControls <- betaControls[, !grepl('ch', colnames(betaControls))]
+betaControlsWT <- betaControlsWT[, !grepl('ch', colnames(betaControlsWT))]
 betaControlsOld <- betaControlsOld[, !grepl('ch', colnames(betaControlsOld))]
 betaValid <- betaValid[, !grepl('ch', colnames(betaValid))]
 
@@ -210,12 +211,14 @@ betaValid <- betaValid[, !grepl('ch', colnames(betaValid))]
 # remove outliers
 ##########
 betaControls <- removeOutlier(betaControls, wt = F, val = F)
+betaControlsWT <- removeOutlier(betaControlsWT, wt = T, val = T)
 betaValid <- removeOutlier(betaControls, wt = F, val = T)
 
 
 # save each dataset
 saveRDS(betaCases, paste0(model_data, '/betaCases', method,'.rda'))
 saveRDS(betaControls, paste0(model_data, '/betaControls', method,'.rda'))
+saveRDS(betaControlsWT, paste0(model_data, '/betaControlsWT', method,'.rda'))
 saveRDS(betaControlsOld, paste0(model_data, '/betaControlsOld', method,'.rda'))
 saveRDS(betaValid, paste0(model_data, '/betaValid', method,'.rda'))
 # 
@@ -256,6 +259,23 @@ getPCA(pca_data = betaControls,
 getPCA(pca_data = betaControls,
        column_name = 'sentrix_id',
        name = 'betaControls sentrix_id',
+       gene_start = 8,
+       pca1 = 1,
+       pca2 = 2)
+
+
+# Controls, gender
+getPCA(pca_data = betaControlsWT,
+       column_name = 'gender',
+       name = 'betaControlsWT gender',
+       gene_start = 8,
+       pca1 = 1,
+       pca2 = 2)
+
+# Controls, sentrix_id
+getPCA(pca_data = betaControlsWt,
+       column_name = 'sentrix_id',
+       name = 'betaControlsWt sentrix_id',
        gene_start = 8,
        pca1 = 1,
        pca2 = 2)

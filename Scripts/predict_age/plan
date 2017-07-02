@@ -1,0 +1,5 @@
+- predict_cancer - not needed for cluster - you have results with training and testing on full data
+- predict_acc- has weird error, but needs to be put on cluster WITH PRED.
+- model_pipeline and model_pipeline_fac are ready for cluster - they have pred now.
+- test_pipeline needs to be edited for pred to work (then run it).
+

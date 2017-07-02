@@ -47,6 +47,7 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 method = 'raw'
 k = 4
 seed_num <- 1
+bh_method <- 'pred'
 seed_num <- argv[1]
 
 
@@ -55,6 +56,7 @@ seed_num <- argv[1]
 ##########
 betaCases <- readRDS(paste0(model_data, '/betaCases', method,'.rda'))
 betaControls <- readRDS(paste0(model_data, '/betaControls', method,'.rda'))
+betaControlsWT <- readRDS(paste0(model_data, '/betaControlsWT', method,'.rda'))
 betaControlsOld <- readRDS(paste0(model_data, '/betaControlsOld', method,'.rda'))
 betaValid <- readRDS(paste0(model_data, '/betaValid', method,'.rda'))
 # 
@@ -88,6 +90,13 @@ betaControls <- betaControls[, c('age_diagnosis',
                                  'gender', 
                                 intersect_names)]
 
+# controls wild type
+betaControlsWT <- betaControlsWT[, c('age_diagnosis', 
+                                 'age_sample_collection', 
+                                 'cancer_diagnosis_diagnoses', 
+                                 'gender', 
+                                 intersect_names)]
+
 # controls
 betaControlsOld <- betaControlsOld[, c('age_diagnosis', 
                                  'age_sample_collection', 
@@ -115,15 +124,18 @@ betaValid <- betaValid[, c('age_diagnosis',
 # get a column for each dataset indicating the fold
 betaCases <- getFolds(betaCases, seed_number = seed_num, k_num = k)
 betaControls <- getFolds(betaControls, seed_number = seed_num, k_num = k)
+betaControlsWT <- getFolds(betaControlsWT, seed_number = seed_num, k_num = k)
 betaValid <- getFolds(betaValid, seed_number = seed_num, k_num = k)
 
-betaCases <- betaCases[, c(1:10000, ncol(betaCases))]
-betaControls <- betaControls[, c(1:10000, ncol(betaControls))]
+betaCases <- betaCases[, c(1:5000, ncol(betaCases))]
+betaControls <- betaControls[, c(1:5000, ncol(betaControls))]
+betaControlsWT <- betaControlsWT[, c(1:5000, ncol(betaControlsWT))]
 
-cases <- betaCases
-controls <- betaControls
+
 trainTest <- function(cases, 
-                      controls, 
+                      controls,
+                      controls_wt,
+                      bh_type,
                       k) 
 {
   
@@ -143,12 +155,14 @@ trainTest <- function(cases,
   
     # high pvalue, no evidence they are different
     # print(testKS(cases$age_sample_collection[train_index], controls$age_sample_collection)$p.value)
+    # print(testKS(controls_wt$age_sample_collection[train_index], controls$age_sample_collection)$p.value)
+    
     
     if(bh_type == 'surv') {
       # use bumphunter surveillance function to get first set of regions
       bh_feat[[i]] <- bumpHunterSurv(dat_cases = cases[train_index,], dat_controls = controls)
     } else {
-      bh_feat[[i]] <- bumpHunterPred(dat_cases = cases[train_index,], dat_controls = controls)
+      bh_feat[[i]] <- bumpHunterPred(dat_controls_wt = controls_wt, dat_controls_mut = controls)
       
     }
    
@@ -166,7 +180,7 @@ trainTest <- function(cases,
     
     mod_result <- runEnet(training_dat = cases[train_index,], 
                           test_dat = cases[test_index,], 
-                          bh_features = bh_feat_all,
+                          bh_features = bh_feat_sig,
                           gender = T)
     
     
@@ -188,9 +202,11 @@ trainTest <- function(cases,
 
 mod_results <- trainTest(cases = betaCases,
                          controls = betaControls,
+                         controls_wt = betaControlsWT,
+                         bh_type = bh_method,
                          k = 4)
 
 # change pred to nothing if doing surv
 saveRDS(mod_results, paste0('~/hpf/largeprojects/agoldenb/ben/Projects/LFS/Scripts/
-                            predict_age/Results/reg_results/pred_train_test', '_' ,seed_num, '.rda'))
+                            predict_age/Results/reg_results/train_test', '_', bh_method , '_' ,seed_num, '.rda'))
 
