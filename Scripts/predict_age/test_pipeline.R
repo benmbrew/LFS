@@ -117,6 +117,8 @@ bh_feat_all <- getProbe(bh_feat)
 bh_feat_tot <- getRun(bh_feat_all[[1]], run_num = .20)
 bh_feat_sig <- getRun(bh_feat_all[[2]], run_num = .20)
 
+saveRDS(bh_feat_all, paste0(model_data, '/bh_feat_all.rda'))
+
 # save.image('/home/benbrew/Desktop/temp_full_test.RData')
 load('/home/benbrew/Desktop/temp_full_test.RData')
 
@@ -239,29 +241,19 @@ testModel <- function(cases_dat,
   
   
 }
-# cases_dat <- betaCases
-# controls_dat <- betaControls
-# controls_dat_full <- betaControlsFull
-# valid_dat <- betaValid
-# bh_features <- bh_feat_sig
-# alpha = 0.9
-testModel(betaCases,
-          betaControls,
-          betaControlsFull,
-          betaValid,
-          bh_feat_sig,
-          alpha = 0.5)
 
 
-
+##########
+# calssification
+##########
 
 testModelFac <- function(cases_dat,
-                      controls_dat,
-                      controls_dat_full,
-                      valid_dat,
-                      bh_features,
-                      cutoff,
-                      alpha)
+                         controls_dat,
+                         controls_dat_full,
+                         valid_dat,
+                         bh_features,
+                         cutoff,
+                         alpha)
 {
   
   # get intersection of bh features and real data
@@ -281,9 +273,9 @@ testModelFac <- function(cases_dat,
   test_y_controls <- factor(ifelse(controls_dat$age_sample_collection <= cutoff, 'yes', 'no'), 
                             levels = c('yes', 'no'))
   test_y_controls_full <- factor(ifelse(controls_dat_full$age_sample_collection <= cutoff, 'yes', 'no'), 
-                            levels = c('yes', 'no'))
+                                 levels = c('yes', 'no'))
   test_y_valid <- factor(ifelse(valid_dat$age_sample_collection <= cutoff, 'yes', 'no'), 
-                            levels = c('yes', 'no'))
+                         levels = c('yes', 'no'))
   
   # get bumphunter features
   cases_dat <- cases_dat[, intersected_feats]
@@ -386,18 +378,20 @@ testModelFac <- function(cases_dat,
 }
 
 
-# cases_dat <- betaCases
-# controls_dat <- betaControls
-# controls_dat_full <- betaControlsFull
-# valid_dat <- betaValid
-# bh_features <- bh_feat_sig
-# cutoff <- 48
-# alpha = 0.9
+
+testModel(betaCases,
+          betaControls,
+          betaControlsFull,
+          betaValid,
+          bh_feat_sig,
+          alpha = 0.5)
+
+
 
 testModelFac(betaCases,
              betaControls,
              betaControlsFull,
              betaValid,
              bh_feat_sig,
-             cutoff = 48,
+             cutoff = 60,
              alpha = 0.9)

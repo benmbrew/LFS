@@ -410,7 +410,7 @@ bumpHunterSurv <- function(dat_cases,
   bump_clin <- dat[,1:4]
   
   # recode type
-  dat$type <- ifelse(grepl('Unaffected', dat$cancer_diagnosis_diagnoses), 'controls', 'cases')
+  dat$type <- ifelse(grepl('no', dat$cancer_diagnosis_diagnoses), 'controls', 'cases')
   
   ##########
   # get indicator and put into design matrix with intercept 1
@@ -531,7 +531,7 @@ getRun <- function(data, run_num)
 {
   data <- data[data$run == run_num,]
   data <- data[!duplicated(data$probe),]
-  data_feat <- as.data.frame(as.character(data$probe))
+  data_feat <- as.character(data$probe)
   return(data_feat)
 }
 
@@ -564,22 +564,20 @@ runEnet <- function(training_dat,
     intersected_feats <- append('gender', intersected_feats)
     training_dat$gender <- as.numeric(as.factor(training_dat$gender))
     test_dat$gender <- as.numeric(as.factor(test_dat$gender))
-    # controls_dat$gender <- as.numeric(as.factor(controls_dat$gender))
-    # valid_dat$gender <- as.numeric(as.factor(valid_dat$gender))
     
   }
   
   # # get y
   train_y <- as.numeric(training_dat$age_diagnosis)
   test_y <- as.numeric(test_dat$age_diagnosis)
-  # test_y_controls <- as.numeric(controls_dat$age_sample_collection)
-  # test_y_valid <- as.numeric(valid_dat$age_diagnosis)
+  patient_age <- as.numeric(test_dat$age_sample_collection)
+  missing_ind <- !is.na(patient_age)
+  patient_age <-patient_age[missing_ind]
   
   # get bumphunter features
   training_dat <- training_dat[, intersected_feats]
   test_dat <- test_dat[, intersected_feats]
-  # controls_dat <- controls_dat[, intersected_feats]
-  # valid_dat <- valid_dat[, intersected_feats]
+  
   
   N_CV_REPEATS = 2
   nfolds = 3
@@ -683,47 +681,25 @@ runEnet <- function(training_dat,
   
   test.predictions <- temp_test.predictions[, temp.min_lambda_index]
   
-  # # get controls
-  # temp_test.predictions_controls <- predict(model, 
-  #                                           data.matrix(controls_dat),
-  #                                           type = 'response')
-  # 
-  # 
-  # 
-  # test.predictions_controls <- temp_test.predictions_controls[, temp.min_lambda_index]
-  # 
-  # 
-  # # get validation
-  # temp_test.predictions_valid <- predict(model, 
-  #                                        data.matrix(valid_dat),
-  #                                        type = 'response')
-  # 
-  # 
-  # 
-  # test.predictions_valid  <- temp_test.predictions_valid[, temp.min_lambda_index]
-  # 
   importance <- coef(model)
   
   lambda_value <- elastic_net.cv_model$lambda.min
   
   cases_cor  <- cor(test_y, test.predictions)
   
-  # # for each iteration, this should always be the same.
-  # controls_cor <- cor(test_y_controls, test.predictions_controls)
-  # 
-  # valid_cor  <- cor(test_y_valid, test.predictions_valid)
+  age_cor <- cor(test.predictions[missing_ind], patient_age)
   
   alpha  <- best_alpha
   
-  return(list(alpha, lambda_value, importance, cases_cor, model))
+  return(list(alpha, lambda_value, importance, cases_cor, age_cor, temp.non_zero_coeff))
 
 
 }
-training_dat = cases[train_index,]
-test_dat = cases[test_index,]
-bh_features = bh_feat_sig
-gender = T
-cutoff = 48
+# training_dat = cases[train_index,]
+# test_dat = cases[test_index,]
+# bh_features = bh_feat_sig
+# gender = T
+# cutoff = 48
 
 runEnetFac <- function(training_dat, 
                        test_dat,
@@ -872,10 +848,268 @@ runEnetFac <- function(training_dat,
   
   alpha  <- best_alpha
   
-  return(list(alpha, lambda_value, importance, test_stats, model))
+  return(list(alpha, lambda_value, importance, test_stats, model, temp.non_zero_coeff))
   
   
 }
 
+
+##########
+# get the variation of the probe that is orthogonal to age of sample collection
+##########
+
+getResidual <- function(data,
+                        bh_features) 
+
+{
+  
+  # get feature intersection
+  intersected_feats <- intersect(bh_features, colnames(data))
+  
+  # get genes 
+  data <- data[, c("age_diagnosis", 
+                   "age_sample_collection",
+                   "cancer_diagnosis_diagnoses", 
+                   "gender", 
+                   intersected_feats)]
+  
+  probes <- colnames(data)[5:ncol(data)]
+  
+  resid <- list()
+  
+  for (i in 5:ncol(data)){
+    
+    temp <- data[, i]
+    temp1 <- data$age_sample_collection
+    
+    resid[[i]] <- lm(temp ~ temp1)$residuals
+    
+    print(i)
+    
+  }
+  
+  resid <- do.call('cbind', resid)
+  resid <- apply(resid, 2, function(x) as.numeric(x))
+  resid <- as.data.frame(resid)
+  resid <- cbind(data$age_diagnosis, 
+                 data$age_sample_collection, 
+                 data$cancer_diagnosis_diagnoses,
+                 data$gender, 
+                 resid)
+  
+  # change colnames
+  colnames(resid) <- c('age_diagnosis', 
+                       'age_sample_collection',
+                       'cancer_diagnosis_diagnoses',
+                       'gender',
+                        probes)
+  
+
+  
+  return(resid)
+  
+}
+
+##########
+# predict cancer
+##########
+predCancer <- function(training_dat, 
+                       test_dat,
+                       bh_features,
+                       gender,
+                       cutoff) 
+{
+  
+  # get intersection of bh features and real data
+  bh_features <- as.character(unlist(bh_features))
+  
+  intersected_feats <- intersect(bh_features, colnames(training_dat))
+  
+  if(gender) {
+    
+    intersected_feats <- append('gender', intersected_feats)
+    training_dat$gender <- as.numeric(as.factor(training_dat$gender))
+    test_dat$gender <- as.numeric(as.factor(test_dat$gender))
+    # controls_dat$gender <- as.numeric(as.factor(controls_dat$gender))
+    # valid_dat$gender <- as.numeric(as.factor(valid_dat$gender))
+    
+  }
+  
+  
+  # # get y
+  train_y <- factor(training_dat$cancer_diagnosis_diagnoses, levels = c('yes', 'no'))
+  test_y <- factor(test_dat$cancer_diagnosis_diagnoses, levels = c('yes', 'no'))
+  
+  
+  # test_y_controls <- as.numeric(controls_dat$age_sample_collection)
+  # test_y_valid <- as.numeric(valid_dat$age_diagnosis)
+  
+  # get bumphunter features
+  training_dat <- training_dat[, intersected_feats]
+  test_dat <- test_dat[, intersected_feats]
+  # controls_dat <- controls_dat[, intersected_feats]
+  # valid_dat <- valid_dat[, intersected_feats]
+  
+  N_CV_REPEATS = 2
+  nfolds = 3
+  
+  ###### ENET
+  # create vector and list to store best alpha on training data. alpha is the parameter that choses the 
+  # the optimal proportion lambda, the tuning parameter for L1 (ridge) and L2 (lasso)
+  elastic_net.cv_error = vector()
+  elastic_net.cv_model = list()
+  elastic_net.ALPHA <- c(1:9) / 10 # creates possible alpha values for model to choose from
+  
+  # set parameters for training model
+  type_family <- 'binomial'
+  type_measure <- 'auc'
+  
+  # create error matrix for for opitmal alpha that can run in parraellel if you have bigger data 
+  # or if you have a high number fo N_CV_REPEATS
+  temp.cv_error_matrix <- foreach (temp = 1:N_CV_REPEATS, .combine=rbind, .errorhandling="stop") %do% {      
+    for (alpha in 1:length(elastic_net.ALPHA)) # for i in 1:9 - the model will run 9 times
+    {      
+      elastic_net.cv_model[[alpha]] = cv.glmnet(x = as.matrix(training_dat)
+                                                , y =  train_y
+                                                , alpha = elastic_net.ALPHA[alpha] # first time with 0.1 and so on
+                                                , type.measure = type_measure
+                                                , family = type_family
+                                                , standardize = FALSE 
+                                                , nfolds = nfolds 
+                                                , nlambda = 10
+                                                , parallel = TRUE
+      )
+      elastic_net.cv_error[alpha] = min(elastic_net.cv_model[[alpha]]$cvm)
+    }
+    elastic_net.cv_error # stores 9 errors    
+  }
+  
+  if (N_CV_REPEATS == 1) {
+    temp.cv_error_mean = temp.cv_error_matrix
+  } else {
+    temp.cv_error_mean = apply(temp.cv_error_matrix, 2, mean) # take the mean of the 5 iterations  
+    # as your value for alpha
+  }
+  
+  # stop if you did not recover error for any models 
+  stopifnot(length(temp.cv_error_mean) == length(elastic_net.ALPHA))
+  
+  # get index of best alpha (lowest error) - alpha is values 0.1-0.9
+  temp.best_alpha_index = which(min(temp.cv_error_mean) == temp.cv_error_mean)[length(which(min(temp.cv_error_mean) == temp.cv_error_mean))] 
+  print(paste("Best ALPHA:", elastic_net.ALPHA[temp.best_alpha_index])) # print the value for alpha
+  best_alpha <- elastic_net.ALPHA[temp.best_alpha_index]
+  temp.non_zero_coeff = 0
+  temp.loop_count = 0
+  # loop runs initially because temp.non_zero coefficient <3 and then stops 
+  # usually after one iteration because the nzero variable selected by lambda is greater that 3. if it keeps looping
+  # it they are never greater than 1, then the model does not converge. 
+  while (temp.non_zero_coeff < 1) { 
+    elastic_net.cv_model = cv.glmnet(x = as.matrix(training_dat)
+                                     , y =  train_y
+                                     , alpha = elastic_net.ALPHA[temp.best_alpha_index]
+                                     , type.measure = type_measure
+                                     , family = type_family
+                                     , standardize=FALSE
+                                     , nlambda = 100
+                                     , nfolds = nfolds
+                                     , parallel = TRUE
+    )
+    
+    # get optimal lambda - the tuning parameter for ridge and lasso
+    # THIS IS IMPORTANT BECAUSE WHEN YOU TRAIN THE MODEL ON 100 SEPERATE VALUES OF LAMBDA
+    # AND WHEN YOU TEST THE MODEL IT WILL RETURN PREDCITION FOR ALL THOSE VALUES (1-100). YOU NEED TO 
+    # GRAB THE PREDICTION WITH SAME LAMBDA THAT YOU TRAINED ON. ITS ALL IN THE CODE, BUT JUST WANTED TO 
+    # GIVE YOU REASONS
+    temp.min_lambda_index = which(elastic_net.cv_model$lambda == elastic_net.cv_model$lambda.min) 
+    
+    # # number of non zero coefficients at that lambda    
+    temp.non_zero_coeff = elastic_net.cv_model$nzero[temp.min_lambda_index] 
+    temp.loop_count = temp.loop_count + 1
+    
+    # set seed for next loop iteration
+    as.numeric(Sys.time())-> t 
+    set.seed((t - floor(t)) * 1e8 -> seed) 
+    if (temp.loop_count > 10) {
+      print("diverged")
+      temp.min_lambda_index = 50 # if it loops more than 5 times, then model did not converge
+      break
+    }
+  }# while loop ends 
+  print(temp.non_zero_coeff)  
+  
+  model  = glmnet(x = as.matrix(training_dat)
+                  , y =  train_y
+                  ,alpha = elastic_net.ALPHA[temp.best_alpha_index]
+                  ,standardize=FALSE
+                  ,nlambda = 100
+                  ,family = type_family)
+  
+  # This returns 100 prediction with 1-100 lambdas
+  temp_test.predictions <- predict(model, 
+                                   data.matrix(test_dat),
+                                   type = 'class')
+  
+  
+  test.predictions <- temp_test.predictions[, temp.min_lambda_index]
+  test.predictions <- factor(test.predictions, levels = c('yes', 'no'))
+  
+  test_stats <- confusionMatrix(test_y, test.predictions)
+  importance <- coef(model)
+  
+  lambda_value <- elastic_net.cv_model$lambda.min
+  
+  alpha  <- best_alpha
+  
+  return(list(alpha, lambda_value, importance, test_stats, model, temp.non_zero_coeff))
+  
+  
+}
+
+
+##########
+# get results
+##########
+
+getResults <- function(result_list, result_list_resid)
+{
+  
+  
+  results_final <- list(result_list[[1]],
+                        result_list[[2]],
+                        result_list[[3]],
+                        result_list[[4]],
+                        result_list[[5]],
+                        result_list[[6]])
+  
+  results_final_resid <- list(result_list_resid[[1]],
+                              result_list_resid[[2]],
+                              result_list_resid[[3]],
+                              result_list_resid[[4]],
+                              result_list_resid[[5]],
+                              result_list_resid[[6]])
+  
+  return(list(results_final, results_final_resid))
+  
+}
+
+
+##########
+# get results cancer
+##########
+
+getResultsCancer <- function(result_list)
+{
+  
+  
+  results_final <- list(result_list[[1]],
+                        result_list[[2]],
+                        result_list[[3]],
+                        result_list[[4]],
+                        result_list[[5]],
+                        result_list[[6]])
+  
+  return(results_final)
+  
+}
 
 

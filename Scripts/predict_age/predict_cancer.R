@@ -1,15 +1,20 @@
+#######
+# this script will use p53 cases and controls (full) to predict cancer or not to get an 
+# idea as to what extent methylation has a strong cancer signature.
+
 #!/hpf/tools/centos6/R/3.2.3/bin/Rscript
 
 # Script to evaluate the how each imputation method affects the
 # performance of the clustering methods
 
-argv <- as.numeric(commandArgs(T))
+# argv <- as.numeric(commandArgs(T))
 
 ##########
 # This script will get cleaned data from data saved in clean_data.R
 # this will be the modeling pipeline script where we select features on 
 # our training set and fit model. On the test set we test our model 
 # and compare our predictions to values. 
+
 ##########
 # initialize libraries
 ##########
@@ -17,8 +22,6 @@ library(caret)
 library(glmnet)
 library(randomForest)
 library(kernlab)
-library(ROCR)
-library(ModelMetrics)
 library(pROC)
 library(Metrics)
 library(doParallel)
@@ -47,10 +50,8 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 method = 'raw'
 k = 4
-age = 48
-seed_num <- 1
-seed_num <- argv[1]
-
+# seed_num <- 1
+# seed_num <- argv[1]
 
 
 ##########
@@ -59,7 +60,10 @@ seed_num <- argv[1]
 betaCases <- readRDS(paste0(model_data, '/betaCases', method,'.rda'))
 betaControls <- readRDS(paste0(model_data, '/betaControls', method,'.rda'))
 betaControlsOld <- readRDS(paste0(model_data, '/betaControlsOld', method,'.rda'))
-betaValid <- readRDS(paste0(model_data, '/betaValid', method,'.rda'))
+
+# load features
+bh_feat_all <- readRDS(paste0(model_data, '/bh_feat_all.rda'))
+
 # 
 # # # TEMP
 # betaCases <- betaCases[!grepl('9721365183', betaCases$sentrix_id),]
@@ -74,8 +78,7 @@ cg_locations$X <- NULL
 ##########
 
 intersect_names <- Reduce(intersect, list(colnames(betaCases)[8:ncol(betaCases)], 
-                                          colnames(betaControls)[8:ncol(betaControls)], 
-                                          colnames(betaValid)[8:ncol(betaValid)]))
+                                          colnames(betaControls)[8:ncol(betaControls)]))
 # organize each data set accordling
 
 # cases
@@ -97,18 +100,15 @@ betaControlsOld <- betaControlsOld[, c('age_diagnosis',
                                        'cancer_diagnosis_diagnoses', 
                                        'gender', 
                                        intersect_names)]
-#validation
-betaValid <- betaValid[, c('age_diagnosis', 
-                           'age_sample_collection', 
-                           'cancer_diagnosis_diagnoses', 
-                           'gender', 
-                           intersect_names)]
 
 # #TEMP
-# betaControlsFull <- rbind(betaControls, betaControlsOld)
-# 
-# # remove na in sample collection and duplicate ids
-# betaControlsFull <- betaControlsFull[!is.na(betaControlsFull$age_sample_collection),]
+betaFull <- rbind(betaCases, betaControls, betaControlsOld)
+
+rm(betaCases, betaControls, betaControlsOld)
+
+# create outcome variable cancer or not 
+betaFull$cancer_diagnosis_diagnoses <- ifelse(grepl('Unaffected', 
+                                                    betaFull$cancer_diagnosis_diagnoses), 'no', 'yes')
 
 
 ###########################################################################
@@ -116,28 +116,20 @@ betaValid <- betaValid[, c('age_diagnosis',
 # between 2 groups
 
 # get a column for each dataset indicating the fold
-betaCases <- getFolds(betaCases, seed_number = seed_num, k_num = k)
-betaControls <- getFolds(betaControls, seed_number = seed_num, k_num = k)
-betaValid <- getFolds(betaValid, seed_number = seed_num, k_num = k)
+seed_num <- 1
+  
+betaFull <- getFolds(betaFull, seed_number = seed_num, k_num = k)
 
-betaCases <- betaCases[, c(1:3000, ncol(betaCases))]
-betaControls <- betaControls[, c(1:3000, ncol(betaControls))]
+bh_feat_sig <- getRun(bh_feat_all[[2]], run_num = .20)
 
 
-trainTestFac <- function(cases, 
-                         controls, 
-                         age_cutoff,
-                         bh_type,
-                         k) 
+trainTest <- function(cases, 
+                      k) 
 {
   
   # list to store results
   bh_feat <- list()
-  cor_score <- list()
-  alpha_score <- list()
-  lambda_num <- list()
-  import <- list()
-  models <- list()
+  model_results <- list()
   
   # now write forloop to 
   for (i in 1:k) {
@@ -146,50 +138,82 @@ trainTestFac <- function(cases,
     train_index <- !grepl(i, cases$folds)
     test_index <- !train_index
     
-    # high pvalue, no evidence they are different
-    # print(testKS(cases$age_sample_collection[train_index], controls$age_sample_collection)$p.value)
-    if(bh_type == 'surv') {
-      # use bumphunter surveillance function to get first set of regions
-      bh_feat[[i]] <- bumpHunterSurv(dat_cases = cases[train_index,], dat_controls = controls)
-    } else {
-      bh_feat[[i]] <- bumpHunterPred(dat_cases = cases[train_index,], dat_controls = controls)
-      
-    }
-   
-    
-    # get probes with regions
-    bh_feat_3 <- getProbe(bh_feat[[i]])
-    
-    # get all data sets from bh_feat_3
-    # bh_feat_all <- getRun(bh_feat_3[[1]], run_num = .20)
-    bh_feat_sig <- getRun(bh_feat_3[[2]], run_num = .20)
-    # bh_feat_fwer <- getRun(bh_feat_3[[3]], run_num = seed_num)
-    
-    mod_result <- runEnetFac(training_dat = cases[train_index,],
+    mod_result <- predCancer(training_dat = cases[train_index,], 
                              test_dat = cases[test_index,], 
                              bh_features = bh_feat_sig,
-                             gender = T,
-                             cutoff = age_cutoff)
+                             gender = T)
     
     
-    alpha_score[[i]] <- mod_result[[1]]
-    lambda_num[[i]] <- mod_result[[2]]
-    import[[i]] <- mod_result[[3]]
-    test_stats[[i]] <- mod_result[[4]]
-    models[[i]] <- mod_result[[5]]
+    model_results[[i]] <- getResultsCancer(mod_result)
     
     
   }
   
-  return(list(alpha_score, lambda_num, import, test_stats, models))
+  return(model_results)
   
 }
+set.seed(4)
+mod_results <- trainTest(cases = betaFull,
+                         k = 4)
 
-mod_results <- trainTestFac(cases = betaCases,
-                            controls = betaControls,
-                            age_cutoff = age,
-                            k = 4)
 
-saveRDS(mod_results, paste0('/hpf/largeprojects/agoldenb/ben/Projects/LFS/train_test', '_' ,
-                            seed_num, '_' ,age,'.rds'))
+getClassResutls <- function(temp.result) {
+  
+  # creat matrix
+  mat <- matrix(NA, nrow = 2, ncol = 2)
 
+  for (j in 1:4) {
+    
+    if(j > 1) {
+      
+      mat <- mat + temp.result[[j]][[4]]$table[1:2,1:2]
+      acc_temp <- acc_temp + temp.result[[j]][[4]]$overall[1]
+      tpr_temp <- tpr_temp + temp.result[[j]][[4]]$byClass[1]
+      tnr_temp <- tnr_temp + temp.result[[j]][[4]]$byClass[2]
+      alpha_temp <- alpha_temp + temp.result[[j]][[1]]
+      lambda_temp <- lambda_temp + temp.result[[j]][[1]]
+      
+      
+    } else{
+      
+      mat <- temp.result[[j]][[4]]$table[1:2,1:2]
+      acc_temp <- as.numeric(temp.result[[j]][[4]]$overall[1])
+      tpr_temp <- as.numeric(temp.result[[j]][[4]]$byClass[1])
+      tnr_temp <- as.numeric(temp.result[[j]][[4]]$byClass[2])
+      alpha_temp <- as.numeric(temp.result[[j]][[1]])
+      lambda_temp <- as.numeric(temp.result[[j]][[1]])
+      
+    }
+    
+  }
+  
+  # get average from j
+  confusion_table <- mat/4
+  acc_table <- acc_temp/4
+  tnr_table <- tnr_temp/4
+  tpr_table <- tpr_temp/4
+  alpha_table <- alpha_temp/4
+  lambda_table <- lambda_temp/4
+  
+  # store at i 
+  table_results <- confusion_table
+  
+  table_results <- as.data.frame(table_results)
+  
+  table_scores <- as.data.frame(cbind(alpha_table, lambda_table, acc_table, tnr_table, tpr_table))
+  
+  # remove NAs - bad predictions dont yield a value for precision, etc
+  table_scores <- table_scores[complete.cases(table_scores),]
+  
+  # fpr, fnr
+  table_scores$fpr <- 1 - table_scores$tnr
+  table_scores$fnr <- 1 - table_scores$tpr
+  
+
+  return(list(table_results, table_scores))
+}
+
+# get results for age 48
+result_48 <- getClassResutls(mod_results)
+conMat_48 <- result_48[[1]]
+resultTab_48 <- result_48[[2]]

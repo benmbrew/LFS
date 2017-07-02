@@ -1,3 +1,6 @@
+#######
+# this script predict age of onset within only the ACC population
+
 #!/hpf/tools/centos6/R/3.2.3/bin/Rscript
 
 # Script to evaluate the how each imputation method affects the
@@ -45,7 +48,7 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 # fixed variables
 ##########
 method = 'raw'
-k = 4
+k = 3
 seed_num <- 1
 seed_num <- argv[1]
 
@@ -55,10 +58,9 @@ seed_num <- argv[1]
 ##########
 betaCases <- readRDS(paste0(model_data, '/betaCases', method,'.rda'))
 betaControls <- readRDS(paste0(model_data, '/betaControls', method,'.rda'))
-betaControlsOld <- readRDS(paste0(model_data, '/betaControlsOld', method,'.rda'))
-betaValid <- readRDS(paste0(model_data, '/betaValid', method,'.rda'))
-# 
-# # # TEMP
+
+
+# TEMP
 # betaCases <- betaCases[!grepl('9721365183', betaCases$sentrix_id),]
 
 # load cg_locations
@@ -69,10 +71,8 @@ cg_locations$X <- NULL
 ##########
 # get intersecting colnames and prepare data for modeling
 ##########
-
 intersect_names <- Reduce(intersect, list(colnames(betaCases)[8:ncol(betaCases)], 
-                                          colnames(betaControls)[8:ncol(betaControls)], 
-                                          colnames(betaValid)[8:ncol(betaValid)]))
+                                          colnames(betaControls)[8:ncol(betaControls)]))
 # organize each data set accordling
 
 # cases
@@ -86,23 +86,9 @@ betaControls <- betaControls[, c('age_diagnosis',
                                  'age_sample_collection', 
                                  'cancer_diagnosis_diagnoses', 
                                  'gender', 
-                                intersect_names)]
-
-# controls
-betaControlsOld <- betaControlsOld[, c('age_diagnosis', 
-                                 'age_sample_collection', 
-                                 'cancer_diagnosis_diagnoses', 
-                                 'gender', 
                                  intersect_names)]
-#validation
-betaValid <- betaValid[, c('age_diagnosis', 
-                           'age_sample_collection', 
-                           'cancer_diagnosis_diagnoses', 
-                           'gender', 
-                          intersect_names)]
 
-# #TEMP
-# betaControlsFull <- rbind(betaControls, betaControlsOld)
+
 # 
 # # remove na in sample collection and duplicate ids
 # betaControlsFull <- betaControlsFull[!is.na(betaControlsFull$age_sample_collection),]
@@ -115,54 +101,46 @@ betaValid <- betaValid[, c('age_diagnosis',
 # get a column for each dataset indicating the fold
 betaCases <- getFolds(betaCases, seed_number = seed_num, k_num = k)
 betaControls <- getFolds(betaControls, seed_number = seed_num, k_num = k)
-betaValid <- getFolds(betaValid, seed_number = seed_num, k_num = k)
 
-betaCases <- betaCases[, c(1:10000, ncol(betaCases))]
-betaControls <- betaControls[, c(1:10000, ncol(betaControls))]
+# temp
+betaCases <- betaCases[, c(1:4000, ncol(betaCases))]
+betaControls <- betaControls[, c(1:4000, ncol(betaControls))]
 
-cases <- betaCases
-controls <- betaControls
+
 trainTest <- function(cases, 
                       controls, 
                       k) 
 {
   
+  cases <- cases[cases$cancer_diagnosis_diagnoses == 'ACC',]
   # remove samples that dont have an age of sample collection
   cases <- cases[complete.cases(cases),]
   
   # list to store results
   bh_feat <- list()
   model_results <- list()
-
+  
   # now write forloop to 
   for (i in 1:k) {
-
+    
     # get x 
     train_index <- !grepl(i, cases$folds)
     test_index <- !train_index
-  
+    
     # high pvalue, no evidence they are different
     # print(testKS(cases$age_sample_collection[train_index], controls$age_sample_collection)$p.value)
     
-    if(bh_type == 'surv') {
-      # use bumphunter surveillance function to get first set of regions
-      bh_feat[[i]] <- bumpHunterSurv(dat_cases = cases[train_index,], dat_controls = controls)
-    } else {
-      bh_feat[[i]] <- bumpHunterPred(dat_cases = cases[train_index,], dat_controls = controls)
-      
-    }
-   
+    # use bumphunter surveillance function to get first set of regions
+    bh_feat[[i]] <- bumpHunterSurv(dat_cases = cases[train_index,], dat_controls = controls)
+    
     # get probes with regions
     bh_feat_3 <- getProbe(bh_feat[[i]])
     
     # get all data sets from bh_feat_3
-    # bh_feat_all <- getRun(bh_feat_3[[1]], run_num = .20)
-    bh_feat_sig <- getRun(bh_feat_3[[2]], run_num = .20)
+    bh_feat_all <- getRun(bh_feat_3[[1]], run_num = .20)
+    # bh_feat_sig <- getRun(bh_feat_3[[2]], run_num = .20)
     # bh_feat_fwer <- getRun(bh_feat_3[[3]], run_num = seed_num)
     
-    # get residuals
-    cases_resid <- getResidual(data = cases, 
-                               bh_features = bh_feat_sig)
     
     mod_result <- runEnet(training_dat = cases[train_index,], 
                           test_dat = cases[test_index,], 
@@ -170,14 +148,8 @@ trainTest <- function(cases,
                           gender = T)
     
     
-    mod_result_resid <- runEnet(training_dat = cases_resid[train_index,], 
-                                test_dat = cases_resid[test_index,], 
-                                bh_features = bh_feat_sig,
-                                gender = T)
     
-    
-    
-    model_results[[i]] <- getResults(mod_result, mod_result_resid)
+    model_results[[i]] <- getResultsCancer(mod_result)
     
     
   }
@@ -186,11 +158,10 @@ trainTest <- function(cases,
   
 }
 
+#ERROR -rror in { :  task 1 failed - "singular matrix in 'backsolve'. First zero in diagonal [2]" 
 mod_results <- trainTest(cases = betaCases,
                          controls = betaControls,
                          k = 4)
 
-# change pred to nothing if doing surv
-saveRDS(mod_results, paste0('~/hpf/largeprojects/agoldenb/ben/Projects/LFS/Scripts/
-                            predict_age/Results/reg_results/pred_train_test', '_' ,seed_num, '.rda'))
+saveRDS(mod_results, paste0('/hpf/largeprojects/agoldenb/ben/Projects/LFS/train_test', '_' ,seed_num))
 
