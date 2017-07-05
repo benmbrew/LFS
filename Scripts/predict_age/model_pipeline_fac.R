@@ -31,7 +31,7 @@ registerDoParallel(1)
 ##########
 # initialize folders
 ##########
-home_folder <- '~/hpf/largeprojects/agoldenb/ben/Projects'
+home_folder <- '/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
 data_folder <- paste0(project_folder, '/Data')
 methyl_data <- paste0(data_folder, '/methyl_data')
@@ -45,11 +45,10 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 # fixed variables
 ##########
-method = 'raw'
+method = 'funnorm'
 k = 4
 age = 48
 seed_num <- 1
-bh_method <- 'pred'
 seed_num <- argv[1]
 
 
@@ -57,10 +56,12 @@ seed_num <- argv[1]
 ##########
 # load data
 ##########
+##########
+# load data
+##########
 betaCases <- readRDS(paste0(model_data, '/betaCases', method,'.rda'))
 betaControls <- readRDS(paste0(model_data, '/betaControls', method,'.rda'))
-betaControlsWT <- readRDS(paste0(model_data, '/betaControlsWT', method,'.rda'))
-betaControlsOld <- readRDS(paste0(model_data, '/betaControlsOld', method,'.rda'))
+# betaControlsOld <- readRDS(paste0(model_data, '/betaControlsOld', method,'.rda'))
 betaValid <- readRDS(paste0(model_data, '/betaValid', method,'.rda'))
 # 
 # # # TEMP
@@ -92,20 +93,12 @@ betaControls <- betaControls[, c('age_diagnosis',
                                  'cancer_diagnosis_diagnoses', 
                                  'gender', 
                                  intersect_names)]
-
-# controls wild type
-betaControlsWT <- betaControlsWT[, c('age_diagnosis', 
-                                     'age_sample_collection', 
-                                     'cancer_diagnosis_diagnoses', 
-                                     'gender', 
-                                     intersect_names)]
-
-# controls
-betaControlsOld <- betaControlsOld[, c('age_diagnosis', 
-                                       'age_sample_collection', 
-                                       'cancer_diagnosis_diagnoses', 
-                                       'gender', 
-                                       intersect_names)]
+# # controls
+# betaControlsOld <- betaControlsOld[, c('age_diagnosis', 
+#                                  'age_sample_collection', 
+#                                  'cancer_diagnosis_diagnoses', 
+#                                  'gender', 
+#                                  intersect_names)]
 #validation
 betaValid <- betaValid[, c('age_diagnosis', 
                            'age_sample_collection', 
@@ -127,30 +120,33 @@ betaValid <- betaValid[, c('age_diagnosis',
 # get a column for each dataset indicating the fold
 betaCases <- getFolds(betaCases, seed_number = seed_num, k_num = k)
 betaControls <- getFolds(betaControls, seed_number = seed_num, k_num = k)
-betaControlsWT <- getFolds(betaControlsWT, seed_number = seed_num, k_num = k)
 betaValid <- getFolds(betaValid, seed_number = seed_num, k_num = k)
 
-betaCases <- betaCases[, c(1:3000, ncol(betaCases))]
-betaControls <- betaControls[, c(1:3000, ncol(betaControls))]
-betaControlsWT <- betaControlsWT[, c(1:3000, ncol(betaControlsWT))]
+# get gender dummy variable
+betaCases <- cbind(as.data.frame(class.ind(betaCases$gender)), betaCases)
+betaControls <- cbind(as.data.frame(class.ind(betaControls$gender)), betaControls)
+
+
+betaCases <- betaCases[, c(1:10000, ncol(betaCases))]
+betaControls <- betaControls[, c(1:10000, ncol(betaControls))]
 
 
 
 trainTestFac <- function(cases, 
                          controls,
-                         controls_wt,
-                         bh_type,
                          age_cutoff,
                          k) 
 {
   
   # list to store results
   bh_feat <- list()
-  cor_score <- list()
+  test_stats <- list()
   alpha_score <- list()
   lambda_num <- list()
   import <- list()
   models <- list()
+  bh_dim <- list()
+  
   
   # now write forloop to 
   for (i in 1:k) {
@@ -161,21 +157,17 @@ trainTestFac <- function(cases,
     
     # high pvalue, no evidence they are different
     # print(testKS(cases$age_sample_collection[train_index], controls$age_sample_collection)$p.value)
-    if(bh_type == 'surv') {
       # use bumphunter surveillance function to get first set of regions
-      bh_feat[[i]] <- bumpHunterSurv(dat_cases = cases[train_index,], dat_controls = controls)
-    } else {
-      bh_feat[[i]] <- bumpHunterPred(dat_cases = cases[train_index,], dat_controls = controls)
-      
-    }
+    bh_feat[[i]] <- bumpHunterSurv(dat_cases = cases[train_index,], dat_controls = controls)
    
-    
     # get probes with regions
     bh_feat_3 <- getProbe(bh_feat[[i]])
     
     # get all data sets from bh_feat_3
     # bh_feat_all <- getRun(bh_feat_3[[1]], run_num = .20)
-    bh_feat_sig <- getRun(bh_feat_3[[2]], run_num = .20)
+    bh_feat_sig <- getRun(bh_feat_3[[1]], run_num = .10)
+    bh_dim[[i]] <- length(bh_feat_sig)
+    
     # bh_feat_fwer <- getRun(bh_feat_3[[3]], run_num = seed_num)
     
     mod_result <- runEnetFac(training_dat = cases[train_index,],
@@ -194,18 +186,15 @@ trainTestFac <- function(cases,
     
   }
   
-  return(list(alpha_score, lambda_num, import, test_stats, models))
+  return(list(alpha_score, lambda_num, import, test_stats, models, bh_dim))
   
 }
 
 mod_results <- trainTestFac(cases = betaCases,
                             controls = betaControls,
-                            controls_wt = betaControlsWT,
-                            bh_type = bh_method,
                             age_cutoff = age,
                             k = 4)
 
-saveRDS(mod_results, paste0('/hpf/largeprojects/agoldenb/ben/Projects/LFS/Scripts/
-                            predict_age/Results/class_results/train_test', '_' , bh_method, '_',
+saveRDS(mod_results, paste0('/hpf/largeprojects/agoldenb/ben/Projects/LFS/Scripts/predict_age/Results/class_results_funnorm/train_test', '_',
                             seed_num, '_' ,age,'.rds'))
 

@@ -44,7 +44,7 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 # fixed variables
 ##########
-method = 'funnorm'
+method = 'raw'
 k = 4
 seed_num <- 1
 seed_num <- argv[1]
@@ -55,9 +55,10 @@ seed_num <- argv[1]
 ##########
 betaCases <- readRDS(paste0(model_data, '/betaCases', method,'.rda'))
 betaControls <- readRDS(paste0(model_data, '/betaControls', method,'.rda'))
-# betaControlsOld <- readRDS(paste0(model_data, '/betaControlsOld', method,'.rda'))
-betaValid <- readRDS(paste0(model_data, '/betaValid', method,'.rda'))
-# 
+betaControlsWT <- readRDS(paste0(model_data, '/betaControlsWT', method,'.rda'))
+betaControlsOld <- readRDS(paste0(model_data, '/betaControlsOld', method,'.rda'))
+
+
 # # # TEMP
 # betaCases <- betaCases[!grepl('9721365183', betaCases$sentrix_id),]
 
@@ -71,8 +72,7 @@ cg_locations$X <- NULL
 ##########
 
 intersect_names <- Reduce(intersect, list(colnames(betaCases)[8:ncol(betaCases)], 
-                                          colnames(betaControls)[8:ncol(betaControls)], 
-                                          colnames(betaValid)[8:ncol(betaValid)]))
+                                          colnames(betaControls)[8:ncol(betaControls)]))
 # organize each data set accordling
 
 # cases
@@ -87,18 +87,20 @@ betaControls <- betaControls[, c('age_diagnosis',
                                  'cancer_diagnosis_diagnoses', 
                                  'gender', 
                                  intersect_names)]
-# # controls
-# betaControlsOld <- betaControlsOld[, c('age_diagnosis', 
-#                                  'age_sample_collection', 
-#                                  'cancer_diagnosis_diagnoses', 
-#                                  'gender', 
-#                                  intersect_names)]
-#validation
-betaValid <- betaValid[, c('age_diagnosis', 
-                           'age_sample_collection', 
-                           'cancer_diagnosis_diagnoses', 
-                           'gender', 
-                           intersect_names)]
+
+# controls wild type
+betaControlsWT <- betaControlsWT[, c('age_diagnosis', 
+                                     'age_sample_collection', 
+                                     'cancer_diagnosis_diagnoses', 
+                                     'gender', 
+                                     intersect_names)]
+
+# controls
+betaControlsOld <- betaControlsOld[, c('age_diagnosis', 
+                                       'age_sample_collection', 
+                                       'cancer_diagnosis_diagnoses', 
+                                       'gender', 
+                                       intersect_names)]
 
 # #TEMP
 # betaControlsFull <- rbind(betaControls, betaControlsOld)
@@ -114,29 +116,77 @@ betaValid <- betaValid[, c('age_diagnosis',
 # get a column for each dataset indicating the fold
 betaCases <- getFolds(betaCases, seed_number = seed_num, k_num = k)
 betaControls <- getFolds(betaControls, seed_number = seed_num, k_num = k)
+betaControlsWT <- getFolds(betaControlsWT, seed_number = seed_num, k_num = k)
 
-# get gender 
-# get gender dummy variable
-betaCases <- cbind(as.data.frame(class.ind(betaCases$gender)), betaCases)
-betaControls <- cbind(as.data.frame(class.ind(betaControls$gender)), betaControls)
+# betaCases <- betaCases[, c(1:5000, ncol(betaCases))]
+# betaControls <- betaControls[, c(1:5000, ncol(betaControls))]
+# betaControlsWT <- betaControlsWT[, c(1:5000, ncol(betaControlsWT))]
 
 
-betaCases <- betaCases[, c(1:10000, ncol(betaCases))]
-betaControls <- betaControls[, c(1:10000, ncol(betaControls))]
+# high pvalue, no evidence they are different
+# print(testKS(cases$age_sample_collection[train_index], controls$age_sample_collection)$p.value)
+print(testKS(betaControlsWT$age_sample_collection, betaControls$age_sample_collection)$p.value)
 
+# subset betaControlsWT by removing a sample with age of sample collection between 300 and 400
+# iteratively, each time running until p.value of testKS is above 0.05
+p_value =  0
+loop_counts=  0
+
+while (p_value < 0.05) {
+  
+  if (loop_counts == 0) {
+    
+    remove_index <- which(betaControlsWT$age_sample_collection >= 300 & 
+                            betaControlsWT$age_sample_collection <= 400)
+    remove_index <- remove_index[1]
+    
+    
+    betaControlsWTSub <- betaControlsWT[-remove_index,]
+  } else {
+    
+    remove_index <- which(betaControlsWTSub$age_sample_collection >= 300 & 
+                            betaControlsWTSub$age_sample_collection <= 400)
+    
+    remove_index <- remove_index[1]
+    
+    
+    betaControlsWTSub <- betaControlsWTSub[-remove_index,]
+  }
+ 
+  p_value <- testKS(betaControlsWTSub$age_sample_collection, betaControls$age_sample_collection)$p.value
+  
+  loop_counts <- loop_counts + 1
+}
+# # adjust for age
+# hist(betaControlsWTSub$age_sample_collection)
+# hist(betaControls$age_sample_collection)
+bh_feat <- bumpHunterPred(dat_controls_wt = betaControlsWTSub, dat_controls_mut = betaControls)
+
+# get probes with regions
+bh_feat_3 <- getProbe(bh_feat)
+
+# saveRDS(bh_feat_3, paste0(model_data, '/bh_feat_pred.rda'))
+
+# get all data sets from bh_feat_3
+# bh_feat_all <- getRun(bh_feat_3[[1]], run_num = .20)
+bh_feat_sig <- getRun(bh_feat_3[[2]], run_num = .20)
+# bh_feat_fwer <- getRun(bh_feat_3[[3]], run_num = seed_num)
 
 trainTest <- function(cases, 
-                      controls,
+                      bh_feat_sig,
                       k) 
 {
   
   # remove samples that dont have an age of sample collection
   cases <- cases[complete.cases(cases),]
   
+  # get residuals
+  cases_resid <- getResidual(data = cases, 
+                             bh_features = bh_feat_sig)
+  
   # list to store results
   bh_feat <- list()
   model_results <- list()
-  bh_dim <- list()
   
   # now write forloop to 
   for (i in 1:k) {
@@ -145,32 +195,14 @@ trainTest <- function(cases,
     train_index <- !grepl(i, cases$folds)
     test_index <- !train_index
     
-    # high pvalue, no evidence they are different
-    # print(testKS(cases$age_sample_collection[train_index], controls$age_sample_collection)$p.value)
-    # print(testKS(controls_wt$age_sample_collection[train_index], controls$age_sample_collection)$p.value)
-    
-    # use bumphunter surveillance function to get first set of regions
-    bh_feat[[i]] <- bumpHunterSurv(dat_cases = cases[train_index,], dat_controls = controls)
-    
-    # get probes with regions
-    bh_feat_3 <- getProbe(bh_feat[[i]])
-    
-    # get all data sets from bh_feat_3
-    # bh_feat_all <- getRun(bh_feat_3[[1]], run_num = .20)
-    bh_feat_sig <- getRun(bh_feat_3[[2]], run_num = .10)
-    bh_dim[[i]] <- length(bh_feat_sig)
-    # bh_feat_fwer <- getRun(bh_feat_3[[3]], run_num = seed_num)
-    
-    # get residuals
-    cases_resid <- getResidual(data = cases, 
-                               bh_features = bh_feat_sig)
-    
+    # run regression model
     mod_result <- runEnet(training_dat = cases[train_index,], 
                           test_dat = cases[test_index,], 
                           bh_features = bh_feat_sig,
                           gender = T)
     
     
+    # run classification model
     mod_result_resid <- runEnet(training_dat = cases_resid[train_index,], 
                                 test_dat = cases_resid[test_index,], 
                                 bh_features = bh_feat_sig,
@@ -178,7 +210,7 @@ trainTest <- function(cases,
     
     
     
-    model_results[[i]] <- getResults(mod_result, mod_result_resid, bh_dim)
+    model_results[[i]] <- getResults(mod_result, mod_result_resid)
     
     
   }
@@ -188,9 +220,11 @@ trainTest <- function(cases,
 }
 
 mod_results <- trainTest(cases = betaCases,
-                         controls = betaControls,
+                         bh_feat_sig = bh_feat_sig,
                          k = 4)
 
+seed_num
 # change pred to nothing if doing surv
-saveRDS(mod_results, paste0('/hpf/largeprojects/agoldenb/ben/Projects/LFS/Scripts/predict_age/Results/reg_results_funnorm/train_test', '_' , seed_num, '.rda'))
+saveRDS(mod_results, 
+        paste0('/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects/LFS/Scripts/predict_age/Results/reg_results/train_test', '_', 'pred' , '_' ,seed_num, '.rda'))
 

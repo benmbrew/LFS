@@ -52,29 +52,85 @@ preprocessMethod <- function(data, preprocess) {
 ##########
 # impute and scale for raw data
 ##########
-scaleImputeDat <- function(dat) {
+scaleImputeDat <- function(dat, scale) {
   
-  # get row statistics
-  rowMean <- apply(dat, 1, mean, na.rm=TRUE)
-  rowSd <- apply(dat, 1, sd, na.rm=TRUE)
-  # constantInd <- rowSd==0
-  # rowSd[constantInd] <- 1
-  rowStats <- list(mean=rowMean, sd=rowSd)
+  if(scale){
+    # get row statistics
+    rowMean <- apply(dat, 1, mean, na.rm=TRUE)
+    rowSd <- apply(dat, 1, sd, na.rm=TRUE)
+    # constantInd <- rowSd==0
+    # rowSd[constantInd] <- 1
+    rowStats <- list(mean=rowMean, sd=rowSd)
+    
+    # apply normilization
+    dat  <- (dat - rowStats$mean) / rowStats$sd
+    
+    # make matrix
+    dat <- as.matrix(dat)
+    
+    # impute with knn
+    dat_knn <-  impute.knn(dat, k = 10)$data
+    
+    # get clin data back and return final data
+    final_dat <- dat_knn
+    
+  } else {
+    # make matrix
+    dat <- as.matrix(dat)
+    
+    # impute with knn
+    dat_knn <-  impute.knn(dat, k = 10)$data
+    
+    # get clin data back and return final data
+    final_dat <- dat_knn
+    
+  }
   
-  # apply normilization
-  dat  <- (dat - rowStats$mean) / rowStats$sd
-  
-  # make matrix
-  dat <- as.matrix(dat)
-  
-  # impute with knn
-  dat_knn <-  impute.knn(dat, k = 10)$data
-  
- 
-  # get clin data back and return final data
-  final_dat <- dat_knn
   
   return(final_dat)
+}
+
+runCombat <- function(data)
+{
+  data$batch <- ifelse(grepl('9721365183', data$sentrix_id), 'tor', 'mon')
+  # get batch
+  batch_indicator <- as.character(data$batch)
+  batch_indicator <- as.factor(batch_indicator)
+  
+  gender <- data$gender
+  sentrix_id <- data$sentrix_id
+  sen_batch <- data$sen_batch
+  ids <- data$ids
+  sample_collection <- data$age_sample_collection
+  diagnosis <- data$age_diagnosis
+  p53 <- data$p53_germline
+  cancer_diagnosis <- data$cancer_diagnosis_diagnoses
+  # put model ids in rownames and remove columns
+  mat_data <- data[, (8:ncol(data) - 1)]
+  # get features
+  features <- colnames(mat_data)
+  mat_data <- t(mat_data)
+  
+  # get intercept
+  modcombat <- model.matrix(~1, data = data)
+  combat <- ComBat(dat = mat_data, batch = batch_indicator, mod = modcombat, par.prior=TRUE, prior.plots=FALSE)
+  
+  # transpose and add back columns
+  final_dat <- as.data.frame(t(combat))
+  final_dat$gender <- gender
+  final_dat$ids <- ids
+  final_dat$age_sample_collection <- sample_collection
+  final_dat$age_diagnosis <- diagnosis
+  final_dat$p53_germline <- p53
+  final_dat$sentrix_id <- sentrix_id
+  final_dat$cancer_diagnosis_diagnoses <- cancer_diagnosis
+  final_dat <- final_dat[, c('ids', 'p53_germline', 'age_diagnosis','cancer_diagnosis_diagnoses' ,
+                             'age_sample_collection', 'gender', 'sentrix_id', features)]
+  final_dat$sentrix_id.1 <- NULL
+  rownames(final_dat) <- NULL
+  
+  return(final_dat)
+  
 }
 
 
@@ -365,6 +421,13 @@ removeOutlier <- function(data, wt, val) {
   return(data)
 }
 
+##########
+# batch correction
+##########
+
+
+
+
 # data_controls <- controls_wt
 getBalAge <- function(data_controls, full)
 {
@@ -408,7 +471,7 @@ bumpHunterSurv <- function(dat_cases,
   bump_clin <- dat[,1:4]
   
   # recode type
-  dat$type <- ifelse(grepl('no', dat$cancer_diagnosis_diagnoses), 'controls', 'cases')
+  dat$type <- ifelse(grepl('Unaffected', dat$cancer_diagnosis_diagnoses), 'controls', 'cases')
   
   ##########
   # get indicator and put into design matrix with intercept 1
@@ -458,7 +521,7 @@ bumpHunterSurv <- function(dat_cases,
   
   # set paramenters 
   DELTA_BETA_THRESH = .20 # DNAm difference threshold
-  NUM_BOOTSTRAPS = 3   # number of randomizations
+  NUM_BOOTSTRAPS = 2  # number of randomizations
   
   # create tab list
   tab <- list()
@@ -656,17 +719,11 @@ runEnet <- function(training_dat,
 
   # get intersection of bh features and real data
   bh_features <- as.character(unlist(bh_features))
+  bh_features <- append('M', bh_features)
+  bh_features <- append('F', bh_features)
   
   intersected_feats <- intersect(bh_features, colnames(training_dat))
-  
-  if(gender) {
-    
-    intersected_feats <- append('gender', intersected_feats)
-    training_dat$gender <- as.numeric(as.factor(training_dat$gender))
-    test_dat$gender <- as.numeric(as.factor(test_dat$gender))
-    
-  }
-  
+
   # # get y
   train_y <- as.numeric(training_dat$age_diagnosis)
   test_y <- as.numeric(test_dat$age_diagnosis)
@@ -678,7 +735,7 @@ runEnet <- function(training_dat,
   training_dat <- training_dat[, intersected_feats]
   test_dat <- test_dat[, intersected_feats]
   
-  
+
   N_CV_REPEATS = 2
   nfolds = 3
   
@@ -810,18 +867,10 @@ runEnetFac <- function(training_dat,
   
   # get intersection of bh features and real data
   bh_features <- as.character(unlist(bh_features))
+  bh_features <- append('M', bh_features)
+  bh_features <- append('F', bh_features)
   
   intersected_feats <- intersect(bh_features, colnames(training_dat))
-  
-  if(gender) {
-    
-    intersected_feats <- append('gender', intersected_feats)
-    training_dat$gender <- as.numeric(as.factor(training_dat$gender))
-    test_dat$gender <- as.numeric(as.factor(test_dat$gender))
-    # controls_dat$gender <- as.numeric(as.factor(controls_dat$gender))
-    # valid_dat$gender <- as.numeric(as.factor(valid_dat$gender))
-    
-  }
   
 
   # # get y
@@ -970,14 +1019,15 @@ getResidual <- function(data,
   data <- data[, c("age_diagnosis", 
                    "age_sample_collection",
                    "cancer_diagnosis_diagnoses", 
-                   "gender", 
+                   "M",
+                   "F",
                    intersected_feats)]
   
-  probes <- colnames(data)[5:ncol(data)]
+  probes <- colnames(data)[6:ncol(data)]
   
   resid <- list()
   
-  for (i in 5:ncol(data)){
+  for (i in 6:ncol(data)){
     
     temp <- data[, i]
     temp1 <- data$age_sample_collection
@@ -994,7 +1044,8 @@ getResidual <- function(data,
   resid <- cbind(data$age_diagnosis, 
                  data$age_sample_collection, 
                  data$cancer_diagnosis_diagnoses,
-                 data$gender, 
+                 data$M, 
+                 data$F,
                  resid)
   
   # change colnames

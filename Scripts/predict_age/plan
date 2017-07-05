@@ -1,5 +1,21 @@
 - predict_cancer - not needed for cluster - you have results with training and testing on full data
 - predict_acc- has weird error, but needs to be put on cluster WITH PRED.
-- model_pipeline and model_pipeline_fac are ready for cluster - they have pred now.
+- model_pipeline and model_pipeline_fac can be run on cluster now.
 - test_pipeline needs to be edited for pred to work (then run it).
+- need to predict random - increase features sequintially
+- eventually need to try other normilization methods.
+
+SURV
+- run model_pipeline and model_pipeline_fac for funnorm and quan
+ with bh dims and correct gender (running).
+- look at results
+- test quan and funnorm on controls and validation
+- do batch correction on sentrix ids for raw
+- rerun pipeline with new batch correction for raw
+
+
+- currently running raw, quan, funnorm for both reg and fac.
+because of mistake - each fac should be in respective folders, but each reg will all be in reg_results, marked accordingly.
+
+
 

@@ -9,6 +9,7 @@ library(bumphunter)
 library(dplyr)
 library(dgof)
 library(graphics)
+library(sva)
 library(stringr)
 library(impute)
 library(data.table)
@@ -126,14 +127,12 @@ betaValid <- preprocessMethod(rgValid, preprocess = method)
 
 # save.image('/home/benbrew/Desktop/temp_raw.RData')
 # load('/home/benbrew/Desktop/temp_raw.RData')
-
 ###########
 # scale and impute
 ###########
-betaCases <- scaleImputeDat(dat = betaCases)
-betaControls <- scaleImputeDat(dat = betaControls)
-betaValid <- scaleImputeDat(dat = betaValid)
-
+betaCases <- scaleImputeDat(dat = betaCases, scale = F)
+betaControls <- scaleImputeDat(dat = betaControls, scale = F)
+betaValid <- scaleImputeDat(dat = betaValid, scale = F)
 
 ###########
 # id functions
@@ -208,6 +207,24 @@ betaControlsOld <- betaControlsOld[, !grepl('ch', colnames(betaControlsOld))]
 betaValid <- betaValid[, !grepl('ch', colnames(betaValid))]
 
 ##########
+# run combat
+##########
+# correct for the 9 samples done in montreal
+betaCases <- runCombat(betaCases)
+
+# # scale data
+# # get row statistics
+# colMean <- apply(dat, 2, mean, na.rm=TRUE)
+# colSd <- apply(dat, 2, sd, na.rm=TRUE)
+# # constantInd <- rowSd==0
+# # rowSd[constantInd] <- 1
+# rowStats <- list(mean=colMean, sd=colSd)
+# 
+# # apply normilization
+# dat  <- (dat - rowStats$mean) / rowStats$sd
+betaCases[, 8:ncol(betaCases)] <- scale(betaCases[, 8:ncol(betaCases)])
+
+##########
 # remove outliers
 ##########
 betaControls <- removeOutlier(betaControls, wt = F, val = F)
@@ -273,7 +290,7 @@ getPCA(pca_data = betaControlsWT,
        pca2 = 2)
 
 # Controls, sentrix_id
-getPCA(pca_data = betaControlsWt,
+getPCA(pca_data = betaControlsWT,
        column_name = 'sentrix_id',
        name = 'betaControlsWt sentrix_id',
        gene_start = 8,

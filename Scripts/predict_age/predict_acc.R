@@ -102,11 +102,16 @@ betaControls <- betaControls[, c('age_diagnosis',
 betaCases <- getFolds(betaCases, seed_number = seed_num, k_num = k)
 betaControls <- getFolds(betaControls, seed_number = seed_num, k_num = k)
 
-# temp
-betaCases <- betaCases[, c(1:4000, ncol(betaCases))]
-betaControls <- betaControls[, c(1:4000, ncol(betaControls))]
+# get gender dummy variable
+betaCases <- cbind(as.data.frame(class.ind(betaCases$gender)), betaCases)
+betaControls <- cbind(as.data.frame(class.ind(betaControls$gender)), betaControls)
 
+# # temp
+# betaCases <- betaCases[, c(1:4000, ncol(betaCases))]
+# betaControls <- betaControls[, c(1:4000, ncol(betaControls))]
 
+cases <- betaCases
+controls <- betaControls
 trainTest <- function(cases, 
                       controls, 
                       k) 
@@ -133,6 +138,7 @@ trainTest <- function(cases,
     # use bumphunter surveillance function to get first set of regions
     bh_feat[[i]] <- bumpHunterSurv(dat_cases = cases[train_index,], dat_controls = controls)
     
+    # saveRDS(bh_feat,'~/Desktop/temp_bh_acc.rda' )
     # get probes with regions
     bh_feat_3 <- getProbe(bh_feat[[i]])
     
