@@ -1,11 +1,11 @@
 # initialize folders
 library(gsubfn)
-library(dplyr)
+library(tidyverse)
 
 
 ### This Script will explore clinical data 
 # Initialize folders
-home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects/'
+home_folder <- '~/hpf/largeprojects/agoldenb/ben/Projects/'
 project_folder <- paste0(home_folder, '/LFS')
 test <- paste0(project_folder, '/Scripts/classification_template')
 data_folder <- paste0(project_folder, '/Data')
@@ -23,6 +23,22 @@ clin <- read.csv(paste0(clin_data, '/clinical_two.csv'), stringsAsFactors = F)
 ##########
 clin$cancer_diagnosis_diagnoses <- trimws(clin$cancer_diagnosis_diagnoses, which = 'both')
 clin$p53_germline <- trimws(clin$p53_germline, which = 'both')
+
+##########
+# get model data and check reoccuring cancers
+##########
+
+# first remove unaffected 
+temp_mod <- clin[!grepl('Unaffected', clin$cancer_diagnosis_diagnoses),]
+
+# ones with have methylation for
+temp_mod <- temp_mod[temp_mod$methyl_indicator == TRUE,]
+
+# keep tp53 mutant
+temp_mod <- temp_mod[grepl('Mut', temp_mod$p53_germline),]
+
+# figure out duplicates and reoccuring
+length(which(duplicated(temp_mod$blood_dna_malkin_lab_)))
 
 ##########
 # how many familes

@@ -18,8 +18,9 @@ library(biovizBase)
 library(GEOquery)
 library(IlluminaHumanMethylation450kmanifest)
 library(preprocessCore)
-
-
+library(IlluminaHumanMethylationEPICanno.ilm10b2.hg19)
+# source("https://bioconductor.org/biocLite.R")
+# biocLite("IlluminaHumanMethylationEPICanno.ilm10b2.hg19")
 ##########
 # initialize folders
 ##########
@@ -121,12 +122,13 @@ rgValid <- read.metharray.exp(idat_data_valid)
 # get preprocessing method
 ##########
 betaCases <- preprocessMethod(rgCases, preprocess = method)
+rm(rgCases)
 betaControls <- preprocessMethod(rgControls, preprocess = method)
+rm(rgControls)
 betaValid <- preprocessMethod(rgValid, preprocess = method)
+rm(rgValid)
 # getwd()
 
-# save.image('/home/benbrew/Desktop/temp_raw.RData')
-# load('/home/benbrew/Desktop/temp_raw.RData')
 ###########
 # scale and impute
 ###########
@@ -156,15 +158,19 @@ betaCases <- cleanIds(betaCases)
 betaControls <- cleanIds(betaControls)
 betaValid <- cleanIds(betaValid)
 
+# save.image('/home/benbrew/Desktop/temp_raw_quan.RData')
+# load('/home/benbrew/Desktop/temp_raw_# save.image('/home/benbrew/Desktop/temp_raw.RData')
+# load('/home/benbrew/Desktop/temp_raw.RData').RData')
+
 # # get cg locations
 # cg_locations <- getIds()
 # 
 # # write.csv(cg_locations, paste0(model_data, '/cg_locations.csv'))
 # 
-
 ###########
 # join data 
 ###########
+
 
 # join data to clinical 
 betaCases <- joinData(betaCases, control = F)
@@ -197,8 +203,6 @@ betaControlsOld <- removeCancer(betaControlsOld)
 ##########
 betaCases <- getModData(betaCases)
 
-# save.image('/home/benbrew/Desktop/temp_clean_funnorm.RData')
-# load('/home/benbrew/Desktop/temp_clean_funnorm.RData')
 
 betaCases <- betaCases[, !grepl('ch', colnames(betaCases))]
 betaControls <- betaControls[, !grepl('ch', colnames(betaControls))]
@@ -209,6 +213,10 @@ betaValid <- betaValid[, !grepl('ch', colnames(betaValid))]
 ##########
 # run combat
 ##########
+
+# save.image('/home/benbrew/Desktop/temp_raw.RData')
+# load('/home/benbrew/Desktop/temp_raw.RData')
+
 # correct for the 9 samples done in montreal
 betaCases <- runCombat(betaCases)
 

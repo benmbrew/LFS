@@ -37,8 +37,8 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 # fixed variables
 ##########
-method = 'raw'
-k = 4
+method = 'funnorm'
+k = 5
 seed_num <- 1
 seed_num <- argv[1]
 
@@ -70,14 +70,16 @@ betaCases <- betaCases[, c('age_diagnosis',
 # between 2 groups
 
 # get a column for each dataset indicating the fold
-betaCases <- getFolds(betaCases, seed_number = seed_num, k_num = k)
+betaCases <- getFolds(betaCases, 
+                      seed_number = seed_num, 
+                      k_num = k)
 
 
 # betaCases <- betaCases[, c(1:5000, ncol(betaCases))]
 # betaControls <- betaControls[, c(1:5000, ncol(betaControls))]
 # betaControlsWT <- betaControlsWT[, c(1:5000, ncol(betaControlsWT))]
-cases <- betaCases
-num_feats <- 100
+# cases <- betaCases
+# num_feats <- 100
 trainTestRand <- function(cases, 
                           num_feats,
                           k) 
@@ -119,10 +121,9 @@ trainTestRand <- function(cases,
 }
 
 mod_results <- trainTestRand(cases = betaCases,
-                             num_feats = 1000,
-                             k = 4)
+                             num_feats = 800,
+                             k = k)
 
-seed_num
 # change pred to nothing if doing surv
 saveRDS(mod_results, 
         paste0('/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects/LFS/Scripts/predict_age/Results/reg_results/train_test', '_', 'pred' , '_' ,seed_num, '.rda'))

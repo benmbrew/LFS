@@ -33,8 +33,8 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 # fixed variables
 ##########
-method = 'quan'
-k = 4
+method = 'raw'
+k = 10
 seed_num = 1
 
 
@@ -114,13 +114,13 @@ bh_feat <- bumpHunterSurv(dat_cases = betaCases, dat_controls = betaControls)
 # get features
 ##########
 bh_feat_all <- getProbe(bh_feat)
-bh_feat_tot <- getRun(bh_feat_all[[1]], run_num = .15)
-bh_feat_sig <- getRun(bh_feat_all[[2]], run_num = .15)
+bh_feat_tot <- getRun(bh_feat_all[[1]], run_num = .40)
+bh_feat_sig <- getRun(bh_feat_all[[2]], run_num = .40)
 
 
 # saveRDS(bh_feat_all, paste0(model_data, '/bh_feat_all.rda'))
 # saveRDS(bh_feat_all, paste0(model_data, '/bh_feat_all_quan.rda'))
-bh_feat_all <- readRDS(paste0(model_data, '/bh_feat_all_quan.rda'))
+# bh_feat_all <- readRDS(paste0(model_data, '/bh_feat_all_quan.rda'))
 
 # #raw
 # save.image('/home/benbrew/Desktop/temp_full_test.RData')

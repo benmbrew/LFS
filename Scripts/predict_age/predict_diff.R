@@ -1,3 +1,5 @@
+# predict age of onset in patients where age of onset and age of sample collection are most different
+
 #!/hpf/tools/centos6/R/3.2.3/bin/Rscript
 
 # Script to evaluate the how each imputation method affects the
@@ -10,6 +12,7 @@ argv <- as.numeric(commandArgs(T))
 # this will be the modeling pipeline script where we select features on 
 # our training set and fit model. On the test set we test our model 
 # and compare our predictions to values. 
+
 ##########
 # initialize libraries
 ##########
@@ -17,8 +20,6 @@ library(caret)
 library(glmnet)
 library(randomForest)
 library(kernlab)
-library(ROCR)
-library(ModelMetrics)
 library(pROC)
 library(Metrics)
 library(doParallel)
@@ -46,15 +47,10 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 # fixed variables
 ##########
 method = 'raw'
-k = 4
-age = 72
+k_folds = 10
 seed_num <- argv[1]
 
 
-
-##########
-# load data
-##########
 ##########
 # load data
 ##########
@@ -111,6 +107,17 @@ betaValid <- betaValid[, c('age_diagnosis',
 # # remove na in sample collection and duplicate ids
 # betaControlsFull <- betaControlsFull[!is.na(betaControlsFull$age_sample_collection),]
 
+##########
+# subset cases by samples that have the most difference between age of sample collection and onset
+##########
+
+# temp <- betaCases[, 1:2]
+# temp_1 <- temp$age_sample_collection - temp$age_diagnosis
+# length(which(temp_1 > 24)) 
+# 28 samples have a difference of greater than 2 years between onset and samples - use those
+
+# create variable to 
+betaCases <- betaCases[which((betaCases$age_sample_collection - betaCases$age_diagnosis) > 24),]
 
 ###########################################################################
 # Next part of the pipline selects regions of the genome that are most differentially methylated 
@@ -119,33 +126,29 @@ betaValid <- betaValid[, c('age_diagnosis',
 # get a column for each dataset indicating the fold
 betaCases <- getFolds(betaCases, seed_number = seed_num, k_num = k)
 betaControls <- getFolds(betaControls, seed_number = seed_num, k_num = k)
-betaValid <- getFolds(betaValid, seed_number = seed_num, k_num = k)
 
+# get gender 
 # get gender dummy variable
 betaCases <- cbind(as.data.frame(class.ind(betaCases$gender)), betaCases)
 betaControls <- cbind(as.data.frame(class.ind(betaControls$gender)), betaControls)
 
+# 
+# betaCases <- betaCases[, c(1:2000, ncol(betaCases))]
+# betaControls <- betaControls[, c(1:2000, ncol(betaControls))]
 
-#betaCases <- betaCases[, c(1:10000, ncol(betaCases))]
-#betaControls <- betaControls[, c(1:10000, ncol(betaControls))]
 
-
-
-trainTestFac <- function(cases, 
-                         controls,
-                         age_cutoff,
-                         k) 
+trainTest <- function(cases, 
+                      controls,
+                      k) 
 {
+  
+  # remove samples that dont have an age of sample collection
+  cases <- cases[complete.cases(cases),]
   
   # list to store results
   bh_feat <- list()
-  test_stats <- list()
-  alpha_score <- list()
-  lambda_num <- list()
-  import <- list()
-  models <- list()
+  model_results <- list()
   bh_dim <- list()
-  
   
   # now write forloop to 
   for (i in 1:k) {
@@ -156,43 +159,50 @@ trainTestFac <- function(cases,
     
     # high pvalue, no evidence they are different
     # print(testKS(cases$age_sample_collection[train_index], controls$age_sample_collection)$p.value)
-      # use bumphunter surveillance function to get first set of regions
+    # print(testKS(controls_wt$age_sample_collection[train_index], controls$age_sample_collection)$p.value)
+    
+    # use bumphunter surveillance function to get first set of regions
     bh_feat[[i]] <- bumpHunterSurv(dat_cases = cases[train_index,], dat_controls = controls)
-   
+    
     # get probes with regions
     bh_feat_3 <- getProbe(bh_feat[[i]])
     
     # get all data sets from bh_feat_3
-    bh_feat_all <- getRun(bh_feat_3[[1]], run_num = .15)
-    #bh_feat_sig <- getRun(bh_feat_3[[1]], run_num = .10)
-    bh_dim[[i]] <- length(bh_feat_all)
-    
+    # bh_feat_all <- getRun(bh_feat_3[[1]], run_num = .20)
+    bh_feat_sig <- getRun(bh_feat_3[[2]], run_num = .40)
+    bh_dim[[i]] <- length(bh_feat_sig)
     # bh_feat_fwer <- getRun(bh_feat_3[[3]], run_num = seed_num)
     
-    mod_result <- runEnetFac(training_dat = cases[train_index,],
-                             test_dat = cases[test_index,], 
-                             bh_features = bh_feat_all,
-                             gender = T,
-                             cutoff = age_cutoff)
+    # get residuals
+    cases_resid <- getResidual(data = cases, 
+                               bh_features = bh_feat_sig)
+    
+    mod_result <- runEnet(training_dat = cases[train_index,], 
+                          test_dat = cases[test_index,], 
+                          bh_features = bh_feat_sig,
+                          gender = T)
     
     
-    alpha_score[[i]] <- mod_result[[1]]
-    lambda_num[[i]] <- mod_result[[2]]
-    import[[i]] <- mod_result[[3]]
-    test_stats[[i]] <- mod_result[[4]]
-    models[[i]] <- mod_result[[5]]
+    mod_result_resid <- runEnet(training_dat = cases_resid[train_index,], 
+                                test_dat = cases_resid[test_index,], 
+                                bh_features = bh_feat_sig,
+                                gender = T)
+    
+    
+    
+    model_results[[i]] <- getResults(mod_result, mod_result_resid)
     
     
   }
   
-  return(list(alpha_score, lambda_num, import, test_stats, models, bh_dim))
+  return(list(model_results, bh_dim))
   
 }
 
-mod_results <- trainTestFac(cases = betaCases,
-                            controls = betaControls,
-                            age_cutoff = age,
-                            k = 4)
+mod_results <- trainTest(cases = betaCases,
+                         controls = betaControls,
+                         k = k_folds)
 
-saveRDS(mod_results, paste0('/hpf/largeprojects/agoldenb/ben/Projects/LFS/Scripts/predict_age/Results/class_results/train_test', '_',seed_num, '_' ,age,'.rda'))
+# change pred to nothing if doing surv
+saveRDS(mod_results, paste0('/hpf/largeprojects/agoldenb/ben/Projects/LFS/Scripts/predict_age/Results/reg_results/train_test_diff', '_' , seed_num, '.rda'))
 

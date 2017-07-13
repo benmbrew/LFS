@@ -71,6 +71,7 @@ scaleImputeDat <- function(dat, scale) {
     # impute with knn
     dat_knn <-  impute.knn(dat, k = 10)$data
     
+    
     # get clin data back and return final data
     final_dat <- dat_knn
     
@@ -81,6 +82,7 @@ scaleImputeDat <- function(dat, scale) {
     # impute with knn
     dat_knn <-  impute.knn(dat, k = 10)$data
     
+    
     # get clin data back and return final data
     final_dat <- dat_knn
     
@@ -88,49 +90,6 @@ scaleImputeDat <- function(dat, scale) {
   
   
   return(final_dat)
-}
-
-runCombat <- function(data)
-{
-  data$batch <- ifelse(grepl('9721365183', data$sentrix_id), 'tor', 'mon')
-  # get batch
-  batch_indicator <- as.character(data$batch)
-  batch_indicator <- as.factor(batch_indicator)
-  
-  gender <- data$gender
-  sentrix_id <- data$sentrix_id
-  sen_batch <- data$sen_batch
-  ids <- data$ids
-  sample_collection <- data$age_sample_collection
-  diagnosis <- data$age_diagnosis
-  p53 <- data$p53_germline
-  cancer_diagnosis <- data$cancer_diagnosis_diagnoses
-  # put model ids in rownames and remove columns
-  mat_data <- data[, (8:ncol(data) - 1)]
-  # get features
-  features <- colnames(mat_data)
-  mat_data <- t(mat_data)
-  
-  # get intercept
-  modcombat <- model.matrix(~1, data = data)
-  combat <- ComBat(dat = mat_data, batch = batch_indicator, mod = modcombat, par.prior=TRUE, prior.plots=FALSE)
-  
-  # transpose and add back columns
-  final_dat <- as.data.frame(t(combat))
-  final_dat$gender <- gender
-  final_dat$ids <- ids
-  final_dat$age_sample_collection <- sample_collection
-  final_dat$age_diagnosis <- diagnosis
-  final_dat$p53_germline <- p53
-  final_dat$sentrix_id <- sentrix_id
-  final_dat$cancer_diagnosis_diagnoses <- cancer_diagnosis
-  final_dat <- final_dat[, c('ids', 'p53_germline', 'age_diagnosis','cancer_diagnosis_diagnoses' ,
-                             'age_sample_collection', 'gender', 'sentrix_id', features)]
-  final_dat$sentrix_id.1 <- NULL
-  rownames(final_dat) <- NULL
-  
-  return(final_dat)
-  
 }
 
 
@@ -468,7 +427,7 @@ bumpHunterSurv <- function(dat_cases,
   ##########
   # get clinical dat 
   ##########
-  bump_clin <- dat[,1:4]
+  bump_clin <- dat[,1:6]
   
   # recode type
   dat$type <- ifelse(grepl('Unaffected', dat$cancer_diagnosis_diagnoses), 'controls', 'cases')
@@ -484,14 +443,16 @@ bumpHunterSurv <- function(dat_cases,
   # Get genetic locations
   ##########
   dat$p53_germline <- dat$age_diagnosis <- dat$cancer_diagnosis_diagnoses <- dat$ids <- dat$batch <- 
-    dat$age_sample_collection <- dat$id <- dat$type <- dat$gender <-  dat$sentrix_id <-  NULL
+    dat$age_sample_collection <- dat$id <- dat$type <- dat$gender <-  dat$sentrix_id <-
+    dat$F <- dat$M <- dat$folds<-  NULL
+  
   # transpose methylation to join with cg_locations to get genetic location vector.
   dat <- as.data.frame(t(dat), stringsAsFactors = F)
   
   # make probe a column in methyl
   dat$probe <- rownames(dat)
   rownames(dat) <- NULL
-  
+  cg_locations$probe <- as.character(cg_locations$probe)
   # inner join methyl and cg_locations by probe
   methyl_cg <- inner_join(dat, cg_locations, by = 'probe')
   
@@ -520,8 +481,8 @@ bumpHunterSurv <- function(dat_cases,
   stopifnot(dim(beta)[1] == length(pos))
   
   # set paramenters 
-  DELTA_BETA_THRESH = .20 # DNAm difference threshold
-  NUM_BOOTSTRAPS = 2  # number of randomizations
+  DELTA_BETA_THRESH = .40 # DNAm difference threshold
+  NUM_BOOTSTRAPS = 3   # number of randomizations
   
   # create tab list
   tab <- list()
@@ -554,7 +515,7 @@ bumpHunterPred <- function(dat_controls_wt,
 {
   
   
-  # add columns indicating p53 status (in place of age of diagnosis
+  # add columns indicating p53 status in place of age of diagnosis
   dat_controls_wt$age_diagnosis <- 'WT'
   dat_controls_mut$age_diagnosis <- 'MUT'
   

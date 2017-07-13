@@ -44,9 +44,8 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 # fixed variables
 ##########
-method = 'funnorm'
-k = 4
-seed_num <- 1
+method = 'raw'
+k_folds = 10
 seed_num <- argv[1]
 
 
@@ -121,8 +120,8 @@ betaCases <- cbind(as.data.frame(class.ind(betaCases$gender)), betaCases)
 betaControls <- cbind(as.data.frame(class.ind(betaControls$gender)), betaControls)
 
 
-betaCases <- betaCases[, c(1:10000, ncol(betaCases))]
-betaControls <- betaControls[, c(1:10000, ncol(betaControls))]
+# betaCases <- betaCases[, c(1:3000, ncol(betaCases))]
+# betaControls <- betaControls[, c(1:3000, ncol(betaControls))]
 
 
 trainTest <- function(cases, 
@@ -157,7 +156,7 @@ trainTest <- function(cases,
     
     # get all data sets from bh_feat_3
     # bh_feat_all <- getRun(bh_feat_3[[1]], run_num = .20)
-    bh_feat_sig <- getRun(bh_feat_3[[2]], run_num = .10)
+    bh_feat_sig <- getRun(bh_feat_3[[1]], run_num = .40)
     bh_dim[[i]] <- length(bh_feat_sig)
     # bh_feat_fwer <- getRun(bh_feat_3[[3]], run_num = seed_num)
     
@@ -178,19 +177,19 @@ trainTest <- function(cases,
     
     
     
-    model_results[[i]] <- getResults(mod_result, mod_result_resid, bh_dim)
+    model_results[[i]] <- getResults(mod_result, mod_result_resid)
     
     
   }
   
-  return(model_results)
+  return(list(model_results, bh_dim))
   
 }
 
 mod_results <- trainTest(cases = betaCases,
                          controls = betaControls,
-                         k = 4)
+                         k = k_folds)
 
 # change pred to nothing if doing surv
-saveRDS(mod_results, paste0('/hpf/largeprojects/agoldenb/ben/Projects/LFS/Scripts/predict_age/Results/reg_results_funnorm/train_test', '_' , seed_num, '.rda'))
+saveRDS(mod_results, paste0('/hpf/largeprojects/agoldenb/ben/Projects/LFS/Scripts/predict_age/Results/reg_results/train_test', '_' , seed_num, '.rda'))
 
