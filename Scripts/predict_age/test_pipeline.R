@@ -34,7 +34,7 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 # fixed variables
 ##########
 method = 'raw'
-k = 10
+k = 5
 seed_num = 1
 
 
@@ -114,10 +114,15 @@ bh_feat <- bumpHunterSurv(dat_cases = betaCases, dat_controls = betaControls)
 # get features
 ##########
 bh_feat_all <- getProbe(bh_feat)
-bh_feat_tot <- getRun(bh_feat_all[[1]], run_num = .40)
-bh_feat_sig <- getRun(bh_feat_all[[2]], run_num = .40)
+bh_feat_tot <- getRun(bh_feat_all[[1]], run_num = .30)
+bh_feat_sig <- getRun(bh_feat_all[[2]], run_num = .30)
 
 
+# get gender dummy variable
+betaCases <- cbind(as.data.frame(class.ind(betaCases$gender)), betaCases)
+betaControls <- cbind(as.data.frame(class.ind(betaControls$gender)), betaControls)
+betaControlsFull <- cbind(as.data.frame(class.ind(betaControlsFull$gender)), betaControlsFull)
+betaValid <- cbind(as.data.frame(class.ind(betaValid$gender)), betaValid)
 # saveRDS(bh_feat_all, paste0(model_data, '/bh_feat_all.rda'))
 # saveRDS(bh_feat_all, paste0(model_data, '/bh_feat_all_quan.rda'))
 # bh_feat_all <- readRDS(paste0(model_data, '/bh_feat_all_quan.rda'))
@@ -150,13 +155,10 @@ testModel <- function(cases_dat,
   # get intersection of bh features and real data
   bh_features <- as.character(unlist(bh_features))
   
-  intersected_feats <- intersect(bh_features, colnames(cases_dat))
+  bh_features <- append('M', bh_features)
+  bh_features <- append('F', bh_features)
   
-  intersected_feats <- append('gender', intersected_feats)
-  cases_dat$gender <- as.numeric(as.factor(cases_dat$gender))
-  controls_dat$gender <- as.numeric(as.factor(controls_dat$gender))
-  controls_dat_full$gender <- as.numeric(as.factor(controls_dat_full$gender))
-  valid_dat$gender <- as.numeric(as.factor(valid_dat$gender))
+  intersected_feats <- intersect(bh_features, colnames(cases_dat))
   
   # get y
   train_y <- as.numeric(cases_dat$age_diagnosis)
@@ -388,10 +390,10 @@ testModelFac <- function(cases_dat,
 
 testModel(betaCases,
           betaControls,
-          betaControls,
+          betaControlsFull,
           betaValid,
           bh_feat_tot,
-          alpha = 0.9)
+          alpha = 0.6)
 
 
 

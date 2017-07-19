@@ -156,7 +156,7 @@ trainTest <- function(cases,
     
     # get all data sets from bh_feat_3
     # bh_feat_all <- getRun(bh_feat_3[[1]], run_num = .20)
-    bh_feat_sig <- getRun(bh_feat_3[[1]], run_num = .40)
+    bh_feat_sig <- getRun(bh_feat_3[[1]], run_num = .20)
     bh_dim[[i]] <- length(bh_feat_sig)
     # bh_feat_fwer <- getRun(bh_feat_3[[3]], run_num = seed_num)
     

@@ -44,7 +44,7 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 # fixed variables
 ##########
-method = 'raw'
+method = 'quan'
 
 #################################################################################
 # Load id_map, which has ids to merge with methylation - do for cases and controls
@@ -132,9 +132,9 @@ rm(rgValid)
 ###########
 # scale and impute
 ###########
-betaCases <- scaleImputeDat(dat = betaCases, scale = F)
-betaControls <- scaleImputeDat(dat = betaControls, scale = F)
-betaValid <- scaleImputeDat(dat = betaValid, scale = F)
+betaCases <- scaleImputeDat(dat = betaCases, scale = T)
+betaControls <- scaleImputeDat(dat = betaControls, scale = T)
+betaValid <- scaleImputeDat(dat = betaValid, scale = T)
 
 ###########
 # id functions
@@ -158,10 +158,6 @@ betaCases <- cleanIds(betaCases)
 betaControls <- cleanIds(betaControls)
 betaValid <- cleanIds(betaValid)
 
-# save.image('/home/benbrew/Desktop/temp_raw_quan.RData')
-# load('/home/benbrew/Desktop/temp_raw_# save.image('/home/benbrew/Desktop/temp_raw.RData')
-# load('/home/benbrew/Desktop/temp_raw.RData').RData')
-
 # # get cg locations
 # cg_locations <- getIds()
 # 
@@ -177,12 +173,50 @@ betaCases <- joinData(betaCases, control = F)
 betaControls <- joinData(betaControls, control = T)
 betaValid <- joinData(betaValid, control = F)
 
+# save.image('/home/benbrew/Desktop/temp_raw_full_batch.RData')
+load('/home/benbrew/Desktop/temp_raw_full_batch.RData')
+
+# save.image('/home/benbrew/Desktop/temp_quan_full_batch.RData')
+# load('/home/benbrew/Desktop/temp_quan_full_batch.RData')
+
+##########
+# get model dat
+##########
+
+betaCases <- betaCases[, !grepl('ch', colnames(betaCases))]
+betaControls <- betaControls[, !grepl('ch', colnames(betaControls))]
+betaValid <- betaValid[, !grepl('ch', colnames(betaValid))]
+
+##########
+# run combat
+##########
+
+# correct for the 9 samples done in montreal
+betaCases <- runCombat(betaCases, betaControls, betaValid, batch_var = 'mon')
+
+#############################################################################
+
+# correct fo the batches between cases, controls, and valid
+betaFull <- runCombat(betaCases, betaControls, betaValid, batch_var = 'all')
+
+# extract data from betaFull 
+betaCasesBatchFull <- betaFull[grepl('5771|5760|9721', betaFull$sentrix_id),]
+betaControlsBatchFull <- betaFull[grepl('2003|2004', betaFull$sentrix_id),]
+betaValidBatchFull <- betaFull[grepl('2010|2009', betaFull$sentrix_id),]
+
+# check if data is the same
+stopifnot(betaCases$ids == betaCasesBatchFull$ids)
+stopifnot(betaControls$ids == betaControlsBatchFull$ids)
+stopifnot(betaValid$ids == betaValidBatchFull$ids)
 
 ##########
 # get controls wild type- that is WT non cancer
 ##########
 betaControlsWT <- betaCases[which(betaCases$cancer_diagnosis_diagnoses == 'Unaffected' & 
                                     betaCases$p53_germline == 'WT'),]
+
+betaControlsWTBatchFull <- betaCasesBatchFull[which(betaCasesBatchFull$cancer_diagnosis_diagnoses == 'Unaffected' & 
+                                                    betaCasesBatchFull$p53_germline == 'WT'),]
 
 ##########
 # get old controls
@@ -191,53 +225,43 @@ betaControlsOld <- betaCases[which(betaCases$cancer_diagnosis_diagnoses == 'Unaf
                                      betaCases$p53_germline == 'Mut'),]
 
 
+betaControlsOldBatchFull <- betaCasesBatchFull[which(betaCasesBatchFull$cancer_diagnosis_diagnoses == 'Unaffected' &
+                                                     betaCasesBatchFull$p53_germline == 'Mut'),]
 ##########
 # remove cancers from controls data
 ##########
 betaControls <- removeCancer(betaControls)
 betaControlsOld <- removeCancer(betaControlsOld)
 
+# batch full
+betaControlsBatchFull <- removeCancer(betaControlsBatchFull)
+betaControlsOldBatchFull <- removeCancer(betaControlsOldBatchFull)
 
-##########
-# get model dat
-##########
-betaCases <- getModData(betaCases)
-
-
-betaCases <- betaCases[, !grepl('ch', colnames(betaCases))]
-betaControls <- betaControls[, !grepl('ch', colnames(betaControls))]
+# remove ch 
 betaControlsWT <- betaControlsWT[, !grepl('ch', colnames(betaControlsWT))]
 betaControlsOld <- betaControlsOld[, !grepl('ch', colnames(betaControlsOld))]
-betaValid <- betaValid[, !grepl('ch', colnames(betaValid))]
+betaControlsWTBatchFull <- betaControlsWTBatchFull[, !grepl('ch', colnames(betaControlsWTBatchFull))]
+betaControlsOldBatchFull <- betaControlsOldBatchFull[, !grepl('ch', colnames(betaControlsOldBatchFull))]
 
-##########
-# run combat
-##########
-
-# save.image('/home/benbrew/Desktop/temp_raw.RData')
-# load('/home/benbrew/Desktop/temp_raw.RData')
-
-# correct for the 9 samples done in montreal
-betaCases <- runCombat(betaCases)
-
-# # scale data
-# # get row statistics
-# colMean <- apply(dat, 2, mean, na.rm=TRUE)
-# colSd <- apply(dat, 2, sd, na.rm=TRUE)
-# # constantInd <- rowSd==0
-# # rowSd[constantInd] <- 1
-# rowStats <- list(mean=colMean, sd=colSd)
-# 
-# # apply normilization
-# dat  <- (dat - rowStats$mean) / rowStats$sd
-betaCases[, 8:ncol(betaCases)] <- scale(betaCases[, 8:ncol(betaCases)])
+# get model data
+betaCases <- getModData(betaCases)
+betaCasesBatchFull <- getModData(betaCasesBatchFull)
 
 ##########
 # remove outliers
 ##########
+# remove from normal (batch juston toronto and montreal)
 betaControls <- removeOutlier(betaControls, wt = F, val = F)
 betaControlsWT <- removeOutlier(betaControlsWT, wt = T, val = T)
-betaValid <- removeOutlier(betaControls, wt = F, val = T)
+betaValid <- removeOutlier(betaValid, wt = F, val = T)
+
+# save.image('/home/benbrew/Desktop/batch_raw.RData')
+# save.image('/home/benbrew/Desktop/batch_quan.RData')
+
+# remove from full batch
+betaControlsBatchFull <- removeOutlier(betaControlsBatchFull, wt = F, val = F)
+betaControlsWTBatchFull <- removeOutlier(betaControlsWTBatchFull, wt = T, val = T)
+betaValidBatchFull <- removeOutlier(betaValidBatchFull, wt = F, val = T)
 
 
 # save each dataset
@@ -246,6 +270,13 @@ saveRDS(betaControls, paste0(model_data, '/betaControls', method,'.rda'))
 saveRDS(betaControlsWT, paste0(model_data, '/betaControlsWT', method,'.rda'))
 saveRDS(betaControlsOld, paste0(model_data, '/betaControlsOld', method,'.rda'))
 saveRDS(betaValid, paste0(model_data, '/betaValid', method,'.rda'))
+
+# save each dataset for batch full
+saveRDS(betaCasesBatchFull, paste0(model_data, '/betaCasesBatchFull', method,'.rda'))
+saveRDS(betaControlsBatchFull, paste0(model_data, '/betaControlsBatchFull', method,'.rda'))
+saveRDS(betaControlsWTBatchFull, paste0(model_data, '/betaControlsWTBatchFull', method,'.rda'))
+saveRDS(betaControlsOldBatchFull, paste0(model_data, '/betaControlsOldBatchFull', method,'.rda'))
+saveRDS(betaValidBatchFull, paste0(model_data, '/betaValidBatchFull', method,'.rda'))
 # 
 # betaCases <- readRDS(paste0(model_data, '/betaCases', method,'.rda'))
 # betaControls <- readRDS(paste0(model_data, '/betaControls', method,'.rda'))
