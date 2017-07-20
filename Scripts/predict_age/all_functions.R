@@ -365,7 +365,8 @@ getPCA <- function(pca_data,
                    name, 
                    gene_start, 
                    pca1,
-                   pca2) 
+                   pca2,
+                   use_legend) 
 {
   
   
@@ -409,10 +410,18 @@ getPCA <- function(pca_data,
                cex = 1.3,
                main = name,
                pch = 16,
-               col = adjustcolor(colors, alpha.f = 0.9)
+               col = adjustcolor(colors, alpha.f = 0.7)
   )
   abline(v = c(0,0),
          h = c(0,0))
+  
+  if(use_legend) {
+    legend('bottomright',  
+           legend = unique(pca_data$batch), 
+           col=1:length(unique(pca_data$batch)), 
+           pch=16,  
+           cex = 0.7)
+  }
   
   return(plot)
 }
