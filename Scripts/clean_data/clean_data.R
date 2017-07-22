@@ -1,6 +1,3 @@
-######
-# This script will act as the "model pipeline" grabbing bumphunter features on training set only
-
 ##########
 # initialize libraries
 ##########
@@ -216,7 +213,7 @@ betaControlsWT <- betaCases[which(betaCases$cancer_diagnosis_diagnoses == 'Unaff
                                     betaCases$p53_germline == 'WT'),]
 
 betaControlsWTBatchFull <- betaCasesBatchFull[which(betaCasesBatchFull$cancer_diagnosis_diagnoses == 'Unaffected' & 
-                                                    betaCasesBatchFull$p53_germline == 'WT'),]
+                                                      betaCasesBatchFull$p53_germline == 'WT'),]
 
 ##########
 # get old controls
@@ -226,7 +223,7 @@ betaControlsOld <- betaCases[which(betaCases$cancer_diagnosis_diagnoses == 'Unaf
 
 
 betaControlsOldBatchFull <- betaCasesBatchFull[which(betaCasesBatchFull$cancer_diagnosis_diagnoses == 'Unaffected' &
-                                                     betaCasesBatchFull$p53_germline == 'Mut'),]
+                                                       betaCasesBatchFull$p53_germline == 'Mut'),]
 ##########
 # remove cancers from controls data
 ##########
@@ -353,6 +350,4 @@ getPCA(pca_data = betaValid,
        pca2 = 2)
 
 
-# 
-# 
 # 
