@@ -23,13 +23,6 @@ clin_data <- paste0(data_folder, '/clin_data')
 ##########
 # raw
 beta_raw <- readRDS(paste0(methyl_data, '/beta_raw.rda'))
-beta_raw_controls <- readRDS(paste0(methyl_data, '/beta_raw_controls.rda'))
-beta_raw_valid <- readRDS(paste0(methyl_data, '/beta_raw_valid.rda'))
-
-# quan
-beta_quan <- readRDS(paste0(methyl_data, '/beta_quan.rda'))
-beta_quan_controls <- readRDS(paste0(methyl_data, '/beta_quan_controls.rda'))
-beta_quan_valid <- readRDS(paste0(methyl_data, '/beta_quan_valid.rda'))
 
 
 ##########

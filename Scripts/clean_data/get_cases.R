@@ -4,6 +4,7 @@
 ##########
 # load libraries
 ##########
+library(tidyverse)
 library(data.table)
 library(GenomicRanges)
 library(biovizBase)
@@ -41,6 +42,7 @@ rgCases <- read.metharray.exp(idat_data)
 # get preprocedssing method
 ##########
 betaCases <- preprocessMethod(rgCases, preprocess = method)
+rm(rgCases)
 
 ##########
 # read in clinical data
@@ -65,6 +67,7 @@ id_map_other$Project <- NULL
 # combine id_map and id_map_other
 ##########
 id_map <- rbind(id_map, id_map_other)
+rm(id_map_other)
 
 ##########
 # clean idmap
@@ -86,46 +89,40 @@ betaCases <- cleanIds(betaCases)
 # remove 'ch' from column names
 betaCases <- betaCases[, !grepl('ch', colnames(betaCases))]
 
-# remove duplicates 
-
-# store ids and sentrix id
-ids <- cbind(malkin_ids = betaCases$ids, sentrix_id = betaCases$sentrix_id)
-
-# remove sentrix_id
-betaCases$sentrix_id <- NULL
-
-# make betaCases a dat
-keys <- colnames(betaCases)[!grepl('cg', colnames(betaCases))]
-
-X <- as.data.table(betaCases)
-
-betaCasesDup <- X[,lapply(.SD,mean),keys]
-
-
-# remove duplicate ids 
-
-
-# group by ids and get means
-betaCases_dup <- betaCases %>%
-  group_by(ids) %>%
-  summarise_all(funs(mean))
-
 ##########
 # join data
 ##########
-temp <- inner_join(betaCases$ids)
-length(unique(betaCases$ids))
-length(unique(clin$ids))
 
-###########
-# scale and impute
-###########
+# inner join
+betaCases <- inner_join(clin, betaCases, by = 'ids')
 
-if (method == 'raw') {
-  
-  betaCases <- scaleImputeDat(dat = betaCases, scale = T)
-  
-}
+# remove NAs from tm_donor 
+betaCases <- betaCases[!is.na(betaCases$tm_donor_),]
 
+# remove duplicates
+betaCases <- betaCases[!duplicated(betaCases$tm_donor_),]
 
+##########
+# get data in format for saving
+##########
+
+# get cg_sites
+cg_sites <- colnames(betaCases)[grepl('cg', colnames(betaCases))]
+
+# subset data by colmns of interest and cg_sites
+betaCases <- betaCases[, c('ids', 
+                           'p53_germline', 
+                           'cancer_diagnosis_diagnoses', 
+                           'age_diagnosis',
+                           'age_sample_collection',
+                           'gender',
+                           cg_sites)]
+
+# save.image('/home/benbrew/Desktop/raw_cases_temp.RData')
+# load('/home/benbrew/Desktop/raw_cases_temp.RData')
+
+##########
+# save version of data to explore batches on pca
+##########
+# saveRDS(betaCases, paste0(methyl_data, '/betaCasesBatch.rda'))
 
