@@ -50,6 +50,24 @@ preprocessMethod <- function(data, preprocess) {
 }
 
 ##########
+# scale data
+##########
+scaleData <- function(dat)
+{
+  # get row statistics
+  colMean <- apply(dat, 2, mean)
+  colSd <- apply(dat, 2, sd)
+  # constantInd <- rowSd==0
+  # rowSd[constantInd] <- 1
+  colStats <- list(mean=colMean, sd=colSd)
+  
+  # apply normilization
+  dat  <- (dat - colStats$mean) / colStats$sd
+  
+  return(dat)
+}
+
+##########
 # impute and scale for raw data
 ##########
 scaleImputeDat <- function(dat, scale) {
@@ -88,6 +106,26 @@ scaleImputeDat <- function(dat, scale) {
   
   
   return(final_dat)
+}
+
+##########
+# function to remove columns that have any NAs
+##########
+removeNA <- function(data_frame, probe_start) {
+  
+  # get full probe (all non missing columns) data set
+  temp_data <- 
+    data_frame[, probe_start:ncol(data_frame)][, sapply(data_frame[, probe_start:ncol(data_frame),], 
+                                                        function(x) all(!is.na(x)))]
+  
+  # combine probes with clin
+  full_data <- as.data.frame(cbind(data_frame[, 1:7], temp_data))
+  
+  # check that it worked
+  stopifnot(all(!is.na(full_data[, probe_start:ncol(full_data)])))
+  
+  return(full_data)
+  
 }
 
 ##########
@@ -372,9 +410,7 @@ getPCA <- function(pca_data,
   
   pca_data[, column_name] <- as.factor(pca_data[, column_name])
   
-  # # subet data so only p53 mut
-  # pca_data <- pca_data[pca_data$p53_germline == 'Mut',]
-  # 
+
   # get features sites
   cg_sites <- colnames(pca_data)[gene_start:ncol(pca_data)]
   
@@ -390,8 +426,6 @@ getPCA <- function(pca_data,
   data_length <- ncol(pca_data)
   pca <- prcomp(pca_data[,2:data_length])
 
-  
-  # plot data 4257,  94, 93
   #fill in factors with colors 
   col_vec <- c('blue','red' , 'green', 'brown', 'orange', 'purple', 'lightblue', 
                'blueviolet', 'bisque', 'cyan', 'deeppink',
@@ -430,19 +464,21 @@ getPCA <- function(pca_data,
 ##########
 # remove outliers  4257 cases, 3391, 3392 controls
 ##########
-# "201046420226_R01C01"
-# data <- valid
-# val <- T
-# wt <- F
-removeOutlier <- function(data, wt, val) {
 
-  #controls outlier
-  data <- data[data$ids != '3391',]
-  data <- data[data$ids != '3392',]
-  
-  if(wt) {
-    data <- data[data$ids != '2564',]
+removeOutlier <- function(data, 
+                          cases, 
+                          controls, 
+                          val) {
+
+  if (cases) {
+    data <- data[data$ids != '3010',]
     
+  }
+  #controls outlier
+  if (controls) {
+    
+    data <- data[data$ids != '3391',]
+    data <- data[data$ids != '3392',]
   }
   
   if(val){
@@ -450,12 +486,6 @@ removeOutlier <- function(data, wt, val) {
     
   }
 
-  
-  # data <- data[data$ids != '4257',]
-  # data <- data[data$ids != '94',]
-  # data <- data[data$ids != '93',]
-  # data <- data[data$ids != '2414',]
-  
   
   return(data)
 }

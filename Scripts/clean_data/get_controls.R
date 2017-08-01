@@ -85,7 +85,7 @@ betaControls <- betaControls[, !grepl('ch', colnames(betaControls))]
 betaCases <- readRDS(paste0(methyl_data, '/betaCasesBatch.rda'))
 
 # get intersecting features
-intersect_feat <- Reduce(intersect, list(colnames(betaCases)[7:ncol(betaCases)],
+intersect_feat <- Reduce(intersect, list(colnames(betaCases)[8:ncol(betaCases)],
                                          colnames(betaControls)[1:ncol(betaControls)]))
 
 # subset betaCases and save
@@ -95,6 +95,7 @@ betaCases <- betaCases[, c('ids',
                            'age_diagnosis',
                            'age_sample_collection',
                            'gender',
+                           'sentrix_id',
                            intersect_feat)]
 
 saveRDS(betaCases, paste0(methyl_data, '/betaCasesBatch.rda'))
@@ -134,6 +135,7 @@ betaControls <- betaControls[, c('ids',
                                   'age_diagnosis',
                                   'age_sample_collection',
                                   'gender',
+                                 'sentrix_id',
                                   cg_sites)]
 
 
@@ -141,4 +143,28 @@ betaControls <- betaControls[, c('ids',
 # save version of data to explore batches on pca
 ##########
 saveRDS(betaControls, paste0(methyl_data, '/betaControlsBatch.rda'))
+betaControls <- readRDS(paste0(methyl_data, '/betaControlsBatch.rda'))
+
+##########
+# remove NA
+##########
+betaControls <- removeNA(betaControls, probe_start = 8) #450168
+
+##########
+# remove outliers
+##########
+betaControls <- removeOutlier(betaControls, 
+                              cases = F, 
+                              controls = T, 
+                              val =F)
+
+##########
+# scale data
+##########
+
+##########
+# batch correction
+########## 
+
+
 

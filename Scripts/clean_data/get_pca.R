@@ -1,6 +1,6 @@
 ## this script will read in batch data from get_cases, get_controls, or get_valid and explore potential batches and outliers
 
-############
+##########
 # initialize libraries
 ##########
 library(dplyr)
@@ -25,6 +25,125 @@ betaControls <- readRDS(paste0(methyl_data, '/betaControlsBatch.rda'))
 betaValid <- readRDS(paste0(methyl_data, '/betaValidBatch.rda'))
 
 ##########
-# run pca on data
+# source all_functions.R script
 ##########
-colnames(betaCases)[1:10]
+source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
+
+##########
+# impute data - knn needs samples in columns
+##########
+betaCasesFull <- removeNA(betaCases, probe_start = 8)
+betaControlsFull <- removeNA(betaControls, probe_start = 8) #450168
+betaValidFull <- removeNA(betaValid, probe_start = 8) #450168
+
+##########
+# first check the potential sentrix_id batch effect (probes start at 8)
+##########
+
+getPCA(pca_data = betaCasesFull, 
+       column_name = 'sentrix_id', 
+       gene_start = 8, 
+       pca1 = 1, 
+       pca2 = 2, 
+       name = 'cases sentrix_id', 
+       use_legend = F) # 3358
+
+getPCA(pca_data = betaControlsFull, 
+       column_name = 'sentrix_id', 
+       gene_start = 8, 
+       pca1 = 1, 
+       pca2 = 2, 
+       name = 'controls sentrix_id', 
+       use_legend = F)
+
+getPCA(pca_data = betaValidFull, 
+       column_name = 'sentrix_id', 
+       gene_start = 8, 
+       pca1 = 1, 
+       pca2 = 2, 
+       name = 'controls sentrix_id', 
+       use_legend = F)
+
+
+##########
+# remove outliers 
+##########
+
+betaCasesFull <- removeOutlier(betaCasesFull, 
+                               cases = T, 
+                               controls = F, 
+                               val =F)
+
+betaControlsFull <- removeOutlier(betaControlsFull, 
+                                  cases = F, 
+                                  controls = T, 
+                                  val = F)
+
+betaValidFull <- removeOutlier(betaValidFull, 
+                               cases = F, 
+                               controls = F, 
+                               val = T)
+
+##########
+# first check the potential sentrix_id batch effect (probes start at 8)
+##########
+
+getPCA(pca_data = betaCasesFull, 
+       column_name = 'sentrix_id', 
+       gene_start = 8, 
+       pca1 = 1, 
+       pca2 = 2, 
+       name = 'cases sentrix_id', 
+       use_legend = F) # 3010
+
+getPCA(pca_data = betaControlsFull, 
+       column_name = 'sentrix_id', 
+       gene_start = 8, 
+       pca1 = 1, 
+       pca2 = 2, 
+       name = 'controls sentrix_id', 
+       use_legend = F)
+
+getPCA(pca_data = betaValidFull, 
+       column_name = 'sentrix_id', 
+       gene_start = 8, 
+       pca1 = 1, 
+       pca2 = 2, 
+       name = 'valid sentrix_id', 
+       use_legend = F)
+
+
+##########
+# scale data
+##########
+betaCasesFull <- scaleData(betaCasesFull)
+betaControlsFull <- scaleData(betaControlsFull)
+betaValidFull <- scaleData(betaValidFull)
+
+##########
+# first check the potential sentrix_id batch effect (probes start at 8)
+##########
+
+getPCA(pca_data = betaCasesFull, 
+       column_name = 'sentrix_id', 
+       gene_start = 8, 
+       pca1 = 1, 
+       pca2 = 2, 
+       name = 'cases sentrix_id', 
+       use_legend = F) # 3010
+
+getPCA(pca_data = betaControlsFull, 
+       column_name = 'sentrix_id', 
+       gene_start = 8, 
+       pca1 = 1, 
+       pca2 = 2, 
+       name = 'controls sentrix_id', 
+       use_legend = F)
+
+getPCA(pca_data = betaValidFull, 
+       column_name = 'sentrix_id', 
+       gene_start = 8, 
+       pca1 = 1, 
+       pca2 = 2, 
+       name = 'valid sentrix_id', 
+       use_legend = F)

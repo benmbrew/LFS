@@ -24,8 +24,6 @@ clin_data <- paste0(data_folder, '/clin_data')
 idat_data <- paste0(methyl_data, '/validation/idat_files')
 map_data <- paste0(data_folder, '/methyl_data/validation')
 
-
-
 ##########
 # source all_functions.R script
 ##########
@@ -99,7 +97,7 @@ betaValid <- betaValid[, !grepl('ch', colnames(betaValid))]
 ##########
 betaControls <- readRDS(paste0(methyl_data, '/betaControlsBatch.rda'))
 
-feats <- colnames(betaControls)[7:ncol(betaControls)]
+feats <- colnames(betaControls)[8:ncol(betaControls)]
 
 # subet betaValid by feats
 betaValid <- betaValid[, c('ids', 
@@ -141,14 +139,32 @@ betaValid <- betaValid[, c('ids',
                            'age_diagnosis',
                            'age_sample_collection',
                            'gender',
+                           'sentrix_id',
                            cg_sites)]
-
-# save.image('/home/benbrew/Desktop/raw_Valid_temp.RData')
-# load('/home/benbrew/Desktop/raw_Valid_temp.RData')
 
 ##########
 # save version of data to explore batches on pca
 ##########
-saveRDS(betaValid, paste0(methyl_data, '/betaValidBatch.rda'))
+# saveRDS(betaValid, paste0(methyl_data, '/betaValidBatch.rda'))
+# betaValid <- readRDS(paste0(methyl_data, '/betaValidBatch.rda'))
 
-##############
+##########
+# remove NA
+##########
+betaValidFull <- removeNA(betaValid, probe_start = 8) #450168
+
+##########
+# remove outliers
+##########
+betaValid <- removeOutlier(betaValid, 
+                           cases = F, 
+                           controls = F, 
+                           val = T)
+
+##########
+# scale data
+##########
+
+##########
+# batch correction
+########## 

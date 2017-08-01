@@ -116,13 +116,38 @@ betaCases <- betaCases[, c('ids',
                            'age_diagnosis',
                            'age_sample_collection',
                            'gender',
+                           'sentrix_id',
                            cg_sites)]
 
-# save.image('/home/benbrew/Desktop/raw_cases_temp.RData')
-# load('/home/benbrew/Desktop/raw_cases_temp.RData')
 
 ##########
 # save version of data to explore batches on pca
 ##########
 # saveRDS(betaCases, paste0(methyl_data, '/betaCasesBatch.rda'))
+# betaCases <- readRDS(paste0(methyl_data, '/betaCasesBatch.rda'))
+
+
+##########
+# remove NA
+##########
+betaCases <- removeNA(betaCases, probe_start = 8)
+
+##########
+# remove outliers
+##########
+betaCases <- removeOutlier(betaCases, 
+                           cases = T, 
+                           controls = F, 
+                           val =F)
+
+
+##########
+# scale data
+##########
+betaCases <- scaleData(betaCases)
+
+##########
+# batch correction
+########## 
+
 
