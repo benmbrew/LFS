@@ -116,9 +116,9 @@ getPCA(pca_data = betaValidFull,
 ##########
 # scale data
 ##########
-betaCasesFull <- scaleData(betaCasesFull)
-betaControlsFull <- scaleData(betaControlsFull)
-betaValidFull <- scaleData(betaValidFull)
+betaCasesFull <- scaleData(betaCasesFull, probe_start = 8)
+betaControlsFull <- scaleData(betaControlsFull, probe_start = 8)
+betaValidFull <- scaleData(betaValidFull, probe_start = 8)
 
 ##########
 # first check the potential sentrix_id batch effect (probes start at 8)

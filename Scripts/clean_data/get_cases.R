@@ -22,6 +22,8 @@ data_folder <- paste0(project_folder, '/Data')
 methyl_data <- paste0(data_folder, '/methyl_data')
 clin_data <- paste0(data_folder, '/clin_data')
 idat_data <- paste0(methyl_data, '/raw_files')
+model_data <- paste0(data_folder, '/model_data')
+
 
 ##########
 # source all_functions.R script
@@ -130,7 +132,7 @@ betaCases <- betaCases[, c('ids',
 ##########
 # remove NA
 ##########
-betaCases <- removeNA(betaCases, probe_start = 8)
+betaCases <- removeNA(betaCases, probe_start = 8) #450168
 
 ##########
 # remove outliers
@@ -140,14 +142,25 @@ betaCases <- removeOutlier(betaCases,
                            controls = F, 
                            val =F)
 
-
 ##########
 # scale data
 ##########
-betaCases <- scaleData(betaCases)
+betaCases[, 8:ncol(betaCases)] <- scale(betaCases[, 8:ncol(betaCases)])
 
 ##########
-# batch correction
+# save data
 ########## 
+saveRDS(betaCases, paste0(model_data, '/raw_cases_new.rda'))
+
+
+
+
+
+
+
+
+
+
+
 
 

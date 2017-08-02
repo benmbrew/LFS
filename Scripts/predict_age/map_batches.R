@@ -4,91 +4,66 @@
 # this script will check the relationship between the three controls in 450 and 850k
 # It will also create and save linear transformed controls
 # finally, it will create and save original controls with same probes used in original data
+
+##########
+# load libraries
+##########
 library(dplyr)
 library(ggplot2)
+library(graphics)
+
+##########
 # Initialize folders
+##########
 home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
 scripts_folder <- paste0(project_folder, '/Scripts')
 data_folder <- paste0(project_folder, '/Data')
-methyl_data <- paste0(data_folder, '/methyl_data')
-idat_data <- paste0(methyl_data, '/raw_files')
-clin_data <- paste0(data_folder, '/clin_data')
-bumphunter_data <- paste0(data_folder, '/bumphunter_data')
 model_data <- paste0(data_folder, '/model_data')
 
-##########################
-# load 450k and 850k
-##########################
-load(paste0(idat_data, '/imputed_idat_betas_final_control.RData'))
-beta_raw_control <- beta_raw
-beta_quan_control <- beta_quan
-beta_swan_control <- beta_swan
-beta_funnorm_control <- beta_funnorm
-rm(beta_raw, beta_quan, beta_swan, beta_funnorm)
-load(paste0(idat_data, '/imputed_idat_betas_final.RData'))
 
-#########################
-# Check distribution of controls age of sample vs original
-#########################
-hist(beta_raw$age_sample_collection, xlab = 'Age in months', 
-     main = 'Age of sample collection', col = 'lightblue', 
-     xlim = c(0,1000), ylim = c(0,70))
-hist(beta_raw_control$age_sample_collection, xlab = 'Age in months',
-     main = 'Age of sample collection (controls)', col = 'lightblue',
-     xlim = c(0,1000), ylim = c(0,20))
+##########
+# load data
+##########
+betaCases <- readRDS(paste0(model_data, '/raw_cases_new.rda'))
+betaControls <- readRDS(paste0(model_data, '/raw_controls_new.rda'))
+betaValid <- readRDS(paste0(model_data, '/raw_valid_new.rda'))
 
-##########################
-# find controls that are both in 450 and 850
-###########################
 
-# subset control data and original data by 12 samples in both
-subsetBeta <- function(control, orig) {
-  # control <- control[control$cancer_diagnosis_diagnoses != 'Unaffected',]
-  control_ids <- paste(control$id, collapse = '|')
-  orig <- orig[grepl(control_ids, orig$id), ]
-  orig_ids <- paste(orig$id, collapse = '|')
-  control <- control[grepl(orig_ids, control$id),]
-  # order the ids 
-  orig <- orig[order(orig$id),]
-  control <- control[order(control$id),]
-  # find overalpping probes between 450k and 850k for those 3 individuals (?)
-  orig_features <- colnames(orig[, 6:ncol(orig)])
-  con_features <- colnames(control[, 5:ncol(control)])
-  overlaps <- intersect(orig_features, con_features)
+##########
+# find ids that are in both cases and controls 
+##########
+shared_ids <- paste(intersect(betaCases$ids, betaControls$ids), collapse = '|')
+shared_cols <- intersect(colnames(betaCases), colnames(betaControls))
+
+# subset cases and contorls based on these ids
+cases_sub <- betaCases[grepl(shared_ids, betaCases$ids),]
+controls_sub <- betaControls[grepl(shared_ids, betaControls$ids),]
+
+# subet by columns 
+cases_sub <- cases_sub[, shared_cols]
+controls_sub <- controls_sub[, shared_cols]
+
+##########
+# function to plot each id against the other
+##########
+cases <- cases_sub
+controls <- controls_sub
+row_index <- 1
+plotCaseCon <- function (cases, controls, row_index) 
+{
+  cases_cg <- as.numeric(cases[row_index, 8:ncol(cases)])
+  controls_cg <- as.numeric(controls[row_index, 8:ncol(controls)])
   
-  # subset orig and control by overlaps
-  orig <- orig[, c('id', 'age_sample_collection', overlaps)]
-  control <- control[, c('id' ,'age_sample_collection', overlaps)]
-  raw_control <- beta_raw_control[, c('id' ,'age_sample_collection', overlaps)]
+  smoothScatter(cases_cg, 
+                controls_cg, 
+                main = row_index,
+                xlab = 'cases', 
+                ylab = 'controls')
   
-  return(list(orig, control, raw_control))
+  
 }
 
-
-# raw
-raw <- subsetBeta(beta_raw_control, beta_raw)
-beta_raw_12 <- raw[[1]]
-beta_raw_control_12 <- raw[[2]]
-beta_raw_control_overlap <- raw[[3]]
-
-#quan
-quan <- subsetBeta(beta_quan_control, beta_quan)
-beta_quan_12 <- quan[[1]]
-beta_quan_control_12 <- quan[[2]]
-beta_quan_control_overlap <- quan[[3]]
-
-#swan
-swan <- subsetBeta(beta_swan_control, beta_swan)
-beta_swan_12 <- swan[[1]]
-beta_swan_control_12 <- swan[[2]]
-beta_swan_control_overlap <- swan[[3]]
-
-#funnorm
-funnorm <- subsetBeta(beta_funnorm_control, beta_funnorm)
-beta_funnorm_12 <- funnorm[[1]]
-beta_funnorm_control_12 <- funnorm[[2]]
-beta_funnorm_control_overlap <- funnorm[[3]]
 ########################
 # 3 plots, 450k against 850k, ordering methylation values from smallest to largest
 ##########################

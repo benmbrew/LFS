@@ -49,23 +49,26 @@ preprocessMethod <- function(data, preprocess) {
   
 }
 
-##########
-# scale data
-##########
-scaleData <- function(dat)
-{
-  # get row statistics
-  colMean <- apply(dat, 2, mean)
-  colSd <- apply(dat, 2, sd)
-  # constantInd <- rowSd==0
-  # rowSd[constantInd] <- 1
-  colStats <- list(mean=colMean, sd=colSd)
-  
-  # apply normilization
-  dat  <- (dat - colStats$mean) / colStats$sd
-  
-  return(dat)
-}
+# ##########
+# # scale data
+# ##########
+# dat <- betaCases 
+# probe_start <- 8
+# scaleData <- function(dat, probe_start)
+# {
+#   
+#   # get row statistics
+#   colMean <- apply(dat[, probe_start:ncol(dat)], 2, mean)
+#   colSd <- apply(dat[, probe_start:ncol(dat)], 2, sd)
+#   # constantInd <- rowSd==0
+#   # rowSd[constantInd] <- 1
+#   colStats <- list(mean=colMean, sd=colSd)
+#   
+#   # apply normilization
+#   dat[, probe_start:ncol(dat)]  <- (dat[, probe_start:ncol(dat)] - colStats$mean) / colStats$sd
+#   
+#   return(dat)
+# }
 
 ##########
 # impute and scale for raw data

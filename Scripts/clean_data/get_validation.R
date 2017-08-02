@@ -23,6 +23,8 @@ methyl_data <- paste0(data_folder, '/methyl_data')
 clin_data <- paste0(data_folder, '/clin_data')
 idat_data <- paste0(methyl_data, '/validation/idat_files')
 map_data <- paste0(data_folder, '/methyl_data/validation')
+model_data <- paste0(data_folder, '/model_data')
+
 
 ##########
 # source all_functions.R script
@@ -146,12 +148,12 @@ betaValid <- betaValid[, c('ids',
 # save version of data to explore batches on pca
 ##########
 # saveRDS(betaValid, paste0(methyl_data, '/betaValidBatch.rda'))
-# betaValid <- readRDS(paste0(methyl_data, '/betaValidBatch.rda'))
+betaValid <- readRDS(paste0(methyl_data, '/betaValidBatch.rda'))
 
 ##########
 # remove NA
 ##########
-betaValidFull <- removeNA(betaValid, probe_start = 8) #450168
+betaValid <- removeNA(betaValid, probe_start = 8) #450168
 
 ##########
 # remove outliers
@@ -164,7 +166,9 @@ betaValid <- removeOutlier(betaValid,
 ##########
 # scale data
 ##########
+betaValid <- scaleData(betaValid, probe_start = 8)
 
 ##########
-# batch correction
+# save data
 ########## 
+betaValid <- saveRDS(betaValid, paste0(model_data, 'raw_valid_new.rda'))

@@ -22,6 +22,7 @@ data_folder <- paste0(project_folder, '/Data')
 methyl_data <- paste0(data_folder, '/methyl_data')
 clin_data <- paste0(data_folder, '/clin_data')
 idat_data <- paste0(methyl_data, '/controls')
+model_data <- paste0(data_folder, '/model_data')
 
 ##########
 # source all_functions.R script
@@ -142,8 +143,8 @@ betaControls <- betaControls[, c('ids',
 ##########
 # save version of data to explore batches on pca
 ##########
-saveRDS(betaControls, paste0(methyl_data, '/betaControlsBatch.rda'))
-betaControls <- readRDS(paste0(methyl_data, '/betaControlsBatch.rda'))
+# saveRDS(betaControls, paste0(methyl_data, '/betaControlsBatch.rda'))
+# betaControls <- readRDS(paste0(methyl_data, '/betaControlsBatch.rda'))
 
 ##########
 # remove NA
@@ -156,15 +157,18 @@ betaControls <- removeNA(betaControls, probe_start = 8) #450168
 betaControls <- removeOutlier(betaControls, 
                               cases = F, 
                               controls = T, 
-                              val =F)
+                              val = F)
 
 ##########
 # scale data
 ##########
+betaControls[, 8:ncol(betaControls)] <- scale(betaControls[, 8:ncol(betaControls)])
+
 
 ##########
-# batch correction
+# save data
 ########## 
+saveRDS(betaControls, paste0(model_data, '/raw_controls_new.rda'))
 
 
 
