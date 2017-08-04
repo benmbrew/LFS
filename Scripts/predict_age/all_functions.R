@@ -592,7 +592,7 @@ bumpHunterSurv <- function(dat_cases,
   stopifnot(dim(beta)[1] == length(pos))
   
   # set paramenters 
-  DELTA_BETA_THRESH = .30 # DNAm difference threshold
+  DELTA_BETA_THRESH = .10 # DNAm difference threshold
   NUM_BOOTSTRAPS = 3  # number of randomizations
   
   # create tab list

@@ -41,13 +41,27 @@ seed_num = 1
 ##########
 # load data
 ##########
-betaCases <- readRDS(paste0(model_data, '/betaCases', method,'.rda'))
-betaControls <- readRDS(paste0(model_data, '/betaControls', method,'.rda'))
-betaControlsOld <- readRDS(paste0(model_data, '/betaControlsOld', method,'.rda'))
-betaValid <- readRDS(paste0(model_data, '/betaValid', method,'.rda'))
+# betaCases <- readRDS(paste0(model_data, '/betaCases', method,'.rda'))
+# betaControls <- readRDS(paste0(model_data, '/betaControls', method,'.rda'))
+# betaControlsOld <- readRDS(paste0(model_data, '/betaControlsOld', method,'.rda'))
+# betaValid <- readRDS(paste0(model_data, '/betaValid', method,'.rda'))
 # 
 # # # TEMP
 # betaCases <- betaCases[!grepl('9721365183', betaCases$sentrix_id),]
+
+betaCases <- readRDS(paste0(model_data, '/raw_cases_new_unscaled.rda'))
+betaControls <- readRDS(paste0(model_data, '/raw_controls_new_unscaled.rda'))
+betaValid <- readRDS(paste0(model_data, '/raw_valid_new_unscaled.rda'))
+
+###########
+# get model data
+###########
+betaCases <- getModData(betaCases)
+
+# get rid of cancer samples in controls 
+betaControls <- betaControls[grepl('Unaffected', betaControls$cancer_diagnosis_diagnoses),]
+
+
 
 # load cg_locations
 cg_locations <- read.csv(paste0(model_data, 
@@ -114,8 +128,8 @@ bh_feat <- bumpHunterSurv(dat_cases = betaCases, dat_controls = betaControls)
 # get features
 ##########
 bh_feat_all <- getProbe(bh_feat)
-bh_feat_tot <- getRun(bh_feat_all[[1]], run_num = .30)
-bh_feat_sig <- getRun(bh_feat_all[[2]], run_num = .30)
+bh_feat_tot <- getRun(bh_feat_all[[1]], run_num = .10)
+bh_feat_sig <- getRun(bh_feat_all[[2]], run_num = .10)
 
 
 # get gender dummy variable
@@ -138,12 +152,12 @@ betaValid <- cbind(as.data.frame(class.ind(betaValid$gender)), betaValid)
 ##########
 # test model
 # ##########
-# cases_dat <- betaCases
-# controls_dat <- betaControls
-# controls_dat_full <- betaControlsFull
-# valid_dat <- betaValid
-# bh_features <- bh_feat_sig
-# alpha = 0.9
+cases_dat <- betaCases
+controls_dat <- betaControls
+controls_dat_full <- betaControlsFull
+valid_dat <- betaValid
+bh_features <- bh_feat_sig
+alpha = 0.9
 testModel <- function(cases_dat,
                       controls_dat,
                       controls_dat_full,

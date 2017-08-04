@@ -147,3 +147,39 @@ getPCA(pca_data = betaValidFull,
        pca2 = 2, 
        name = 'valid sentrix_id', 
        use_legend = F)
+
+##########
+# combine data and get pca
+##########
+
+
+
+# get intersection
+shared_feats <- Reduce(intersect, list(colnames(betaCasesFull[, 8:ncol(betaCasesFull)]),
+                                       colnames(betaControlsFull[, 8:ncol(betaControlsFull)]),
+                                       colnames(betaValidFull[, 8:ncol(betaValidFull)])))
+
+# add indicator for type of data
+betaCasesFull$type <- 'cases'
+betaControlsFull$type <- 'controls'
+betaValidFull$type <- 'valid'
+
+# subset data and combine
+betaCasesFull <- betaCasesFull[, c('ids', 'type' , shared_feats)]
+betaControlsFull <- betaControlsFull[, c('ids', 'type' , shared_feats)]
+betaValidFull <- betaValidFull[, c('ids', 'type' , shared_feats)]
+
+
+# full_data
+full_data <- rbind(betaCasesFull,
+                   betaControlsFull,
+                   betaValidFull)
+
+# look at pca
+getPCA(pca_data = full_data, 
+       column_name = 'type', 
+       gene_start = 3, 
+       name = 'full_data', 
+       pca1 = 1, 
+       pca2 = 2, 
+       use_legend = F)

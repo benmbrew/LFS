@@ -25,9 +25,9 @@ model_data <- paste0(data_folder, '/model_data')
 ##########
 # load data
 ##########
-betaCases <- readRDS(paste0(model_data, '/raw_cases_new.rda'))
-betaControls <- readRDS(paste0(model_data, '/raw_controls_new.rda'))
-betaValid <- readRDS(paste0(model_data, '/raw_valid_new.rda'))
+betaCases <- readRDS(paste0(model_data, '/raw_cases_new_quan.rda'))
+betaControls <- readRDS(paste0(model_data, '/raw_controls_new_quan.rda'))
+betaValid <- readRDS(paste0(model_data, '/raw_valid_new_quan.rda'))
 
 
 ##########
@@ -61,106 +61,7 @@ plotCaseCon <- function (cases, controls, row_index)
                 xlab = 'cases', 
                 ylab = 'controls')
   
-  
 }
-
-########################
-# 3 plots, 450k against 850k, ordering methylation values from smallest to largest
-##########################
-par(mfrow = c(3,4))
-
-plotRelationship <- function(beta_orig, beta_control) {
-  # plot for first patient
-  orig_1 <- as.numeric(beta_orig[1, 3:ncol(beta_orig)])
-  control_1 <- as.numeric(beta_control[1, 3:ncol(beta_orig)])
-  
-  smoothScatter(orig_1, control_1, main = '1st Sample',
-                xlab = 'Original', ylab = 'Control')
-  
-  # plot for 2nd  patient
-  orig_2 <- as.numeric(beta_orig[2,3:ncol(beta_orig)])
-  control_2 <- as.numeric(beta_control[2,3:ncol(beta_orig)])
-  
-  smoothScatter(orig_2, control_2, main = '2nd Sample',
-                xlab = 'Original', ylab = 'Control')
-  
-  # plot for 3rd patient
-  orig_3 <- as.numeric(beta_orig[3,3:ncol(beta_orig)])
-  control_3 <- as.numeric(beta_control[3,3:ncol(beta_orig)])
-  
-  smoothScatter(orig_3, control_3, main = '3rd Sample',
-                xlab = 'Original', ylab = 'Control')
-  
-  # plot for 4th patient
-  orig_4 <- as.numeric(beta_orig[4,3:ncol(beta_orig)])
-  control_4 <- as.numeric(beta_control[4,3:ncol(beta_orig)])
-  
-  smoothScatter(orig_4, control_4, main = '4th Sample',
-                xlab = 'Original', ylab = 'Control')
-  
-  # plot for 5th patient
-  orig_5 <- as.numeric(beta_orig[5,3:ncol(beta_orig)])
-  control_5 <- as.numeric(beta_control[5,3:ncol(beta_orig)])
-  
-  smoothScatter(orig_5, control_5, main = '5th Sample',
-                xlab = 'Original', ylab = 'Control')
-  
-  # plot for 6th patient
-  orig_6 <- as.numeric(beta_orig[6,3:ncol(beta_orig)])
-  control_6 <- as.numeric(beta_control[6,3:ncol(beta_orig)])
-  
-  smoothScatter(orig_6, control_6, main = '6th Sample',
-                xlab = 'Original', ylab = 'Control')
-  
-  # plot for 7th patient
-  orig_7 <- as.numeric(beta_orig[7,3:ncol(beta_orig)])
-  control_7 <- as.numeric(beta_control[7,3:ncol(beta_orig)])
-  
-  smoothScatter(orig_7, control_7, main = '7th Sample',
-                xlab = 'Original', ylab = 'Control')
-  
-  # plot for 8th patient
-  orig_8 <- as.numeric(beta_orig[8,3:ncol(beta_orig)])
-  control_8 <- as.numeric(beta_control[8,3:ncol(beta_orig)])
-  
-  smoothScatter(orig_8, control_8, main = '8th Sample',
-                xlab = 'Original', ylab = 'Control')
-  
-  # plot for 9th patient
-  orig_9 <- as.numeric(beta_orig[9,3:ncol(beta_orig)])
-  control_9 <- as.numeric(beta_control[9,3:ncol(beta_orig)])
-  
-  smoothScatter(orig_9, control_9, main = '9th Sample',
-                xlab = 'Original', ylab = 'Control')
-  
-  # plot for 10th patient
-  orig_10 <- as.numeric(beta_orig[10,3:ncol(beta_orig)])
-  control_10 <- as.numeric(beta_control[10,3:ncol(beta_orig)])
-  
-  smoothScatter(orig_10, control_10, main = '10th Sample',
-                xlab = 'Original', ylab = 'Control')
-  
-  # plot for 11th patient
-  orig_11 <- as.numeric(beta_orig[11,3:ncol(beta_orig)])
-  control_11 <- as.numeric(beta_control[11,3:ncol(beta_orig)])
-  
-  smoothScatter(orig_11, control_11, main = '11th Sample',
-                xlab = 'Original', ylab = 'Control')
-  
-  # plot for 12th patient
-  orig_12 <- as.numeric(beta_orig[12,3:ncol(beta_orig)])
-  control_12 <- as.numeric(beta_control[12,3:ncol(beta_orig)])
-  
-  smoothScatter(orig_12, control_12, main = '12th Sample',
-                xlab = 'Original', ylab = 'Control')
-  
-}
-
-plotRelationship(beta_raw_12, beta_raw_control_12)
-plotRelationship(beta_quan_12, beta_quan_control_12)
-plotRelationship(beta_swan_12, beta_swan_control_12)
-plotRelationship(beta_funnorm_12, beta_funnorm_control_12)
-
 
 
 # ######################

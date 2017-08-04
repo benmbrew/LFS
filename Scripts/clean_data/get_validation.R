@@ -34,7 +34,7 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 # fixed variables
 ##########
-method = 'raw'
+method = 'funnorm'
 
 ##########
 # read in idate for Valid, controls, and validation set
@@ -72,7 +72,6 @@ colnames(id_map)[1] <- 'Sample_Name'
 colnames(id_map)[3] <- 'Sentrix_ID'
 colnames(id_map)[4] <- 'Sentrix_Position'
 colnames(id_map)[5] <- 'Sample_Plate'
-
 
 ##########
 # clean idmap
@@ -114,10 +113,6 @@ rm(betaControls)
 # inner join
 betaValid <- inner_join(clin, betaValid, by = 'ids')
 
-# CHECK TO SEE IF YOU CAN JUST TAKE 1st DIRECTLY
-# save.image('/home/benbrew/Desktop/raw_valid_temp.RData')
-# load('/home/benbrew/Desktop/raw_valid_temp.RData')
-
 # order betaValid by tm_donor_ and age of sample collection
 betaValid <- betaValid[order(betaValid$tm_donor_, betaValid$age_sample_collection),]
 
@@ -147,8 +142,8 @@ betaValid <- betaValid[, c('ids',
 ##########
 # save version of data to explore batches on pca
 ##########
-# saveRDS(betaValid, paste0(methyl_data, '/betaValidBatch.rda'))
-betaValid <- readRDS(paste0(methyl_data, '/betaValidBatch.rda'))
+saveRDS(betaValid, paste0(methyl_data, '/betaValidQuanBatch.rda'))
+# betaValid <- readRDS(paste0(methyl_data, '/betaValidBatch.rda'))
 
 ##########
 # remove NA
@@ -164,11 +159,17 @@ betaValid <- removeOutlier(betaValid,
                            val = T)
 
 ##########
+# saved unscaled data
+##########
+saveRDS(betaValid, paste0(model_data, '/raw_valid_new_quan.rda'))
+
+##########
 # scale data
 ##########
-betaValid <- scaleData(betaValid, probe_start = 8)
+betaValid[, 8:ncol(betaValid)]  <- scale(betaValid[, 8:ncol(betaValid)])
 
 ##########
 # save data
 ########## 
-betaValid <- saveRDS(betaValid, paste0(model_data, 'raw_valid_new.rda'))
+saveRDS(betaValid, paste0(model_data, '/raw_valid_new.rda'))
+

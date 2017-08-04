@@ -33,7 +33,7 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 # fixed variables
 ##########
-method = 'raw'
+method = 'funnorm'
 
 ##########
 # read in idate for cases, controls, and validation set
@@ -125,7 +125,7 @@ betaCases <- betaCases[, c('ids',
 ##########
 # save version of data to explore batches on pca
 ##########
-# saveRDS(betaCases, paste0(methyl_data, '/betaCasesBatch.rda'))
+# saveRDS(betaCases, paste0(methyl_data, '/betaCasesFunBatch.rda'))
 # betaCases <- readRDS(paste0(methyl_data, '/betaCasesBatch.rda'))
 
 
@@ -141,6 +141,12 @@ betaCases <- removeOutlier(betaCases,
                            cases = T, 
                            controls = F, 
                            val =F)
+
+##########
+# saved unscaled data
+##########
+saveRDS(betaCases, paste0(model_data, '/raw_cases_new_fun.rda'))
+
 
 ##########
 # scale data

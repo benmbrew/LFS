@@ -52,13 +52,25 @@ seed_num <- argv[1]
 ##########
 # load data
 ##########
-betaCases <- readRDS(paste0(model_data, '/betaCases', method,'.rda'))
-betaControls <- readRDS(paste0(model_data, '/betaControls', method,'.rda'))
-# betaControlsOld <- readRDS(paste0(model_data, '/betaControlsOld', method,'.rda'))
-betaValid <- readRDS(paste0(model_data, '/betaValid', method,'.rda'))
-# 
-# # # TEMP
-# betaCases <- betaCases[!grepl('9721365183', betaCases$sentrix_id),]
+# betaCases <- readRDS(paste0(model_data, '/betaCases', method,'.rda'))
+# betaControls <- readRDS(paste0(model_data, '/betaControls', method,'.rda'))
+# # betaControlsOld <- readRDS(paste0(model_data, '/betaControlsOld', method,'.rda'))
+# betaValid <- readRDS(paste0(model_data, '/betaValid', method,'.rda'))
+# # 
+# # # # TEMP
+# # betaCases <- betaCases[!grepl('9721365183', betaCases$sentrix_id),]
+betaCases <- readRDS(paste0(model_data, '/raw_cases_new_unscaled.rda'))
+betaControls <- readRDS(paste0(model_data, '/raw_controls_new_unscaled.rda'))
+betaValid <- readRDS(paste0(model_data, '/raw_valid_new_unscaled.rda'))
+
+###########
+# get model data
+###########
+betaCases <- getModData(betaCases)
+
+# get rid of cancer samples in controls 
+betaControls <- betaControls[grepl('Unaffected', betaControls$cancer_diagnosis_diagnoses),]
+
 
 # load cg_locations
 cg_locations <- read.csv(paste0(model_data, 
@@ -122,7 +134,8 @@ betaControls <- cbind(as.data.frame(class.ind(betaControls$gender)), betaControl
 
 # betaCases <- betaCases[, c(1:3000, ncol(betaCases))]
 # betaControls <- betaControls[, c(1:3000, ncol(betaControls))]
-
+cases <- betaCases
+controls <- betaControls
 
 trainTest <- function(cases, 
                       controls,
@@ -156,7 +169,7 @@ trainTest <- function(cases,
     
     # get all data sets from bh_feat_3
     # bh_feat_all <- getRun(bh_feat_3[[1]], run_num = .20)
-    bh_feat_sig <- getRun(bh_feat_3[[1]], run_num = .20)
+    bh_feat_sig <- getRun(bh_feat_3[[1]], run_num = .10)
     bh_dim[[i]] <- length(bh_feat_sig)
     # bh_feat_fwer <- getRun(bh_feat_3[[3]], run_num = seed_num)
     
