@@ -454,8 +454,8 @@ getPCA <- function(pca_data,
   
   if(use_legend) {
     legend('bottomright',  
-           legend = unique(pca_data$batch), 
-           col=1:length(unique(pca_data$batch)), 
+           legend = unique(pca_data[, column_name]), 
+           col=unique(colors), 
            pch=16,  
            cex = 0.7)
   }
@@ -592,7 +592,7 @@ bumpHunterSurv <- function(dat_cases,
   stopifnot(dim(beta)[1] == length(pos))
   
   # set paramenters 
-  DELTA_BETA_THRESH = .10 # DNAm difference threshold
+  DELTA_BETA_THRESH = .05 # DNAm difference threshold
   NUM_BOOTSTRAPS = 3  # number of randomizations
   
   # create tab list

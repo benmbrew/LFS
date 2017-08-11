@@ -32,7 +32,7 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 # fixed variables
 ##########
-method = 'funnorm'
+method = 'quan'
 
 ##########
 # read in idate for Controls, controls, and validation set
@@ -79,36 +79,6 @@ betaControls <- cleanIds(betaControls)
 # remove 'ch' from column names
 betaControls <- betaControls[, !grepl('ch', colnames(betaControls))]
 
-
-##########
-# read in cases and get features
-##########
-betaCases <- readRDS(paste0(methyl_data, '/betaCasesQuanBatch.rda'))
-
-# get intersecting features
-intersect_feat <- Reduce(intersect, list(colnames(betaCases)[8:ncol(betaCases)],
-                                         colnames(betaControls)[1:ncol(betaControls)]))
-
-# subset betaCases and save
-betaCases <- betaCases[, c('ids', 
-                           'p53_germline', 
-                           'cancer_diagnosis_diagnoses', 
-                           'age_diagnosis',
-                           'age_sample_collection',
-                           'gender',
-                           'sentrix_id',
-                           intersect_feat)]
-
-saveRDS(betaCases, paste0(methyl_data, '/betaCasesQuanBatch.rda'))
-rm(betaCases)
-
-# subset betaControls 
-betaControls <- betaControls[, c('ids', 
-                                 'sentrix_id', 
-                                  intersect_feat)]
-
-# save.image('/home/benbrew/Desktop/raw_Controls_temp.RData')
-# load('/home/benbrew/Desktop/raw_Controls_temp.RData')
 ##########
 # join data
 ##########
@@ -143,8 +113,7 @@ betaControls <- betaControls[, c('ids',
 ##########
 # save version of data to explore batches on pca
 ##########
-saveRDS(betaControls, paste0(methyl_data, '/betaControlsFunBatch.rda'))
-# betaControls <- readRDS(paste0(methyl_data, '/betaControlsQuanBatch.rda'))
+saveRDS(betaControls, paste0(model_data, paste0('/', method, '_', 'controls_batch.rda')))
 
 ##########
 # remove NA
@@ -162,16 +131,6 @@ betaControls <- removeOutlier(betaControls,
 ##########
 # saved unscaled data
 ##########
-saveRDS(betaControls, paste0(model_data, '/raw_controls_new_fun.rda'))
 
+saveRDS(betaControls, paste0(model_data, paste0('/', method, '_', 'controls_new.rda')))
 
-##########
-# scale data
-##########
-betaControls[, 8:ncol(betaControls)] <- scale(betaControls[, 8:ncol(betaControls)])
-
-
-##########
-# save data
-########## 
-saveRDS(betaControls, paste0(model_data, '/raw_controls_new.rda'))

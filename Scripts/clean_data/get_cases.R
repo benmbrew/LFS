@@ -33,7 +33,7 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 # fixed variables
 ##########
-method = 'funnorm'
+method = 'quan'
 
 ##########
 # read in idate for cases, controls, and validation set
@@ -111,6 +111,9 @@ betaCases <- betaCases[!duplicated(betaCases$tm_donor_),]
 # get cg_sites
 cg_sites <- colnames(betaCases)[grepl('cg', colnames(betaCases))]
 
+saveRDS(cg_sites, paste0(model_data, '/four_fifty_feats.rda'))
+
+
 # subset data by colmns of interest and cg_sites
 betaCases <- betaCases[, c('ids', 
                            'p53_germline', 
@@ -125,8 +128,7 @@ betaCases <- betaCases[, c('ids',
 ##########
 # save version of data to explore batches on pca
 ##########
-# saveRDS(betaCases, paste0(methyl_data, '/betaCasesFunBatch.rda'))
-# betaCases <- readRDS(paste0(methyl_data, '/betaCasesBatch.rda'))
+saveRDS(betaCases, paste0(model_data, paste0('/', method, '_', 'cases_new_batch.rda')))
 
 
 ##########
@@ -145,18 +147,10 @@ betaCases <- removeOutlier(betaCases,
 ##########
 # saved unscaled data
 ##########
-saveRDS(betaCases, paste0(model_data, '/raw_cases_new_fun.rda'))
+
+saveRDS(betaCases, paste0(model_data, paste0('/', method, '_', 'cases_new.rda')))
 
 
-##########
-# scale data
-##########
-betaCases[, 8:ncol(betaCases)] <- scale(betaCases[, 8:ncol(betaCases)])
-
-##########
-# save data
-########## 
-saveRDS(betaCases, paste0(model_data, '/raw_cases_new.rda'))
 
 
 

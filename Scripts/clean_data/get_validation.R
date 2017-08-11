@@ -142,8 +142,7 @@ betaValid <- betaValid[, c('ids',
 ##########
 # save version of data to explore batches on pca
 ##########
-saveRDS(betaValid, paste0(methyl_data, '/betaValidQuanBatch.rda'))
-# betaValid <- readRDS(paste0(methyl_data, '/betaValidBatch.rda'))
+saveRDS(betaValid, paste0(model_data, paste0('/', method, '_', 'valid_batch.rda')))
 
 ##########
 # remove NA
@@ -161,15 +160,6 @@ betaValid <- removeOutlier(betaValid,
 ##########
 # saved unscaled data
 ##########
-saveRDS(betaValid, paste0(model_data, '/raw_valid_new_quan.rda'))
 
-##########
-# scale data
-##########
-betaValid[, 8:ncol(betaValid)]  <- scale(betaValid[, 8:ncol(betaValid)])
-
-##########
-# save data
-########## 
-saveRDS(betaValid, paste0(model_data, '/raw_valid_new.rda'))
+saveRDS(betaValid, paste0(model_data, paste0('/', method, '_', 'valid_new.rda')))
 

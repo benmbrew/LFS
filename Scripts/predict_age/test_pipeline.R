@@ -34,14 +34,14 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 # fixed variables
 ##########
 method = 'raw'
-k = 5
+k = 10
 seed_num = 1
 
 
 ##########
 # load data
 ##########
-# betaCases <- readRDS(paste0(model_data, '/betaCases', method,'.rda'))
+# betaCases_old <- readRDS(paste0(model_data, '/betaCases', method,'.rda'))
 # betaControls <- readRDS(paste0(model_data, '/betaControls', method,'.rda'))
 # betaControlsOld <- readRDS(paste0(model_data, '/betaControlsOld', method,'.rda'))
 # betaValid <- readRDS(paste0(model_data, '/betaValid', method,'.rda'))
@@ -50,8 +50,21 @@ seed_num = 1
 # betaCases <- betaCases[!grepl('9721365183', betaCases$sentrix_id),]
 
 betaCases <- readRDS(paste0(model_data, '/raw_cases_new_unscaled.rda'))
-betaControls <- readRDS(paste0(model_data, '/raw_controls_new_unscaled.rda'))
-betaValid <- readRDS(paste0(model_data, '/raw_valid_new_unscaled.rda'))
+
+# scaled ata
+betaCases <- readRDS(paste0(model_data, '/raw_cases_new.rda'))
+
+
+# scale betaCaes
+# betaControls <- readRDS(paste0(model_data, '/raw_controls_new_unscaled.rda'))
+# betaValid <- readRDS(paste0(model_data, '/raw_valid_new_unscaled.rda'))
+
+betaControls <- readRDS(paste0(model_data, '/controls_transformed.rda'))
+betaValid <- readRDS(paste0(model_data, '/valid_transformed.rda'))
+
+betaControls <- readRDS(paste0(model_data, '/controls_transformed_scaled.rda'))
+betaValid <- readRDS(paste0(model_data, '/valid_transformed_scaled.rda'))
+
 
 ###########
 # get model data
@@ -60,8 +73,6 @@ betaCases <- getModData(betaCases)
 
 # get rid of cancer samples in controls 
 betaControls <- betaControls[grepl('Unaffected', betaControls$cancer_diagnosis_diagnoses),]
-
-
 
 # load cg_locations
 cg_locations <- read.csv(paste0(model_data, 
@@ -111,6 +122,17 @@ betaControlsFull <- betaControlsFull[!is.na(betaControlsFull$age_sample_collecti
 rm(betaControlsOld)
 
 ##########
+# change age variables to numeric
+##########
+betaCases$age_diagnosis <- as.numeric(as.character(betaCases$age_diagnosis))
+betaControls$age_diagnosis <- as.numeric(as.character(betaControls$age_diagnosis))
+betaValid$age_diagnosis <- as.numeric(as.character(betaValid$age_diagnosis))
+
+betaCases$age_sample_collection <- as.numeric(as.character(betaCases$age_sample_collection))
+betaControls$age_sample_collection <- as.numeric(as.character(betaControls$age_sample_collection))
+betaValid$age_sample_collection <- as.numeric(as.character(betaValid$age_sample_collection))
+
+##########
 # test for distribution sameness 
 ########## 
 testKS(x = betaCases$age_sample_collection, y = betaControls$age_sample_collection)
@@ -123,13 +145,13 @@ testKS(x = betaCases$age_sample_collection, y = betaControlsFull$age_sample_coll
 bh_feat <- bumpHunterSurv(dat_cases = betaCases, dat_controls = betaControls)
 # bh_feat_full <- bumpHunterSurv(dat_cases = betaCases, dat_controls = betaControlsFull)
 
-
 ##########
 # get features
 ##########
 bh_feat_all <- getProbe(bh_feat)
-bh_feat_tot <- getRun(bh_feat_all[[1]], run_num = .10)
-bh_feat_sig <- getRun(bh_feat_all[[2]], run_num = .10)
+bh_feat_tot <- getRun(bh_feat_all[[1]], run_num = .05)
+bh_feat_sig <- getRun(bh_feat_all[[2]], run_num = .05)
+saveRDS(bh_feat_all, '/home/benbrew/Desktop/bh_feat_unscaled.rda')
 
 
 # get gender dummy variable
@@ -156,8 +178,8 @@ cases_dat <- betaCases
 controls_dat <- betaControls
 controls_dat_full <- betaControlsFull
 valid_dat <- betaValid
-bh_features <- bh_feat_sig
-alpha = 0.9
+bh_features <- bh_feat_tot
+alpha = 0.4
 testModel <- function(cases_dat,
                       controls_dat,
                       controls_dat_full,

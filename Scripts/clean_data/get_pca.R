@@ -37,16 +37,82 @@ betaControlsFull <- removeNA(betaControls, probe_start = 8) #450168
 betaValidFull <- removeNA(betaValid, probe_start = 8) #450168
 
 ##########
+# load scaled and unscaled transormed data
+##########
+
+betaCases <- readRDS(paste0(model_data, '/raw_cases_new_unscaled.rda'))
+
+# scaled ata
+betaCases <- readRDS(paste0(model_data, '/raw_cases_new.rda'))
+
+
+# scale betaCaes
+# betaControls <- readRDS(paste0(model_data, '/raw_controls_new_unscaled.rda'))
+# betaValid <- readRDS(paste0(model_data, '/raw_valid_new_unscaled.rda'))
+
+betaControls <- readRDS(paste0(model_data, '/controls_transformed.rda'))
+betaValid <- readRDS(paste0(model_data, '/valid_transformed.rda'))
+
+betaControls <- readRDS(paste0(model_data, '/controls_transformed_scaled.rda'))
+betaValid <- readRDS(paste0(model_data, '/valid_transformed_scaled.rda'))
+
+##########
 # first check the potential sentrix_id batch effect (probes start at 8)
 ##########
 
+# get mod data
+betaCases <- getModData(betaCases)
+
+##########
+# if you use transform data, homogenize here
+##########
+intersect_names <- Reduce(intersect, list(colnames(betaCases)[8:ncol(betaCases)], 
+                                          colnames(betaControls)[8:ncol(betaControls)], 
+                                          colnames(betaValid)[8:ncol(betaValid)]))
+# organize each data set accordling
+betaCases$type <- 'cases'
+betaControls$type <- 'controls'
+betaValid$type <- 'valid'
+
+# cases
+betaCases <- betaCases[, c('age_diagnosis', 
+                           'age_sample_collection', 
+                           'cancer_diagnosis_diagnoses', 
+                           'gender',
+                           'type',
+                           intersect_names)]
+# controls
+betaControls <- betaControls[, c('age_diagnosis', 
+                                 'age_sample_collection', 
+                                 'cancer_diagnosis_diagnoses', 
+                                 'gender', 
+                                 'type',
+                                 intersect_names)]
+
+#validation
+betaValid <- betaValid[, c('age_diagnosis', 
+                           'age_sample_collection', 
+                           'cancer_diagnosis_diagnoses', 
+                           'gender',
+                           'type',
+                           intersect_names)]
+
+betaCasesFull <- rbind(betaCases,
+                       betaControls,
+                       betaValid)
+
+
+# scale full data
+betaCasesFull[, 6:ncol(betaCasesFull)] <- scale(betaCasesFull[, 6:ncol(betaCasesFull)])
+
 getPCA(pca_data = betaCasesFull, 
-       column_name = 'sentrix_id', 
-       gene_start = 8, 
+       column_name = 'type', 
+       gene_start = 6, 
        pca1 = 1, 
        pca2 = 2, 
-       name = 'cases sentrix_id', 
-       use_legend = F) # 3358
+       name = 'cases, controls, validation set, just cancer', 
+       use_legend = T) # 3358
+
 
 getPCA(pca_data = betaControlsFull, 
        column_name = 'sentrix_id', 

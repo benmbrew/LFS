@@ -123,8 +123,8 @@ betaValid <- betaValid[, c('age_diagnosis',
 # between 2 groups
 
 # get a column for each dataset indicating the fold
-betaCases <- getFolds(betaCases, seed_number = seed_num, k_num = k)
-betaControls <- getFolds(betaControls, seed_number = seed_num, k_num = k)
+betaCases <- getFolds(betaCases, seed_number = seed_num, k_num = k_folds)
+betaControls <- getFolds(betaControls, seed_number = seed_num, k_num = k_folds)
 
 # get gender 
 # get gender dummy variable
