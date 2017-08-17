@@ -396,6 +396,24 @@ getModData <- function(data)
   return(data)
 }
 
+##########
+# get old controls 
+##########
+getControls <- function(data, mut) 
+{
+  data <- data[grepl('Unaffected', data$cancer_diagnosis_diagnoses),]
+  
+  if (mut) {
+    # subset data by not na in age of diagnosis and mut
+    data <- data[grepl('Mut', data$p53_germline),]
+  } else {
+    data <- data[grepl('WT', data$p53_germline),]
+    
+  }
+ 
+  return(data)
+}
+
 
 ##########
 # get pca function
@@ -781,10 +799,18 @@ testKS <- function(x, y)
   
 }
 
-# # #
+# # # #
+# training_dat = cases[train_index,]
+# test_dat = cases[test_index,]
+# controls_dat = betaControls
+# valid_dat = betaValid
+# bh_features = bh_feat_sig
+# gender = T
 
 runEnet <- function(training_dat, 
                     test_dat,
+                    controls_dat,
+                    valid_dat,
                     bh_features,
                     gender) 
 {
@@ -799,15 +825,18 @@ runEnet <- function(training_dat,
   # # get y
   train_y <- as.numeric(training_dat$age_diagnosis)
   test_y <- as.numeric(test_dat$age_diagnosis)
+  test_y_controls <- as.numeric(controls_dat$age_sample_collection)
+  test_y_valid <- as.numeric(valid_dat$age_diagnosis)
   patient_age <- as.numeric(test_dat$age_sample_collection)
   missing_ind <- !is.na(patient_age)
-  patient_age <-patient_age[missing_ind]
+  patient_age <- patient_age[missing_ind]
   
   # get bumphunter features
   training_dat <- training_dat[, intersected_feats]
   test_dat <- test_dat[, intersected_feats]
+  controls_dat <- controls_dat[, intersected_feats]
+  valid_dat <- valid_dat[, intersected_feats]
   
-
   N_CV_REPEATS = 2
   nfolds = 3
   
@@ -906,9 +935,25 @@ runEnet <- function(training_dat,
                                    data.matrix(test_dat),
                                    type = 'response')
   
-  
-  
   test.predictions <- temp_test.predictions[, temp.min_lambda_index]
+  
+  # get controls
+  temp_test.predictions_controls <- predict(model,
+                                            data.matrix(controls_dat),
+                                            type = 'response')
+  
+  
+  
+  test.predictions_controls <- temp_test.predictions_controls[, temp.min_lambda_index]
+  
+  # valid
+  temp_test.predictions_valid <- predict(model,
+                                         data.matrix(valid_dat),
+                                         type = 'response')
+  
+  
+  
+  test.predictions_valid  <- temp_test.predictions_valid[, temp.min_lambda_index]
   
   importance <- coef(model)
   
@@ -918,20 +963,29 @@ runEnet <- function(training_dat,
   
   age_cor <- cor(test.predictions[missing_ind], patient_age)
   
+  # # for each iteration, this should always be the same.
+  controls_cor <- cor(test_y_controls, test.predictions_controls)
+  
+  valid_cor  <- cor(test_y_valid, test.predictions_valid)
+  
   alpha  <- best_alpha
   
-  return(list(alpha, lambda_value, importance, cases_cor, age_cor, temp.non_zero_coeff))
+  return(list(alpha, lambda_value, importance, cases_cor, age_cor, controls_cor, valid_cor, temp.non_zero_coeff))
 
 
 }
 # training_dat = cases[train_index,]
 # test_dat = cases[test_index,]
+# controls_dat = betaControls
+# valid_dat = betaValid
 # bh_features = bh_feat_sig
 # gender = T
 # cutoff = 48
 
 runEnetFac <- function(training_dat, 
                        test_dat,
+                       controls_dat,
+                       valid_dat,
                        bh_features,
                        gender,
                        cutoff) 
@@ -1302,14 +1356,18 @@ getResults <- function(result_list, result_list_resid)
                         result_list[[3]],
                         result_list[[4]],
                         result_list[[5]],
-                        result_list[[6]])
+                        result_list[[6]],
+                        result_list[[7]],
+                        result_list[[8]])
   
   results_final_resid <- list(result_list_resid[[1]],
                               result_list_resid[[2]],
                               result_list_resid[[3]],
                               result_list_resid[[4]],
                               result_list_resid[[5]],
-                              result_list_resid[[6]])
+                              result_list_resid[[6]],
+                              result_list_resid[[7]],
+                              result_list_resid[[8]])
   
   return(list(results_final, results_final_resid))
   

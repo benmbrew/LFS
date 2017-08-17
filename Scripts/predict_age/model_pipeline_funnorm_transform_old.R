@@ -30,7 +30,7 @@ registerDoParallel(1)
 ##########
 # initialize folders
 ##########
-home_folder <- '~/hpf/largeprojects/agoldenb/ben/Projects'
+home_folder <- '/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
 data_folder <- paste0(project_folder, '/Data')
 methyl_data <- paste0(data_folder, '/methyl_data')
@@ -44,33 +44,43 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 # fixed variables
 ##########
-method = 'raw'
-k_folds = 10
+method = 'funnorm'
+k = 5
 seed_num <- argv[1]
-
+type = 'transform'
 
 ##########
 # load data
 ##########
-# betaCases <- readRDS(paste0(model_data, '/betaCases', method,'.rda'))
-# betaControls <- readRDS(paste0(model_data, '/betaControls', method,'.rda'))
-# # betaControlsOld <- readRDS(paste0(model_data, '/betaControlsOld', method,'.rda'))
-# betaValid <- readRDS(paste0(model_data, '/betaValid', method,'.rda'))
-# # 
-# # # # TEMP
-# # betaCases <- betaCases[!grepl('9721365183', betaCases$sentrix_id),]
-betaCases <- readRDS(paste0(model_data, '/raw_cases_new_unscaled.rda'))
-betaControls <- readRDS(paste0(model_data, '/raw_controls_new_unscaled.rda'))
-betaValid <- readRDS(paste0(model_data, '/raw_valid_new_unscaled.rda'))
+if (type == 'original') {
+  
+  betaCases <- readRDS(paste0(model_data, paste0('/', method, '_', 'cases_new.rda')))
+  betaControls <- readRDS(paste0(model_data, paste0('/', method, '_', 'controls_new.rda'))) #34 449936
+  betaValid <- readRDS(paste0(model_data, paste0('/', method, '_', 'valid_new.rda'))) #35 449783
+  
+} else if (type == 'transform') {
+  
+  betaCases <- readRDS(paste0(model_data, paste0('/', method, '_', 'cases_new.rda')))
+  betaControls <- readRDS(paste0(model_data, paste0('/controls_transform','_' , method, '.rda'))) # 34 435813
+  betaValid <- readRDS(paste0(model_data, paste0('/valid_transform','_' , method, '.rda'))) # 45 400842
+  
+} else {
+  
+  betaCases <- readRDS(paste0(model_data, paste0('/', method, '_', 'cases_new.rda')))
+  betaControls <- readRDS(paste0(model_data, paste0('/controls_no_transform','_' , method, '.rda'))) # 34 435813
+  betaValid <- readRDS(paste0(model_data, paste0('/valid_no_transform','_' , method, '.rda')))# 45 400842
+  
+}
+
+###########
+# get extra controls from 450k 
+###########
+betaControlsOld <- getControls(betaCases, mut = T)
 
 ###########
 # get model data
 ###########
 betaCases <- getModData(betaCases)
-
-# get rid of cancer samples in controls 
-betaControls <- betaControls[grepl('Unaffected', betaControls$cancer_diagnosis_diagnoses),]
-
 
 # load cg_locations
 cg_locations <- read.csv(paste0(model_data, 
@@ -93,17 +103,13 @@ betaCases <- betaCases[, c('age_diagnosis',
                            'gender', 
                            intersect_names)]
 # controls
-betaControls <- betaControls[, c('age_diagnosis', 
-                                 'age_sample_collection', 
-                                 'cancer_diagnosis_diagnoses', 
-                                 'gender', 
-                                 intersect_names)]
-# # controls
-# betaControlsOld <- betaControlsOld[, c('age_diagnosis', 
-#                                  'age_sample_collection', 
-#                                  'cancer_diagnosis_diagnoses', 
-#                                  'gender', 
-#                                  intersect_names)]
+betaControlsOld <- betaControlsOld[, c('age_diagnosis', 
+                                       'age_sample_collection', 
+                                       'cancer_diagnosis_diagnoses', 
+                                       'gender', 
+                                       intersect_names)]
+
+
 #validation
 betaValid <- betaValid[, c('age_diagnosis', 
                            'age_sample_collection', 
@@ -111,34 +117,30 @@ betaValid <- betaValid[, c('age_diagnosis',
                            'gender', 
                            intersect_names)]
 
-# #TEMP
-# betaControlsFull <- rbind(betaControls, betaControlsOld)
-# 
-# # remove na in sample collection and duplicate ids
-# betaControlsFull <- betaControlsFull[!is.na(betaControlsFull$age_sample_collection),]
-
+rm(betaControls)
 
 ###########################################################################
 # Next part of the pipline selects regions of the genome that are most differentially methylated 
 # between 2 groups
 
 # get a column for each dataset indicating the fold
-betaCases <- getFolds(betaCases, seed_number = seed_num, k_num = k_folds)
-betaControls <- getFolds(betaControls, seed_number = seed_num, k_num = k_folds)
+betaCases <- getFolds(betaCases, seed_number = seed_num, k_num = k)
+betaControlsOld <- getFolds(betaControlsOld, seed_number = seed_num, k_num = k)
 
 # get gender 
 # get gender dummy variable
 betaCases <- cbind(as.data.frame(class.ind(betaCases$gender)), betaCases)
-betaControls <- cbind(as.data.frame(class.ind(betaControls$gender)), betaControls)
+betaControlsOld <- cbind(as.data.frame(class.ind(betaControlsOld$gender)), betaControlsOld)
+betaValid <- cbind(as.data.frame(class.ind(betaValid$gender)), betaValid)
 
 
 # betaCases <- betaCases[, c(1:3000, ncol(betaCases))]
-# betaControls <- betaControls[, c(1:3000, ncol(betaControls))]
-cases <- betaCases
-controls <- betaControls
+# betaControlsOld <- betaControlsOld[, c(1:3000, ncol(betaControlsOld))]
+# betaValid <- betaValid[, c(1:3000, ncol(betaValid))]
 
 trainTest <- function(cases, 
                       controls,
+                      valid,
                       k) 
 {
   
@@ -168,24 +170,28 @@ trainTest <- function(cases,
     bh_feat_3 <- getProbe(bh_feat[[i]])
     
     # get all data sets from bh_feat_3
-    # bh_feat_all <- getRun(bh_feat_3[[1]], run_num = .20)
-    bh_feat_sig <- getRun(bh_feat_3[[1]], run_num = .10)
-    bh_dim[[i]] <- length(bh_feat_sig)
+    bh_feat_all <- getRun(bh_feat_3[[1]], run_num = .05)
+    # bh_feat_sig <- getRun(bh_feat_3[[2]], run_num = .10)
+    bh_dim[[i]] <- length(bh_feat_all)
     # bh_feat_fwer <- getRun(bh_feat_3[[3]], run_num = seed_num)
     
     # get residuals
     cases_resid <- getResidual(data = cases, 
-                               bh_features = bh_feat_sig)
+                               bh_features = bh_feat_all)
     
     mod_result <- runEnet(training_dat = cases[train_index,], 
                           test_dat = cases[test_index,], 
-                          bh_features = bh_feat_sig,
+                          controls_dat = controls,
+                          valid_dat = valid,
+                          bh_features = bh_feat_all,
                           gender = T)
     
     
     mod_result_resid <- runEnet(training_dat = cases_resid[train_index,], 
                                 test_dat = cases_resid[test_index,], 
-                                bh_features = bh_feat_sig,
+                                controls_dat = controls,
+                                valid_dat = valid,
+                                bh_features = bh_feat_all,
                                 gender = T)
     
     
@@ -200,9 +206,10 @@ trainTest <- function(cases,
 }
 
 mod_results <- trainTest(cases = betaCases,
-                         controls = betaControls,
-                         k = k_folds)
+                         controls = betaControlsOld,
+                         valid = betaValid,
+                         k = k)
 
 # change pred to nothing if doing surv
-saveRDS(mod_results, paste0('/hpf/largeprojects/agoldenb/ben/Projects/LFS/Scripts/predict_age/Results/reg_results/train_test', '_' , seed_num, '.rda'))
+saveRDS(mod_results, paste0('/hpf/largeprojects/agoldenb/ben/Projects/LFS/Scripts/predict_age/Results/reg_results/train_test', '_' , seed_num,'_', type, '_', method, '_', 'old', '.rda'))
 

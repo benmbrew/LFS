@@ -11,6 +11,7 @@
 library(dplyr)
 library(ggplot2)
 library(graphics)
+library(epiR)
 
 ##########
 # Initialize folders
@@ -29,6 +30,43 @@ method = 'raw'
 betaCases <- readRDS(paste0(model_data, paste0('/', method, '_', 'cases_new.rda')))
 betaControls <- readRDS(paste0(model_data, paste0('/', method, '_', 'controls_new.rda')))
 betaValid <- readRDS(paste0(model_data, paste0('/', method, '_', 'valid_new.rda')))
+
+##########
+# combine data
+##########
+intersect_names <- Reduce(intersect, list(colnames(betaCases)[8:ncol(betaCases)], 
+                                          colnames(betaControls)[8:ncol(betaControls)], 
+                                          colnames(betaValid)[8:ncol(betaValid)]))
+# organize each data set accordling
+
+# cases
+betaCases <- betaCases[, c('ids',
+                           'p53_germline',
+                           'age_diagnosis', 
+                           'age_sample_collection', 
+                           'cancer_diagnosis_diagnoses', 
+                           'gender', 
+                           'sentrix_id',
+                           intersect_names)]
+# controls
+betaControls <- betaControls[, c('ids',
+                                 'p53_germline',
+                                 'age_diagnosis', 
+                                 'age_sample_collection', 
+                                 'cancer_diagnosis_diagnoses', 
+                                 'gender', 
+                                 'sentrix_id',
+                                 intersect_names)]
+#validation
+betaValid <- betaValid[, c('ids',
+                           'p53_germline',
+                           'age_diagnosis', 
+                           'age_sample_collection', 
+                           'cancer_diagnosis_diagnoses', 
+                           'gender', 
+                           'sentrix_id',
+                           intersect_names)]
+
 
 
 ##########
@@ -76,14 +114,91 @@ plotCaseCon(cases_sub, controls_sub, row_index = 9)
 plotCaseCon(cases_sub, controls_sub, row_index = 10)
 plotCaseCon(cases_sub, controls_sub, row_index = 11)
 plotCaseCon(cases_sub, controls_sub, row_index = 12)
+plotCaseCon(cases_sub, controls_sub, row_index = 13)
+
+
+
+##########
+# find way to remove outliers on correlation plot 
+##########
+
+# loop through each probe and if their diff is bigger than 0.2 flag it
+probe_list <- list()
+sample_list <- list()
+
+for (i in 1:nrow(cases_sub)){
+  
+  temp.sample_cases <- cases_sub[i, ]
+  temp.sample_controls <- controls_sub[i, ]
+  
+  for (j in 9:ncol(temp.sample_cases)) {
+    
+    temp.probe_cases_name <- names(temp.sample_cases)[j]
+    
+    temp.probe_cases <- temp.sample_cases[, j]
+    temp.probe_controls <- temp.sample_controls[, j]
+    
+    diff <- abs(temp.probe_cases - temp.probe_controls)
+    
+    if (diff > 0.2) {
+      
+    probe_list[[j]] <- temp.probe_cases_name
+    
+    }
+    
+  }
+  
+  probe_names <- do.call(rbind, probe_list)
+  sample_list[[i]] <- probe_names
+  
+  print(i)
+  
+}
+
+load('/home/benbrew/Desktop/temp.sample_list.RData')
+
+###########
+# combine list 
+###########
+
+# get union of all "bad" probes 
+temp_probes <- as.data.frame(do.call(rbind, sample_list))
+
+# remove duplicates 
+temp_probes <- as.character(temp_probes[!duplicated(temp_probes$V1),])
+
+# put temp_probes in right format
+remove_index <- colnames(cases_sub) %in% temp_probes
+
+# subset cases, contorls, and controlsub
+cases_sub <- cases_sub[, !remove_index]
+controls_sub <- controls_sub[, !remove_index]
+betaControlsSub <- betaControlsSub[, !remove_index]
+
+# replot
+plotCaseCon(cases_sub, controls_sub, row_index = 1)
+plotCaseCon(cases_sub, controls_sub, row_index = 2)
+plotCaseCon(cases_sub, controls_sub, row_index = 3)
+plotCaseCon(cases_sub, controls_sub, row_index = 4)
+plotCaseCon(cases_sub, controls_sub, row_index = 5)
+plotCaseCon(cases_sub, controls_sub, row_index = 6)
+plotCaseCon(cases_sub, controls_sub, row_index = 7)
+plotCaseCon(cases_sub, controls_sub, row_index = 8)
+plotCaseCon(cases_sub, controls_sub, row_index = 9)
+plotCaseCon(cases_sub, controls_sub, row_index = 10)
+plotCaseCon(cases_sub, controls_sub, row_index = 11)
+plotCaseCon(cases_sub, controls_sub, row_index = 12)
+plotCaseCon(cases_sub, controls_sub, row_index = 13)
+
+
 
 ##########
 # estimate linear model and transform
 ##########
 
-linearTransform <- function(cases_12, 
-                            controls_12, 
-                            controls_full) {
+linearTransform <- function (cases_12, 
+                             controls_12, 
+                             controls_full) {
   
   probe_model <- list()
   probe_control_result <- list()
@@ -132,16 +247,11 @@ linearTransform <- function(cases_12,
 
 controls_transformed <- linearTransform(cases_sub, controls_sub, betaControlsSub)
 
-saveRDS(controls_transformed, paste0(model_data, '/controls_transformed.rda'))
-
-# scale the transformed data and save 
-controls_transformed[, 8:ncol(controls_transformed)] <- scale(controls_transformed[, 8:ncol(controls_transformed)])
-
-saveRDS(controls_transformed, paste0(model_data, '/controls_transformed_scaled.rda'))
-
+saveRDS(controls_transformed, paste0(model_data, paste0('/controls_transform', '_' , method, '.rda')))
+saveRDS(betaControlsSub, paste0(model_data, paste0('/controls_no_transform', '_' , method, '.rda')))
 
 ##########
-# do the same for validation setW
+# do the same for validation set 
 ##########
 
 # find ids that are in both cases and controls 
@@ -164,14 +274,88 @@ valid_sub <- valid_sub[, shared_cols]
 # subset betaControls as well
 betaValidSub <- betaValid[, shared_cols]
 
+plotCaseCon(cases_sub, valid_sub, row_index = 1)
+plotCaseCon(cases_sub, valid_sub, row_index = 2)
+plotCaseCon(cases_sub, valid_sub, row_index = 3)
+plotCaseCon(cases_sub, valid_sub, row_index = 4)
+plotCaseCon(cases_sub, valid_sub, row_index = 5)
+plotCaseCon(cases_sub, valid_sub, row_index = 6)
+plotCaseCon(cases_sub, valid_sub, row_index = 7)
+plotCaseCon(cases_sub, valid_sub, row_index = 8)
+
+
+##########
+# find way to remove outliers on correlation plot 
+##########
+
+# loop through each probe and if their diff is bigger than 0.2 flag it
+probe_list <- list()
+sample_list <- list()
+
+for (i in 1:nrow(cases_sub)){
+  
+  temp.sample_cases <- cases_sub[i, ]
+  temp.sample_valid <- valid_sub[i, ]
+  
+  for (j in 9:ncol(temp.sample_cases)) {
+    
+    temp.probe_cases_name <- names(temp.sample_cases)[j]
+    
+    temp.probe_cases <- temp.sample_cases[, j]
+    temp.probe_valid <- temp.sample_valid[, j]
+    
+    diff <- abs(temp.probe_cases - temp.probe_valid)
+    
+    if (diff > 0.2) {
+      
+      probe_list[[j]] <- temp.probe_cases_name
+      
+    }
+    
+  }
+  
+  probe_names <- do.call(rbind, probe_list)
+  sample_list[[i]] <- probe_names
+  
+  print(i)
+  
+}
+
+load('/home/benbrew/Desktop/temp.sample_list_valid.RData')
+
+###########
+# combine list 
+###########
+
+# get union of all "bad" probes 
+temp_probes <- as.data.frame(do.call(rbind, sample_list))
+
+# remove duplicates 
+temp_probes <- as.character(temp_probes[!duplicated(temp_probes$V1),])
+
+# put temp_probes in right format
+remove_index <- colnames(cases_sub) %in% temp_probes
+
+# subset cases, contorls, and controlsub
+cases_sub <- cases_sub[, !remove_index]
+valid_sub <- valid_sub[, !remove_index]
+betaValidSub <- betaValidSub[, !remove_index]
+
+# replot
+plotCaseCon(cases_sub, valid_sub, row_index = 1)
+plotCaseCon(cases_sub, valid_sub, row_index = 2)
+plotCaseCon(cases_sub, valid_sub, row_index = 3)
+plotCaseCon(cases_sub, valid_sub, row_index = 4)
+plotCaseCon(cases_sub, valid_sub, row_index = 5)
+plotCaseCon(cases_sub, valid_sub, row_index = 6)
+plotCaseCon(cases_sub, valid_sub, row_index = 7)
+plotCaseCon(cases_sub, valid_sub, row_index = 8)
+
+##########
+# plot x vs z1, z2, z3
+##########
+
 valid_transformed <- linearTransform(cases_sub, valid_sub, betaValidSub)
 
-saveRDS(valid_transformed, paste0(model_data, '/valid_transformed.rda'))
-
-# scale the transformed data and save 
-valid_transformed[, 8:ncol(valid_transformed)] <- scale(valid_transformed[, 8:ncol(valid_transformed)])
-
-saveRDS(valid_transformed, paste0(model_data, '/valid_transformed_scaled.rda'))
-
-
-
+saveRDS(valid_transformed, paste0(model_data, paste0('/valid_transform','_' , method, '.rda')))
+saveRDS(betaValidSub, paste0(model_data, paste0('/valid_no_transform','_' , method, '.rda')))

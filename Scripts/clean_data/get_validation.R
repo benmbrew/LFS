@@ -94,21 +94,18 @@ betaValid <- cleanIds(betaValid)
 betaValid <- betaValid[, !grepl('ch', colnames(betaValid))]
 
 ##########
-# read in betaControls and get colnames 
-##########
-betaControls <- readRDS(paste0(methyl_data, '/betaControlsBatch.rda'))
-
-feats <- colnames(betaControls)[8:ncol(betaControls)]
-
-# subet betaValid by feats
-betaValid <- betaValid[, c('ids', 
-                           'sentrix_id', 
-                           feats)]
-
-rm(betaControls)
-##########
 # join data
 ##########
+cg_sites <-  readRDS(paste0(model_data, '/four_fifty_feats.rda'))
+
+intersect_cg_cites <- intersect(cg_sites, colnames(betaValid))
+
+
+# subset data by colmns of interest and cg_sites
+betaValid <- betaValid[, c('ids', 
+                          'sentrix_id',
+                          intersect_cg_cites)]
+
 
 # inner join
 betaValid <- inner_join(clin, betaValid, by = 'ids')

@@ -33,7 +33,7 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 # fixed variables
 ##########
-method = 'quan'
+method = 'raw'
 
 ##########
 # read in idate for cases, controls, and validation set
@@ -111,7 +111,7 @@ betaCases <- betaCases[!duplicated(betaCases$tm_donor_),]
 # get cg_sites
 cg_sites <- colnames(betaCases)[grepl('cg', colnames(betaCases))]
 
-saveRDS(cg_sites, paste0(model_data, '/four_fifty_feats.rda'))
+# saveRDS(cg_sites, paste0(model_data, '/four_fifty_feats.rda'))
 
 
 # subset data by colmns of interest and cg_sites

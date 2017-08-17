@@ -32,7 +32,7 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 # fixed variables
 ##########
-method = 'quan'
+method = 'funnorm'
 
 ##########
 # read in idate for Controls, controls, and validation set
@@ -83,6 +83,16 @@ betaControls <- betaControls[, !grepl('ch', colnames(betaControls))]
 # join data
 ##########
 
+cg_sites <-  readRDS(paste0(model_data, '/four_fifty_feats.rda'))
+
+intersect_cg_cites <- intersect(cg_sites, colnames(betaControls))
+
+
+# subset data by colmns of interest and cg_sites
+betaControls <- betaControls[, c('ids', 
+                                 'sentrix_id',
+                                 intersect_cg_cites)]
+
 # inner join
 betaControls <- inner_join(clin, betaControls, by = 'ids')
 
@@ -92,22 +102,21 @@ betaControls <- betaControls[!is.na(betaControls$tm_donor_),]
 # remove duplicates
 betaControls <- betaControls[!duplicated(betaControls$tm_donor_),]
 
-##########
-# get data in format for saving
-##########
-
 # get cg_sites
 cg_sites <- colnames(betaControls)[grepl('cg', colnames(betaControls))]
 
+# saveRDS(cg_sites, paste0(model_data, '/four_fifty_feats.rda'))
+
+
 # subset data by colmns of interest and cg_sites
 betaControls <- betaControls[, c('ids', 
-                                  'p53_germline', 
-                                  'cancer_diagnosis_diagnoses', 
-                                  'age_diagnosis',
-                                  'age_sample_collection',
-                                  'gender',
-                                  'sentrix_id',
-                                  cg_sites)]
+                           'p53_germline', 
+                           'cancer_diagnosis_diagnoses', 
+                           'age_diagnosis',
+                           'age_sample_collection',
+                           'gender',
+                           'sentrix_id',
+                           cg_sites)]
 
 
 ##########

@@ -223,7 +223,6 @@ mod_results <- trainTest(cases = betaCases,
                          bh_feat_sig = bh_feat_sig,
                          k = 4)
 
-seed_num
 # change pred to nothing if doing surv
 saveRDS(mod_results, 
         paste0('/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects/LFS/Scripts/predict_age/Results/reg_results/train_test', '_', 'pred' , '_' ,seed_num, '.rda'))

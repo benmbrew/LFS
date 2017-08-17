@@ -1,5 +1,3 @@
-#########
-# This script will train model on full data and test on controls and valid 
 ##########
 # initialize libraries
 ##########
@@ -19,7 +17,7 @@ registerDoParallel(1)
 ##########
 # initialize folders
 ##########
-home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
+home_folder <- '~/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
 data_folder <- paste0(project_folder, '/Data')
 methyl_data <- paste0(data_folder, '/methyl_data')
@@ -34,37 +32,44 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 # fixed variables
 ##########
 method = 'raw'
-k = 10
-seed_num = 1
-
+k = 5
+seed_num <- argv[1]
+type = 'transform'
 
 ##########
 # load data
 ##########
-# betaCases_old <- readRDS(paste0(model_data, '/betaCases', method,'.rda'))
-# betaControls <- readRDS(paste0(model_data, '/betaControls', method,'.rda'))
-# betaControlsOld <- readRDS(paste0(model_data, '/betaControlsOld', method,'.rda'))
-# betaValid <- readRDS(paste0(model_data, '/betaValid', method,'.rda'))
-# 
-# # # TEMP
-# betaCases <- betaCases[!grepl('9721365183', betaCases$sentrix_id),]
+if (type == 'original') {
+  
+  betaCases <- readRDS(paste0(model_data, paste0('/', method, '_', 'cases_new.rda')))
+  betaControls <- readRDS(paste0(model_data, paste0('/', method, '_', 'controls_new.rda'))) #34 449936
+  betaValid <- readRDS(paste0(model_data, paste0('/', method, '_', 'valid_new.rda'))) #35 449783
+  
+} else if (type == 'transform') {
+  
+  betaCases <- readRDS(paste0(model_data, paste0('/', method, '_', 'cases_new.rda')))
+  betaControls <- readRDS(paste0(model_data, paste0('/controls_transform','_' , method, '.rda'))) # 34 435813
+  betaValid <- readRDS(paste0(model_data, paste0('/valid_transform','_' , method, '.rda'))) # 45 400842
+  
+} else {
+  
+  betaCases <- readRDS(paste0(model_data, paste0('/', method, '_', 'cases_new.rda')))
+  betaControls <- readRDS(paste0(model_data, paste0('/controls_no_transform','_' , method, '.rda'))) # 34 435813
+  betaValid <- readRDS(paste0(model_data, paste0('/valid_no_transform','_' , method, '.rda')))# 45 400842
+  
+}
 
-betaCases <- readRDS(paste0(model_data, '/raw_cases_new_unscaled.rda'))
+###########
+# make id into ids
+###########
+colnames(betaCases)[1] <- 'ids'
+colnames(betaControls)[1] <- 'ids'
+colnames(betaValid)[1] <- 'ids'
 
-# scaled ata
-betaCases <- readRDS(paste0(model_data, '/raw_cases_new.rda'))
-
-
-# scale betaCaes
-# betaControls <- readRDS(paste0(model_data, '/raw_controls_new_unscaled.rda'))
-# betaValid <- readRDS(paste0(model_data, '/raw_valid_new_unscaled.rda'))
-
-betaControls <- readRDS(paste0(model_data, '/controls_transformed.rda'))
-betaValid <- readRDS(paste0(model_data, '/valid_transformed.rda'))
-
-betaControls <- readRDS(paste0(model_data, '/controls_transformed_scaled.rda'))
-betaValid <- readRDS(paste0(model_data, '/valid_transformed_scaled.rda'))
-
+###########
+# get extra controls from 450k 
+###########
+betaControlsOld <- getControls(betaCases, mut = T)
 
 ###########
 # get model data
@@ -73,6 +78,7 @@ betaCases <- getModData(betaCases)
 
 # get rid of cancer samples in controls 
 betaControls <- betaControls[grepl('Unaffected', betaControls$cancer_diagnosis_diagnoses),]
+
 
 # load cg_locations
 cg_locations <- read.csv(paste0(model_data, 
@@ -89,99 +95,116 @@ intersect_names <- Reduce(intersect, list(colnames(betaCases)[8:ncol(betaCases)]
 # organize each data set accordling
 
 # cases
-betaCases <- betaCases[, c('age_diagnosis', 
+betaCases <- betaCases[, c('ids',
+                           'age_diagnosis', 
                            'age_sample_collection', 
                            'cancer_diagnosis_diagnoses', 
                            'gender', 
                            intersect_names)]
 # controls
-betaControls <- betaControls[, c('age_diagnosis', 
+betaControls <- betaControls[, c('ids',
+                                 'age_diagnosis', 
                                  'age_sample_collection', 
                                  'cancer_diagnosis_diagnoses', 
                                  'gender', 
                                  intersect_names)]
 
 # controls
-betaControlsOld <- betaControlsOld[, c('age_diagnosis', 
+betaControlsOld <- betaControlsOld[, c('ids', 
+                                       'age_diagnosis', 
                                        'age_sample_collection', 
                                        'cancer_diagnosis_diagnoses', 
                                        'gender', 
                                        intersect_names)]
+
 #validation
-betaValid <- betaValid[, c('age_diagnosis', 
+betaValid <- betaValid[, c('ids', 
+                           'age_diagnosis', 
                            'age_sample_collection', 
                            'cancer_diagnosis_diagnoses', 
                            'gender', 
                            intersect_names)]
 
-betaControlsFull <- rbind(betaControls, betaControlsOld)
+# get controls full
+betaControlsFull <- rbind(betaControls,
+                          betaControlsOld)
 
-# remove na in sample collection and duplicate ids
+# remove duplicates from betaControlsFull
+length(which(duplicated(betaControlsFull$ids)))
+betaControlsFull <- betaControlsFull[!duplicated(betaControlsFull$ids),]
+
+##########
+# remove samples with no age data
+##########
+betaControls <- betaControls[!is.na(betaControls$age_sample_collection),]
+betaControlsOld <- betaControlsOld[!is.na(betaControlsOld$age_sample_collection),]
 betaControlsFull <- betaControlsFull[!is.na(betaControlsFull$age_sample_collection),]
 
-rm(betaControlsOld)
-
-##########
-# change age variables to numeric
-##########
-betaCases$age_diagnosis <- as.numeric(as.character(betaCases$age_diagnosis))
-betaControls$age_diagnosis <- as.numeric(as.character(betaControls$age_diagnosis))
-betaValid$age_diagnosis <- as.numeric(as.character(betaValid$age_diagnosis))
-
-betaCases$age_sample_collection <- as.numeric(as.character(betaCases$age_sample_collection))
-betaControls$age_sample_collection <- as.numeric(as.character(betaControls$age_sample_collection))
-betaValid$age_sample_collection <- as.numeric(as.character(betaValid$age_sample_collection))
 
 ##########
 # test for distribution sameness 
 ########## 
 testKS(x = betaCases$age_sample_collection, y = betaControls$age_sample_collection)
-testKS(x = betaCases$age_sample_collection, y = betaControlsFull$age_sample_collection)
 
-
+# 
+# betaCases <- betaCases[, c(1:3000, ncol(betaCases))]
+# betaControls <- betaControls[, c(1:3000, ncol(betaControls))]
+# betaControlsOld <- betaControlsOld[, c(1:3000, ncol(betaControlsOld))]
+# betaControlsFull <- betaControlsFull[, c(1:3000, ncol(betaControlsFull))]
+# betaValid <- betaValid[, c(1:3000, ncol(betaValid))]
 ##########
 # run bumphunter
 ##########
 bh_feat <- bumpHunterSurv(dat_cases = betaCases, dat_controls = betaControls)
-# bh_feat_full <- bumpHunterSurv(dat_cases = betaCases, dat_controls = betaControlsFull)
+bh_feat_old <- bumpHunterSurv(dat_cases = betaCases, dat_controls = betaControlsOld)
+bh_feat_full <- bumpHunterSurv(dat_cases = betaCases, dat_controls = betaControlsFull)
 
 ##########
 # get features
 ##########
 bh_feat_all <- getProbe(bh_feat)
 bh_feat_tot <- getRun(bh_feat_all[[1]], run_num = .05)
-bh_feat_sig <- getRun(bh_feat_all[[2]], run_num = .05)
-saveRDS(bh_feat_all, '/home/benbrew/Desktop/bh_feat_unscaled.rda')
+
+bh_feat_all_old <- getProbe(bh_feat_old)
+bh_feat_tot_old <- getRun(bh_feat_all_old[[1]], run_num = .05)
+
+bh_feat_all_full <- getProbe(bh_feat_full)
+bh_feat_tot_full <- getRun(bh_feat_all_full[[1]], run_num = .05)
+
+###########
+# save bh_features
+###########
+saveRDS(bh_feat_tot, paste0(model_data, '/bh_feat_all', '_', method, '_', type))
+saveRDS(bh_feat_tot_old, paste0(model_data, '/bh_feat_old', '_', method, '_', type))
+saveRDS(bh_feat_tot_full, paste0(model_data, '/bh_feat_full', '_', method, '_', type))
+
+bh_feat <- readRDS(paste0(model_data, '/bh_feat_all', '_', method, '_', type))
+bh_feat_old <- readRDS(paste0(model_data, '/bh_feat_old', '_', method, '_', type))
+bh_feat_full <- readRDS(paste0(model_data, '/bh_feat_full', '_', method, '_', type))
+
 
 
 # get gender dummy variable
 betaCases <- cbind(as.data.frame(class.ind(betaCases$gender)), betaCases)
 betaControls <- cbind(as.data.frame(class.ind(betaControls$gender)), betaControls)
+betaControlsOld <- cbind(as.data.frame(class.ind(betaControlsOld$gender)), betaControlsOld)
 betaControlsFull <- cbind(as.data.frame(class.ind(betaControlsFull$gender)), betaControlsFull)
 betaValid <- cbind(as.data.frame(class.ind(betaValid$gender)), betaValid)
-# saveRDS(bh_feat_all, paste0(model_data, '/bh_feat_all.rda'))
-# saveRDS(bh_feat_all, paste0(model_data, '/bh_feat_all_quan.rda'))
-# bh_feat_all <- readRDS(paste0(model_data, '/bh_feat_all_quan.rda'))
-
-# #raw
-# save.image('/home/benbrew/Desktop/temp_full_test.RData')
-# load('/home/benbrew/Desktop/temp_full_test.RData')
-# #quan
-# save.image('/home/benbrew/Desktop/temp_full_test_quan.RData')
-# load('/home/benbrew/Desktop/temp_full_test_quan.RData')
 
 
 ##########
 # test model
 # ##########
-cases_dat <- betaCases
-controls_dat <- betaControls
-controls_dat_full <- betaControlsFull
-valid_dat <- betaValid
-bh_features <- bh_feat_tot
-alpha = 0.4
+# cases_dat <- betaCases
+# controls_dat <- betaControls
+# controls_dat_old <- betaControlsOld
+# controls_dat_full <- betaControlsFull
+# valid_dat <- betaValid
+# bh_features <- bh_feat_tot
+# alpha = 0.4
 testModel <- function(cases_dat,
                       controls_dat,
+                      controls_dat_old,
                       controls_dat_full,
                       valid_dat,
                       bh_features,
@@ -199,12 +222,14 @@ testModel <- function(cases_dat,
   # get y
   train_y <- as.numeric(cases_dat$age_diagnosis)
   test_y_controls <- as.numeric(controls_dat$age_sample_collection)
+  test_y_controls_old <- as.numeric(controls_dat_old$age_sample_collection)
   test_y_controls_full <- as.numeric(controls_dat_full$age_sample_collection)
   test_y_valid <- as.numeric(valid_dat$age_diagnosis)
   
   # get bumphunter features
   cases_dat <- cases_dat[, intersected_feats]
   controls_dat <- controls_dat[, intersected_feats]
+  controls_dat_old <- controls_dat_old[, intersected_feats]
   controls_dat_full <- controls_dat_full[, intersected_feats]
   valid_dat <- valid_dat[, intersected_feats]
   
@@ -251,6 +276,15 @@ testModel <- function(cases_dat,
 
   test.predictions_controls <- temp_test.predictions_controls[, temp.min_lambda_index]
   
+  # get controls
+  temp_test.predictions_controls_old <- predict(model,
+                                            data.matrix(controls_dat_old),
+                                            type = 'response')
+  
+  
+  
+  test.predictions_controls_old <- temp_test.predictions_controls_old[, temp.min_lambda_index]
+  
   # get controls full
   temp_test.predictions_controls_full <- predict(model,
                                                 data.matrix(controls_dat_full),
@@ -278,14 +312,53 @@ testModel <- function(cases_dat,
   # # for each iteration, this should always be the same.
   controls_cor <- cor(test_y_controls, test.predictions_controls)
   
+  controls_cor_old <- cor(test_y_controls_old, test.predictions_controls_old)
+  
+  
   controls_cor_full <- cor(test_y_controls_full, test.predictions_controls_full)
   
   valid_cor  <- cor(test_y_valid, test.predictions_valid)
 
-  return(list(controls_cor, controls_cor_full, valid_cor))
+  return(list(controls_cor, controls_cor_old, controls_cor_full, valid_cor))
   
   
 }
+
+runModel <- function(bh_features) {
+ 
+  alphas <- c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)
+  
+  result_list <- list()
+  
+  for(i in 1:length(alphas)) {
+    
+    alpha <- alphas[i]
+    
+    temp.result  <- testModel(cases_dat = betaCases,
+                              controls_dat = betaControls, 
+                              controls_dat_old = betaControlsOld,
+                              controls_dat_full = betaControlsFull,
+                              valid_dat = betaValid,
+                              bh_features = bh_features,
+                              alpha = alpha)
+    
+    temp.result_dat <- as.data.frame(t(do.call(rbind, temp.result)))
+    temp.result_dat$alpha <- alpha
+    colnames(temp.result_dat) <- c('controls', 'controls_old', 'controls_full', 'valid', 'alpha')
+  
+    result_list[[i]] <- temp.result_dat
+    
+    print(i)
+  }
+  
+  result_table <- do.call(rbind, result_list)
+  
+  return(result_table)
+  
+   
+}
+
+results <- runModel(bh_features = bh_feat)
 
 
 ##########
