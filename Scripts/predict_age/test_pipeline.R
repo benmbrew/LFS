@@ -22,19 +22,23 @@ project_folder <- paste0(home_folder, '/LFS')
 data_folder <- paste0(project_folder, '/Data')
 methyl_data <- paste0(data_folder, '/methyl_data')
 model_data <- paste0(data_folder, '/model_data')
+results_folder <- paste0(project_folder, '/Scripts/predict_age/Results/test_reg_results_05')
+
 
 ##########
 # source all_functions.R script
 ##########
 source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 
+# load in alpha mzx
+alpha_max <- readRDS(paste0(model_data, '/alpha_max.rda'))
+
 ##########
 # fixed variables
 ##########
-method = 'raw'
+method = 'quan'
 k = 5
-seed_num <- argv[1]
-type = 'transform'
+type = 'no_transform'
 
 ##########
 # load data
@@ -125,6 +129,13 @@ betaValid <- betaValid[, c('ids',
                            'gender', 
                            intersect_names)]
 
+betaControls$ids <- as.character(betaControls$ids) 
+betaControls$cancer_diagnosis_diagnoses <- as.character(betaControls$cancer_diagnosis_diagnoses) 
+betaControls$gender <- as.character(betaControls$gender) 
+betaControls$age_diagnosis <- as.numeric(as.character(betaControls$age_diagnosis))
+betaControls$age_sample_collection <- as.numeric(as.character(betaControls$age_sample_collection))
+
+
 # get controls full
 betaControlsFull <- rbind(betaControls,
                           betaControlsOld)
@@ -155,34 +166,33 @@ testKS(x = betaCases$age_sample_collection, y = betaControls$age_sample_collecti
 ##########
 # run bumphunter
 ##########
-bh_feat <- bumpHunterSurv(dat_cases = betaCases, dat_controls = betaControls)
-bh_feat_old <- bumpHunterSurv(dat_cases = betaCases, dat_controls = betaControlsOld)
-bh_feat_full <- bumpHunterSurv(dat_cases = betaCases, dat_controls = betaControlsFull)
+# bh_feat <- bumpHunterSurv(dat_cases = betaCases, dat_controls = betaControls)
+# bh_feat_old <- bumpHunterSurv(dat_cases = betaCases, dat_controls = betaControlsOld)
+# bh_feat_full <- bumpHunterSurv(dat_cases = betaCases, dat_controls = betaControlsFull)
 
 ##########
 # get features
 ##########
-bh_feat_all <- getProbe(bh_feat)
-bh_feat_tot <- getRun(bh_feat_all[[1]], run_num = .05)
+# bh_feat_all <- getProbe(bh_feat)
+# bh_feat_tot <- getRun(bh_feat_all[[1]], run_num = .05)
+# 
+# bh_feat_all_old <- getProbe(bh_feat_old)
+# bh_feat_tot_old <- getRun(bh_feat_all_old[[1]], run_num = .05)
+# 
+# bh_feat_all_full <- getProbe(bh_feat_full)
+# bh_feat_tot_full <- getRun(bh_feat_all_full[[1]], run_num = .05)
 
-bh_feat_all_old <- getProbe(bh_feat_old)
-bh_feat_tot_old <- getRun(bh_feat_all_old[[1]], run_num = .05)
-
-bh_feat_all_full <- getProbe(bh_feat_full)
-bh_feat_tot_full <- getRun(bh_feat_all_full[[1]], run_num = .05)
 
 ###########
 # save bh_features
 ###########
-saveRDS(bh_feat_tot, paste0(model_data, '/bh_feat_all', '_', method, '_', type))
-saveRDS(bh_feat_tot_old, paste0(model_data, '/bh_feat_old', '_', method, '_', type))
-saveRDS(bh_feat_tot_full, paste0(model_data, '/bh_feat_full', '_', method, '_', type))
+# saveRDS(bh_feat_tot, paste0(model_data, '/bh_feat_all', '_', method, '_', type))
+# saveRDS(bh_feat_tot_old, paste0(model_data, '/bh_feat_old', '_', method, '_', type))
+# saveRDS(bh_feat_tot_full, paste0(model_data, '/bh_feat_full', '_', method, '_', type))
 
 bh_feat <- readRDS(paste0(model_data, '/bh_feat_all', '_', method, '_', type))
 bh_feat_old <- readRDS(paste0(model_data, '/bh_feat_old', '_', method, '_', type))
 bh_feat_full <- readRDS(paste0(model_data, '/bh_feat_full', '_', method, '_', type))
-
-
 
 # get gender dummy variable
 betaCases <- cbind(as.data.frame(class.ind(betaCases$gender)), betaCases)
@@ -190,6 +200,9 @@ betaControls <- cbind(as.data.frame(class.ind(betaControls$gender)), betaControl
 betaControlsOld <- cbind(as.data.frame(class.ind(betaControlsOld$gender)), betaControlsOld)
 betaControlsFull <- cbind(as.data.frame(class.ind(betaControlsFull$gender)), betaControlsFull)
 betaValid <- cbind(as.data.frame(class.ind(betaValid$gender)), betaValid)
+
+#subset valid
+betaValid <- betaValid[!betaValid$ids %in% betaCases$ids,]
 
 
 ##########
@@ -358,8 +371,23 @@ runModel <- function(bh_features) {
    
 }
 
-results <- runModel(bh_features = bh_feat)
 
+# get results
+results_norm <- runModel(bh_features = bh_feat)
+results_old <- runModel(bh_features = bh_feat_old)
+results_full <- runModel(bh_features = bh_feat_full)
+
+# add columna and combine
+results_norm$feat <- 'normal'
+results_old$feat <- 'old'
+results_full$feat <- 'full'
+
+results <- rbind(results_norm,
+                 results_old,
+                 results_full)
+
+
+saveRDS(results, paste0(results_folder, '/results_test_pipeline', '_', method, '_', type, '_', '05', '_' ,'.rda'))
 
 ##########
 # calssification
@@ -494,16 +522,6 @@ testModelFac <- function(cases_dat,
   
   
 }
-
-
-
-testModel(betaCases,
-          betaControls,
-          betaControlsFull,
-          betaValid,
-          bh_feat_tot,
-          alpha = 0.6)
-
 
 
 testModelFac(betaCases,

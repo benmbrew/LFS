@@ -15,8 +15,6 @@ cleanIdMap <- function(data, valid) {
   
 }
 
-
-
 ##########
 # function that Loops through list, preprocesses, and convert to beta, m, and cn values 
 ##########
@@ -75,7 +73,8 @@ preprocessMethod <- function(data, preprocess) {
 ##########
 scaleImputeDat <- function(dat, scale) {
   
-  if(scale){
+  if (scale) {
+    
     # get row statistics
     rowMean <- apply(dat, 1, mean, na.rm=TRUE)
     rowSd <- apply(dat, 1, sd, na.rm=TRUE)
@@ -471,7 +470,7 @@ getPCA <- function(pca_data,
          h = c(0,0))
   
   if(use_legend) {
-    legend('bottomright',  
+    legend('topright',  
            legend = unique(pca_data[, column_name]), 
            col=unique(colors), 
            pch=16,  
@@ -738,7 +737,7 @@ bumpHunterPred <- function(dat_controls_wt,
 ##########
 # generate folds and set the seed for random samplings - referenced in arg[]
 ##########
-getFolds <- function(model_dat, seed_number, k_num){
+getFolds <- function(model_dat, seed_number, k){
   # assign folds
   set.seed(seed_number)
   model_dat$folds <- sample(1:k, nrow(model_dat), replace = T)
@@ -1347,7 +1346,7 @@ predCancer <- function(training_dat,
 # get results
 ##########
 
-getResults <- function(result_list, result_list_resid)
+getResults <- function(result_list)
 {
   
   
@@ -1360,16 +1359,8 @@ getResults <- function(result_list, result_list_resid)
                         result_list[[7]],
                         result_list[[8]])
   
-  results_final_resid <- list(result_list_resid[[1]],
-                              result_list_resid[[2]],
-                              result_list_resid[[3]],
-                              result_list_resid[[4]],
-                              result_list_resid[[5]],
-                              result_list_resid[[6]],
-                              result_list_resid[[7]],
-                              result_list_resid[[8]])
   
-  return(list(results_final, results_final_resid))
+  return(results_final)
   
 }
 
@@ -1392,5 +1383,145 @@ getResultsCancer <- function(result_list)
   return(results_final)
   
 }
+
+
+##########
+# function for finding probes with threshold differenceW
+##########
+
+get_diff_probes <-
+  function(cases, 
+           other_850,
+           thresh) {
+    
+    temp_names <- list()
+    
+    for (i in 1:nrow(cases)) {
+      
+      temp.sample_cases <- as.data.frame(t(cases[i, 8:ncol(cases)]))
+      temp.sample_other_850 <- as.data.frame(t(other_850[i, 8:ncol(other_850)]))
+      
+      temp_diff <- abs(temp.sample_cases - temp.sample_other_850)
+      
+      temp_names[[i]] <- rownames(temp_diff)[temp_diff > thresh]
+      
+      print(i)
+      
+    }
+    
+    probe_names <- unlist(temp_names)
+    # probe_names_dup <- probe_names[!duplicated(probe_names)]
+    
+    return(probe_names)
+    
+  }
+
+
+##########
+# function for finding probes with threshold differenceW
+##########
+
+get_diff_probes_keep <-
+  function(cases, 
+           other_850,
+           thresh) {
+    
+    temp_names <- list()
+    
+    for (i in 1:nrow(cases)) {
+      
+      temp.sample_cases <- as.data.frame(t(cases[i, 8:ncol(cases)]))
+      temp.sample_other_850 <- as.data.frame(t(other_850[i, 8:ncol(other_850)]))
+      
+      temp_diff <- as.data.frame(abs(temp.sample_cases - temp.sample_other_850))
+      
+      colnames(temp_diff)[1] <- 'diff'
+      temp_diff$sample <- i
+      temp_diff$names <- rownames(temp_diff)
+      
+      temp_names[[i]] <- temp_diff[temp_diff$diff > thresh,]
+      
+      print(i)
+      
+    }
+    
+    probe_data <- do.call(rbind, temp_names)
+   
+    
+    return(probe_data)
+    
+  }
+
+##########
+# estimate linear model and transform
+##########
+
+linearTransform <- function (cases_12, 
+                             controls_12, 
+                             controls_full) {
+  
+  probe_model <- list()
+  probe_control_result <- list()
+  
+  for (i in 8:ncol(controls_full)) {
+    
+    control <- as.data.frame(controls_12[, i])
+    cases <- as.data.frame(cases_12[, i])
+    model_data <- data.frame(control = control, cases = cases)
+    names(model_data) <- c('control', 'cases')
+    probe_model[[i]] <- lm(cases ~ control, data = model_data)
+    control_full <- as.numeric(controls_full[, i])
+    model_data_new <- data.frame(control = control_full)
+    names(model_data_new) <- 'control'
+    probe_control_result[[i]] <- predict(probe_model[[i]], newdata = model_data_new, type = 'response')
+    
+    print(i) 
+  }
+  
+  # transpose results
+  temp <- do.call(rbind, probe_control_result)
+  transform_controls <- t(temp)
+  
+  # add cg sites
+  colnames(transform_controls) <- colnames(controls_full[8:ncol(controls_full)])
+  
+  # add clinical variables
+  transform_controls <- as.data.frame(cbind(id = controls_full$id, 
+                                            p53_germline = controls_full$p53_germline, 
+                                            cancer_diagnosis_diagnoses = controls_full$cancer_diagnosis_diagnoses, 
+                                            age_diagnosis = controls_full$age_diagnosis, 
+                                            age_sample_collection = controls_full$age_sample_collection,
+                                            gender = controls_full$gender, 
+                                            sentrix_id = controls_full$sentrix_id, 
+                                            transform_controls))
+  
+  # make numeric
+  transform_controls[, 8:ncol(transform_controls)] <- apply(transform_controls[, 8:ncol(transform_controls)], 
+                                                            2, 
+                                                            function(x) as.numeric(x))
+  
+  
+  return(transform_controls)
+  
+}
+
+##########
+# function to plot each id against the other
+##########
+
+plotCaseCon <- 
+  function (cases, controls, row_index) {
+    
+    cases_cg <- as.numeric(cases[row_index, 8:ncol(cases)])
+    controls_cg <- as.numeric(controls[row_index, 8:ncol(controls)])
+    
+    smoothScatter(cases_cg, 
+                  controls_cg, 
+                  main = paste0(row_index, '_', 'sample'),
+                  xlab = 'cases', 
+                  ylab = 'controls')
+    
+  }
+
 
 

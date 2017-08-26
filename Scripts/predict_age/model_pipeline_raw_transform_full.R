@@ -30,7 +30,7 @@ registerDoParallel(1)
 ##########
 # initialize folders
 ##########
-home_folder <- '~/hpf/largeprojects/agoldenb/ben/Projects'
+home_folder <- '/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
 data_folder <- paste0(project_folder, '/Data')
 methyl_data <- paste0(data_folder, '/methyl_data')
@@ -71,15 +71,16 @@ if (type == 'original') {
   betaValid <- readRDS(paste0(model_data, paste0('/valid_no_transform','_' , method, '.rda')))# 45 400842
   
 }
+##########
+# recode and restructure
+##########
+betaCases <- as.data.frame(betaCases, stringsAsFactors = F)
+betaControls <- as.data.frame(betaControls, stringsAsFactors = F)
+betaValid <- as.data.frame(betaValid, stringsAsFactors = F)
 
-###########
-# force id = ids
-###########
 colnames(betaCases)[1] <- 'ids'
 colnames(betaControls)[1] <- 'ids'
 colnames(betaValid)[1] <- 'ids'
-
-
 
 ###########
 # get extra controls from 450k 
@@ -141,6 +142,8 @@ betaValid <- betaValid[, c('ids',
                            'gender', 
                            intersect_names)]
 
+betaValid <- betaValid[!betaValid$ids %in% betaCases$ids,]
+
 # get controls full
 betaControlsFull <- rbind(betaControls,
                           betaControlsOld)
@@ -157,8 +160,8 @@ betaControlsFull <- betaControlsFull[!duplicated(betaControlsFull$ids),]
 # between 2 groups
 
 # get a column for each dataset indicating the fold
-betaCases <- getFolds(betaCases, seed_number = seed_num, k_num = k)
-betaControlsFull <- getFolds(betaControlsFull, seed_number = seed_num, k_num = k)
+betaCases <- getFolds(betaCases, seed_number = seed_num, k = k)
+betaControlsFull <- getFolds(betaControlsFull, seed_number = seed_num, k = k)
 
 # get gender 
 # get gender dummy variable
@@ -166,11 +169,10 @@ betaCases <- cbind(as.data.frame(class.ind(betaCases$gender)), betaCases)
 betaControlsFull <- cbind(as.data.frame(class.ind(betaControlsFull$gender)), betaControlsFull)
 betaValid <- cbind(as.data.frame(class.ind(betaValid$gender)), betaValid)
 
-
+# # 
 # betaCases <- betaCases[, c(1:3000, ncol(betaCases))]
 # betaControlsFull <- betaControlsFull[, c(1:3000, ncol(betaControlsFull))]
 # betaValid <- betaValid[, c(1:3000, ncol(betaValid))]
-
 
 trainTest <- function(cases, 
                       controls,
@@ -180,6 +182,7 @@ trainTest <- function(cases,
   
   # remove samples that dont have an age of sample collection
   cases <- cases[complete.cases(cases),]
+  controls <- controls[!is.na(controls$age_sample_collection),]
   
   # list to store results
   bh_feat <- list()
@@ -209,9 +212,9 @@ trainTest <- function(cases,
     bh_dim[[i]] <- length(bh_feat_all)
     # bh_feat_fwer <- getRun(bh_feat_3[[3]], run_num = seed_num)
     
-    # get residuals
-    cases_resid <- getResidual(data = cases, 
-                               bh_features = bh_feat_all)
+    # # get residuals
+    # cases_resid <- getResidual(data = cases, 
+    #                            bh_features = bh_feat_all)
     
     mod_result <- runEnet(training_dat = cases[train_index,], 
                           test_dat = cases[test_index,], 
@@ -221,16 +224,16 @@ trainTest <- function(cases,
                           gender = T)
     
     
-    mod_result_resid <- runEnet(training_dat = cases_resid[train_index,], 
-                                test_dat = cases_resid[test_index,], 
-                                controls_dat = controls,
-                                valid_dat = valid,
-                                bh_features = bh_feat_all,
-                                gender = T)
+    # mod_result_resid <- runEnet(training_dat = cases_resid[train_index,], 
+    #                             test_dat = cases_resid[test_index,], 
+    #                             controls_dat = controls,
+    #                             valid_dat = valid,
+    #                             bh_features = bh_feat_all,
+    #                             gender = T)
     
     
     
-    model_results[[i]] <- getResults(mod_result, mod_result_resid)
+    model_results[[i]] <- getResults(mod_result)
     
     
   }
