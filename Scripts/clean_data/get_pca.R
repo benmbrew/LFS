@@ -16,19 +16,47 @@ model_data <- paste0(data_folder, '/model_data')
 clin_data <- paste0(data_folder, '/clin_data')
 
 # get method 
-method = 'raw'
+method = 'swan'
 
 ##########
 # load data
 ##########
-betaCases <- readRDS(paste0(model_data, paste0('/', method, '_', 'cases_new.rda')))
-betaControls <- readRDS(paste0(model_data, paste0('/', method, '_', 'controls_new.rda')))
-betaValid <- readRDS(paste0(model_data, paste0('/', method, '_', 'valid_new.rda')))
+betaCases <- readRDS(paste0(model_data, paste0('/', method, '_', 'cases_new_batch_m.rda')))
+betaControls <- readRDS(paste0(model_data, paste0('/', method, '_', 'controls_batch_m.rda')))
+betaValid <- readRDS(paste0(model_data, paste0('/', method, '_', 'valid_batch_m.rda')))
 
 ##########
 # source all_functions.R script
 ##########
 source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
+
+########## 
+# remove NA
+##########
+betaCases <- removeNA(betaCases, probe_start = 8)
+betaControls <- removeNA(betaControls, probe_start = 8)
+betaValid <- removeNA(betaValid, probe_start = 8)
+
+# ##########
+# # convert to m values 
+# ##########
+# 
+# betaCases <- get_m_values(betaCases, probe_start = 8)
+# betaControls <- get_m_values(betaControls, probe_start = 8)
+# betaValid <- get_m_values(betaValid, probe_start = 8)
+
+# # read data for models
+# betaCases <- readRDS(paste0(model_data, paste0('/', method, '_', 'cases_new_m.rda')))
+# betaControls <- readRDS(paste0(model_data, paste0('/', method, '_', 'controls_new_m.rda')))
+# betaValid <- readRDS(paste0(model_data, paste0('/', method, '_', 'valid_new_m.rda')))
+
+###########
+# remove columns with Inf
+###########
+betaCases <- removeInf(betaCases, probe_start = 8)
+betaControls <- removeInf(betaControls, probe_start = 8)
+betaValid <- removeInf(betaValid, probe_start = 8)
+
 
 #########
 # binarize age variables 
@@ -148,33 +176,114 @@ mod_data <- rbind(betaCasesMod,
 ##########
 # pca of age of onset, age of sample collection, gender. sentrix_id 
 ##########
-
+setwd('~/Desktop/')
+pdf(paste0(method, '_plots_m_values_raw.pdf'))
 # cases full
+data_cols <- c('age_diagnosis', 
+               'age_sample_collection', 
+               'cancer_diagnosis_diagnoses', 
+               'sentrix_id', 
+               'gender')
 
-getPCA(pca_data = betaCases, 
-       column_name = 'age_diagnosis', 
-       gene_start = 7, 
-       pca1 = 1, 
-       pca2 = 2, 
-       name = 'Full Cases, Age of Onset', 
-       use_legend = T) # 3358
+# cases 
 
-getPCA(pca_data = betaCases, 
-       column_name = 'age_sample_collection', 
-       gene_start = 7, 
-       pca1 = 1, 
-       pca2 = 2, 
-       name = 'Full Cases, Age Collection', 
-       use_legend = T) # 3358
+par(mfrow = c(1,1))
 
-getPCA(pca_data = betaCases, 
-       column_name = 'cancer_diagnosis_diagnoses', 
-       gene_start = 7, 
-       pca1 = 1, 
-       pca2 = 2, 
-       name = 'Full Cases, Cancer', 
-       use_legend = T) # 3358
+for (i in data_cols) {
+  
+  getPCA(pca_data = betaCases, 
+         column_name = i, 
+         gene_start = 8, 
+         pca1 = 1, 
+         pca2 = 2, 
+         name = paste0('CasesFull_', i), 
+         use_legend = F) # 3358
+  
+  print(i)
+  
+}
+
+for (i in data_cols) {
+  
+  getPCA(pca_data = betaCasesMod, 
+         column_name = i, 
+         gene_start = 8, 
+         pca1 = 1, 
+         pca2 = 2, 
+         name = paste0('CasesMod_', i), 
+         use_legend = F) # 3358
+  
+  print(i)
+  
+}
+
+for (i in data_cols[-1]) {
+  
+  getPCA(pca_data = betaControlsMod, 
+         column_name = i, 
+         gene_start = 8, 
+         pca1 = 1, 
+         pca2 = 2, 
+         name = paste0('ControlsMod_', i), 
+         use_legend = F) # 3358
+  
+  print(i)
+  
+}
+
+for (i in data_cols) {
+  
+  getPCA(pca_data = betaValidMod, 
+         column_name = i, 
+         gene_start = 8, 
+         pca1 = 1, 
+         pca2 = 2, 
+         name = paste0('ValidMod_', i), 
+         use_legend = F) # 3358
+  
+  print(i)
+  
+}
+
+# combined data cols
+combined_cols <- c('age_diagnosis', 
+                   'age_sample_collection', 
+                   'cancer_diagnosis_diagnoses', 
+                   'gender',
+                   'batch')
 
 
+# get full data combined
+for (i in combined_cols) {
+  
+  getPCA(pca_data = full_data ,
+         column_name = i, 
+         gene_start = 8, 
+         pca1 = 1, 
+         pca2 = 2, 
+         name = paste0('combined_data_full_', i, '_'), 
+         use_legend = F) # 3358
+  
+  print(i)
+  
+}
+
+# get mod data combined
+
+for (i in combined_cols) {
+  
+  getPCA(pca_data = mod_data ,
+         column_name = i, 
+         gene_start = 8, 
+         pca1 = 1, 
+         pca2 = 2, 
+         name = paste0('combined_data_mod_', i, '_'), 
+         use_legend = F) # 3358
+  
+  print(i)
+  
+}
+
+dev.off()
 
 

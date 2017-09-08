@@ -24,7 +24,7 @@ model_data <- paste0(data_folder, '/model_data')
 
 # set fixed variable- this script should only use raw
 method = 'raw'
-thresh = 0.2
+thresh = 2
 
 ##########
 # source all_functions.R script
@@ -34,9 +34,9 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 # load data
 ##########
-betaCases <- readRDS(paste0(model_data, paste0('/', method, '_', 'cases_new.rda')))
-betaControls <- readRDS(paste0(model_data, paste0('/', method, '_', 'controls_new.rda')))
-betaValid <- readRDS(paste0(model_data, paste0('/', method, '_', 'valid_new.rda')))
+betaCases <- readRDS(paste0(model_data, paste0('/', method, '_', 'cases_new_m.rda')))
+betaControls <- readRDS(paste0(model_data, paste0('/', method, '_', 'controls_new_m.rda')))
+betaValid <- readRDS(paste0(model_data, paste0('/', method, '_', 'valid_new_m.rda')))
 
 ##########
 # combine data
@@ -142,7 +142,6 @@ controls_sub_case_con_union <- controls_sub_case_con[, !remove_index_union]
 betaControlsSubInt <- betaControls[, !remove_index_int]
 betaControlsSubUnion <- betaControls[, !remove_index_union]
 
-
 # subset validation int
 cases_sub_case_valid_int <- cases_sub_case_valid[, !remove_index_int]
 valid_sub_case_valid_int <- valid_sub_case_valid[, !remove_index_int]
@@ -156,7 +155,7 @@ betaValidSubInt <- betaValid[, !remove_index_int]
 betaValidSubUnion <- betaValid[, !remove_index_union]
 
 # Plt
-par(mfrow = c(1,3))
+par(mfrow = c(1,1))
 
 for(i in 1:5) {
   
@@ -185,12 +184,12 @@ for(i in 1:5) {
 
 # save data controls
 # saveRDS(controls_transformed, paste0(model_data, paste0('/controls_transform', '_' , method, '_' , thresh, '.rda')))
-saveRDS(betaControlsSubInt, paste0(model_data, paste0('/controls_no_transform_int', '_' , method, '_' , thresh, '.rda')))
-saveRDS(betaControlsSubUnion, paste0(model_data, paste0('/controls_no_transform_union', '_' , method, '_' , thresh, '.rda')))
+saveRDS(betaControlsSubInt, paste0(model_data, paste0('/controls_no_transform_int_m', '_' , method, '_' , thresh, '.rda')))
+saveRDS(betaControlsSubUnion, paste0(model_data, paste0('/controls_no_transform_union_m', '_' , method, '_' , thresh, '.rda')))
 
 
 # save data valid
 # saveRDS(valid_transformed, paste0(model_data, paste0('/valid_transform','_' , method,'_' , thresh, '.rda')))
-saveRDS(betaValidSubInt, paste0(model_data, paste0('/valid_no_transform_int','_' , method,'_' , thresh, '.rda')))
-saveRDS(betaValidSubUnion, paste0(model_data, paste0('/valid_no_transform_union','_' , method,'_' , thresh, '.rda')))
+saveRDS(betaValidSubInt, paste0(model_data, paste0('/valid_no_transform_int_m','_' , method,'_' , thresh, '.rda')))
+saveRDS(betaValidSubUnion, paste0(model_data, paste0('/valid_no_transform_union_m','_' , method,'_' , thresh, '.rda')))
 

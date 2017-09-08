@@ -33,7 +33,7 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 # fixed variables
 ##########
-method = 'raw'
+method = 'swan'
 
 ##########
 # read in idate for cases, controls, and validation set
@@ -128,8 +128,7 @@ betaCases <- betaCases[, c('ids',
 ##########
 # save version of data to explore batches on pca
 ##########
-saveRDS(betaCases, paste0(model_data, paste0('/', method, '_', 'cases_new_batch.rda')))
-
+saveRDS(betaCases, paste0(model_data, paste0('/', method, '_', 'cases_new_batch_m.rda')))
 
 ##########
 # remove NA
@@ -145,10 +144,19 @@ betaCases <- removeOutlier(betaCases,
                            val =F)
 
 ##########
+# remove infinite values 
+##########
+if(method == 'raw') {
+  betaCases <- removeInf(betaCases, probe_start = 8)
+  
+}
+
+
+##########
 # saved unscaled data
 ##########
 
-saveRDS(betaCases, paste0(model_data, paste0('/', method, '_', 'cases_new.rda')))
+saveRDS(betaCases, paste0(model_data, paste0('/', method, '_', 'cases_new_m.rda')))
 
 
 

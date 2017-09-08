@@ -36,7 +36,9 @@ full_data_rf_small$X <- NULL
 
 # hierarchical clustering function
 # samples need to be in the columns
-clusterMethyl <- function(data, cluster_size_kmeans, cluster_size_hier) {
+clusterMethyl <- function(data, 
+                          cluster_size_kmeans, 
+                          cluster_size_hier) {
   
   data <- data[!duplicated(data$blood_dna_malkin_lab_),]
   rownames(data) <- data[,7]

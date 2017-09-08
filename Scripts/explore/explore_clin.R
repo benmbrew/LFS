@@ -25,6 +25,68 @@ clin$cancer_diagnosis_diagnoses <- trimws(clin$cancer_diagnosis_diagnoses, which
 clin$p53_germline <- trimws(clin$p53_germline, which = 'both')
 
 ##########
+# age of onset chart for p53 status 
+##########
+p53_age <- clin %>%
+  filter(!is.na(p53_germline)) %>%
+  group_by(p53_germline) %>%
+  summarise(mean_age_onset = (mean(age_diagnosis, na.rm = T)))
+
+temp <- clin[!is.na(clin$p53_germline),]
+
+ggplot(temp, aes(age_diagnosis, fill = p53_germline)) + 
+  geom_histogram(bins = 20, alpha=.5, position="identity") + 
+  xlab('Age of diagnosis') + ylab('Frequency in clinical data') + 
+  scale_fill_manual(name = 'TP53 Germline',
+                    breaks = c('Mut', 'WT'),
+                    labels = c('Mutation', 'Wild Type'),
+                    values = c('Red', 'Blue'))  + 
+  theme_bw() + theme(axis.text.y = element_text(size = 12),
+                     axis.text.x = element_text(size = 12))
+
+##########
+# get top cancers age distribution 
+##########
+# group by cancer and get counts and mean age onset
+cancer_age <- clin %>%
+  filter(!is.na(cancer_diagnosis_diagnoses)) %>%
+  filter(cancer_diagnosis_diagnoses != 'Unaffected') %>%
+  group_by(cancer_diagnosis_diagnoses) %>%
+  summarise(counts = n(),
+            mean_age = mean(age_diagnosis, na.rm = T)) %>%
+  arrange(-counts)
+
+cancer_age_names <- paste(cancer_age$cancer_diagnosis_diagnoses[1:5], collapse = '|')
+cancer_age_names <- "^ACC$|^CPC$|^OS$|^ERMS$|^Breast ca$"
+
+temp_clin <- clin[grepl(cancer_age_names, clin$cancer_diagnosis_diagnoses),]
+
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442")
+
+ggplot(temp_clin, aes(age_diagnosis, fill = cancer_diagnosis_diagnoses)) + 
+  geom_histogram(bins = 30, alpha=.5, position="identity") + 
+  xlab('Age of diagnosis') + ylab('Frequency in clinical data') + 
+  scale_fill_manual(name = 'Most prevelant cancers',
+                    breaks = c('ACC', 'CPC', 'OS', 'ERMS', 'Breast ca'),
+                    labels = c('ACC', 'CPC', 'OS', 'ERMS', 'Breast'),
+                    values = cbPalette)  + 
+  theme_bw() + theme(axis.text.y = element_text(size = 12),
+                     axis.text.x = element_text(size = 12))
+
+
+# subset to acc and do it on lfs
+temp_acc <- temp_clin[grepl('ACC', temp_clin$cancer_diagnosis_diagnoses),]
+
+ggplot(temp_acc, aes(age_diagnosis, fill = p53_germline)) + 
+  geom_histogram(bins = 15, alpha=.5, position="identity") + 
+  xlab('Age of diagnosis') + ylab('Frequency in clinical data') + 
+  scale_fill_manual(name = 'TP53 Germline',
+                    breaks = c('Mut', 'WT'),
+                    labels = c('Mutation', 'Wild Type'),
+                    values = c('Red', 'Blue')) + 
+  theme_bw() + theme(axis.text.y = element_text(size = 12),
+                     axis.text.x = element_text(size = 12))
+##########
 # get model data and check reoccuring cancers
 ##########
 

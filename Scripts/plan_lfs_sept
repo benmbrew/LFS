@@ -1,0 +1,12 @@
+- now you are using M values. 
+- right now you can only trust raw original - try other normalization methods
+- controls_full predicts horribly (which is good)
+- do residual of m values on full data set 
+- dont use gender unless it is correlated with the outcome
+- use bumphunter on very similar data = equal distribution of age, gender, cancer.
+- cluster the methylation data and look at the clusters across clinical information.
+- predict with clusters, maybe use group lasso
+- sample clusters - across and within. 
+- look at predictions and see what probes are consistently getting chosen (are they even consistently getting chosen). maybe run model with random features, increasing the number of features each time until probes start coming up consistently. 
+- random features increasing in size and saving all predictions, age of onsets, and age of sample collection. see how the correlation change as we add features
+

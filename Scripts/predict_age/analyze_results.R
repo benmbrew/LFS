@@ -146,8 +146,8 @@ get_results <-
 #########
 
 # loop through method types and control sizes and aggregate results
-methods <- c('raw', 'quan', 'funnorm')
-types <- c('original', 'transform', 'no_transform')
+methods <- c('raw')
+types <- c('original', 'no_transform')
 sizes <- c('', '_old', '_full')
 
 temp_i <- 
@@ -206,3 +206,47 @@ result_key <-
   summarise(mean_cor = mean(mean_cor, na.rm = T),
             mean_cor_con = mean(mean_cor_controls, na.rm = T),
             mean_cor_val = mean(mean_cor_valid, na.rm = T))
+
+
+##########
+# threshold results 
+##########
+
+temp.result <- list()
+for (i in 1:30) {
+  temp.result[[i]] <- readRDS(paste0(reg_folder, '/full_results_thresh_', i,'.rda' ))
+ 
+}
+
+result <- do.call(rbind, temp.result)
+
+# get summary of methods
+summary(as.factor(result$method))
+
+# get summary of features
+summary(as.factor(result$mean_dim))
+
+# plot mean_dim against onset_correlation
+plot(result$mean_dim, result$onset_correlation)
+
+# plot mean_dim againse controls correlation
+plot(result$mean_dim, result$controls_cor)
+
+# plot mean_dim against valid correlation
+plot(result$mean_dim, result$valid_cor)
+
+# group by alpha and method
+temp_result <- result %>%
+  group_by(alpha, method) %>%
+  summarise(counts = n(),
+            mean_onset = mean(onset_correlation),
+            mean_con = mean(controls_cor),
+            mean_val = mean(valid_cor),
+            mean_vars = mean(vars),
+            mean_dim = mean(mean_dim))
+
+# sort 
+temp_result <- temp_result[order(temp_result$diff, decreasing = T),]
+
+# remove any rows were onset correlation is below 80
+result <- result[result$onset_correlation > .80,]

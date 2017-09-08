@@ -1,6 +1,3 @@
-#######
-# this script will use p53 cases and controls (full) to predict cancer or not to get an 
-# idea as to what extent methylation has a strong cancer signature.
 
 #!/hpf/tools/centos6/R/3.2.3/bin/Rscript
 
@@ -10,10 +7,9 @@
 # argv <- as.numeric(commandArgs(T))
 
 ##########
-# This script will get cleaned data from data saved in clean_data.R
-# this will be the modeling pipeline script where we select features on 
-# our training set and fit model. On the test set we test our model 
-# and compare our predictions to values. 
+# This script will predict cancer with cases and controls, both 450k and 850k
+
+# predict cancer = methylation (p53 mutants)
 
 ##########
 # initialize libraries
@@ -29,6 +25,7 @@ library(nnet)
 library(dplyr)
 library(bumphunter)
 library(sqldf)
+library(e1071)
 
 registerDoParallel(1)
 ##########
@@ -49,88 +46,154 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 # fixed variables
 ##########
 method = 'raw'
-k = 4
-# seed_num <- 1
-# seed_num <- argv[1]
-
-
+k = 5
+seed_num = 1
 ##########
 # load data
 ##########
-betaCases <- readRDS(paste0(model_data, '/betaCases', method,'.rda'))
-betaControls <- readRDS(paste0(model_data, '/betaControls', method,'.rda'))
-betaControlsOld <- readRDS(paste0(model_data, '/betaControlsOld', method,'.rda'))
+# read in full m value data 
+betaCases <- readRDS(paste0(model_data, paste0('/', method, '_', 'cases_new_m.rda')))
+betaControls <- readRDS(paste0(model_data, paste0('/', method, '_', 'controls_new_m.rda'))) #34 449936
+betaValid <- readRDS(paste0(model_data, paste0('/', method, '_', 'valid_new_m.rda')))
+#35 449783
 
-# load features
-bh_feat_all <- readRDS(paste0(model_data, '/bh_feat_all.rda'))
+###########
+# make id into ids
+###########
+colnames(betaCases)[1] <- 'ids'
+colnames(betaControls)[1] <- 'ids'
+colnames(betaValid)[1] <- 'ids'
 
-# 
-# # # TEMP
-# betaCases <- betaCases[!grepl('9721365183', betaCases$sentrix_id),]
+##########
+# remove inf
+##########
+betaCases <- removeInf(betaCases, probe_start = 8)
+betaControls <- removeInf(betaControls, probe_start = 8)
+betaValid<- removeInf(betaValid, probe_start = 8)
 
-# load cg_locations
-cg_locations <- read.csv(paste0(model_data, 
-                                '/cg_locations.csv'))
 
-cg_locations$X <- NULL
+# get old controls - Mut and 'Unaffected'
+betaControlsOld <- subset(betaCases, p53_germline == 'Mut' & 
+                            cancer_diagnosis_diagnoses == 'Unaffected')
+
+# get p53, not 'Unaffected'
+betaCases <- subset(betaCases, p53_germline == 'Mut' & 
+                      cancer_diagnosis_diagnoses != 'Unaffected')
+
+# get rid of cancer samples in controls 
+betaControls <- betaControls[grepl('Unaffected', betaControls$cancer_diagnosis_diagnoses),]
+
+#subset valid
+betaValid <- betaValid[!betaValid$ids %in% betaCases$ids,]
+
 ##########
 # get intersecting colnames and prepare data for modeling
 ##########
 
 intersect_names <- Reduce(intersect, list(colnames(betaCases)[8:ncol(betaCases)], 
-                                          colnames(betaControls)[8:ncol(betaControls)]))
-# organize each data set accordling
+                                          colnames(betaControls)[8:ncol(betaControls)], 
+                                          colnames(betaValid)[8:ncol(betaValid)]))
+# assign dataframe identifier
+betaCases$type <- '450k'
+betaControls$type <- '850k'
+betaControlsOld$type <- '450k'
+betaValid$type <- '850k'
+
 
 # cases
-betaCases <- betaCases[, c('age_diagnosis', 
+betaCases <- betaCases[, c('ids',
+                           'age_diagnosis', 
                            'age_sample_collection', 
                            'cancer_diagnosis_diagnoses', 
-                           'gender', 
+                           'gender',
+                           'type',
                            intersect_names)]
 # controls
-betaControls <- betaControls[, c('age_diagnosis', 
+betaControls <- betaControls[, c('ids',
+                                 'age_diagnosis', 
                                  'age_sample_collection', 
                                  'cancer_diagnosis_diagnoses', 
                                  'gender', 
+                                 'type',
                                  intersect_names)]
 
 # controls
-betaControlsOld <- betaControlsOld[, c('age_diagnosis', 
-                                       'age_sample_collection', 
-                                       'cancer_diagnosis_diagnoses', 
-                                       'gender', 
-                                       intersect_names)]
+betaControlsOld <- betaControlsOld[, c('ids',
+                                 'age_diagnosis', 
+                                 'age_sample_collection', 
+                                 'cancer_diagnosis_diagnoses', 
+                                 'gender', 
+                                 'type',
+                                 intersect_names)]
 
-# #TEMP
-betaFull <- rbind(betaCases, betaControls, betaControlsOld)
-
-rm(betaCases, betaControls, betaControlsOld)
-
-# create outcome variable cancer or not 
-betaFull$cancer_diagnosis_diagnoses <- ifelse(grepl('Unaffected', 
-                                                    betaFull$cancer_diagnosis_diagnoses), 'no', 'yes')
-
-
-# get gender dummy variable
-betaCases <- cbind(as.data.frame(class.ind(betaCases$gender)), betaCases)
-betaControls <- cbind(as.data.frame(class.ind(betaControls$gender)), betaControls)
+#validation
+betaValid <- betaValid[, c('ids', 
+                           'age_diagnosis', 
+                           'age_sample_collection', 
+                           'cancer_diagnosis_diagnoses', 
+                           'gender', 
+                           'type',
+                           intersect_names)]
 
 
-###########################################################################
-# Next part of the pipline selects regions of the genome that are most differentially methylated 
-# between 2 groups
+
+###########
+# get full data
+###########
+beta_full <- rbind(betaCases,
+                   betaControls,
+                   betaControlsOld,
+                   betaValid)
+
+rm(betaCases,
+   betaControls,
+   betaControlsOld,
+   betaValid)
+
+##########
+# remove duplicates 
+##########
+length(which(duplicated(beta_full$ids)))
+
+# remove 
+beta_full <- beta_full[!duplicated(beta_full$ids),]
+
+# summary of data types 
+summary(as.factor(beta_full$type))
 
 # get a column for each dataset indicating the fold
-seed_num <- 1
-  
-betaFull <- getFolds(betaFull, seed_number = seed_num, k_num = k)
-
-bh_feat_sig <- getRun(bh_feat_all[[2]], run_num = .20)
+beta_full <- getFolds(beta_full, seed_number = seed_num, k = k)
 
 
-trainTest <- function(cases, 
+# lets have this model either do 450 only, 850 only, or both, no combinations
+trainTest <- function(dat,
+                      methyl_tech,
                       k) 
 {
+  
+  
+  if(methyl_tech == '450k'){
+    
+    beta_dat <- dat[grepl('450k', dat$type),]
+    
+  } else if (methyl_tech =='850k') {
+    
+    beta_dat <- dat[grepl('850k', dat$type),]
+    
+  } else if(methyl_tech == '450_850') {
+    
+    beta_dat <- subset(dat, type == '450k' |  (type == '850k' & cancer_diagnosis_diagnoses == 'Unaffected'))
+    
+  } else if (methyl_tech =='850_450') {
+    
+    beta_dat <- subset(dat, type == '850k' |  (type == '450k' & cancer_diagnosis_diagnoses == 'Unaffected'))
+    
+  } else {
+    
+    beta_dat <- dat
+    
+  }
+  
   
   # list to store results
   bh_feat <- list()
@@ -140,13 +203,16 @@ trainTest <- function(cases,
   for (i in 1:k) {
     
     # get x 
-    train_index <- !grepl(i, cases$folds)
+    train_index <- !grepl(i, beta_dat$folds)
     test_index <- !train_index
     
-    mod_result <- predCancer(training_dat = cases[train_index,], 
-                             test_dat = cases[test_index,], 
-                             bh_features = bh_feat_sig,
-                             gender = T)
+    mod_feats <- colnames(beta_dat)[7:(ncol(beta_dat) -1)]
+    
+    mod_feats <- sample(mod_feats, 5000, replace = T)
+    
+    mod_result <- predCancer(training_dat = beta_dat[train_index,], 
+                             test_dat = beta_dat[test_index,], 
+                             bh_features = mod_feats)
     
     
     model_results[[i]] <- getResultsCancer(mod_result)
@@ -158,8 +224,7 @@ trainTest <- function(cases,
   
 }
 set.seed(4)
-mod_results <- trainTest(cases = betaFull,
-                         k = 4)
+mod_results <- trainTest(dat = beta_full, methyl_tech = '850', k = 5)
 
 
 getClassResutls <- function(temp.result) {

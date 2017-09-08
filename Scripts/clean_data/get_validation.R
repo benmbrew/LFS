@@ -34,7 +34,7 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 # fixed variables
 ##########
-method = 'funnorm'
+method = 'swan'
 
 ##########
 # read in idate for Valid, controls, and validation set
@@ -139,7 +139,7 @@ betaValid <- betaValid[, c('ids',
 ##########
 # save version of data to explore batches on pca
 ##########
-saveRDS(betaValid, paste0(model_data, paste0('/', method, '_', 'valid_batch.rda')))
+saveRDS(betaValid, paste0(model_data, paste0('/', method, '_', 'valid_batch_m.rda')))
 
 ##########
 # remove NA
@@ -155,8 +155,16 @@ betaValid <- removeOutlier(betaValid,
                            val = T)
 
 ##########
+# remove inf
+##########
+if(method == 'raw') {
+  betaValid <- removeInf(betaValid, probe_start = 8)
+  
+}
+
+##########
 # saved unscaled data
 ##########
 
-saveRDS(betaValid, paste0(model_data, paste0('/', method, '_', 'valid_new.rda')))
+saveRDS(betaValid, paste0(model_data, paste0('/', method, '_', 'valid_new_m.rda')))
 

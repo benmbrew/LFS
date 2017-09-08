@@ -32,7 +32,7 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 # fixed variables
 ##########
-method = 'funnorm'
+method = 'swan'
 
 ##########
 # read in idate for Controls, controls, and validation set
@@ -122,7 +122,7 @@ betaControls <- betaControls[, c('ids',
 ##########
 # save version of data to explore batches on pca
 ##########
-saveRDS(betaControls, paste0(model_data, paste0('/', method, '_', 'controls_batch.rda')))
+saveRDS(betaControls, paste0(model_data, paste0('/', method, '_', 'controls_batch_m.rda')))
 
 ##########
 # remove NA
@@ -138,8 +138,16 @@ betaControls <- removeOutlier(betaControls,
                               val = F)
 
 ##########
+# remove inf
+##########
+if(method == 'raw') {
+  betaControls <- removeInf(betaControls, probe_start = 8)
+  
+}
+
+##########
 # saved unscaled data
 ##########
 
-saveRDS(betaControls, paste0(model_data, paste0('/', method, '_', 'controls_new.rda')))
+saveRDS(betaControls, paste0(model_data, paste0('/', method, '_', 'controls_new_m.rda')))
 

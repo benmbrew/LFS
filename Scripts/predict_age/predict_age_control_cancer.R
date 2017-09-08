@@ -41,6 +41,7 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 method = 'raw'
 k = 10
+seed_num = 1
 ##########
 # load data
 ##########
@@ -126,7 +127,7 @@ trainTest <- function(cases,
                       mod_feats,
                       diff_thresh,
                       feature_set,
-                      seed_num, 
+                      seed_number, 
                       subset, 
                       k) 
 {
@@ -195,9 +196,8 @@ trainTest <- function(cases,
 seed_results <- list()
 full_results <- list()
 
-
-feature_length <- c(100, 500, 1000, 5000, 10000, 20000)
-seeds <- c(1, 2, 3)
+feature_length <- c(100, 500, 1000,  5000, 10000, 20000)
+seeds <- c(1,2,3)
 
 for(l in 1:length(feature_length)) {
   
@@ -219,11 +219,14 @@ for(l in 1:length(feature_length)) {
   print(paste0('done with ', l, ' random feature set'))
   
 }
-
-
+# load('/home/benbrew/Desktop/temp_pred_diff.RData')
+# save.image('/home/benbrew/Desktop/temp_pred_diff.RData')
+##
+# HERE look at full_results first
+##
 final_results <- do.call(rbind, full_results)
 
-# saveRDS(final_results, paste0(model_data, '/predict_acc_results.rda'))
+# saveRDS(final_results, paste0(model_data, '/predict_diff_results.rda'))
 
 # change variable types 
 names(final_results)
@@ -257,11 +260,6 @@ stopifnot(all(results$counts == length(seeds)))
 # get absolute value of difference
 results$onset_diff <- abs(results$onset - results$mean_pred)
 results$age_diff <- abs(results$age - results$mean_pred)
-
-# # get rmse
-# results$onset_diff <- sqrt((results$onset - results$mean_pred)^2)
-# abs(results$onset - results$mean_pred)
-# results$age_diff <- (results$age - results$mean_pred)^2
 
 temp_result <- results[, c('num_feats', 'onset_diff', 'age_diff')]
 
