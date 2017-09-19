@@ -34,18 +34,7 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 # fixed variables
 ##########
-method = 'swan'
-
-##########
-# read in idate for Valid, controls, and validation set
-##########
-rgValid <- read.metharray.exp(idat_data)
-
-##########
-# get preprocedssing method
-##########
-betaValid <- preprocessMethod(rgValid, preprocess = method)
-rm(rgValid)
+method = 'funnorm'
 
 ##########
 # read in clinical data
@@ -62,7 +51,7 @@ id_map <- read.csv(paste0(map_data, '/id_map_validation.csv'), stringsAsFactors 
 
 # homogenize valid map data with cases and controls
 id_map <- id_map[, c('Sample.ID', 'Sample.Group', 'Sentrix.Barcode', 'Sample.Section',
-                                 'Project', 'Pool_ID', 'Sample_Well')]
+                     'Project', 'Pool_ID', 'Sample_Well')]
 
 # sub out '.' for '_'
 colnames(id_map) <- gsub('.', '_', colnames(id_map), fixed = T)
@@ -77,6 +66,27 @@ colnames(id_map)[5] <- 'Sample_Plate'
 # clean idmap
 ##########
 id_map <- cleanIdMap(id_map)
+
+##########
+# read in idate for Valid, controls, and validation set
+##########
+rgValid <- read.metharray.exp(idat_data)
+
+###########
+# remove outliers (previously determined) from rgset before normalization
+###########
+
+rgValid <- remove_outliers(rgSet = rgValid, 
+                           id_map = id_map, 
+                           method = 'funnorm', 
+                           type = 'valid')
+
+##########
+# get preprocedssing method
+##########
+betaValid <- preprocessMethod(rgValid, preprocess = method, only_m_values = T)
+rm(rgValid)
+
 
 ###########
 # id functions
@@ -139,7 +149,7 @@ betaValid <- betaValid[, c('ids',
 ##########
 # save version of data to explore batches on pca
 ##########
-saveRDS(betaValid, paste0(model_data, paste0('/', method, '_', 'valid_batch_m.rda')))
+saveRDS(betaValid, paste0(model_data, paste0('/', method, '_', 'valid_batch_m_sub.rda')))
 
 ##########
 # remove NA

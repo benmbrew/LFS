@@ -33,25 +33,14 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 # fixed variables
 ##########
-method = 'swan'
-
-##########
-# read in idate for cases, controls, and validation set
-##########
-rgCases <- read.metharray.exp(idat_data)
-
-##########
-# get preprocedssing method
-##########
-betaCases <- preprocessMethod(rgCases, preprocess = method)
-rm(rgCases)
+method = 'funnorm'
 
 ##########
 # read in clinical data
 ##########
 clin <- read.csv(paste0(clin_data, '/clinical_two.csv'), stringsAsFactors = F)
 
-# clean clinical idss
+# clean clinical ids
 clin$ids <-  gsub('A|B|_|-', '', clin$blood_dna_malkin_lab_)
 
 ##########
@@ -75,6 +64,34 @@ rm(id_map_other)
 # clean idmap
 ##########
 id_map <- cleanIdMap(id_map)
+
+##########
+# read in idate for cases, controls, and validation set
+##########t
+rgCases <- read.metharray.exp(idat_data)
+
+
+
+###########
+# remove outliers (previously determined from rgset before normalization)
+###########
+
+rgCases <- remove_outliers(rgCases, 
+                              id_map = id_map, 
+                              method = 'funnorm', 
+                              type = 'cases')
+
+
+##########
+# get preprocedssing method
+##########
+betaCases <- preprocessMethod(rgCases, preprocess = method, only_m_values = T)
+
+# save.image('~/Desktop/temp_cases.RData')
+# load('~/Desktop/temp_cases.RData')
+
+# remove rgset
+rm(rgCases)
 
 ###########
 # id functions
@@ -128,7 +145,7 @@ betaCases <- betaCases[, c('ids',
 ##########
 # save version of data to explore batches on pca
 ##########
-saveRDS(betaCases, paste0(model_data, paste0('/', method, '_', 'cases_new_batch_m.rda')))
+saveRDS(betaCases, paste0(model_data, paste0('/', method, '_', 'cases_batch_m_sub.rda')))
 
 ##########
 # remove NA
@@ -157,6 +174,7 @@ if(method == 'raw') {
 ##########
 
 saveRDS(betaCases, paste0(model_data, paste0('/', method, '_', 'cases_new_m.rda')))
+
 
 
 

@@ -58,7 +58,6 @@ getManifest(rgCases)
 
 
 # what functions can be used on RGset
-
 summary <- shinySummarize(rgCases)
 summary_controls <- shinySummarize(rgControls)
 summary_valid <- shinySummarize(rgValid)
@@ -66,7 +65,8 @@ summary_valid <- shinySummarize(rgValid)
 # save.image('~/Desktop/shiny_methyl.RData')
 # load('~/Desktop/shiny_methyl.RData')
 
-
+slotNames(summary)
+temp <- summary@greenControls[[1]]
 runShinyMethyl(summary_controls)
 
 

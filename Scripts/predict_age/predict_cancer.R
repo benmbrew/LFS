@@ -208,7 +208,7 @@ trainTest <- function(dat,
     
     mod_feats <- colnames(beta_dat)[7:(ncol(beta_dat) -1)]
     
-    mod_feats <- sample(mod_feats, 5000, replace = T)
+    mod_feats <- sample(mod_feats, 10000, replace = T)
     
     mod_result <- predCancer(training_dat = beta_dat[train_index,], 
                              test_dat = beta_dat[test_index,], 
@@ -224,7 +224,7 @@ trainTest <- function(dat,
   
 }
 set.seed(4)
-mod_results <- trainTest(dat = beta_full, methyl_tech = '850', k = 5)
+mod_results <- trainTest(dat = beta_full, methyl_tech = 'all', k = 5)
 
 
 getClassResutls <- function(temp.result) {

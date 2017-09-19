@@ -32,18 +32,7 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 # fixed variables
 ##########
-method = 'swan'
-
-##########
-# read in idate for Controls, controls, and validation set
-##########
-rgControls <- read.metharray.exp(idat_data)
-
-##########
-# get preprocedssing method
-##########
-betaControls <- preprocessMethod(rgControls, preprocess = method)
-rm(rgControls)
+method = 'funnorm'
 
 ##########
 # read in clinical data
@@ -58,11 +47,30 @@ clin$ids <-  gsub('A|B|_|-', '', clin$blood_dna_malkin_lab_)
 ##########
 id_map <- read.csv(paste0(methyl_data, '/ids_map_controls.csv'), stringsAsFactors = F)
 
-
 ##########
 # clean idmap
 ##########
 id_map <- cleanIdMap(id_map)
+
+
+##########
+# read in idate for Controls, controls, and validation set
+##########
+rgControls <- read.metharray.exp(idat_data)
+
+###########
+# remove outliers (previously determined) from rgset before normalization
+###########
+
+rgControls <- remove_outliers(rgSet = rgControls, 
+                              id_map = id_map, 
+                              method = 'funnorm', 
+                              type = 'controls')
+##########
+# get preprocedssing method
+##########
+betaControls <- preprocessMethod(rgControls, preprocess = method, only_m_values = T)
+rm(rgControls)
 
 ###########
 # id functions
@@ -122,7 +130,7 @@ betaControls <- betaControls[, c('ids',
 ##########
 # save version of data to explore batches on pca
 ##########
-saveRDS(betaControls, paste0(model_data, paste0('/', method, '_', 'controls_batch_m.rda')))
+saveRDS(betaControls, paste0(model_data, paste0('/', method, '_', 'controls_batch_m_sub.rda')))
 
 ##########
 # remove NA

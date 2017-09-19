@@ -15,10 +15,54 @@ cleanIdMap <- function(data, valid) {
   
 }
 
+
+##########
+# function for removing outlier from rgset
+##########
+remove_outliers <- function(rgSet, id_map, method, type) {
+ 
+  # read in outliers
+  outliers <- readRDS(paste0(model_data, paste0('/', method, '_', 'outliers.rda')))
+  
+  # clean sample name
+  column_split <- strsplit(as.character(id_map$sample_name), '#')
+  last_digits <- lapply(column_split, function(x) x[length(x)])
+  sub_ids <- unlist(last_digits)
+  sub_ids <- gsub('RD-', '', sub_ids)
+  id_map$ids <- sub_ids
+  id_map$ids <- gsub('A|B|_|-', '', id_map$ids)
+  id_map$ids <- substr(id_map$ids, 1,4) 
+  
+  # combine outliers and id map by 
+  temp <- inner_join(id_map, outliers, by = 'ids')
+  temp <- temp[grepl(type, temp$batch),]
+  
+  # get identifier 
+  temp_id <- as.character(temp$identifier)
+  
+  # keep only
+  rg_names <- colnames(rgSet)
+  print(paste0(length(which(rg_names %in% temp_id)), ' found'))
+  
+  # intersecting index
+  int_index <- rg_names %in% temp_id
+  
+  # subset rgSet by temp_id
+  rgSet <- rgSet[, !int_index]
+
+  return(rgSet)
+  
+  
+}
+
+
+
 ##########
 # function that Loops through list, preprocesses, and convert to beta, m, and cn values 
 ##########
-preprocessMethod <- function(data, preprocess) {
+preprocessMethod <- function(data, 
+                             preprocess,
+                             only_m_values) {
   
   if (preprocess == 'raw') {
     
@@ -26,7 +70,7 @@ preprocessMethod <- function(data, preprocess) {
   }
   
   if (preprocess == 'quan') {
-    Mset   <-preprocessQuantile(data, fixOutliers = TRUE,
+    Mset <- preprocessQuantile(data, fixOutliers = TRUE,
                                 removeBadSamples = TRUE, badSampleCutoff = 10.5,
                                 quantileNormalize = TRUE, stratified = TRUE,
                                 mergeManifest = FALSE, sex = NULL)
@@ -42,12 +86,24 @@ preprocessMethod <- function(data, preprocess) {
   
   if (preprocess == 'funnorm') {
     Mset <-preprocessFunnorm(data)
+    
   }
-  
-  # gset <- mapToGenome(ratioSet) 
+  # 
+  # map methyl set to genome (funnorm already does this)
+  Gset <- mapToGenome(Mset)
+
+  # get m values
   m <- getM(Mset)
-  # beta <- getBeta(gset)
-  return(m)
+
+  # get beta values
+  beta <- getBeta(Gset)
+  
+  if(only_m_values) {
+    return(m)
+  } else {
+    return(list(beta, m, Gset, Mset))
+    
+  }
   
 }
 
@@ -3518,4 +3574,1246 @@ runSvmRandResid <- function(training_dat,
   
 }
 
+
+
+
+
+
+##########
+# predict cancer
+##########
+predCancer <- function(training_dat, 
+                       test_dat,
+                       bh_features,
+                       gender,
+                       cutoff) 
+{
+  
+  # get intersection of bh features and real data
+  bh_features <- as.character(unlist(bh_features))
+  
+  intersected_feats <- intersect(bh_features, colnames(training_dat))
+  
+  # # get y
+  train_y <- as.factor(ifelse(grepl('Unaffected',training_dat$cancer_diagnosis_diagnoses), 'no', 'yes'))
+  test_y <- as.factor(ifelse(grepl('Unaffected',test_dat$cancer_diagnosis_diagnoses), 'no', 'yes'))
+  
+  train_y <- factor(train_y, levels = c('yes', 'no'))
+  test_y <- factor(test_y, levels = c('yes', 'no'))
+  
+  
+  # get bumphunter features
+  training_dat <- training_dat[, intersected_feats]
+  test_dat <- test_dat[, intersected_feats]
+  
+  training_dat <- training_dat[, 1:100]
+  test_dat <- test_dat[, 1:100]
+  
+  
+  # controls_dat <- controls_dat[, intersected_feats]
+  # valid_dat <- valid_dat[, intersected_feats]
+  
+  N_CV_REPEATS = 2
+  nfolds = 5
+  
+  ###### ENET
+  # create vector and list to store best alpha on training data. alpha is the parameter that choses the 
+  # the optimal proportion lambda, the tuning parameter for L1 (ridge) and L2 (lasso)
+  elastic_net.cv_error = vector()
+  elastic_net.cv_model = list()
+  elastic_net.ALPHA <- c(1:9) / 10 # creates possible alpha values for model to choose from
+  
+  # set parameters for training model
+  type_family <- 'binomial'
+  type_measure <- 'auc'
+  
+  # create error matrix for for opitmal alpha that can run in parraellel if you have bigger data 
+  # or if you have a high number fo N_CV_REPEATS
+  temp.cv_error_matrix <- foreach (temp = 1:N_CV_REPEATS, .combine=rbind, .errorhandling="stop") %do% {      
+    for (alpha in 1:length(elastic_net.ALPHA)) # for i in 1:9 - the model will run 9 times
+    {      
+      elastic_net.cv_model[[alpha]] = cv.glmnet(x = as.matrix(training_dat)
+                                                , y =  train_y
+                                                , alpha = elastic_net.ALPHA[alpha] # first time with 0.1 and so on
+                                                , type.measure = type_measure
+                                                , family = type_family
+                                                , standardize = FALSE 
+                                                , nfolds = nfolds 
+                                                , nlambda = 10
+                                                , parallel = TRUE
+      )
+      elastic_net.cv_error[alpha] = min(elastic_net.cv_model[[alpha]]$cvm)
+    }
+    elastic_net.cv_error # stores 9 errors    
+  }
+  
+  if (N_CV_REPEATS == 1) {
+    temp.cv_error_mean = temp.cv_error_matrix
+  } else {
+    temp.cv_error_mean = apply(temp.cv_error_matrix, 2, mean) # take the mean of the 5 iterations  
+    # as your value for alpha
+  }
+  
+  # stop if you did not recover error for any models 
+  stopifnot(length(temp.cv_error_mean) == length(elastic_net.ALPHA))
+  
+  # get index of best alpha (lowest error) - alpha is values 0.1-0.9
+  temp.best_alpha_index = which(min(temp.cv_error_mean) == temp.cv_error_mean)[length(which(min(temp.cv_error_mean) == temp.cv_error_mean))] 
+  print(paste("Best ALPHA:", elastic_net.ALPHA[temp.best_alpha_index])) # print the value for alpha
+  best_alpha <- elastic_net.ALPHA[temp.best_alpha_index]
+  temp.non_zero_coeff = 0
+  temp.loop_count = 0
+  # loop runs initially because temp.non_zero coefficient <3 and then stops 
+  # usually after one iteration because the nzero variable selected by lambda is greater that 3. if it keeps looping
+  # it they are never greater than 1, then the model does not converge. 
+  while (temp.non_zero_coeff < 1) { 
+    elastic_net.cv_model = cv.glmnet(x = as.matrix(training_dat)
+                                     , y =  train_y
+                                     , alpha = elastic_net.ALPHA[temp.best_alpha_index]
+                                     , type.measure = type_measure
+                                     , family = type_family
+                                     , standardize=FALSE
+                                     , nlambda = 100
+                                     , nfolds = nfolds
+                                     , parallel = TRUE
+    )
+    
+    # get optimal lambda - the tuning parameter for ridge and lasso
+    # THIS IS IMPORTANT BECAUSE WHEN YOU TRAIN THE MODEL ON 100 SEPERATE VALUES OF LAMBDA
+    # AND WHEN YOU TEST THE MODEL IT WILL RETURN PREDCITION FOR ALL THOSE VALUES (1-100). YOU NEED TO 
+    # GRAB THE PREDICTION WITH SAME LAMBDA THAT YOU TRAINED ON. ITS ALL IN THE CODE, BUT JUST WANTED TO 
+    # GIVE YOU REASONS
+    temp.min_lambda_index = which(elastic_net.cv_model$lambda == elastic_net.cv_model$lambda.min) 
+    
+    # # number of non zero coefficients at that lambda    
+    temp.non_zero_coeff = elastic_net.cv_model$nzero[temp.min_lambda_index] 
+    temp.loop_count = temp.loop_count + 1
+    
+    # set seed for next loop iteration
+    as.numeric(Sys.time())-> t 
+    set.seed((t - floor(t)) * 1e8 -> seed) 
+    if (temp.loop_count > 10) {
+      print("diverged")
+      temp.min_lambda_index = 50 # if it loops more than 5 times, then model did not converge
+      break
+    }
+  }# while loop ends 
+  print(temp.non_zero_coeff)  
+  
+  model  = glmnet(x = as.matrix(training_dat)
+                  , y =  train_y
+                  ,alpha = elastic_net.ALPHA[temp.best_alpha_index]
+                  ,standardize=FALSE
+                  ,nlambda = 100
+                  ,family = type_family)
+  
+  # This returns 100 prediction with 1-100 lambdas
+  temp_test.predictions <- predict(model, 
+                                   data.matrix(test_dat),
+                                   type = 'class')
+  
+  
+  test.predictions <- temp_test.predictions[, temp.min_lambda_index]
+  test.predictions <- factor(test.predictions, levels = c('yes', 'no'))
+  
+  test_stats <- confusionMatrix(test_y, test.predictions)
+  importance <- coef(model)
+  
+  lambda_value <- elastic_net.cv_model$lambda.min
+  
+  alpha  <- best_alpha
+  
+  return(list(alpha, lambda_value, importance, test_stats, model, temp.non_zero_coeff))
+  
+  
+}
+
+
+
+
+##########
+# enet diff
+###########
+
+runEnetRandFac <- function(training_dat,
+                        controls_dat,
+                        controls_dat_old,
+                        controls_dat_full,
+                        valid_dat,
+                        test_dat,
+                        age_cutoff,
+                        pred_cutoff,
+                        bh_features,
+                        gender) {
+  
+  if(gender) {
+    # get intersection of bh features and real data
+    bh_features <- as.character(unlist(bh_features))
+    bh_features <- append('M', bh_features)
+    bh_features <- append('F', bh_features)
+  }
+  
+  # get intersection of bh features and real data
+  bh_features <- as.character(unlist(bh_features))
+  
+  intersected_feats <- intersect(bh_features, colnames(training_dat))
+  # # get y
+  train_y <- ifelse(training_dat$age_diagnosis > age_cutoff, 'no', 'yes')
+  test_y <-ifelse(test_dat$age_diagnosis > age_cutoff, 'no', 'yes')
+  valid_y <- ifelse(valid_dat$age_diagnosis > age_cutoff, 'no', 'yes')
+  
+  train_y <- factor(train_y, levels = c('yes', 'no'))
+  test_y <- factor(test_y, levels = c('yes', 'no'))
+  valid_y <-factor(valid_y, levels = c('yes', 'no'))
+  
+  # get test age of sample collection
+  patient_age <-  ifelse(test_dat$age_sample_collection > age_cutoff, 'no', 'yes')
+  patient_age_controls <-  ifelse(controls_dat$age_sample_collection > age_cutoff, 'no', 'yes')
+  patient_age_controls_old <- ifelse(controls_dat_old$age_sample_collection > age_cutoff, 'no', 'yes')
+  patient_age_controls_full <- ifelse(controls_dat_full$age_sample_collection > age_cutoff, 'no', 'yes')
+  patient_age_valid <- ifelse(valid_dat$age_sample_collection > age_cutoff, 'no', 'yes')
+  
+  patient_age <- factor(patient_age, levels = c('yes', 'no'))
+  patient_age_controls <- factor(patient_age_controls, levels = c('yes', 'no'))
+  patient_age_controls_old <- factor(patient_age_controls_old, levels = c('yes', 'no'))
+  patient_age_controls_full <- factor(patient_age_controls_full, levels = c('yes', 'no'))
+  patient_age_valid <- factor(patient_age_valid, levels = c('yes', 'no'))
+  
+
+  # get bumphunter features
+  training_dat <- training_dat[, intersected_feats]
+  controls_dat <- controls_dat[, intersected_feats]
+  controls_dat_old <- controls_dat_old[, intersected_feats]
+  controls_dat_full <- controls_dat_full[, intersected_feats]
+  valid_dat <- valid_dat[, intersected_feats]
+  test_dat <- test_dat[, intersected_feats]
+
+  # start elastic net tuning
+  N_CV_REPEATS = 2
+  nfolds = 3
+  
+  ###### ENET
+  # create vector and list to store best alpha on training data. alpha is the parameter that choses the 
+  # the optimal proportion lambda, the tuning parameter for L1 (ridge) and L2 (lasso)
+  elastic_net.cv_error = vector()
+  elastic_net.cv_model = list()
+  elastic_net.ALPHA <- c(1:9) / 10 # creates possible alpha values for model to choose from
+  
+  # set parameters for training model
+  type_family <- 'binomial'
+  type_measure <- 'auc'
+  
+  # create error matrix for for opitmal alpha that can run in parraellel if you have bigger data 
+  # or if you have a high number fo N_CV_REPEATS
+  temp.cv_error_matrix <- foreach (temp = 1:N_CV_REPEATS, .combine=rbind, .errorhandling="stop") %do% {      
+    for (alpha in 1:length(elastic_net.ALPHA)) # for i in 1:9 - the model will run 9 times
+    {      
+      elastic_net.cv_model[[alpha]] = cv.glmnet(x = as.matrix(training_dat)
+                                                , y =  train_y
+                                                , alpha = elastic_net.ALPHA[alpha] # first time with 0.1 and so on
+                                                , type.measure = type_measure
+                                                , family = type_family
+                                                , standardize = FALSE 
+                                                , nfolds = nfolds 
+                                                , nlambda = 10
+                                                , parallel = TRUE
+      )
+      elastic_net.cv_error[alpha] = min(elastic_net.cv_model[[alpha]]$cvm)
+    }
+    elastic_net.cv_error # stores 9 errors    
+  }
+  
+  if (N_CV_REPEATS == 1) {
+    temp.cv_error_mean = temp.cv_error_matrix
+  } else {
+    temp.cv_error_mean = apply(temp.cv_error_matrix, 2, mean) # take the mean of the 5 iterations  
+    # as your value for alpha
+  }
+  
+  # stop if you did not recover error for any models 
+  stopifnot(length(temp.cv_error_mean) == length(elastic_net.ALPHA))
+  
+  # get index of best alpha (lowest error) - alpha is values 0.1-0.9
+  temp.best_alpha_index = which(min(temp.cv_error_mean) == temp.cv_error_mean)[length(which(min(temp.cv_error_mean) == temp.cv_error_mean))] 
+  # print(paste("Best ALPHA:", elastic_net.ALPHA[temp.best_alpha_index])) # print the value for alpha
+  best_alpha <- elastic_net.ALPHA[temp.best_alpha_index]
+  temp.non_zero_coeff = 0
+  temp.loop_count = 0
+  # loop runs initially because temp.non_zero coefficient <3 and then stops 
+  # usually after one iteration because the nzero variable selected by lambda is greater that 3. if it keeps looping
+  # it they are never greater than 1, then the model does not converge. 
+  while (temp.non_zero_coeff < 1) { 
+    elastic_net.cv_model = cv.glmnet(x = as.matrix(training_dat)
+                                     , y =  train_y
+                                     , alpha = elastic_net.ALPHA[temp.best_alpha_index]
+                                     , type.measure = type_measure
+                                     , family = type_family
+                                     , standardize=FALSE
+                                     , nlambda = 100
+                                     , nfolds = nfolds
+                                     , parallel = TRUE
+    )
+    
+    # get optimal lambda - the tuning parameter for ridge and lasso
+    # THIS IS IMPORTANT BECAUSE WHEN YOU TRAIN THE MODEL ON 100 SEPERATE VALUES OF LAMBDA
+    # AND WHEN YOU TEST THE MODEL IT WILL RETURN PREDCITION FOR ALL THOSE VALUES (1-100). YOU NEED TO 
+    # GRAB THE PREDICTION WITH SAME LAMBDA THAT YOU TRAINED ON. ITS ALL IN THE CODE, BUT JUST WANTED TO 
+    # GIVE YOU REASONS
+    temp.min_lambda_index = which(elastic_net.cv_model$lambda == elastic_net.cv_model$lambda.min) 
+    
+    # # number of non zero coefficients at that lambda    
+    temp.non_zero_coeff = elastic_net.cv_model$nzero[temp.min_lambda_index] 
+    temp.loop_count = temp.loop_count + 1
+    
+    # set seed for next loop iteration
+    as.numeric(Sys.time())-> t 
+    set.seed((t - floor(t)) * 1e8 -> seed) 
+    if (temp.loop_count > 10) {
+      print("diverged")
+      temp.min_lambda_index = 50 # if it loops more than 5 times, then model did not converge
+      break
+    }
+  }# while loop ends 
+  # print(temp.non_zero_coeff)  
+  
+  model  = glmnet(x = as.matrix(training_dat)
+                  , y =  train_y
+                  ,alpha = elastic_net.ALPHA[temp.best_alpha_index]
+                  ,standardize=FALSE
+                  ,nlambda = 100
+                  ,family = type_family)
+  
+
+  
+  ##########
+  # Predictions on test data
+  ##########
+  
+  # This returns 100 prediction with 1-100 lambdas
+  temp_test.predictions <- predict(model, 
+                                   data.matrix(test_dat),
+                                   type = 'response')
+  
+  
+  # original should be fine, something wrong with caret package
+  test.predictions <- temp_test.predictions[, temp.min_lambda_index]
+  test.predictions <- ifelse(test.predictions <= pred_cutoff, 'yes', 'no')
+  test.predictions <- factor(test.predictions, levels = c('yes', 'no'))
+  test_stats <- confusionMatrix(test_y, test.predictions)
+  test_stats_age <- confusionMatrix(patient_age, test.predictions)
+  
+  ##########
+  # Predictions against controls 
+  ##########
+  
+  # get controls
+  temp_test.predictions_controls <- predict(model,
+                                            data.matrix(controls_dat),
+                                            type = 'response')
+  
+  
+  test.predictions_controls <- temp_test.predictions_controls[, temp.min_lambda_index]
+  test.predictions_controls <- ifelse(test.predictions_controls <= pred_cutoff, 'yes', 'no')
+  test.predictions_controls <- factor(test.predictions_controls, levels = c('yes', 'no'))
+  test_stats_controls <- confusionMatrix(patient_age_controls, test.predictions_controls)
+  
+  
+  ##########
+  # Predictions against controls old
+  ##########
+  
+  # get controls
+  temp_test.predictions_controls_old <- predict(model,
+                                            data.matrix(controls_dat_old),
+                                            type = 'response')
+  
+  
+  test.predictions_controls_old <- temp_test.predictions_controls_old[, temp.min_lambda_index]
+  test.predictions_controls_old <- ifelse(test.predictions_controls_old <= pred_cutoff, 'yes', 'no')
+  test.predictions_controls_old <- factor(test.predictions_controls_old, levels = c('yes', 'no'))
+  test_stats_controls_old <- confusionMatrix(patient_age_controls_old, test.predictions_controls_old)
+  
+  
+  ##########
+  # Predictions against controls full
+  ##########
+  
+  # get controls
+  temp_test.predictions_controls_full <- predict(model,
+                                                data.matrix(controls_dat_full),
+                                                type = 'response')
+  
+  
+  test.predictions_controls_full <- temp_test.predictions_controls_full[, temp.min_lambda_index]
+  test.predictions_controls_full <- ifelse(test.predictions_controls_full <= pred_cutoff, 'yes', 'no')
+  test.predictions_controls_full <- factor(test.predictions_controls_full, levels = c('yes', 'no'))
+  test_stats_controls_full <- confusionMatrix(patient_age_controls_full, test.predictions_controls_full)
+  
+  
+  ##########
+  # Predictions on valid dat
+  ##########
+  
+  # This returns 100 prediction with 1-100 lambdas
+  temp_test.predictions_valid <- predict(model, 
+                                   data.matrix(valid_dat),
+                                   type = 'response')
+  
+  
+  # original should be fine, something wrong with caret package
+  test.predictions_valid <- temp_test.predictions_valid[, temp.min_lambda_index]
+  test.predictions_valid <- ifelse(test.predictions_valid <=  pred_cutoff, 'yes', 'no')
+  test.predictions_valid <- factor(test.predictions_valid, levels = c('yes', 'no'))
+  test_stats_valid <- confusionMatrix(valid_y, test.predictions_valid)
+  test_stats_age_valid <- confusionMatrix(patient_age_valid, test.predictions_valid)
+  
+  
+  return(list(test_stats, test_stats_age,
+              test_stats_controls, test_stats_controls_old,
+              test_stats_controls_full, test_stats_valid,
+              test_stats_age_valid))
+  
+  
+}
+
+##########
+# Lasso
+###########
+
+runLassoRandFac <- function(training_dat,
+                           controls_dat,
+                           controls_dat_old,
+                           controls_dat_full,
+                           valid_dat,
+                           test_dat,
+                           age_cutoff,
+                           pred_cutoff,
+                           bh_features,
+                           gender) {
+  
+  if(gender) {
+    # get intersection of bh features and real data
+    bh_features <- as.character(unlist(bh_features))
+    bh_features <- append('M', bh_features)
+    bh_features <- append('F', bh_features)
+  }
+  
+  # get intersection of bh features and real data
+  bh_features <- as.character(unlist(bh_features))
+  
+  intersected_feats <- intersect(bh_features, colnames(training_dat))
+  # # get y
+  train_y <- ifelse(training_dat$age_diagnosis > age_cutoff, 'no', 'yes')
+  test_y <-ifelse(test_dat$age_diagnosis > age_cutoff, 'no', 'yes')
+  valid_y <- ifelse(valid_dat$age_diagnosis > age_cutoff, 'no', 'yes')
+  
+  train_y <- factor(train_y, levels = c('yes', 'no'))
+  test_y <- factor(test_y, levels = c('yes', 'no'))
+  valid_y <-factor(valid_y, levels = c('yes', 'no'))
+  
+  # get test age of sample collection
+  patient_age <-  ifelse(test_dat$age_sample_collection > age_cutoff, 'no', 'yes')
+  patient_age_controls <-  ifelse(controls_dat$age_sample_collection > age_cutoff, 'no', 'yes')
+  patient_age_controls_old <- ifelse(controls_dat_old$age_sample_collection > age_cutoff, 'no', 'yes')
+  patient_age_controls_full <- ifelse(controls_dat_full$age_sample_collection > age_cutoff, 'no', 'yes')
+  patient_age_valid <- ifelse(valid_dat$age_sample_collection > age_cutoff, 'no', 'yes')
+  
+  patient_age <- factor(patient_age, levels = c('yes', 'no'))
+  patient_age_controls <- factor(patient_age_controls, levels = c('yes', 'no'))
+  patient_age_controls_old <- factor(patient_age_controls_old, levels = c('yes', 'no'))
+  patient_age_controls_full <- factor(patient_age_controls_full, levels = c('yes', 'no'))
+  patient_age_valid <- factor(patient_age_valid, levels = c('yes', 'no'))
+  
+  
+  
+  
+  # get bumphunter features
+  training_dat <- training_dat[, intersected_feats]
+  controls_dat <- controls_dat[, intersected_feats]
+  controls_dat_old <- controls_dat_old[, intersected_feats]
+  controls_dat_full <- controls_dat_full[, intersected_feats]
+  valid_dat <- valid_dat[, intersected_feats]
+  test_dat <- test_dat[, intersected_feats]
+  
+  # start elastic net tuning
+  N_CV_REPEATS = 2
+  nfolds = 5
+  
+
+  # set parameters for training model
+  type_family <- 'binomial'
+  type_measure <- 'auc'
+  
+  
+  while (temp.non_zero_coeff < 1) { 
+    elastic_net.cv_model = cv.glmnet(x = as.matrix(training_dat)
+                                     , y =  train_y
+                                     , alpha = 1
+                                     , type.measure = type_measure
+                                     , family = type_family
+                                     , standardize=FALSE
+                                     , nlambda = 100
+                                     , nfolds = nfolds
+                                     , parallel = TRUE
+    )
+    
+    # get optimal lambda - the tuning parameter for ridge and lasso
+    # THIS IS IMPORTANT BECAUSE WHEN YOU TRAIN THE MODEL ON 100 SEPERATE VALUES OF LAMBDA
+    # AND WHEN YOU TEST THE MODEL IT WILL RETURN PREDCITION FOR ALL THOSE VALUES (1-100). YOU NEED TO 
+    # GRAB THE PREDICTION WITH SAME LAMBDA THAT YOU TRAINED ON. ITS ALL IN THE CODE, BUT JUST WANTED TO 
+    # GIVE YOU REASONS
+    temp.min_lambda_index = which(elastic_net.cv_model$lambda == elastic_net.cv_model$lambda.min) 
+    
+    # # number of non zero coefficients at that lambda    
+    temp.non_zero_coeff = elastic_net.cv_model$nzero[temp.min_lambda_index] 
+    temp.loop_count = temp.loop_count + 1
+    
+    # set seed for next loop iteration
+    as.numeric(Sys.time())-> t 
+    set.seed((t - floor(t)) * 1e8 -> seed) 
+    if (temp.loop_count > 10) {
+      print("diverged")
+      temp.min_lambda_index = 50 # if it loops more than 5 times, then model did not converge
+      break
+    }
+  }# while loop ends 
+  # print(temp.non_zero_coeff)  
+  
+  model  = glmnet(x = as.matrix(training_dat)
+                  , y =  train_y
+                  ,alpha = 1
+                  ,standardize=FALSE
+                  ,nlambda = 100
+                  ,family = type_family)
+  
+  
+  
+  ##########
+  # Predictions on test data
+  ##########
+  
+  # This returns 100 prediction with 1-100 lambdas
+  temp_test.predictions <- predict(model, 
+                                   data.matrix(test_dat),
+                                   type = 'response')
+  
+  
+  # original should be fine, something wrong with caret package
+  test.predictions <- temp_test.predictions[, temp.min_lambda_index]
+  test.predictions <- ifelse(test.predictions >= pred_cutoff, 'yes', 'no')
+  test.predictions <- factor(test.predictions, levels = c('yes', 'no'))
+  test_stats <- confusionMatrix(test_y, test.predictions)
+  test_stats_age <- confusionMatrix(patient_age, test.predictions)
+  
+  ##########
+  # Predictions against controls 
+  ##########
+  
+  # get controls
+  temp_test.predictions_controls <- predict(model,
+                                            data.matrix(controls_dat),
+                                            type = 'response')
+  
+  
+  test.predictions_controls <- temp_test.predictions_controls[, temp.min_lambda_index]
+  test.predictions_controls <- ifelse(test.predictions_controls >= pred_cutoff, 'yes', 'no')
+  test.predictions_controls <- factor(test.predictions_controls, levels = c('yes', 'no'))
+  test_stats_controls <- confusionMatrix(patient_age_controls, test.predictions_controls)
+  
+  
+  ##########
+  # Predictions against controls old
+  ##########
+  
+  # get controls
+  temp_test.predictions_controls_old <- predict(model,
+                                                data.matrix(controls_dat_old),
+                                                type = 'response')
+  
+  
+  test.predictions_controls_old <- temp_test.predictions_controls_old[, temp.min_lambda_index]
+  test.predictions_controls_old <- ifelse(test.predictions_controls_old >= pred_cutoff, 'yes', 'no')
+  test.predictions_controls_old <- factor(test.predictions_controls_old, levels = c('yes', 'no'))
+  test_stats_controls_old <- confusionMatrix(patient_age_controls_old, test.predictions_controls_old)
+  
+  
+  ##########
+  # Predictions against controls full
+  ##########
+  
+  # get controls
+  temp_test.predictions_controls_full <- predict(model,
+                                                 data.matrix(controls_dat_full),
+                                                 type = 'response')
+  
+  
+  test.predictions_controls_full <- temp_test.predictions_controls_full[, temp.min_lambda_index]
+  test.predictions_controls_full <- ifelse(test.predictions_controls_full >= pred_cutoff, 'yes', 'no')
+  test.predictions_controls_full <- factor(test.predictions_controls_full, levels = c('yes', 'no'))
+  test_stats_controls_full <- confusionMatrix(patient_age_controls_full, test.predictions_controls_full)
+  
+  
+  ##########
+  # Predictions on valid dat
+  ##########
+  
+  # This returns 100 prediction with 1-100 lambdas
+  temp_test.predictions_valid <- predict(model, 
+                                         data.matrix(valid_dat),
+                                         type = 'response')
+  
+  
+  # original should be fine, something wrong with caret package
+  test.predictions_valid <- temp_test.predictions_valid[, temp.min_lambda_index]
+  test.predictions_valid <- ifelse(test.predictions_valid >= pred_cutoff, 'yes', 'no')
+  test.predictions_valid <- factor(test.predictions_valid, levels = c('yes', 'no'))
+  test_stats_valid <- confusionMatrix(valid_y, test.predictions_valid)
+  test_stats_age_valid <- confusionMatrix(patient_age_valid, test.predictions_valid)
+  
+  
+  return(list(test_stats, test_stats_age,
+              test_stats_controls, test_stats_controls_old,
+              test_stats_controls_full, test_stats_valid,
+              test_stats_age_valid))
+  
+  
+}
+
+##########
+# Lasso
+###########
+
+runRidgeRandFac <- function(training_dat,
+                            controls_dat,
+                            controls_dat_old,
+                            controls_dat_full,
+                            valid_dat,
+                            test_dat,
+                            age_cutoff,
+                            pred_cutoff,
+                            bh_features,
+                            gender) {
+  
+  if(gender) {
+    # get intersection of bh features and real data
+    bh_features <- as.character(unlist(bh_features))
+    bh_features <- append('M', bh_features)
+    bh_features <- append('F', bh_features)
+  }
+  
+  # get intersection of bh features and real data
+  bh_features <- as.character(unlist(bh_features))
+  
+  intersected_feats <- intersect(bh_features, colnames(training_dat))
+  # # get y
+  train_y <- ifelse(training_dat$age_diagnosis > age_cutoff, 'no', 'yes')
+  test_y <-ifelse(test_dat$age_diagnosis > age_cutoff, 'no', 'yes')
+  valid_y <- ifelse(valid_dat$age_diagnosis > age_cutoff, 'no', 'yes')
+  
+  train_y <- factor(train_y, levels = c('yes', 'no'))
+  test_y <- factor(test_y, levels = c('yes', 'no'))
+  valid_y <-factor(valid_y, levels = c('yes', 'no'))
+  
+  # get test age of sample collection
+  patient_age <-  ifelse(test_dat$age_sample_collection > age_cutoff, 'no', 'yes')
+  patient_age_controls <-  ifelse(controls_dat$age_sample_collection > age_cutoff, 'no', 'yes')
+  patient_age_controls_old <- ifelse(controls_dat_old$age_sample_collection > age_cutoff, 'no', 'yes')
+  patient_age_controls_full <- ifelse(controls_dat_full$age_sample_collection > age_cutoff, 'no', 'yes')
+  patient_age_valid <- ifelse(valid_dat$age_sample_collection > age_cutoff, 'no', 'yes')
+  
+  patient_age <- factor(patient_age, levels = c('yes', 'no'))
+  patient_age_controls <- factor(patient_age_controls, levels = c('yes', 'no'))
+  patient_age_controls_old <- factor(patient_age_controls_old, levels = c('yes', 'no'))
+  patient_age_controls_full <- factor(patient_age_controls_full, levels = c('yes', 'no'))
+  patient_age_valid <- factor(patient_age_valid, levels = c('yes', 'no'))
+  
+  # get bumphunter features
+  training_dat <- training_dat[, intersected_feats]
+  controls_dat <- controls_dat[, intersected_feats]
+  controls_dat_old <- controls_dat_old[, intersected_feats]
+  controls_dat_full <- controls_dat_full[, intersected_feats]
+  valid_dat <- valid_dat[, intersected_feats]
+  test_dat <- test_dat[, intersected_feats]
+  
+  # start elastic net tuning
+  N_CV_REPEATS = 2
+  nfolds = 5
+  
+  
+  # set parameters for training model
+  type_family <- 'binomial'
+  type_measure <- 'auc'
+  
+  
+  while (temp.non_zero_coeff < 1) { 
+    elastic_net.cv_model = cv.glmnet(x = as.matrix(training_dat)
+                                     , y =  train_y
+                                     , alpha = 0
+                                     , type.measure = type_measure
+                                     , family = type_family
+                                     , standardize=FALSE
+                                     , nlambda = 100
+                                     , nfolds = nfolds
+                                     , parallel = TRUE
+    )
+    
+    # get optimal lambda - the tuning parameter for ridge and lasso
+    # THIS IS IMPORTANT BECAUSE WHEN YOU TRAIN THE MODEL ON 100 SEPERATE VALUES OF LAMBDA
+    # AND WHEN YOU TEST THE MODEL IT WILL RETURN PREDCITION FOR ALL THOSE VALUES (1-100). YOU NEED TO 
+    # GRAB THE PREDICTION WITH SAME LAMBDA THAT YOU TRAINED ON. ITS ALL IN THE CODE, BUT JUST WANTED TO 
+    # GIVE YOU REASONS
+    temp.min_lambda_index = which(elastic_net.cv_model$lambda == elastic_net.cv_model$lambda.min) 
+    
+    # # number of non zero coefficients at that lambda    
+    temp.non_zero_coeff = elastic_net.cv_model$nzero[temp.min_lambda_index] 
+    temp.loop_count = temp.loop_count + 1
+    
+    # set seed for next loop iteration
+    as.numeric(Sys.time())-> t 
+    set.seed((t - floor(t)) * 1e8 -> seed) 
+    if (temp.loop_count > 10) {
+      print("diverged")
+      temp.min_lambda_index = 50 # if it loops more than 5 times, then model did not converge
+      break
+    }
+  }# while loop ends 
+  # print(temp.non_zero_coeff)  
+  
+  model  = glmnet(x = as.matrix(training_dat)
+                  , y =  train_y
+                  ,alpha = 0
+                  ,standardize=FALSE
+                  ,nlambda = 100
+                  ,family = type_family)
+  
+  
+  
+  ##########
+  # Predictions on test data
+  ##########
+  
+  # This returns 100 prediction with 1-100 lambdas
+  temp_test.predictions <- predict(model, 
+                                   data.matrix(test_dat),
+                                   type = 'response')
+  
+  
+  # original should be fine, something wrong with caret package
+  test.predictions <- temp_test.predictions[, temp.min_lambda_index]
+  test.predictions <- ifelse(test.predictions >= pred_cutoff, 'yes', 'no')
+  test.predictions <- factor(test.predictions, levels = c('yes', 'no'))
+  test_stats <- confusionMatrix(test_y, test.predictions)
+  test_stats_age <- confusionMatrix(patient_age, test.predictions)
+  
+  ##########
+  # Predictions against controls 
+  ##########
+  
+  # get controls
+  temp_test.predictions_controls <- predict(model,
+                                            data.matrix(controls_dat),
+                                            type = 'response')
+  
+  
+  test.predictions_controls <- temp_test.predictions_controls[, temp.min_lambda_index]
+  test.predictions_controls <- ifelse(test.predictions_controls >= pred_cutoff, 'yes', 'no')
+  test.predictions_controls <- factor(test.predictions_controls, levels = c('yes', 'no'))
+  test_stats_controls <- confusionMatrix(patient_age_controls, test.predictions_controls)
+  
+  
+  ##########
+  # Predictions against controls old
+  ##########
+  
+  # get controls
+  temp_test.predictions_controls_old <- predict(model,
+                                                data.matrix(controls_dat_old),
+                                                type = 'response')
+  
+  
+  test.predictions_controls_old <- temp_test.predictions_controls_old[, temp.min_lambda_index]
+  test.predictions_controls_old <- ifelse(test.predictions_controls_old >= pred_cutoff, 'yes', 'no')
+  test.predictions_controls_old <- factor(test.predictions_controls_old, levels = c('yes', 'no'))
+  test_stats_controls_old <- confusionMatrix(patient_age_controls_old, test.predictions_controls_old)
+  
+  
+  ##########
+  # Predictions against controls full
+  ##########
+  
+  # get controls
+  temp_test.predictions_controls_full <- predict(model,
+                                                 data.matrix(controls_dat_full),
+                                                 type = 'response')
+  
+  
+  test.predictions_controls_full <- temp_test.predictions_controls_full[, temp.min_lambda_index]
+  test.predictions_controls_full <- ifelse(test.predictions_controls_full >= pred_cutoff, 'yes', 'no')
+  test.predictions_controls_full <- factor(test.predictions_controls_full, levels = c('yes', 'no'))
+  test_stats_controls_full <- confusionMatrix(patient_age_controls_full, test.predictions_controls_full)
+  
+  
+  ##########
+  # Predictions on valid dat
+  ##########
+  
+  # This returns 100 prediction with 1-100 lambdas
+  temp_test.predictions_valid <- predict(model, 
+                                         data.matrix(valid_dat),
+                                         type = 'response')
+  
+  
+  # original should be fine, something wrong with caret package
+  test.predictions_valid <- temp_test.predictions_valid[, temp.min_lambda_index]
+  test.predictions_valid <- ifelse(test.predictions_valid >= pred_cutoff, 'yes', 'no')
+  test.predictions_valid <- factor(test.predictions_valid, levels = c('yes', 'no'))
+  test_stats_valid <- confusionMatrix(valid_y, test.predictions_valid)
+  test_stats_age_valid <- confusionMatrix(patient_age_valid, test.predictions_valid)
+  
+  
+  return(list(test_stats, test_stats_age,
+              test_stats_controls, test_stats_controls_old,
+              test_stats_controls_full, test_stats_valid,
+              test_stats_age_valid))
+  
+  
+}
+
+##########
+# RF fac
+###########
+
+runRfRandFac <- function(training_dat,
+                      controls_dat,
+                      controls_dat_old,
+                      controls_dat_full,
+                      valid_dat,
+                      test_dat,
+                      age_cutoff,
+                      pred_cutoff,
+                      bh_features,
+                      gender) {
+  if(gender) {
+    # get intersection of bh features and real data
+    bh_features <- as.character(unlist(bh_features))
+    bh_features <- append('M', bh_features)
+    bh_features <- append('F', bh_features)
+  }
+  
+  # get intersection of bh features and real data
+  bh_features <- as.character(unlist(bh_features))
+  
+  intersected_feats <- intersect(bh_features, colnames(training_dat))
+  # # get y
+  train_y <- ifelse(training_dat$age_diagnosis > age_cutoff, 'no', 'yes')
+  test_y <-ifelse(test_dat$age_diagnosis > age_cutoff, 'no', 'yes')
+  valid_y <- ifelse(valid_dat$age_diagnosis > age_cutoff, 'no', 'yes')
+  
+  train_y <- factor(train_y, levels = c('yes', 'no'))
+  test_y <- factor(test_y, levels = c('yes', 'no'))
+  valid_y <-factor(valid_y, levels = c('yes', 'no'))
+  
+  # get test age of sample collection
+  patient_age <-  ifelse(test_dat$age_sample_collection > age_cutoff, 'no', 'yes')
+  patient_age_controls <-  ifelse(controls_dat$age_sample_collection > age_cutoff, 'no', 'yes')
+  patient_age_controls_old <- ifelse(controls_dat_old$age_sample_collection > age_cutoff, 'no', 'yes')
+  patient_age_controls_full <- ifelse(controls_dat_full$age_sample_collection > age_cutoff, 'no', 'yes')
+  patient_age_valid <- ifelse(valid_dat$age_sample_collection > age_cutoff, 'no', 'yes')
+  
+  patient_age <- factor(patient_age, levels = c('yes', 'no'))
+  patient_age_controls <- factor(patient_age_controls, levels = c('yes', 'no'))
+  patient_age_controls_old <- factor(patient_age_controls_old, levels = c('yes', 'no'))
+  patient_age_controls_full <- factor(patient_age_controls_full, levels = c('yes', 'no'))
+  patient_age_valid <- factor(patient_age_valid, levels = c('yes', 'no'))
+  
+  # get bumphunter features
+  training_dat <- training_dat[, intersected_feats]
+  controls_dat <- controls_dat[, intersected_feats]
+  controls_dat_old <- controls_dat_old[, intersected_feats]
+  controls_dat_full <- controls_dat_full[, intersected_feats]
+  valid_dat <- valid_dat[, intersected_feats]
+  test_dat <- test_dat[, intersected_feats]
+  summaryFunc <- twoClassSummary
+ 
+  NFOLDS = 4
+  # determines how you train the model.
+  fitControl <- trainControl( 
+    method = "repeatedcv",  # could train on boostrap resample, here use repeated cross validation.
+    number = min(10, NFOLDS), 
+    classProbs = TRUE,     
+    repeats = 1,
+    allowParallel = TRUE,
+    summaryFunction = summaryFunc)
+  
+  
+  # mtry: Number of variables randomly sampled as candidates at each split.
+  # ntree: Number of trees to grow.
+  mtry <- sqrt(ncol(training_dat))
+  tunegrid <- expand.grid(.mtry=mtry)
+  
+  model  <- train(x = training_dat
+                  , y =train_y
+                  , method = "rf"
+                  , trControl = fitControl
+                  , tuneGrid = tunegrid
+                  , importance = T
+                  , metric = "ROC"
+                  , verbose = FALSE)
+  
+  temp <- varImp(model)[[1]]
+  importance <- cbind(rownames(temp), temp$Overall)
+  
+  
+  ##########
+  # Predictions on test data
+  ##########
+  
+  # This returns 100 prediction with 1-100 lambdas
+  test.predictions <- predict(model, 
+                              data.matrix(test_dat),
+                              type = 'prob')
+  
+  
+  # original should be fine, something wrong with caret package
+  test.predictions <- test.predictions$yes
+  test.predictions <- as.factor(ifelse(test.predictions >= pred_cutoff, 'yes', 'no'))
+  test.predictions <- factor(test.predictions, levels = c('yes', 'no'))
+  
+  test_stats <- confusionMatrix(test_y, test.predictions)
+  test_stats_age <- confusionMatrix(patient_age, test.predictions)
+  
+  
+  ##########
+  # Predictions on controls
+  ##########
+  
+  # This returns 100 prediction with 1-100 lambdas
+  test.predictions_controls <- predict(model, 
+                              data.matrix(controls_dat),
+                              type = 'prob')
+  
+  
+  # original should be fine, something wrong with caret package
+  test.predictions_controls <- test.predictions_controls$yes
+  test.predictions_controls <- as.factor(ifelse(test.predictions_controls >= pred_cutoff, 'yes', 'no'))
+  test.predictions_controls <- factor(test.predictions_controls, levels = c('yes', 'no'))
+  
+  test_stats_controls <- confusionMatrix(patient_age_controls, test.predictions_controls)
+
+  
+  ##########
+  # Predictions on controls old
+  ##########
+  
+  # This returns 100 prediction with 1-100 lambdas
+  test.predictions_controls_old <- predict(model, 
+                                       data.matrix(controls_dat_old),
+                                       type = 'prob')
+  
+  
+  # original should be fine, something wrong with caret package
+  test.predictions_controls_old <- test.predictions_controls_old$yes
+  test.predictions_controls_old <- as.factor(ifelse(test.predictions_controls_old >= pred_cutoff, 'yes', 'no'))
+  test.predictions_controls_old <- factor(test.predictions_controls_old, levels = c('yes', 'no'))
+  
+  test_stats_controls_old <- confusionMatrix(patient_age_controls_old, test.predictions_controls_old)
+  
+  ##########
+  # Predictions on controls full
+  ##########
+  
+  # This returns 100 prediction with 1-100 lambdas
+  test.predictions_controls_full <- predict(model, 
+                                           data.matrix(controls_dat_full),
+                                           type = 'prob')
+  
+  
+  # original should be fine, something wrong with caret package
+  test.predictions_controls_full <- test.predictions_controls_full$yes
+  test.predictions_controls_full <- as.factor(ifelse(test.predictions_controls_full >= pred_cutoff, 'yes', 'no'))
+  test.predictions_controls_full <- factor(test.predictions_controls_full, levels = c('yes', 'no'))
+  
+  test_stats_controls_full <- confusionMatrix(patient_age_controls_full, test.predictions_controls_full)
+  
+
+  ##########
+  # Predictions on valid data
+  ##########
+  
+  # This returns 100 prediction with 1-100 lambdas
+  test.predictions_valid <- predict(model, 
+                              data.matrix(valid_dat),
+                              type = 'prob')
+  
+  
+  # original should be fine, something wrong with caret package
+  test.predictions_valid <- test.predictions_valid$yes
+  test.predictions_valid <- as.factor(ifelse(test.predictions_valid >= pred_cutoff, 'yes', 'no'))
+  test.predictions_valid <- factor(test.predictions_valid, levels = c('yes', 'no'))
+  
+  test_stats_valid <- confusionMatrix(valid_y, test.predictions_valid)
+  test_stats_age_valid <- confusionMatrix(patient_age_valid, test.predictions_valid)
+  
+  
+  
+  return(list(test_stats, test_stats_age,
+              test_stats_controls, test_stats_controls_old,
+              test_stats_controls_full, test_stats_valid,
+              test_stats_age_valid))
+}
+
+
+
+##########
+# enet diff
+###########
+
+runSvmRandFac <- function(training_dat,
+                       controls_dat,
+                       controls_dat_old,
+                       controls_dat_full,
+                       valid_dat,
+                       test_dat,
+                       age_cutoff,
+                       pred_cutoff,
+                       bh_features,
+                       gender) 
+{
+  
+ 
+  if(gender) {
+    # get intersection of bh features and real data
+    bh_features <- as.character(unlist(bh_features))
+    bh_features <- append('M', bh_features)
+    bh_features <- append('F', bh_features)
+  }
+  
+  # get intersection of bh features and real data
+  bh_features <- as.character(unlist(bh_features))
+  
+  intersected_feats <- intersect(bh_features, colnames(training_dat))
+  # # get y
+  train_y <- ifelse(training_dat$age_diagnosis > age_cutoff, 'no', 'yes')
+  test_y <-ifelse(test_dat$age_diagnosis > age_cutoff, 'no', 'yes')
+  valid_y <- ifelse(valid_dat$age_diagnosis > age_cutoff, 'no', 'yes')
+  
+  train_y <- factor(train_y, levels = c('yes', 'no'))
+  test_y <- factor(test_y, levels = c('yes', 'no'))
+  valid_y <-factor(valid_y, levels = c('yes', 'no'))
+  
+  # get test age of sample collection
+  patient_age <-  ifelse(test_dat$age_sample_collection > age_cutoff, 'no', 'yes')
+  patient_age_controls <-  ifelse(controls_dat$age_sample_collection > age_cutoff, 'no', 'yes')
+  patient_age_controls_old <- ifelse(controls_dat_old$age_sample_collection > age_cutoff, 'no', 'yes')
+  patient_age_controls_full <- ifelse(controls_dat_full$age_sample_collection > age_cutoff, 'no', 'yes')
+  patient_age_valid <- ifelse(valid_dat$age_sample_collection > age_cutoff, 'no', 'yes')
+  
+  patient_age <- factor(patient_age, levels = c('yes', 'no'))
+  patient_age_controls <- factor(patient_age_controls, levels = c('yes', 'no'))
+  patient_age_controls_old <- factor(patient_age_controls_old, levels = c('yes', 'no'))
+  patient_age_controls_full <- factor(patient_age_controls_full, levels = c('yes', 'no'))
+  patient_age_valid <- factor(patient_age_valid, levels = c('yes', 'no'))
+  
+  # get bumphunter features
+  training_dat <- training_dat[, intersected_feats]
+  controls_dat <- controls_dat[, intersected_feats]
+  controls_dat_old <- controls_dat_old[, intersected_feats]
+  controls_dat_full <- controls_dat_full[, intersected_feats]
+  valid_dat <- valid_dat[, intersected_feats]
+  test_dat <- test_dat[, intersected_feats]
+  
+  summaryFunc <- twoClassSummary
+  
+  NFOLDS = 4
+  # determines how you train the model.
+  fitControl <- trainControl( 
+    method = "repeatedcv",  # could train on boostrap resample, here use repeated cross validation.
+    number = min(10, NFOLDS), 
+    classProbs = TRUE,     
+    repeats = 1,
+    allowParallel = TRUE,
+    summaryFunction = summaryFunc)
+  
+  
+  
+  model <- train(x = training_dat
+                 , y = train_y
+                 , method = "svmRadial"
+                 , trControl = fitControl
+                 , verbose = FALSE)
+  
+  ##########
+  # Predictions on test data
+  ##########
+  
+  # This returns 100 prediction with 1-100 lambdas
+  test.predictions <- predict(model, 
+                              data.matrix(test_dat),
+                              type = 'prob')
+  
+  
+  # original should be fine, something wrong with caret package
+  test.predictions <- test.predictions$yes
+  test.predictions <- as.factor(ifelse(test.predictions >= pred_cutoff, 'yes', 'no'))
+  test.predictions <- factor(test.predictions, levels = c('yes', 'no'))
+  
+  test_stats <- confusionMatrix(test_y, test.predictions)
+  test_stats_age <- confusionMatrix(patient_age, test.predictions)
+  
+  
+  ##########
+  # Predictions on controls
+  ##########
+  
+  # This returns 100 prediction with 1-100 lambdas
+  test.predictions_controls <- predict(model, 
+                                       data.matrix(controls_dat),
+                                       type = 'prob')
+  
+  
+  # original should be fine, something wrong with caret package
+  test.predictions_controls <- test.predictions_controls$yes
+  test.predictions_controls <- as.factor(ifelse(test.predictions_controls >= pred_cutoff, 'yes', 'no'))
+  test.predictions_controls <- factor(test.predictions_controls, levels = c('yes', 'no'))
+  
+  test_stats_controls <- confusionMatrix(patient_age_controls, test.predictions_controls)
+  
+  
+  ##########
+  # Predictions on controls old
+  ##########
+  
+  # This returns 100 prediction with 1-100 lambdas
+  test.predictions_controls_old <- predict(model, 
+                                           data.matrix(controls_dat_old),
+                                           type = 'prob')
+  
+  
+  # original should be fine, something wrong with caret package
+  test.predictions_controls_old <- test.predictions_controls_old$yes
+  test.predictions_controls_old <- as.factor(ifelse(test.predictions_controls_old >= pred_cutoff, 'yes', 'no'))
+  test.predictions_controls_old <- factor(test.predictions_controls_old, levels = c('yes', 'no'))
+  
+  test_stats_controls_old <- confusionMatrix(patient_age_controls_old, test.predictions_controls_old)
+  
+  ##########
+  # Predictions on controls full
+  ##########
+  
+  # This returns 100 prediction with 1-100 lambdas
+  test.predictions_controls_full <- predict(model, 
+                                            data.matrix(controls_dat_full),
+                                            type = 'prob')
+  
+  
+  # original should be fine, something wrong with caret package
+  test.predictions_controls_full <- test.predictions_controls_full$yes
+  test.predictions_controls_full <- as.factor(ifelse(test.predictions_controls_full >= pred_cutoff, 'yes', 'no'))
+  test.predictions_controls_full <- factor(test.predictions_controls_full, levels = c('yes', 'no'))
+  
+  test_stats_controls_full <- confusionMatrix(patient_age_controls_full, test.predictions_controls_full)
+  
+  
+  ##########
+  # Predictions on valid data
+  ##########
+  
+  # This returns 100 prediction with 1-100 lambdas
+  test.predictions_valid <- predict(model, 
+                                    data.matrix(valid_dat),
+                                    type = 'prob')
+  
+  
+  # original should be fine, something wrong with caret package
+  test.predictions_valid <- test.predictions_valid$yes
+  test.predictions_valid <- as.factor(ifelse(test.predictions_valid >= pred_cutoff, 'yes', 'no'))
+  test.predictions_valid <- factor(test.predictions_valid, levels = c('yes', 'no'))
+  
+  test_stats_valid <- confusionMatrix(valid_y, test.predictions_valid)
+  test_stats_age_valid <- confusionMatrix(patient_age_valid, test.predictions_valid)
+  
+  
+  
+  return(list(test_stats, test_stats_age,
+              test_stats_controls, test_stats_controls_old,
+              test_stats_controls_full, test_stats_valid,
+              test_stats_age_valid))
+  
+}
+
+get_class_results <- function(mod_results_list) {
+  
+  # set fixed variables 
+  model_names <- c('enet', 'rf')
+  feature_length <- c(10, 20, 30, 40, 50, 100, 200, 300, 400, 500, 1000, 5000, 10000)
+  seeds <- c(1, 2, 3, 4, 5)
+  
+  
+  mat_onset <-  Reduce('+',  lapply(lapply(mod_results_list, function(x) x[[1]]$table), function(x) rbind(x)))/5
+  class_onset <- as.data.frame(t(apply(do.call(rbind, lapply(mod_results_list, function(x) x[[1]]$byClass)), 2, function(x) mean(x, na.rm =T))))
+  class_onset$age_type <- 'cases_onset'
+  class_onset$seed_number <- seeds[j]
+  class_onset$feature_num <- feature_length[l]
+  class_onset$model_method <-  model_names[m]
+  
+  # cases age
+  mat_age <-  Reduce('+',  lapply(lapply(mod_results_list, function(x) x[[2]]$table), function(x) rbind(x)))/5
+  class_age <- as.data.frame(t(apply(do.call(rbind, lapply(mod_results_list, function(x) x[[2]]$byClass)), 2, function(x) mean(x, na.rm =T))))
+  class_age$age_type <- 'cases_age'
+  class_age$seed_number <- seeds[j]
+  class_age$feature_num <- feature_length[l]
+  class_age$model_method <-  model_names[m]
+  
+  
+  # valid onset
+  mat_valid_onset <-  Reduce('+',  lapply(lapply(mod_results_list, function(x) x[[6]]$table), function(x) rbind(x)))/5
+  class_valid_onset <- as.data.frame(t(apply(do.call(rbind, lapply(mod_results_list, function(x) x[[6]]$byClass)), 2, function(x) mean(x, na.rm =T))))
+  class_valid_onset$age_type <- 'valid_onset'
+  class_valid_onset$seed_number <- seeds[j]
+  class_valid_onset$feature_num <- feature_length[l]
+  class_valid_onset$model_method <-  model_names[m]
+  
+  # valid age
+  mat_valid_age <-  Reduce('+',  lapply(lapply(mod_results_list, function(x) x[[7]]$table), function(x) rbind(x)))/5
+  class_valid_age <-as.data.frame(t(apply(do.call(rbind, lapply(mod_results_list, function(x) x[[7]]$byClass)), 2, function(x) mean(x, na.rm =T))))
+  class_valid_age$age_type <- 'valid_age'
+  class_valid_age$seed_number <- seeds[j]
+  class_valid_age$feature_num <- feature_length[[l]]
+  class_valid_age$model_method <- model_names[m]
+  # valid age
+  mat_controls_age <-  Reduce('+',  lapply(lapply(mod_results_list, function(x) x[[3]]$table), function(x) rbind(x)))/5
+  class_controls_age <- as.data.frame(t(apply(do.call(rbind, lapply(mod_results_list, function(x) x[[3]]$byClass)), 2, function(x) mean(x, na.rm =T))))
+  class_controls_age$age_type <- 'controls_age'
+  class_controls_age$seed_number <- seeds[j]
+  class_controls_age$feature_num <- feature_length[l]
+  class_controls_age$model_method <- model_names[m]
+  # valid age
+  mat_controls_old_age <-  Reduce('+',  lapply(lapply(mod_results_list, function(x) x[[4]]$table), function(x) rbind(x)))/5
+  class_controls_old_age <- as.data.frame(t(apply(do.call(rbind, lapply(mod_results_list, function(x) x[[4]]$byClass)), 2, function(x) mean(x, na.rm =T))))
+  class_controls_old_age$age_type <- 'controls_old_age'
+  class_controls_old_age$seed_number <- seeds[j]
+  class_controls_old_age$feature_num <- feature_length[l]
+  class_controls_old_age$model_method <- model_names[m]
+  # valid age
+  mat_controls_full_age <-  Reduce('+',  lapply(lapply(mod_results_list, function(x) x[[5]]$table), function(x) rbind(x)))/5
+  class_controls_full_age <- as.data.frame(t(apply(do.call(rbind, lapply(mod_results_list, function(x) x[[5]]$byClass)), 2, function(x) mean(x, na.rm =T))))
+  class_controls_full_age$age_type <- 'controls_full_age'
+  class_controls_full_age$seed_number <- seeds[j]
+  class_controls_full_age$feature_num <- feature_length[l]
+  class_controls_full_age$model_method <- model_names[m]
+  # combine class
+  class_results <- rbind(class_onset,
+                         class_age,
+                         class_valid_age,
+                         class_valid_onset, 
+                         class_controls_age, 
+                         class_controls_old_age, 
+                         class_controls_full_age)
+  
+  return(list(class_results, list(mat_onset, mat_age,
+              mat_valid_onset,  mat_valid_age, 
+              mat_controls_age, 
+              mat_controls_old_age, 
+              mat_controls_full_age)))
+}
 

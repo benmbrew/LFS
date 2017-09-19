@@ -196,30 +196,39 @@ sub_clin <- sub_clin[!grepl('Unaffected', sub_clin$cancer_diagnosis_diagnoses),]
 
 #recode sub_clin cancers
 summary(as.factor(sub_clin$cancer_diagnosis_diagnoses))
+# 
 
-# write.csv(sub_clin, '/home/benbrew/Desktop/sub_clin.csv')
-sub_clin_new <- read.csv('/home/benbrew/Desktop/sub_clin_new.csv')
-
-##########
 # trim columns
 ##########
 sub_clin$cancer_diagnosis_diagnoses <- trimws(sub_clin$cancer_diagnosis_diagnoses, which = 'both')
 sub_clin$p53_germline <- trimws(sub_clin$p53_germline, which = 'both')
 
 # group by cancer_diagnosis
-dat_mod <- sub_clin_new %>%
+dat_mod <- sub_clin %>%
   group_by(cancer_diagnosis_diagnoses) %>%
   summarise(counts = n())
 
+dat_mod <- dat_mod[order(dat_mod$counts, decreasing = T),]
+write.csv(dat_mod, '/home/benbrew/Desktop/dat_mod.csv')
+# sub_clin_new <- read.csv('/home/benbrew/Desktop/sub_clin_new.csv')
+
+
+##########
+library(RColorBrewer)
+dat_mod <- read.csv('/home/benbrew/Desktop/dat_mod.csv')
+summary(dat_mod$name)
+
+display.brewer.all()
+
 # get color column in dat mod that is # of cancers (11)
-dat_mod$col <- c('grey', 'red', 'blue', 'green', 'orange', 'yellow', 'purple',
-                 'white', 'black', 'lightblue', 'darkgreen')
+cbPalette <- brewer.pal(7,"Set1")
+dat_mod$col <- cbPalette
 
 
+dat_mod$name <- sub(' ', '\n', dat_mod$name)
 # first recode for new cancer data
-pie(dat_mod$counts, dat_mod$cancer_diagnosis_diagnoses, main="Distribution of cancers",
-    col = adjustcolor(dat_mod$col, alpha.f =0.8))
-
+pie(dat_mod$counts, dat_mod$name, main="Distribution of cancers",
+    col = adjustcolor(dat_mod$col, alpha.f =0.6), cex = 1.2)
 
 #########
 # get distribution of age

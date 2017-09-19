@@ -16,14 +16,14 @@ model_data <- paste0(data_folder, '/model_data')
 clin_data <- paste0(data_folder, '/clin_data')
 
 # get method 
-method = 'swan'
+method = 'funnorm'
 
 ##########
 # load data
 ##########
-betaCases <- readRDS(paste0(model_data, paste0('/', method, '_', 'cases_new_batch_m.rda')))
-betaControls <- readRDS(paste0(model_data, paste0('/', method, '_', 'controls_batch_m.rda')))
-betaValid <- readRDS(paste0(model_data, paste0('/', method, '_', 'valid_batch_m.rda')))
+betaCases <- readRDS(paste0(model_data, paste0('/', method, '_', 'cases_batch_m_sub.rda')))
+betaControls <- readRDS(paste0(model_data, paste0('/', method, '_', 'controls_batch_m_sub.rda')))
+betaValid <- readRDS(paste0(model_data, paste0('/', method, '_', 'valid_batch_m_sub.rda')))
 
 ##########
 # source all_functions.R script
@@ -36,6 +36,26 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 betaCases <- removeNA(betaCases, probe_start = 8)
 betaControls <- removeNA(betaControls, probe_start = 8)
 betaValid <- removeNA(betaValid, probe_start = 8)
+
+
+##########
+# remove outliers
+##########
+betaCases <- removeOutlier(betaCases, 
+                           cases = T, 
+                           controls = F, 
+                           val =F)
+
+betaControls <- removeOutlier(betaControls, 
+                              cases = F, 
+                              controls = T, 
+                              val =F)
+
+betaValid <- removeOutlier(betaValid, 
+                           cases = F, 
+                           controls = F, 
+                           val = T)
+
 
 # ##########
 # # convert to m values 
@@ -177,12 +197,9 @@ mod_data <- rbind(betaCasesMod,
 # pca of age of onset, age of sample collection, gender. sentrix_id 
 ##########
 setwd('~/Desktop/')
-pdf(paste0(method, '_plots_m_values_raw.pdf'))
+pdf(paste0(method, '_plots_m_values_funnorm_no_outliers.pdf'))
 # cases full
-data_cols <- c('age_diagnosis', 
-               'age_sample_collection', 
-               'cancer_diagnosis_diagnoses', 
-               'sentrix_id', 
+data_cols <- c('cancer_diagnosis_diagnoses', 
                'gender')
 
 # cases 
@@ -246,9 +263,7 @@ for (i in data_cols) {
 }
 
 # combined data cols
-combined_cols <- c('age_diagnosis', 
-                   'age_sample_collection', 
-                   'cancer_diagnosis_diagnoses', 
+combined_cols <- c('cancer_diagnosis_diagnoses', 
                    'gender',
                    'batch')
 
@@ -262,7 +277,7 @@ for (i in combined_cols) {
          pca1 = 1, 
          pca2 = 2, 
          name = paste0('combined_data_full_', i, '_'), 
-         use_legend = F) # 3358
+         use_legend = T) # 3358
   
   print(i)
   
@@ -285,5 +300,20 @@ for (i in combined_cols) {
 }
 
 dev.off()
+
+
+# determine the ranking of data non missingness for betaCasesFull (201) 
+
+# age diagnosis
+length(which(is.na(betaCases$age_diagnosis)))
+length(which(is.na(betaCases$age_sample_collection)))
+length(which(is.na(betaCases$cancer_diagnosis_diagnoses)))
+length(which(is.na(betaCases$gender)))
+length(which(is.na(betaCases$sentrix_id)))
+
+
+
+
+
 
 
