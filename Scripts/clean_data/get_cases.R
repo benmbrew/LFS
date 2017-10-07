@@ -33,7 +33,7 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 # fixed variables
 ##########
-method = 'funnorm'
+method = 'noob'
 
 ##########
 # read in clinical data
@@ -70,28 +70,16 @@ id_map <- cleanIdMap(id_map)
 ##########t
 rgCases <- read.metharray.exp(idat_data)
 
-
-
-###########
-# remove outliers (previously determined from rgset before normalization)
-###########
-
-rgCases <- remove_outliers(rgCases, 
-                              id_map = id_map, 
-                              method = 'funnorm', 
-                              type = 'cases')
-
-
 ##########
 # get preprocedssing method
 ##########
+# use noob on beta then conver to m
 betaCases <- preprocessMethod(rgCases, preprocess = method, only_m_values = T)
-
-# save.image('~/Desktop/temp_cases.RData')
-# load('~/Desktop/temp_cases.RData')
-
 # remove rgset
 rm(rgCases)
+
+# save.image('~/Desktop/temp_cases_noob.RData')
+# load('~/Desktop/temp_cases_noob.RData')
 
 ###########
 # id functions
@@ -139,18 +127,9 @@ betaCases <- betaCases[, c('ids',
                            'age_sample_collection',
                            'gender',
                            'sentrix_id',
+                           'family_name',
                            cg_sites)]
 
-
-##########
-# save version of data to explore batches on pca
-##########
-saveRDS(betaCases, paste0(model_data, paste0('/', method, '_', 'cases_batch_m_sub.rda')))
-
-##########
-# remove NA
-##########
-betaCases <- removeNA(betaCases, probe_start = 8) #450168
 
 ##########
 # remove outliers
@@ -160,20 +139,12 @@ betaCases <- removeOutlier(betaCases,
                            controls = F, 
                            val =F)
 
-##########
-# remove infinite values 
-##########
-if(method == 'raw') {
-  betaCases <- removeInf(betaCases, probe_start = 8)
-  
-}
-
 
 ##########
 # saved unscaled data
 ##########
 
-saveRDS(betaCases, paste0(model_data, paste0('/', method, '_', 'cases_new_m.rda')))
+saveRDS(betaCases, paste0(model_data, paste0('/', method, '_', 'beta_cases.rda')))
 
 
 

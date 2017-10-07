@@ -32,7 +32,7 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 # fixed variables
 ##########
-method = 'funnorm'
+method = 'noob'
 
 ##########
 # read in clinical data
@@ -61,12 +61,12 @@ rgControls <- read.metharray.exp(idat_data)
 ###########
 # remove outliers (previously determined) from rgset before normalization
 ###########
-
-rgControls <- remove_outliers(rgSet = rgControls, 
-                              id_map = id_map, 
-                              method = 'funnorm', 
-                              type = 'controls')
-##########
+# 
+# rgControls <- remove_outliers(rgSet = rgControls, 
+#                               id_map = id_map, 
+#                               method = 'funnorm', 
+#                               type = 'controls')
+# ##########
 # get preprocedssing method
 ##########
 betaControls <- preprocessMethod(rgControls, preprocess = method, only_m_values = T)
@@ -124,18 +124,10 @@ betaControls <- betaControls[, c('ids',
                            'age_sample_collection',
                            'gender',
                            'sentrix_id',
+                           'family_name',
                            cg_sites)]
 
 
-##########
-# save version of data to explore batches on pca
-##########
-saveRDS(betaControls, paste0(model_data, paste0('/', method, '_', 'controls_batch_m_sub.rda')))
-
-##########
-# remove NA
-##########
-betaControls <- removeNA(betaControls, probe_start = 8) #450168
 
 ##########
 # remove outliers
@@ -146,16 +138,8 @@ betaControls <- removeOutlier(betaControls,
                               val = F)
 
 ##########
-# remove inf
-##########
-if(method == 'raw') {
-  betaControls <- removeInf(betaControls, probe_start = 8)
-  
-}
-
-##########
 # saved unscaled data
 ##########
 
-saveRDS(betaControls, paste0(model_data, paste0('/', method, '_', 'controls_new_m.rda')))
+saveRDS(betaControls, paste0(model_data, paste0('/', method, '_', 'beta_controls.rda')))
 

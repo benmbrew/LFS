@@ -16,14 +16,14 @@ model_data <- paste0(data_folder, '/model_data')
 clin_data <- paste0(data_folder, '/clin_data')
 
 # get method 
-method = 'funnorm'
+method = 'noob'
 
 ##########
 # load data
 ##########
-betaCases <- readRDS(paste0(model_data, paste0('/', method, '_', 'cases_batch_m.rda')))
-betaControls <- readRDS(paste0(model_data, paste0('/', method, '_', 'controls_batch_m.rda')))
-betaValid <- readRDS(paste0(model_data, paste0('/', method, '_', 'valid_batch_m.rda')))
+betaCases <- readRDS(paste0(model_data, paste0('/', method, '_', 'cases_batch_m_sub.rda')))
+betaControls <- readRDS(paste0(model_data, paste0('/', method, '_', 'controls_batch_m_sub.rda')))
+betaValid <- readRDS(paste0(model_data, paste0('/', method, '_', 'valid_batch_m_sub.rda')))
 
 ##########
 # read in clinical data
@@ -66,8 +66,8 @@ intersect_names <- Reduce(intersect, list(colnames(betaCases)[8:ncol(betaCases)]
 
 # add column in
 betaCases$batch <- 'cases'
-betaControls$batch <- 'controls_mod'
-betaValid$batch <- 'valid_mod'
+betaControls$batch <- 'controls'
+betaValid$batch <- 'valid'
 
 
 # cases
@@ -101,6 +101,11 @@ betaValid <- betaValid [, c('ids',
                             intersect_names)]
 
 
+# get rid of cancer samples in controls 
+betaControls <- betaControls[grepl('Unaffected', betaControls$cancer_diagnosis_diagnoses),]
+
+#subset valid
+betaValid <- betaValid[!betaValid$ids %in% betaCases$ids,]
 
 # get features sites
 pca_cases <- prcomp(betaCases[,8:ncol(betaCases)])

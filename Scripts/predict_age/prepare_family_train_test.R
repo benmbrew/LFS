@@ -16,31 +16,17 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 # fixed variables
 ##########
-method = 'noob'
+method = 'raw'
 k = 5
-combat = T
+
 ##########
 # load data
 ##########
-if(combat) {
-  
-  full_data <- readRDS(paste0(model_data, paste0('/', method, '_', 'full_data_combat.rda')))
-  
-  # get sub dat
-  betaCases <- full_data[full_data$batch == 'cases',]
-  betaControls <- full_data[full_data$batch == 'controls',]
-  betaValid <- full_data[full_data$batch == 'valid',]
-  
-  
-} else {
-  full_data <- readRDS(paste0(model_data, paste0('/', method, '_', 'full_data.rda')))
-  
-  # get sub dat
-  betaCases <- full_data[full_data$batch == 'cases',]
-  betaControls <- full_data[full_data$batch == 'controls',]
-  betaValid <- full_data[full_data$batch == 'valid',]
-}
-
+# read in full m value data 
+betaCases <- readRDS(paste0(model_data, paste0('/', method, '_', 'cases_new_m_fam.rda')))
+betaControls <- readRDS(paste0(model_data, paste0('/', method, '_', 'controls_new_m_fam.rda'))) #34 449936
+betaValid <- readRDS(paste0(model_data, paste0('/', method, '_', 'valid_new_m_fam.rda')))
+#35 449783
 
 
 ###########
@@ -53,18 +39,14 @@ colnames(betaValid)[1] <- 'ids'
 ##########
 # remove inf
 ##########
-betaCases <- removeInf(betaCases, probe_start = 9)
-betaControls <- removeInf(betaControls, probe_start = 9)
-betaValid<- removeInf(betaValid, probe_start = 9)
+betaCases <- removeInf(betaCases, probe_start = 8)
+betaControls <- removeInf(betaControls, probe_start = 8)
+betaValid<- removeInf(betaValid, probe_start = 8)
 
 
 # get old controls - Mut and 'Unaffected'
 betaControlsOld <- subset(betaCases, p53_germline == 'Mut' & 
                             cancer_diagnosis_diagnoses == 'Unaffected')
-
-
-betaControlsWt <- subset(betaCases, p53_germline == 'WT' & 
-                           cancer_diagnosis_diagnoses == 'Unaffected')
 
 # get p53, not 'Unaffected'
 betaCases <- getModData(betaCases)
@@ -87,8 +69,6 @@ betaCases$type <- 'cases_450k'
 betaControls$type <- 'controls_850k'
 betaControlsOld$type <- 'controls_450k'
 betaValid$type <- 'valid_850k'
-betaControlsWt$type <- 'controls_wt_450k'
-
 
 # cases
 betaCases <- betaCases[, c('ids',
@@ -102,17 +82,6 @@ betaCases <- betaCases[, c('ids',
                            intersect_names)]
 # controls
 betaControls <- betaControls[, c('ids',
-                                 'p53_germline',
-                                 'age_diagnosis', 
-                                 'age_sample_collection', 
-                                 'cancer_diagnosis_diagnoses', 
-                                 'gender', 
-                                 'type',
-                                 'family_name',
-                                 intersect_names)]
-
-# controls
-betaControlsWt <- betaControlsWt[, c('ids',
                                  'p53_germline',
                                  'age_diagnosis', 
                                  'age_sample_collection', 
@@ -156,84 +125,63 @@ length(which(duplicated(betaControlsFull$ids)))
 betaControlsFull <- betaControlsFull[!duplicated(betaControlsFull$ids),]
 
 #########
-clin_data <- betaCases[, 1:8]
-
-# merge with betacobat
-inner_join(clin_data, betaFullCombat)
-
-
-##########
 
 # get full data
 betaFull <- rbind(betaCases,
                   betaControls,
                   betaControlsOld,
                   betaControlsFull,
-                  betaControlsWt,
                   betaValid)
 
+betaFull$family_name.1 <- NULL
 
-if(!outlier) {
-  saveRDS(betaFull, paste0(model_data, paste0('/', method, '_', 'full_mod.rda')))
-  
-} else {
-  saveRDS(betaFull, paste0(model_data, paste0('/', method, '_', 'full_mod_outlier.rda')))
-  
-}
-
+########## 
+# get a training and test set with different families 
+##########
+cases_full <- betaFull[!grepl('Unaffected', betaFull$cancer_diagnosis_diagnoses),]
+controls_full <- betaFull[grepl('Unaffected', betaFull$cancer_diagnosis_diagnoses),]
 
 
+# remove duplicates from each data set
+cases_full <- cases_full[!duplicated(cases_full$ids),]
+controls_full <- controls_full[!duplicated(controls_full$ids),]
+
+# remove overlapping familes 
+length(unique(cases_full$family_name))
+length(unique(controls_full$family_name))
+
+# how many overlapping familes (21) 
+family_names <- cases_full$family_name[cases_full$family_name %in% controls_full$family_name]
+family_names <- family_names[!duplicated(family_names)]
+
+temp_cases <- cases_full[, 1:20] %>%
+  group_by(family_name) %>%
+  summarise(counts_x = n())
+
+temp_controls <- controls_full[, 1:20] %>%
+  group_by(family_name) %>%
+  summarise(counts_y = n())
+
+temp_full <- inner_join(temp_cases, temp_controls, by = 'family_name')
+
+temp_full <- temp_full[order(temp_full$family_name),]
 
 
+##########
+# first remove all overlapping families from cases
+##########
+cases_sub <- cases_full[!cases_full$family_name %in% temp_full$family_name,]
 
+cases_full_sub <- rbind(cases_sub, controls_full)
 
+saveRDS(cases_full_sub, paste0(model_data, paste0('/', method, '_', 'cases_sub.rda')))
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# betaCasesScale <- scale_data(betaCases, probe_start = 7)
-# betaValidScale <- scale_data(betaValid, probe_start = 7)
-# betaControlsScale <- scale_data(betaControls, probe_start = 7)
-# betaControlsOldScale <- scale_data(betaControlsOld, probe_start = 7)
-# betaControlsFullScale <- scale_data(betaControlsFull, probe_start = 7)
-
-# save data
-saveRDS(betaCases, paste0(model_data, paste0('/', method, '_', 'cases_mod.rda')))
-saveRDS(betaValid, paste0(model_data, paste0('/', method, '_', 'valid_mod.rda')))
-saveRDS(betaControls, paste0(model_data, paste0('/', method, '_', 'controls_mod.rda')))
-saveRDS(betaControlsOld, paste0(model_data, paste0('/', method, '_', 'controls_old_mod.rda')))
-saveRDS(betaControlsFull, paste0(model_data, paste0('/', method, '_', 'controls_full_mod.rda')))
-
-# # save data
-# saveRDS(betaCasesScale, paste0(model_data, paste0('/', method, '_', 'cases_mod_scaled.rda')))
-# saveRDS(betaValidScale, paste0(model_data, paste0('/', method, '_', 'valid_mod_scaled.rda')))
-# saveRDS(betaControlsScale, paste0(model_data, paste0('/', method, '_', 'controls_mod_scaled.rda')))
-# saveRDS(betaControlsOldScale, paste0(model_data, paste0('/', method, '_', 'controls_old_mod_scaled.rda')))
-# saveRDS(betaControlsFullScale, paste0(model_data, paste0('/', method, '_', 'controls_full_mod_scaled.rda')))
+##########
+# get sub of cases sub by beta valid
+##########
 
 
 
-# # # save data
-# betaCases <-readRDS(paste0(model_data, paste0('/', method, '_', 'cases_new_m_scaled.rda')))
-# betaValid <- readRDS(paste0(model_data, paste0('/', method, '_', 'valid_new_m_scaled.rda')))
-# betaControls <- readRDS(paste0(model_data, paste0('/', method, '_', 'controls_new_m_scaled.rda')))
-# betaControlsOld <- readRDS(paste0(model_data, paste0('/', method, '_', 'controls_old_new_m_scaled.rda')))
-# betaControlsFull <- readRDS(paste0(model_data, paste0('/', method, '_', 'controls_full_m_scaled.rda')))
-# 
-# kmeans_lab_scaled <- readRDS(paste0(model_data, paste0('/', method, '_', 'cases_kmeans_labs_scaled.rda')))
+
+
 

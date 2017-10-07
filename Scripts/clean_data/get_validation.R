@@ -34,7 +34,7 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 # fixed variables
 ##########
-method = 'funnorm'
+method = 'noob'
 
 ##########
 # read in clinical data
@@ -75,11 +75,11 @@ rgValid <- read.metharray.exp(idat_data)
 ###########
 # remove outliers (previously determined) from rgset before normalization
 ###########
-
-rgValid <- remove_outliers(rgSet = rgValid, 
-                           id_map = id_map, 
-                           method = 'funnorm', 
-                           type = 'valid')
+# 
+# rgValid <- remove_outliers(rgSet = rgValid, 
+#                            id_map = id_map, 
+#                            method = 'funnorm', 
+#                            type = 'valid')
 
 ##########
 # get preprocedssing method
@@ -144,17 +144,8 @@ betaValid <- betaValid[, c('ids',
                            'age_sample_collection',
                            'gender',
                            'sentrix_id',
+                           'family_name',
                            cg_sites)]
-
-##########
-# save version of data to explore batches on pca
-##########
-saveRDS(betaValid, paste0(model_data, paste0('/', method, '_', 'valid_batch_m_sub.rda')))
-
-##########
-# remove NA
-##########
-betaValid <- removeNA(betaValid, probe_start = 8) #450168
 
 ##########
 # remove outliers
@@ -164,17 +155,10 @@ betaValid <- removeOutlier(betaValid,
                            controls = F, 
                            val = T)
 
-##########
-# remove inf
-##########
-if(method == 'raw') {
-  betaValid <- removeInf(betaValid, probe_start = 8)
-  
-}
 
 ##########
 # saved unscaled data
 ##########
 
-saveRDS(betaValid, paste0(model_data, paste0('/', method, '_', 'valid_new_m.rda')))
-
+saveRDS(betaValid, paste0(model_data, paste0('/', method, '_', 'beta_valid.rda')))
+s
