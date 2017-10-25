@@ -14,126 +14,66 @@ model_data <- paste0(data_folder, '/model_data')
 source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 
 ##########
+# source all_functions.R script
+##########
+source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
+
+##########
 # fixed variables
 ##########
-method = 'raw'
-k = 5
+method = 'noob'
+k = 10
+combat = F
 
 ##########
 # load data
 ##########
-# read in full m value data 
-betaCases <- readRDS(paste0(model_data, paste0('/', method, '_', 'cases_new_m_fam.rda')))
-betaControls <- readRDS(paste0(model_data, paste0('/', method, '_', 'controls_new_m_fam.rda'))) #34 449936
-betaValid <- readRDS(paste0(model_data, paste0('/', method, '_', 'valid_new_m_fam.rda')))
-#35 449783
 
 
-###########
-# make id into ids
-###########
-colnames(betaCases)[1] <- 'ids'
-colnames(betaControls)[1] <- 'ids'
-colnames(betaValid)[1] <- 'ids'
+if (combat) {
+  
+  betaFull <-  readRDS(paste0(model_data, paste0('/', method, '_', 'mod_data_combat_m.rda')))
+  
+  
+} else {
+  betaFull <- readRDS(paste0(model_data, paste0('/', method, '_', 'mod_data_m.rda')))
+  
+}
+
 
 ##########
-# remove inf
+# get column names
 ##########
-betaCases <- removeInf(betaCases, probe_start = 8)
-betaControls <- removeInf(betaControls, probe_start = 8)
-betaValid<- removeInf(betaValid, probe_start = 8)
-
-
-# get old controls - Mut and 'Unaffected'
-betaControlsOld <- subset(betaCases, p53_germline == 'Mut' & 
-                            cancer_diagnosis_diagnoses == 'Unaffected')
-
-# get p53, not 'Unaffected'
-betaCases <- getModData(betaCases)
-
-# get rid of cancer samples in controls 
-betaControls <- betaControls[grepl('Unaffected', betaControls$cancer_diagnosis_diagnoses),]
-
-#subset valid
-betaValid <- betaValid[!betaValid$ids %in% betaCases$ids,]
+intersect_names <- colnames(betaFull)[9:ncol(betaFull)]
 
 ##########
-# get intersecting colnames and prepare data for modeling
+# read in all features from feat data
 ##########
 
-intersect_names <- Reduce(intersect, list(colnames(betaCases)[8:ncol(betaCases)], 
-                                          colnames(betaControls)[8:ncol(betaControls)], 
-                                          colnames(betaValid)[8:ncol(betaValid)]))
-# assign dataframe identifier
-betaCases$type <- 'cases_450k'
-betaControls$type <- 'controls_850k'
-betaControlsOld$type <- 'controls_450k'
-betaValid$type <- 'valid_850k'
-
-# cases
-betaCases <- betaCases[, c('ids',
-                           'p53_germline',
-                           'age_diagnosis', 
-                           'age_sample_collection', 
-                           'cancer_diagnosis_diagnoses', 
-                           'gender',
-                           'type',
-                           'family_name',
-                           intersect_names)]
-# controls
-betaControls <- betaControls[, c('ids',
-                                 'p53_germline',
-                                 'age_diagnosis', 
-                                 'age_sample_collection', 
-                                 'cancer_diagnosis_diagnoses', 
-                                 'gender', 
-                                 'type',
-                                 'family_name',
-                                 intersect_names)]
-
-# controls
-betaControlsOld <- betaControlsOld[, c('ids',
-                                       'p53_germline',
-                                       'age_diagnosis', 
-                                       'age_sample_collection', 
-                                       'cancer_diagnosis_diagnoses', 
-                                       'gender', 
-                                       'type',
-                                       'family_name',
-                                       intersect_names)]
-
-#validation
-betaValid <- betaValid[, c('ids', 
-                           'p53_germline',
-                           'age_diagnosis', 
-                           'age_sample_collection', 
-                           'cancer_diagnosis_diagnoses', 
-                           'gender', 
-                           'type',
-                           'family_name',
-                           intersect_names)]
+lfs_feats_m <- readRDS(paste0(feat_data, paste0('/', method, '_', 'lfs_m.rda')))
+no_cancer_feats_m <- readRDS(paste0(feat_data, paste0('/', method, '_', 'no_cancer_m.rda')))
 
 
+# setwd(feat_data)
+# file_list_names = list.files()
+# 
+# 
+# # store all raw rda feature lists in feat_list
+# feat_list <- lapply(file_list_names, function(x) readRDS(x))
+# 
+# # order feat list
+# feat_list  <- feat_list[order(sapply(feat_list, length), decreasing=F)]
+# 
+# # select first 10 
+# feat_list <- feat_list[5]
+# 
+# # model_names <- c('enet', 'rf', 'lasso')
+# # seeds <- c(1, 2, 3)
 
-# get controls full
-betaControlsFull <- rbind(betaControls,
-                          betaControlsOld)
-
-
-# remove duplicates from betaControlsFull
-length(which(duplicated(betaControlsFull$ids)))
-betaControlsFull <- betaControlsFull[!duplicated(betaControlsFull$ids),]
-
-#########
-
-# get full data
-betaFull <- rbind(betaCases,
-                  betaControls,
-                  betaControlsOld,
-                  betaControlsFull,
-                  betaValid)
-
-betaFull$family_name.1 <- NULL
+model_names <- c('enet')
+seeds <- c(1,2,3)
+feat_list <- list(no_cancer_feats_m, lfs_feats_m)
+file_list_names <- list('no_cancer_m', 'lfs_m')
 
 ########## 
 # get a training and test set with different families 
@@ -174,7 +114,7 @@ cases_sub <- cases_full[!cases_full$family_name %in% temp_full$family_name,]
 
 cases_full_sub <- rbind(cases_sub, controls_full)
 
-saveRDS(cases_full_sub, paste0(model_data, paste0('/', method, '_', 'cases_sub.rda')))
+saveRDS(cases_full_sub, paste0(model_data, paste0('/', method, '_', 'cases_sub_m.rda')))
 
 ##########
 # get sub of cases sub by beta valid

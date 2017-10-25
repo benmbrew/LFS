@@ -15,20 +15,67 @@ methyl_data <- paste0(data_folder, '/methyl_data')
 model_data <- paste0(data_folder, '/model_data')
 clin_data <- paste0(data_folder, '/clin_data')
 
-# get method 
-method = 'raw'
-
-##########
-# load data
-##########
-betaCases <- readRDS(paste0(model_data, paste0('/', method, '_', 'cases_new_m_sub.rda')))
-betaControls <- readRDS(paste0(model_data, paste0('/', method, '_', 'controls_new_m_sub.rda')))
-betaValid <- readRDS(paste0(model_data, paste0('/', method, '_', 'valid_new_m_sub.rda')))
-
 ##########
 # source all_functions.R script
 ##########
 source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
+
+##########
+# fixed variables
+##########
+method = 'noob'
+k = 10
+combat = F
+
+##########
+# load data
+##########
+
+
+if (combat) {
+  
+  betaFull <-  readRDS(paste0(model_data, paste0('/', method, '_', 'mod_data_combat_m.rda')))
+  
+  
+} else {
+  betaFull <- readRDS(paste0(model_data, paste0('/', method, '_', 'mod_data_m.rda')))
+  
+}
+
+
+##########
+# get column names
+##########
+intersect_names <- colnames(betaFull)[9:ncol(betaFull)]
+
+##########
+# read in all features from feat data
+##########
+
+lfs_feats_m <- readRDS(paste0(feat_data, paste0('/', method, '_', 'lfs_m.rda')))
+no_cancer_feats_m <- readRDS(paste0(feat_data, paste0('/', method, '_', 'no_cancer_m.rda')))
+
+
+# setwd(feat_data)
+# file_list_names = list.files()
+# 
+# 
+# # store all raw rda feature lists in feat_list
+# feat_list <- lapply(file_list_names, function(x) readRDS(x))
+# 
+# # order feat list
+# feat_list  <- feat_list[order(sapply(feat_list, length), decreasing=F)]
+# 
+# # select first 10 
+# feat_list <- feat_list[5]
+# 
+# # model_names <- c('enet', 'rf', 'lasso')
+# # seeds <- c(1, 2, 3)
+
+model_names <- c('enet')
+seeds <- c(1,2,3)
+feat_list <- list(no_cancer_feats_m, lfs_feats_m)
+file_list_names <- list('no_cancer_m', 'lfs_m')
 
 ##########
 # read in clinical data

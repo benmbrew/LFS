@@ -83,10 +83,11 @@ id_map_con <- cleanIdMap(id_map_con)
 rgSetCase <- read.metharray.exp(idat_data)
 rgSetCon <- read.metharray.exp(idat_data_con)
 
+load('~/Desktop/temp_cases_con_combined.RData')
+
 # remove outliers 
 rgSetCase <- remove_outliers(rgSet = rgSetCase, method = 'noob', id_map = id_map, type = 'cases')
 rgSetCon <- remove_outliers(rgSet = rgSetCon, method = 'noob', id_map = id_map_con, type = 'controls')
-
 
 # combine array - (1) cases with con and (2) cases with valid
 case_con <- combineArrays(rgSetCase, 
@@ -96,13 +97,16 @@ case_con <- combineArrays(rgSetCase,
 
 rm(rgSetCase, rgSetCon)
 
+
+
 ##########
 # get preprocedssing method
 ##########
 # use noob on beta then conver to matrix of
 cases_con_beta <- preprocessMethod(case_con, preprocess = method, only_m_values = T)
 
-cases_con_beta <- readRDS('~/Desktop/cases_con.rda')
+saveRDS(cases_con_beta, '~/Desktop/cases_con_m.rda')
+cases_con_beta <- readRDS('~/Desktop/cases_con_m.rda')
 dim(cases_con_beta)
 
 cases_con_beta_full <- process_rg_set(beta = cases_con_beta, 
@@ -115,7 +119,7 @@ length(which(grepl('^200', cases_con_beta_full$sentrix_id)))
 ##########
 # save version of data to explore batches on pca
 ##########
-saveRDS(cases_con_beta_full, paste0(model_data, paste0('/', method, '_', 'cases_con_beta.rda')))
+saveRDS(cases_con_beta_full, paste0(model_data, paste0('/', method, '_', 'cases_con_beta_m.rda')))
 
 
 

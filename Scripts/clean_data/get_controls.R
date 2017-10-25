@@ -141,5 +141,5 @@ betaControls <- removeOutlier(betaControls,
 # saved unscaled data
 ##########
 
-saveRDS(betaControls, paste0(model_data, paste0('/', method, '_', 'beta_controls.rda')))
+saveRDS(betaControls, paste0(model_data, paste0('/', method, '_', 'beta_controls_m.rda')))
 

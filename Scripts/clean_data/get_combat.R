@@ -18,6 +18,7 @@ library(dplyr)
 library(bumphunter)
 library(sqldf)
 library(e1071)
+library(BiocParallel)
 library(reshape2)
 
 registerDoParallel(1)
@@ -40,9 +41,9 @@ method = 'noob'
 ##########
   
 # read in data
-betaCases <- readRDS(paste0(model_data, paste0('/', method, '_', 'beta_cases.rda')))
-betaControls <- readRDS(paste0(model_data, paste0('/', method, '_', 'beta_controls.rda')))
-betaValid <- readRDS(paste0(model_data, paste0('/', method, '_', 'beta_valid.rda')))
+betaCases <- readRDS(paste0(model_data, paste0('/', method, '_', 'beta_cases_m.rda')))
+betaControls <- readRDS(paste0(model_data, paste0('/', method, '_', 'beta_controls_m.rda')))
+betaValid <- readRDS(paste0(model_data, paste0('/', method, '_', 'beta_valid_m.rda')))
 
   
 ##########
@@ -90,6 +91,7 @@ betaControls <- betaControls[, c('ids',
                      'family_name',
                      intersect_names)]
 
+
 #validation
 betaValid <- betaValid[, c('ids',
                            'p53_germline',
@@ -121,16 +123,30 @@ sep_combat_dat <- function(combat_data){
   beta_controls <- combat_data[combat_data$batch == 'controls',]
   beta_valid <- combat_data[combat_data$batch == 'valid',]
   
+  beta_controls_old <- subset(beta_cases, cancer_diagnosis_diagnoses == 'Unaffected'&
+                              p53_germline == 'Mut')
+  
+  beta_controls_old_wt <- subset(beta_cases, cancer_diagnosis_diagnoses == 'Unaffected'&
+                                p53_germline == 'WT')
   
   beta_cases <- getModData(beta_cases)
-  
+
   beta_controls <- subset(beta_controls, p53_germline == 'Mut' & 
                             cancer_diagnosis_diagnoses == 'Unaffected')
   
   beta_valid <- beta_valid[!beta_valid$ids %in% beta_cases$ids,]
   
+  beta_controls_old <- beta_controls_old[!beta_controls_old$ids %in% beta_cases$ids,]
+  beta_controls_old$batch <- 'controls_old'
+  
+  beta_controls_old_wt <- beta_controls_old_wt[!beta_controls_old_wt$ids %in% beta_cases$ids,]
+  beta_controls_old_wt$batch <- 'controls_old_wt'
+  
+  
   combined_data <- rbind(beta_cases,
                          beta_controls,
+                         beta_controls_old,
+                         beta_controls_old_wt,
                          beta_valid)
   
   
@@ -138,11 +154,11 @@ sep_combat_dat <- function(combat_data){
   
 }
 
-mod_data_combat <- sep_combat_dat(full_data_combat, analysis = 'normal' )
-mod_data <- sep_combat_dat(full_data, analysis = 'normal')
+mod_data_combat <- sep_combat_dat(full_data_combat)
+mod_data <- sep_combat_dat(full_data)
 
-saveRDS(mod_data_combat, paste0(model_data, paste0('/', method, '_', 'mod_data_combat.rda')))
-saveRDS(mod_data, paste0(model_data, paste0('/', method, '_', 'mod_data.rda')))
+saveRDS(mod_data_combat, paste0(model_data, paste0('/', method, '_', 'mod_data_combat_m.rda')))
+saveRDS(mod_data, paste0(model_data, paste0('/', method, '_', 'mod_data_m.rda')))
 
 
 

@@ -21,7 +21,6 @@ registerDoParallel(1)
 ##########
 # initialize folders
 ##########
-
 home_folder <- '~/hpf/largeprojects/agoldenb/ben/Projects'
 project_folder <- paste0(home_folder, '/LFS')
 data_folder <- paste0(project_folder, '/Data')
@@ -38,9 +37,9 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 # fixed variables
 ##########
-method = 'funnorm'
+method = 'noob'
 k = 5
-combat = T
+combat = F
 
 ##########
 # load data
@@ -49,11 +48,11 @@ combat = T
 
 if (combat) {
   
-  betaFull <-  readRDS(paste0(model_data, paste0('/', method, '_', 'mod_data_combat.rda')))
+  betaFull <-  readRDS(paste0(model_data, paste0('/', method, '_', 'mod_data_combat_m.rda')))
   
   
 } else {
-  betaFull <- readRDS(paste0(model_data, paste0('/', method, '_', 'mod_data.rda')))
+  betaFull <- readRDS(paste0(model_data, paste0('/', method, '_', 'mod_data_m.rda')))
   
 }
 
@@ -66,30 +65,39 @@ intersect_names <- colnames(betaFull)[9:ncol(betaFull)]
 ##########
 # read in all features from feat data
 ##########
-setwd(feat_data)
-file_list_names = list.files()
+
+lfs_feats_m <- readRDS(paste0(feat_data, paste0('/', method, '_', 'lfs_m.rda')))
+no_cancer_feats_m <- readRDS(paste0(feat_data, paste0('/', method, '_', 'no_cancer_m.rda')))
 
 
-# store all raw rda feature lists in feat_list
-feat_list <- lapply(file_list_names, function(x) readRDS(x))
+# setwd(feat_data)
+# file_list_names = list.files()
+# 
+# 
+# # store all raw rda feature lists in feat_list
+# feat_list <- lapply(file_list_names, function(x) readRDS(x))
+# 
+# # order feat list
+# feat_list  <- feat_list[order(sapply(feat_list, length), decreasing=F)]
+# 
+# # select first 10 
+# feat_list <- feat_list[5]
+# 
+# # model_names <- c('enet', 'rf', 'lasso')
+# # seeds <- c(1, 2, 3)
 
-# order feat list
-feat_list  <- feat_list[order(sapply(feat_list, length), decreasing=F)]
-
-# select first 10 
-feat_list <- feat_list[1:5]
-
-
-model_names <- c('enet', 'rf', 'lasso')
-seeds <- c(1, 2, 3)
+model_names <- c('rf')
+seeds <- c(1,2, 3)
+feat_list <- list(no_cancer_feats_m, lfs_feats_m)
+file_list_names <- list('no_cancer_m', 'lfs_m')
 
 
-
+# 
 l = j = m = 1
 #
 beta_full = betaFull
 model_method = model_names[m]
-mod_feats = feat_list[[2]]
+mod_feats = no_cancer_m
 feat_name = file_list_names[[l]]
 seed_num = seeds[j]
 k = k
@@ -99,7 +107,7 @@ max_age = 850
 data_type = 'standard'
 
 
-
+betaFull <- betaFull[, 1:10000]
 trainTest <- function(beta_full,
                       model_method,
                       mod_feats,
@@ -109,31 +117,27 @@ trainTest <- function(beta_full,
                       max_age,
                       remove_cases,
                       class_age,
+                      gender,
                       k) {
  
   
   if(data_type == 'standard') {
     
-    beta_cases <- beta_full[beta_full$type == 'cases_450k',]
-    beta_controls <- beta_full[beta_full$type == 'controls_850k',]
-    beta_valid <- beta_full[beta_full$type == 'valid_850k',]
+    beta_cases <- beta_full[beta_full$batch == 'cases',]
+    beta_controls <- beta_full[beta_full$batch == 'controls',]
+    # beta_controls <- beta_controls[beta_controls$age_sample_collection < 215,]
+    beta_valid <- beta_full[beta_full$batch == 'valid',]
+    # beta_valid <- beta_valid[beta_valid$age_sample_collection < 215,]
     
-  } else if (data_type == 'full') {
     
-    beta_cases <- beta_cases[grepl('cases|valid', beta_cases$type)]
-    beta_controls <- beta_controls[grepl('controls', beta_cases$type)]
-    beta_valid <- beta_full[beta_full$type == 'valid_850k',]
+  } else {
     
-  } else if (data_type == 'old_controls') {
-    
-    beta_cases <- beta_full[beta_full$type == 'cases_450k',]
-    beta_controls <- beta_full[beta_full$type == 'controls_850k',]
-    beta_valid <- beta_full[beta_full$type == 'valid_850k',]
+    beta_cases <- beta_cases[grepl('cases|valid', beta_cases$batch)]
+    beta_controls <- beta_controls[grepl('controls', beta_cases$batch)]
+    beta_valid <- beta_full[beta_full$batch == 'valid',]
     
   }
 
-  
-  
   # remove samples that dont have an age of sample collection
   beta_cases <- beta_cases[complete.cases(beta_cases),]
   beta_valid <- beta_valid[complete.cases(beta_valid),]
@@ -152,8 +156,6 @@ trainTest <- function(beta_full,
     beta_cases <- beta_cases[-remove_index,]
     
   }
-
-
 
   set.seed(seed_num)
   # get a column for each dataset indicating the fold
@@ -183,8 +185,7 @@ trainTest <- function(beta_full,
                                    age_cutoff = class_age,
                                    bh_features = mod_feats,
                                    rand_feats = rand_feats,
-                                   weights = T,
-                                   gender = F)
+                                   gender = T)
     } 
     
     if(model_method == 'rf') {
@@ -199,9 +200,8 @@ trainTest <- function(beta_full,
                                  age_cutoff = class_age,
                                  bh_features = mod_feats,
                                  rand_feats = rand_feats,
-                                 pred_cutoff = .5,
-                                 weights = T,
-                                 gender = F)
+                                 pred_cutoff = 0.5,
+                                 gender = gender)
       
       
     } 
@@ -219,8 +219,7 @@ trainTest <- function(beta_full,
                                age_cutoff = age_cutoff,
                                bh_features = mod_feats,
                                rand_feats = rand_feats,
-                               weights = T,
-                               gender = F)
+                               gender = T)
       
     } 
     
@@ -232,12 +231,9 @@ trainTest <- function(beta_full,
                                    age_cutoff = class_age,
                                    bh_features = mod_feats,
                                    rand_feats = rand_feats,
-                                   weights = T,
-                                   gender = F)
+                                   gender = T)
       
     } 
-    
-    
     
     # get results 
     temp_results[[i]] <- mod_result
@@ -271,7 +267,8 @@ for(m in 1:length(model_names)) {
                                data_type = 'standard',
                                max_age = 1000,
                                remove_cases = F,
-                               class_age = 48,
+                               class_age = 72,
+                               gender = T,
                                k)
       
       
@@ -284,6 +281,7 @@ for(m in 1:length(model_names)) {
                                                  mod_name = model_names[m], feat_name = file_list_names[[l]],
                                                  seed_number = seeds[j])[[2]]
       
+
       # five folds, then first element is confusion matrix, and secod element is clss scores
       
       print(paste0('done with ', j, ' seed'))
@@ -311,7 +309,7 @@ for(m in 1:length(model_names)) {
 full_results <- do.call(rbind, full_results_class)
 
 
-saveRDS(full_results, paste0(results_data, '/', method,'_','full_results_class_under18_48.rda'))
+saveRDS(full_results, paste0(results_data, '/', method,'_','full_results_pred_fac_all_bump_m.rda'))
 
 
 colnames(full_results) <- tolower(colnames(full_results))

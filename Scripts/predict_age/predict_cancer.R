@@ -45,155 +45,70 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 # fixed variables
 ##########
-method = 'raw'
+method = 'noob'
 k = 5
-seed_num = 1
+combat = F
+
 ##########
 # load data
 ##########
-# read in full m value data 
-betaCases <- readRDS(paste0(model_data, paste0('/', method, '_', 'cases_new_m.rda')))
-betaControls <- readRDS(paste0(model_data, paste0('/', method, '_', 'controls_new_m.rda'))) #34 449936
-betaValid <- readRDS(paste0(model_data, paste0('/', method, '_', 'valid_new_m.rda')))
-#35 449783
 
-###########
-# make id into ids
-###########
-colnames(betaCases)[1] <- 'ids'
-colnames(betaControls)[1] <- 'ids'
-colnames(betaValid)[1] <- 'ids'
-
-##########
-# remove inf
-##########
-betaCases <- removeInf(betaCases, probe_start = 8)
-betaControls <- removeInf(betaControls, probe_start = 8)
-betaValid<- removeInf(betaValid, probe_start = 8)
+if (combat) {
+  
+  betaFull <-  readRDS(paste0(model_data, paste0('/', method, '_', 'mod_data_combat.rda')))
+  
+  
+} else {
+  
+  betaFull <- readRDS(paste0(model_data, paste0('/', method, '_', 'mod_data.rda')))
+  
+}
 
 
-# get old controls - Mut and 'Unaffected'
-betaControlsOld <- subset(betaCases, p53_germline == 'Mut' & 
-                            cancer_diagnosis_diagnoses == 'Unaffected')
-
-# get p53, not 'Unaffected'
-betaCases <- subset(betaCases, p53_germline == 'Mut' & 
-                      cancer_diagnosis_diagnoses != 'Unaffected')
-
-# get rid of cancer samples in controls 
-betaControls <- betaControls[grepl('Unaffected', betaControls$cancer_diagnosis_diagnoses),]
-
-#subset valid
-betaValid <- betaValid[!betaValid$ids %in% betaCases$ids,]
-
-##########
-# get intersecting colnames and prepare data for modeling
-##########
-
-intersect_names <- Reduce(intersect, list(colnames(betaCases)[8:ncol(betaCases)], 
-                                          colnames(betaControls)[8:ncol(betaControls)], 
-                                          colnames(betaValid)[8:ncol(betaValid)]))
-# assign dataframe identifier
-betaCases$type <- '450k'
-betaControls$type <- '850k'
-betaControlsOld$type <- '450k'
-betaValid$type <- '850k'
-
-
-# cases
-betaCases <- betaCases[, c('ids',
-                           'age_diagnosis', 
-                           'age_sample_collection', 
-                           'cancer_diagnosis_diagnoses', 
-                           'gender',
-                           'type',
-                           intersect_names)]
-# controls
-betaControls <- betaControls[, c('ids',
-                                 'age_diagnosis', 
-                                 'age_sample_collection', 
-                                 'cancer_diagnosis_diagnoses', 
-                                 'gender', 
-                                 'type',
-                                 intersect_names)]
-
-# controls
-betaControlsOld <- betaControlsOld[, c('ids',
-                                 'age_diagnosis', 
-                                 'age_sample_collection', 
-                                 'cancer_diagnosis_diagnoses', 
-                                 'gender', 
-                                 'type',
-                                 intersect_names)]
-
-#validation
-betaValid <- betaValid[, c('ids', 
-                           'age_diagnosis', 
-                           'age_sample_collection', 
-                           'cancer_diagnosis_diagnoses', 
-                           'gender', 
-                           'type',
-                           intersect_names)]
-
-
-
-###########
-# get full data
-###########
-beta_full <- rbind(betaCases,
-                   betaControls,
-                   betaControlsOld,
-                   betaValid)
-
-rm(betaCases,
-   betaControls,
-   betaControlsOld,
-   betaValid)
-
-##########
-# remove duplicates 
-##########
-length(which(duplicated(beta_full$ids)))
-
-# remove 
-beta_full <- beta_full[!duplicated(beta_full$ids),]
 
 # summary of data types 
-summary(as.factor(beta_full$type))
+summary(as.factor(betaFull$batch))
 
-# get a column for each dataset indicating the fold
-beta_full <- getFolds(beta_full, seed_number = seed_num, k = k)
+# remove duplicates 
+betaFull <- betaFull[!duplicated(betaFull$ids),]
 
+# cancer, no cancer
+summary(as.factor(betaFull$cancer_diagnosis_diagnoses))
 
+# get folds 
+betaFull <- getFolds(betaFull, seed_number = 1, k = 5)
+summary(as.factor(betaFull$folds))
+
+beta_dat <- betaFull
 # lets have this model either do 450 only, 850 only, or both, no combinations
-trainTest <- function(dat,
+trainTest <- function(beta_dat,
                       methyl_tech,
                       k) 
 {
   
   
-  if(methyl_tech == '450k'){
-    
-    beta_dat <- dat[grepl('450k', dat$type),]
-    
-  } else if (methyl_tech =='850k') {
-    
-    beta_dat <- dat[grepl('850k', dat$type),]
-    
-  } else if(methyl_tech == '450_850') {
-    
-    beta_dat <- subset(dat, type == '450k' |  (type == '850k' & cancer_diagnosis_diagnoses == 'Unaffected'))
-    
-  } else if (methyl_tech =='850_450') {
-    
-    beta_dat <- subset(dat, type == '850k' |  (type == '450k' & cancer_diagnosis_diagnoses == 'Unaffected'))
-    
-  } else {
-    
-    beta_dat <- dat
-    
-  }
-  
+  # if(methyl_tech == '450k'){
+  #   
+  #   beta_dat <- dat[grepl('450k', dat$type),]
+  #   
+  # } else if (methyl_tech =='850k') {
+  #   
+  #   beta_dat <- dat[grepl('850k', dat$type),]
+  #   
+  # } else if(methyl_tech == '450_850') {
+  #   
+  #   beta_dat <- subset(dat, type == '450k' |  (type == '850k' & cancer_diagnosis_diagnoses == 'Unaffected'))
+  #   
+  # } else if (methyl_tech =='850_450') {
+  #   
+  #   beta_dat <- subset(dat, type == '850k' |  (type == '450k' & cancer_diagnosis_diagnoses == 'Unaffected'))
+  #   
+  # } else {
+  #   
+  #   beta_dat <- dat
+  #   
+  # }
+  # 
   
   # list to store results
   bh_feat <- list()
@@ -206,7 +121,7 @@ trainTest <- function(dat,
     train_index <- !grepl(i, beta_dat$folds)
     test_index <- !train_index
     
-    mod_feats <- colnames(beta_dat)[7:(ncol(beta_dat) -1)]
+    mod_feats <- colnames(beta_dat)[9:(ncol(beta_dat) -1)]
     
     mod_feats <- sample(mod_feats, 10000, replace = T)
     
@@ -224,7 +139,7 @@ trainTest <- function(dat,
   
 }
 set.seed(4)
-mod_results <- trainTest(dat = beta_full, methyl_tech = 'all', k = 5)
+mod_results <- trainTest(beta_dat = betaFull, methyl_tech = 'all', k = 5)
 
 
 getClassResutls <- function(temp.result) {
@@ -234,7 +149,7 @@ getClassResutls <- function(temp.result) {
 
   for (j in 1:4) {
     
-    if(j > 1) {
+    if (j > 1) {
       
       mat <- mat + temp.result[[j]][[4]]$table[1:2,1:2]
       acc_temp <- acc_temp + temp.result[[j]][[4]]$overall[1]

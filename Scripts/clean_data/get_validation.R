@@ -160,5 +160,5 @@ betaValid <- removeOutlier(betaValid,
 # saved unscaled data
 ##########
 
-saveRDS(betaValid, paste0(model_data, paste0('/', method, '_', 'beta_valid.rda')))
-s
+saveRDS(betaValid, paste0(model_data, paste0('/', method, '_', 'beta_valid_m.rda')))
+

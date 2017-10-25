@@ -3,22 +3,9 @@
 ##########
 # initialize libraries
 ##########
-library(tidyverse)
-library(sva)
-library(caret)
-library(glmnet)
-library(randomForest)
-library(kernlab)
-library(pROC)
-library(Metrics)
-library(ModelMetrics)
+library(BiocParallel)
 library(doParallel)
-library(nnet)
-library(dplyr)
-library(bumphunter)
-library(sqldf)
-library(e1071)
-library(reshape2)
+library(sva)
 
 registerDoParallel(1)
 
@@ -48,8 +35,8 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 
 # read in data
-cases_con_beta_full <- readRDS(paste0(model_data, paste0('/', method, '_', 'cases_con_beta.rda')))
-cases_val_beta_full <- readRDS(paste0(model_data, paste0('/', method, '_', 'cases_val_beta.rda')))
+cases_con_beta_full <- readRDS(paste0(model_data, paste0('/', method, '_', 'cases_con_beta_m.rda')))
+cases_val_beta_full <- readRDS(paste0(model_data, paste0('/', method, '_', 'cases_val_beta_m.rda')))
 
 # seperate data
 cases_con <- cases_con_beta_full[!grepl('^200', cases_con_beta_full$sentrix_id), ]
@@ -130,6 +117,8 @@ full_data_val<- rbind(cases_val,
 
 
 
+
+
 full_data_con_combat <- run_combat(full_data_con)
 full_data_val_combat <- run_combat(full_data_val)
 
@@ -177,11 +166,11 @@ mod_data_val <- sep_combat_data(full_data_val, data_type = 'valid')
 
 # save normal data and combat data
 saveRDS(mod_data_con_combat, paste0(model_data, paste0('/', method, '_', 'mod_data_con_combat.rda')))
-saveRDS(mod_data_con, paste0(model_data, paste0('/', method, '_', 'mod_data_con.rda')))
+saveRDS(mod_data_con, paste0(model_data, paste0('/', method, '_', 'mod_data_con_m.rda')))
 
 
 saveRDS(mod_data_val_combat, paste0(model_data, paste0('/', method, '_', 'mod_data_val_combat.rda')))
-saveRDS(mod_data_val, paste0(model_data, paste0('/', method, '_', 'mod_data_val.rda')))
+saveRDS(mod_data_val, paste0(model_data, paste0('/', method, '_', 'mod_data_val_m.rda')))
 
 
 

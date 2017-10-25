@@ -40,7 +40,7 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 ##########
 method = 'funnorm'
 k = 5
-combat = T
+combat = F
 
 ##########
 # load data
@@ -48,37 +48,53 @@ combat = T
 
 if(combat) {
   
-  mod_data_con <- readRDS(paste0(model_data, paste0('/', method, '_', 'mod_data_con_combat.rda')))
-  mod_data_val <- readRDS(paste0(model_data, paste0('/', method, '_', 'mod_data_val_combat.rda')))
+  betaFullCon <- readRDS(paste0(model_data, paste0('/', method, '_', 'mod_data_con_combat.rda')))
+  betaFullVal <- readRDS(paste0(model_data, paste0('/', method, '_', 'mod_data_val_combat.rda')))
   
   
 } else {
   
-  mod_data_con <- readRDS(paste0(model_data, paste0('/', method, '_', 'mod_data_con.rda')))
-  mod_data_val <- readRDS(paste0(model_data, paste0('/', method, '_', 'mod_data_val.rda')))
+  betaFullCon <- readRDS(paste0(model_data, paste0('/', method, '_', 'mod_data_con.rda')))
+  betaFullVal <- readRDS(paste0(model_data, paste0('/', method, '_', 'mod_data_val.rda')))
   
 }
-
-
 
 
 ##########
 # get column names
 ##########
-intersect_names <- colnames(betaFull)[9:ncol(betaFull)]
+intersect_names_con <- colnames(betaFullCon)[9:ncol(betaFullCon)]
+intersect_names_val <- colnames(betaFullVal)[9:ncol(betaFullVal)]
+
 
 ##########
 # read in all features from feat data
 ##########
-setwd(feat_data)
-file_list_names = list.files()
-file_list_names = file_list_names[1:5]
 
-# store all raw rda feature lists in feat_list
-feat_list = lapply(file_list_names, function(x) readRDS(x))
+lfs_feats_m <- readRDS(paste0(feat_data, paste0('/', 'noob', '_', 'lfs_m.rda')))
+no_cancer_feats_m <- readRDS(paste0(feat_data, paste0('/', 'noob', '_', 'no_cancer_m.rda')))
 
-# get first 6 only 
-model_names <- c('enet', 'rf', 'lasso')
+
+# setwd(feat_data)
+# file_list_names = list.files()
+# 
+# 
+# # store all raw rda feature lists in feat_list
+# feat_list <- lapply(file_list_names, function(x) readRDS(x))
+# 
+# # order feat list
+# feat_list  <- feat_list[order(sapply(feat_list, length), decreasing=F)]
+# 
+# # select first 10 
+# feat_list <- feat_list[5]
+# 
+# # model_names <- c('enet', 'rf', 'lasso')
+# # seeds <- c(1, 2, 3)
+
+model_names <- c('enet')
+seeds <- c(1,2,3)
+feat_list <- list(no_cancer_feats_m, lfs_feats_m)
+file_list_names <- list('no_cancer_m', 'lfs_m')
 
 
 
@@ -94,6 +110,7 @@ max_age = 850
 data_type = 'standard'
 
 #
+#
 
 trainTest <- function(beta_full,
                       model_method,
@@ -106,39 +123,17 @@ trainTest <- function(beta_full,
                       k) {
   
   
-  if(data_type == 'combat') {
+  if(data_type == 'standard') {
     
-    # load in data
-    beta_cases <- beta_full[beta_full$type == 'cases',]
-    beta_controls <- beta_full[beta_full$type == 'controls',]
-    beta_valid <- beta_full[beta_full$type == 'valid',]
+    beta_cases <- beta_full[beta_full$batch == 'cases',]
+    beta_controls <- beta_full[beta_full$batch == 'controls',]
+    beta_valid <- beta_full[beta_full$batch == 'valid',]
     
-    # get mod data 
-    beta_cases <- getModData(beta_cases)
+  } else {
     
-    # get rid of cancer samples in controls 
-    beta_controls <- beta_controls[grepl('Unaffected', beta_controls$cancer_diagnosis_diagnoses),]
-    
-    #subset valid
-    beta_valid <- beta_valid[!beta_valid$ids %in% beta_cases$ids,]
-    
-  } else if(data_type == 'standard')  {
-    
-    beta_cases <- beta_full[beta_full$type == 'cases_450k',]
-    beta_controls <- beta_full[beta_full$type == 'controls_850k',]
-    beta_valid <- beta_full[beta_full$type == 'valid_850k',]
-    
-  } else if (data_type == 'full') {
-    
-    beta_cases <- beta_full[grepl('cases|valid', beta_full$type),]
-    beta_controls <- beta_full[grepl('controls', beta_full$type),]
-    beta_valid <- beta_full[beta_full$type == 'valid_850k',]
-    
-  } else if (data_type == 'old_controls') {
-    
-    beta_cases <- beta_full[beta_full$type == 'cases_450k',]
-    beta_controls <- beta_full[beta_full$type == 'controls_850k',]
-    beta_valid <- beta_full[beta_full$type == 'valid_850k',]
+    beta_cases <- beta_cases[grepl('cases|valid', beta_cases$batch)]
+    beta_controls <- beta_controls[grepl('controls', beta_cases$batch)]
+    beta_valid <- beta_full[beta_full$batch == 'valid',]
     
   }
   
@@ -249,11 +244,11 @@ for(m in 1:length(model_names)) {
     
     
     # return list of 2
-    mod_results <- trainTest(beta_full = betaFull,
+    mod_results <- trainTest(beta_full = betaFullCon,
                              model_method = model_names[m],
                              mod_feats = feat_list[[l]],
                              feat_name = file_list_names[[l]],
-                             data_type = 'combat',
+                             data_type = 'standard',
                              max_age = 1000,
                              remove_cases = F,
                              class_age = 72,
@@ -286,7 +281,7 @@ full_results_mat <- temp_results_mat_2
 
 
 
-saveRDS(full_results, paste0(results_data, '/', method,'_','full_results_class_test_850_450_48.rda'))
+saveRDS(full_results, paste0(results_data, '/', method,'_','full_results_class_test_combined_m.rda'))
 
 
 colnames(full_results) <- tolower(colnames(full_results))

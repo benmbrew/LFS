@@ -44,15 +44,18 @@ age_binary <-
 ##########
 # function for removing outlier from rgset
 ##########
-# rgSet <- rgSetCon
+# 
+# rgSet <- rgControls
 # id_map_dat <- id_map_con
 # type = 'controls'
 remove_outliers <- 
   function(rgSet, id_map_dat, method, type) {
     
-    # read in outliers
-    outliers <- readRDS(paste0(model_data, paste0('/', method, '_', 'outliers.rda')))
     
+    # get outlier ids
+    outliers <- data.frame(ids =c('3010','3391','3392','3540'),
+                           batch = c('cases', 'controls', 'controls', 'valid'))
+
     # clean sample name
     column_split <- strsplit(as.character(id_map_dat$sample_name), '#')
     last_digits <- lapply(column_split, function(x) x[length(x)])
@@ -73,7 +76,7 @@ remove_outliers <-
     rg_names <- colnames(rgSet)
     print(paste0(length(which(rg_names %in% temp_id)), ' found'))
     
-    # intersecting index
+  # intersecting index
     int_index <- rg_names %in% temp_id
     
     # subset rgSet by temp_id
@@ -134,13 +137,15 @@ preprocessMethod <- function(data,
   beta <- getBeta(Gset)
   
   if(only_m_values) {
-    return(beta)
+    return(m)
   } else {
     return(list(beta, m, Gset, Mset))
     
   }
   
 }
+
+# data_combat <- full_data_con
 
 run_combat <- function(data_combat) {
   
@@ -150,7 +155,8 @@ run_combat <- function(data_combat) {
   batch_indicator <- as.factor(batch_indicator)
   
   # put model ids in rownames and remove columns
-  mat_combat <- as.data.frame(data_combat[, 9:ncol(data_combat)])
+  mat_combat <- as.matrix(data_combat[, 9:ncol(data_combat)])
+  rownames(mat_combat) <- NULL
   clin_combat <- as.data.frame(data_combat[, 1:8])
   # get features
   features <- colnames(mat_combat)
@@ -159,6 +165,10 @@ run_combat <- function(data_combat) {
   # get intercept
   modcombat <- model.matrix(~1, data = data_combat)
   combat <- ComBat(dat = mat_combat, batch = batch_indicator, mod = modcombat, par.prior=TRUE, prior.plots=FALSE)
+  any(is.na(mat_combat))
+  any(is.na(batch_indicator))
+  any(is.na(modcombat))
+  
   
   # transpose and add back columns
   final_dat <- as.data.frame(t(combat))
@@ -170,7 +180,6 @@ run_combat <- function(data_combat) {
   return(final_dat)
   
 }
-
 
 # ##########
 # # scale data
@@ -327,6 +336,32 @@ findIdsCombined <- function(data_methyl, id_map_1, id_map_2, controls) {
         
       }
     }
+    
+    print(i)
+    
+  }
+  
+  return(data_methyl)
+}
+
+
+
+findIds <- function(data_methyl, id_map) {
+  
+  
+  data_methyl <- as.data.frame(t(data_methyl))
+  data_methyl$identifier <- rownames(data_methyl)
+  data_methyl$identifier <- as.factor(data_methyl$identifier)
+  # loop to combine identifiers, without merging large table
+  data_methyl$ids <- NA
+  data_methyl$sentrix_id <- NA
+  
+  for (i in data_methyl$identifier) {
+    
+
+        data_methyl$ids[data_methyl$identifier == i] <- id_map$sample_name[id_map$identifier == i]
+        data_methyl$sentrix_id[data_methyl$identifier == i] <- id_map$sentrix_id[id_map$identifier == i]
+     
     
     print(i)
     
@@ -1361,11 +1396,10 @@ runEnetDiff <- function(training_dat,
 
 runEnetRand <- function(training_dat,
                         controls_dat,
-                        controls_dat_old,
-                        controls_dat_full,
                         valid_dat,
                         test_dat,
                         bh_features,
+                        age_cutoff,
                         gender) 
 {
   
@@ -1388,15 +1422,11 @@ runEnetRand <- function(training_dat,
   # get test age of sample collection
   patient_age <- as.numeric(test_dat$age_sample_collection)
   patient_age_controls <- as.numeric(controls_dat$age_sample_collection)
-  patient_age_controls_old <- as.numeric(controls_dat_old$age_sample_collection)
-  patient_age_controls_full <- as.numeric(controls_dat_full$age_sample_collection)
   patient_age_valid <- as.numeric(valid_dat$age_sample_collection)
   
   # get bumphunter features
   training_dat <- training_dat[, intersected_feats]
   controls_dat <- controls_dat[, intersected_feats]
-  controls_dat_old <- controls_dat_old[, intersected_feats]
-  controls_dat_full <- controls_dat_full[, intersected_feats]
   valid_dat <- valid_dat[, intersected_feats]
   
   test_dat <- test_dat[, intersected_feats]
@@ -1511,25 +1541,6 @@ runEnetRand <- function(training_dat,
   
   test.predictions_controls <- temp_test.predictions_controls[, temp.min_lambda_index]
   
-  # get controls
-  temp_test.predictions_controls_old <- predict(model,
-                                                data.matrix(controls_dat_old),
-                                                type = 'response')
-  
-  
-  
-  test.predictions_controls_old <- temp_test.predictions_controls_old[, temp.min_lambda_index]
-  
-  # get controls full
-  temp_test.predictions_controls_full <- predict(model,
-                                                 data.matrix(controls_dat_full),
-                                                 type = 'response')
-  
-  
-  
-  test.predictions_controls_full <- temp_test.predictions_controls_full[, temp.min_lambda_index]
-  
-  
   
   # get validation
   temp_test.predictions_valid <- predict(model,
@@ -1543,9 +1554,7 @@ runEnetRand <- function(training_dat,
   
   return(list(test.predictions, test_y, patient_age, 
               test.predictions_valid, valid_y, patient_age_valid,
-              test.predictions_controls, patient_age_controls,
-              test.predictions_controls_full, patient_age_controls_full,
-              test.predictions_controls_old, patient_age_controls_old))
+              test.predictions_controls, patient_age_controls))
   
   
 }
@@ -2449,10 +2458,6 @@ predCancer <- function(training_dat,
   training_dat <- training_dat[, intersected_feats]
   test_dat <- test_dat[, intersected_feats]
   
-  training_dat <- training_dat[, 1:100]
-  test_dat <- test_dat[, 1:100]
-  
-  
   # controls_dat <- controls_dat[, intersected_feats]
   # valid_dat <- valid_dat[, intersected_feats]
   
@@ -2559,7 +2564,7 @@ predCancer <- function(training_dat,
   test.predictions <- temp_test.predictions[, temp.min_lambda_index]
   test.predictions <- factor(test.predictions, levels = c('yes', 'no'))
   
-  test_stats <- confusionMatrix(test_y, test.predictions)
+  test_stats <- caret::confusionMatrix(test.predictions, test_y)
   importance <- coef(model)
   
   lambda_value <- elastic_net.cv_model$lambda.min
@@ -3383,7 +3388,7 @@ predCancer <- function(training_dat,
   test.predictions <- temp_test.predictions[, temp.min_lambda_index]
   test.predictions <- factor(test.predictions, levels = c('yes', 'no'))
   
-  test_stats <- confusionMatrix(test_y, test.predictions)
+  test_stats <- caret::confusionMatrix(test_y, test.predictions)
   importance <- coef(model)
   
   lambda_value <- elastic_net.cv_model$lambda.min
@@ -3575,8 +3580,8 @@ runEnetRandFac <- function(training_dat,
   
   test.predictions_controls <- temp_test.predictions_controls[, temp.min_lambda_index]
   # test.predictions_controls <- ifelse(test.predictions_controls >= pred_cutoff, 'yes', 'no')
-  test.predictions_controls <- factor(test.predictions_controls, levels = c('yes', 'no'))
-  patient_age_controls <- factor(patient_age_controls, levels = c('yes', 'no'))
+  test.predictions_controls <- factor(test.predictions_controls, levels = c('no', 'yes'))
+  patient_age_controls <- factor(patient_age_controls, levels = c('no', 'yes'))
   test_stats_controls <- caret::confusionMatrix(test.predictions_controls, patient_age_controls)
   
   
@@ -4354,6 +4359,7 @@ runGlmLassoRandFac <- function(training_dat,
 ##########
 # RF fac
 ###########
+
 
 runRfRandFac <- function(training_dat,
                          controls_dat,

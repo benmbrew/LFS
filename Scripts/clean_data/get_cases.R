@@ -78,8 +78,8 @@ betaCases <- preprocessMethod(rgCases, preprocess = method, only_m_values = T)
 # remove rgset
 rm(rgCases)
 
-# save.image('~/Desktop/temp_cases_noob.RData')
-# load('~/Desktop/temp_cases_noob.RData')
+# save.image('~/Desktop/temp_cases_noob_m.RData')
+# load('~/Desktop/temp_cases_noob_m.RData')
 
 ###########
 # id functions
@@ -141,10 +141,18 @@ betaCases <- removeOutlier(betaCases,
 
 
 ##########
+# get old controls 
+##########
+betaControlsOld <- subset(betaCases, p53_germline == 'Mut' &
+                            cancer_diagnosis_diagnoses == 'Unaffected')
+
+##########
 # saved unscaled data
 ##########
 
-saveRDS(betaCases, paste0(model_data, paste0('/', method, '_', 'beta_cases.rda')))
+saveRDS(betaControlsOld, paste0(model_data, paste0('/', method, '_', 'beta_controls_old_m.rda')))
+
+saveRDS(betaCases, paste0(model_data, paste0('/', method, '_', 'beta_cases_m.rda')))
 
 
 

@@ -117,7 +117,9 @@ load('~/Desktop/temp_cases_valid.RData')
 ##########
 # use noob on beta then conver to matrix of
 cases_val_beta <- preprocessMethod(case_val, preprocess = method, only_m_values = T)
-cases_val_beta <- readRDS('~/Desktop/cases_val.rda')
+
+# saveRDS(cases_val_beta, '~/Desktop/cases_val_m.rda')
+# cases_val_beta <- readRDS('~/Desktop/cases_val_m.rda')
 
 
 cases_val_beta_full <- process_rg_set(beta = cases_val_beta, 
@@ -128,7 +130,7 @@ cases_val_beta_full <- process_rg_set(beta = cases_val_beta,
 ##########
 # save version of data to explore batches on pca
 ##########
-saveRDS(cases_val_beta_full, paste0(model_data, paste0('/', method, '_', 'cases_val_beta.rda')))
+saveRDS(cases_val_beta_full, paste0(model_data, paste0('/', method, '_', 'cases_val_beta_m.rda')))
 
 
 

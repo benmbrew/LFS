@@ -48,7 +48,7 @@ combat = F
 
 if(combat) {
   
-  betaFull <-  readRDS(paste0(model_data, paste0('/', method, '_', 'mod_data_combat_m.rda')))
+  betaFull <-  readRDS(paste0(model_data, paste0('/', method, '_', 'mod_data_combat.rda')))
   
   
 } else {
@@ -86,7 +86,7 @@ intersect_names <- colnames(betaFull)[9:ncol(betaFull)]
 # function that runs bumphunter on differe pop
 ##########
 # dat <- betaFull
-# # subset_feats <- island_probes
+# subset_feats <- island_probes
 # probe_start = 9
 
 
@@ -96,70 +96,65 @@ bump_hunter_master <-
             m_thresh, 
             probe_start, 
             which_bumps) {
-  
-  if(!is.null(subset_feats)) {
-    dat_clin <- dat[, 1:(probe_start -1)]
-    int_names <- intersect(intersect_names, subset_feats)
-    dat <-cbind(dat_clin, dat[, int_names])
-  } else {
-    subset_feats <- intersect_names
-  }
-  
-  
-  if(which_bumps == 'age') {
-    # get all dat
-    dat <- dat[grepl('Unaffected', dat$cancer_diagnosis_diagnoses),]
     
-    # remove duplicates 
-    dat <- dat[!duplicated(dat$ids),]
+    if(!is.null(subset_feats)) {
+      dat_clin <- dat[, 1:(probe_start -1)]
+      int_names <- intersect(intersect_names, subset_feats)
+      dat <-cbind(dat_clin, dat[, int_names])
+    } else {
+      subset_feats <- intersect_names
+    }
     
-    # split age at 18 (216 months)
-    dat_under <- dat[dat$age_sample_collection < 216,]
-    dat_over <- dat[dat$age_sample_collection >= 216,]
     
-    # remove NAs in ids 
-    dat_over <- dat_over[!is.na(dat_over$ids),]
-    dat_under <- dat_under[!is.na(dat_under$ids),]
+    if(which_bumps == 'age') {
+      # get all dat
+      dat <- dat[grepl('Unaffected', dat$cancer_diagnosis_diagnoses),]
+      
+      # remove duplicates 
+      dat <- dat[!duplicated(dat$ids),]
+      
+      # split age at 18 (216 months)
+      dat_under <- dat[dat$age_sample_collection < 216,]
+      dat_over <- dat[dat$age_sample_collection >= 216,]
+      
+      # remove NAs in ids 
+      dat_over <- dat_over[!is.na(dat_over$ids),]
+      dat_under <- dat_under[!is.na(dat_under$ids),]
+      
+      # change type 
+      dat_over$type <- 'over_18'
+      dat_under$type <- 'under_18'
+      
+      # Run bumphunter on kids and adults
+      temp <- bump_hunter(dat_1 = dat_over, 
+                          dat_2 = dat_under, 
+                          boot_num = 3, 
+                          m_beta_thresh = m_thresh)
+      
+      age_probes <-inner_join(temp, g_ranges, by = 'start' )
+      
+      # get significant 
+      age_sig <- age_probes$probe[age_probes$p.value < 0.10]
+      
+      # remove these from the subsetfeats 
+      temp_age <- subset_feats[!subset_feats %in% age_sig]
+      
+      return(temp_age)
+      
+    }
     
-    # change type 
-    dat_over$type <- 'over_18'
-    dat_under$type <- 'under_18'
-    
-    # Run bumphunter on kids and adults
-    temp <- bump_hunter(dat_1 = dat_over, 
-                        dat_2 = dat_under, 
-                        boot_num = 3, 
-                        m_beta_thresh = m_thresh)
-    
-    age_probes <-inner_join(temp, g_ranges, by = 'start' )
-    
-    # get significant 
-    age_sig <- age_probes$probe[age_probes$p.value < 0.10]
-    
-    # remove these from the subsetfeats 
-    temp_age <- subset_feats[!subset_feats %in% age_sig]
-
-    return(temp_age)
-    
-  }
-   
     if(which_bumps == 'cancer') {
       
       # get caes and controls
       cases <- dat[!grepl('Unaffected',dat$cancer_diagnosis_diagnoses),]
       controls <- dat[grepl('Unaffected',dat$cancer_diagnosis_diagnoses),]
       
-      controls <- subset(controls, p53_germline == 'Mut')
-      
-      subset(beta_cases, 
-               p53_germline == 'Mut')
-      
       controls_sub <- controls[!duplicated(controls$ids),]
       length(which(duplicated(controls$ids)))
       
       cases$type <- 'cancer'
       controls_sub$type <- 'no_cancer'
-     
+      
       
       temp_cancer <- bump_hunter(cases, 
                                  controls_sub, 
@@ -169,14 +164,14 @@ bump_hunter_master <-
       cancer_probes <- inner_join(temp_cancer, g_ranges, by = 'start')
       
       # get significant 
-      cancer_sig <- cancer_probes$probe[cancer_probes$p.value < m_thresh]
+      cancer_sig <- cancer_probes$probe[cancer_probes$p.value < 0.10]
       
       # remove these from the subsetfeats 
       temp_cancer <- subset_feats[!subset_feats %in% cancer_sig]
       
       return(temp_cancer)
       
-    
+      
     }
     
     if(which_bumps == 'lfs') {
@@ -209,25 +204,23 @@ bump_hunter_master <-
       lfs_probes <-inner_join(temp, g_ranges, by = 'start' )
       
       # get significant 
-      lfs_probes <- lfs_probes$probe[lfs_probes$p.value < m_thresh]
+      lfs_probes <- lfs_probes$probe[lfs_probes$p.value < 0.10]
       
       # remove these from the subsetfeats 
       temp_lfs <- subset_feats[!subset_feats %in% lfs_probes]
-
+      
       return(temp_lfs)
       
     }
-
-}
+    
+  }
 
 # bumps = age, cancer, lfs
 # subsets = island_probes, loci27k_probes, loci27k_island_probes
-
-
-
 ##########
 # full data
 ##########
+
 # age
 age <- bump_hunter_master(dat = betaFull, 
                           subset_feats = NULL, 
@@ -244,7 +237,7 @@ cancer <- bump_hunter_master(dat = betaFull,
                              which_bumps = 'cancer')
 
 keep_these <- intersect_names[!intersect_names %in% cancer]
-saveRDS(keep_these, paste0(feat_data, paste0('/', method, '_', 'no_cancer_m.rda')))
+saveRDS(keep_these, paste0(feat_data, paste0('/', method, '_', 'no_cancer_m_combined.rda')))
 
 
 # cancer
@@ -256,16 +249,15 @@ lfs <- bump_hunter_master(dat = betaFull,
 
 saveRDS(lfs, paste0(feat_data, paste0('/', method, '_', 'lfs_m.rda')))
 
-
 ##########
 # chr17 probes
 ##########
 # age, chr_17_int
 no_age_chr17 <- bump_hunter_master(dat = betaFull, 
-                                    subset_feats = chr_17_int, 
-                                    m_thresh = 0.01, 
-                                    probe_start = 9, 
-                                    which_bumps = 'age')
+                                   subset_feats = chr_17_int, 
+                                   m_thresh = 0.1, 
+                                   probe_start = 9, 
+                                   which_bumps = 'age')
 
 # remove from insterscted names and save 
 keep_these <- chr_17_int[!chr_17_int %in% no_age_chr17]
@@ -273,10 +265,10 @@ saveRDS(keep_these, paste0(feat_data, paste0('/', method, '_', 'no_age_chr17_fea
 
 # age, chr_17_int
 no_cancer_chr17 <- bump_hunter_master(dat = betaFull, 
-                                       subset_feats = chr_17_int, 
-                                       m_thresh = 0.1, 
-                                       probe_start = 9, 
-                                       which_bumps = 'cancer')
+                                      subset_feats = chr_17_int, 
+                                      m_thresh = 0.1, 
+                                      probe_start = 9, 
+                                      which_bumps = 'cancer')
 
 # remove from intersected names and save
 keep_these <- chr_17_int[!chr_17_int %in% no_cancer_chr17]
@@ -291,10 +283,10 @@ saveRDS(keep_these, paste0(feat_data, paste0('/', method, '_', 'no_age_cancer_un
 
 # age, chr_17_int
 lfs_chr17 <- bump_hunter_master(dat = betaFull, 
-                                 subset_feats = chr_17_int, 
-                                 m_thresh = 1, 
-                                 probe_start = 9, 
-                                 which_bumps = 'lfs')
+                                subset_feats = chr_17_int, 
+                                m_thresh = 1, 
+                                probe_start = 9, 
+                                which_bumps = 'lfs')
 
 # directly save, no removal
 saveRDS(lfs_chr17 , paste0(feat_data, paste0('/', method, '_', 'lfs_chr17_features.rda')))
@@ -308,10 +300,10 @@ saveRDS(lfs_chr17 , paste0(feat_data, paste0('/', method, '_', 'lfs_chr17_featur
 ##########
 # age, chr_17_island_int
 no_age_chr17_island <- bump_hunter_master(dat = betaFull, 
-                                   subset_feats = chr_17_island_int, 
-                                   m_thresh = 0.1, 
-                                   probe_start = 9, 
-                                   which_bumps = 'age')
+                                          subset_feats = chr_17_island_int, 
+                                          m_thresh = 0.1, 
+                                          probe_start = 9, 
+                                          which_bumps = 'age')
 
 # remove from insterscted names and save 
 keep_these <- chr_17_island_int[!chr_17_island_int %in% no_age_chr17_island]
@@ -319,10 +311,10 @@ saveRDS(keep_these, paste0(feat_data, paste0('/', method, '_', 'no_age_chr17_isl
 
 # age, chr_17_island_int
 no_cancer_chr17_island <- bump_hunter_master(dat = betaFull, 
-                                      subset_feats = chr_17_island_int, 
-                                      m_thresh = 0.1, 
-                                      probe_start = 9, 
-                                      which_bumps = 'cancer')
+                                             subset_feats = chr_17_island_int, 
+                                             m_thresh = 0.1, 
+                                             probe_start = 9, 
+                                             which_bumps = 'cancer')
 
 # remove from intersected names and save
 keep_these <- chr_17_island_int[!chr_17_island_int %in% no_cancer_chr17_island]
@@ -337,10 +329,10 @@ saveRDS(keep_these, paste0(feat_data, paste0('/', method, '_', 'no_age_cancer_un
 
 # age, chr_17_island_int
 lfs_chr17_island <- bump_hunter_master(dat = betaFull, 
-                                subset_feats = chr_17_island_int, 
-                                m_thresh = 1, 
-                                probe_start = 9, 
-                                which_bumps = 'lfs')
+                                       subset_feats = chr_17_island_int, 
+                                       m_thresh = 1, 
+                                       probe_start = 9, 
+                                       which_bumps = 'lfs')
 
 # directly save, no removal
 saveRDS(lfs_chr17_island , paste0(feat_data, paste0('/', method, '_', 'lfs_chr17_features.rda')))
