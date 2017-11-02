@@ -2643,150 +2643,6 @@ getResidual <- function(data,
   
 }
 
-##########
-# predict cancer
-##########
-predCancer <- function(training_dat, 
-                       test_dat,
-                       bh_features,
-                       gender,
-                       cutoff) 
-{
-  
-  # get intersection of bh features and real data
-  bh_features <- as.character(unlist(bh_features))
-  
-  intersected_feats <- intersect(bh_features, colnames(training_dat))
-  
-  # # get y
-  train_y <- as.factor(ifelse(grepl('Unaffected',training_dat$cancer_diagnosis_diagnoses), 'no', 'yes'))
-  test_y <- as.factor(ifelse(grepl('Unaffected',test_dat$cancer_diagnosis_diagnoses), 'no', 'yes'))
-  
-  train_y <- factor(train_y, levels = c('yes', 'no'))
-  test_y <- factor(test_y, levels = c('yes', 'no'))
-  
-  
-  # get bumphunter features
-  training_dat <- training_dat[, intersected_feats]
-  test_dat <- test_dat[, intersected_feats]
-  
-  # controls_dat <- controls_dat[, intersected_feats]
-  # valid_dat <- valid_dat[, intersected_feats]
-  
-  N_CV_REPEATS = 2
-  nfolds = 5
-  
-  ###### ENET
-  # create vector and list to store best alpha on training data. alpha is the parameter that choses the 
-  # the optimal proportion lambda, the tuning parameter for L1 (ridge) and L2 (lasso)
-  elastic_net.cv_error = vector()
-  elastic_net.cv_model = list()
-  elastic_net.ALPHA <- c(1:9) / 10 # creates possible alpha values for model to choose from
-  
-  # set parameters for training model
-  type_family <- 'binomial'
-  type_measure <- 'auc'
-  
-  # create error matrix for for opitmal alpha that can run in parraellel if you have bigger data 
-  # or if you have a high number fo N_CV_REPEATS
-  temp.cv_error_matrix <- foreach (temp = 1:N_CV_REPEATS, .combine=rbind, .errorhandling="stop") %do% {      
-    for (alpha in 1:length(elastic_net.ALPHA)) # for i in 1:9 - the model will run 9 times
-    {      
-      elastic_net.cv_model[[alpha]] = cv.glmnet(x = as.matrix(training_dat)
-                                                , y =  train_y
-                                                , alpha = elastic_net.ALPHA[alpha] # first time with 0.1 and so on
-                                                , type.measure = type_measure
-                                                , family = type_family
-                                                , standardize = FALSE 
-                                                , nfolds = nfolds 
-                                                , nlambda = 10
-                                                , parallel = TRUE
-      )
-      elastic_net.cv_error[alpha] = min(elastic_net.cv_model[[alpha]]$cvm)
-    }
-    elastic_net.cv_error # stores 9 errors    
-  }
-  
-  if (N_CV_REPEATS == 1) {
-    temp.cv_error_mean = temp.cv_error_matrix
-  } else {
-    temp.cv_error_mean = apply(temp.cv_error_matrix, 2, mean) # take the mean of the 5 iterations  
-    # as your value for alpha
-  }
-  
-  # stop if you did not recover error for any models 
-  stopifnot(length(temp.cv_error_mean) == length(elastic_net.ALPHA))
-  
-  # get index of best alpha (lowest error) - alpha is values 0.1-0.9
-  temp.best_alpha_index = which(min(temp.cv_error_mean) == temp.cv_error_mean)[length(which(min(temp.cv_error_mean) == temp.cv_error_mean))] 
-  print(paste("Best ALPHA:", elastic_net.ALPHA[temp.best_alpha_index])) # print the value for alpha
-  best_alpha <- elastic_net.ALPHA[temp.best_alpha_index]
-  temp.non_zero_coeff = 0
-  temp.loop_count = 0
-  # loop runs initially because temp.non_zero coefficient <3 and then stops 
-  # usually after one iteration because the nzero variable selected by lambda is greater that 3. if it keeps looping
-  # it they are never greater than 1, then the model does not converge. 
-  while (temp.non_zero_coeff < 1) { 
-    elastic_net.cv_model = cv.glmnet(x = as.matrix(training_dat)
-                                     , y =  train_y
-                                     , alpha = elastic_net.ALPHA[temp.best_alpha_index]
-                                     , type.measure = type_measure
-                                     , family = type_family
-                                     , standardize=FALSE
-                                     , nlambda = 100
-                                     , nfolds = nfolds
-                                     , parallel = TRUE
-    )
-    
-    # get optimal lambda - the tuning parameter for ridge and lasso
-    # THIS IS IMPORTANT BECAUSE WHEN YOU TRAIN THE MODEL ON 100 SEPERATE VALUES OF LAMBDA
-    # AND WHEN YOU TEST THE MODEL IT WILL RETURN PREDCITION FOR ALL THOSE VALUES (1-100). YOU NEED TO 
-    # GRAB THE PREDICTION WITH SAME LAMBDA THAT YOU TRAINED ON. ITS ALL IN THE CODE, BUT JUST WANTED TO 
-    # GIVE YOU REASONS
-    temp.min_lambda_index = which(elastic_net.cv_model$lambda == elastic_net.cv_model$lambda.min) 
-    
-    # # number of non zero coefficients at that lambda    
-    temp.non_zero_coeff = elastic_net.cv_model$nzero[temp.min_lambda_index] 
-    temp.loop_count = temp.loop_count + 1
-    
-    # set seed for next loop iteration
-    as.numeric(Sys.time())-> t 
-    set.seed((t - floor(t)) * 1e8 -> seed) 
-    if (temp.loop_count > 10) {
-      print("diverged")
-      temp.min_lambda_index = 50 # if it loops more than 5 times, then model did not converge
-      break
-    }
-  }# while loop ends 
-  print(temp.non_zero_coeff)  
-  
-  model  = glmnet(x = as.matrix(training_dat)
-                  , y =  train_y
-                  ,alpha = elastic_net.ALPHA[temp.best_alpha_index]
-                  ,standardize=FALSE
-                  ,nlambda = 100
-                  ,family = type_family)
-  
-  # This returns 100 prediction with 1-100 lambdas
-  temp_test.predictions <- predict(model, 
-                                   data.matrix(test_dat),
-                                   type = 'class')
-  
-  
-  test.predictions <- temp_test.predictions[, temp.min_lambda_index]
-  test.predictions <- factor(test.predictions, levels = c('yes', 'no'))
-  
-  test_stats <- caret::confusionMatrix(test.predictions, test_y)
-  importance <- coef(model)
-  
-  lambda_value <- elastic_net.cv_model$lambda.min
-  
-  alpha  <- best_alpha
-  
-  return(list(alpha, lambda_value, importance, test_stats, model, temp.non_zero_coeff))
-  
-  
-}
 
 
 ##########
@@ -3468,9 +3324,10 @@ runEnetRandResid <- function(training_dat,
 ##########
 predCancer <- function(training_dat, 
                        test_dat,
+                       clin_dat,
                        bh_features,
                        gender,
-                       cutoff) 
+                       p53) 
 {
   
   # get intersection of bh features and real data
@@ -3479,23 +3336,16 @@ predCancer <- function(training_dat,
   intersected_feats <- intersect(bh_features, colnames(training_dat))
   
   # # get y
-  train_y <- as.factor(ifelse(grepl('Unaffected',training_dat$cancer_diagnosis_diagnoses), 'no', 'yes'))
-  test_y <- as.factor(ifelse(grepl('Unaffected',test_dat$cancer_diagnosis_diagnoses), 'no', 'yes'))
+  train_y <- as.factor(ifelse(!grepl('Unaffected',training_dat$cancer_diagnosis_diagnoses), 'a', 'b'))
+  test_y <- as.factor(ifelse(!grepl('Unaffected',test_dat$cancer_diagnosis_diagnoses), 'a', 'b'))
   
-  train_y <- factor(train_y, levels = c('yes', 'no'))
-  test_y <- factor(test_y, levels = c('yes', 'no'))
-  
+  train_y <- factor(train_y, levels = c('a', 'b'))
+  test_y <- factor(test_y, levels = c('a', 'b'))
   
   # get bumphunter features
   training_dat <- training_dat[, intersected_feats]
   test_dat <- test_dat[, intersected_feats]
   
-  training_dat <- training_dat[, 1:100]
-  test_dat <- test_dat[, 1:100]
-  
-  
-  # controls_dat <- controls_dat[, intersected_feats]
-  # valid_dat <- valid_dat[, intersected_feats]
   
   N_CV_REPEATS = 2
   nfolds = 5
@@ -3598,16 +3448,15 @@ predCancer <- function(training_dat,
   
   
   test.predictions <- temp_test.predictions[, temp.min_lambda_index]
-  test.predictions <- factor(test.predictions, levels = c('yes', 'no'))
+  test.predictions <- factor(test.predictions, levels = c('a', 'b'))
   
   test_stats <- caret::confusionMatrix(test_y, test.predictions)
   importance <- coef(model)
   
-  lambda_value <- elastic_net.cv_model$lambda.min
+  # get prediction in clinical data
+  clin_dat$prediction <- test.predictions
   
-  alpha  <- best_alpha
-  
-  return(list(alpha, lambda_value, importance, test_stats, model, temp.non_zero_coeff))
+  return(list(importance, test_stats, clin_data))
   
   
 }
@@ -5127,6 +4976,27 @@ get_class_results <- function(mod_results_list, dims_of_dat, mod_name, feat_name
   
 
   return(list(class_results_norm, clin_data_full))
+}
+
+get_class_results_cancer <- function(mod_results_list, dims_of_dat, mod_name, gender, p53) {
+  
+  
+  # save importance each time 
+  
+  
+  # get stat results
+  class_cancer <- as.data.frame(t(mod_results_list[[2]]$byClass))
+  class_cancer$p53 <- p53
+  class_cancer$gender <- gender
+  class_cancer$feature_num <- dims_of_dat
+  class_cancer$model_name <-  mod_name
+
+
+  # get clinical data
+  clin_data <- mod_results_list[[3]]
+
+  
+  return(list(class_cancer, clin_data))
 }
 
 
