@@ -25,6 +25,8 @@ library(bumphunter)
 library(sqldf)
 library(e1071)
 library(reshape2)
+registerDoParallel(1)
+
 
 
 ##########
@@ -40,6 +42,9 @@ idat_data_con <- paste0(methyl_data, '/controls')
 idat_data_val <- paste0(data_folder, '/methyl_data/validation/idat_files')
 model_data <- paste0(data_folder, '/model_data')
 map_data <- paste0(data_folder, '/methyl_data/validation')
+
+load('~/Desktop/temp_rg_data.RData')
+
 
 
 ##########
@@ -130,7 +135,7 @@ rgValid <- remove_outliers(rgSet = rgValid,
                            type = 'valid')
 
 # save.image('~/Desktop/temp_rg_data.RData')
-load('~/Desktop/temp_rg_data.RData')
+# load('~/Desktop/temp_rg_data.RData')
 
 
 ##########
@@ -139,32 +144,33 @@ load('~/Desktop/temp_rg_data.RData')
 
 # cases 
 rg_cases <- subset_rg_set(rg_set = rgCases, 
-                          keep_gender = F,
-                          keep_controls = F, 
-                          keep_snps = F, 
+                          keep_gender = T,
+                          keep_controls = T, 
+                          keep_snps = T, 
                           get_island = "Island", 
                           get_chr = NULL, 
                           get_type = NULL)
 
 # controls
 rg_controls <- subset_rg_set(rg_set = rgControls, 
-                             keep_gender = F,
-                             keep_controls = F, 
-                             keep_snps = F, 
+                             keep_gender = T,
+                             keep_controls = T, 
+                             keep_snps = T, 
                              get_island = "Island",
                              get_chr = NULL, 
                              get_type = NULL)
 
 # valid 
 rg_valid <- subset_rg_set(rg_set = rgValid, 
-                          keep_gender = F,
-                          keep_controls = F, 
-                          keep_snps = F, 
+                          keep_gender = T,
+                          keep_controls = T, 
+                          keep_snps = T, 
                           get_island = "Island", 
                           get_chr = NULL, 
                           get_type = NULL)
 
 
+rm(rgCases, rgControls, rgValid)
 
 # rg_cases = rg_cases
 # rg_controls = rg_controls
@@ -278,7 +284,7 @@ full_pipeline_cancer <- function(rg_cases,
   m_full_mod <- m_full_mod[!duplicated(m_full_mod$tm_donor_),]
   
   rm(m_cases, m_controls, m_valid)
-  rm(rg_cases, rg_controls, rg_valid, rgCases, rgControls, rgValid)
+  rm(rg_cases, rg_controls, rg_valid)
   
   # remove columns 
   m_full$ids <- m_full$sentrix_id <- m_full$family_name <- m_full$tm_donor_ <-
@@ -360,7 +366,7 @@ full_pipeline_cancer <- function(rg_cases,
 # fixed variables
 ##########
 
-method = 'raw'
+method = 'funnorm'
 k_folds = 5
 gender = T
 p53 = F
@@ -372,17 +378,16 @@ max_columns = 50000
 # check to see that you are removing cancer probes from bumphunter in the pipeline
 
 # run full pipeline 
-full_results <- full_pipeline_cancer(rg_cases = rgCases, 
-                                     rg_controls = rgControls, 
-                                     rg_valid = rgValid, 
-                                     gender = T, 
-                                     p53 = F, 
-                                     k_folds = 5, 
-                                     method = 'raw', 
-                                     max_columns = 50000)
+full_results <- full_pipeline_cancer(rg_cases = rg_cases, 
+                                     rg_controls = rg_controls, 
+                                     rg_valid = rg_valid, 
+                                     gender = gender, 
+                                     p53 = p53, 
+                                     k_folds = k_folds, 
+                                     method = method, 
+                                     max_columns = max_columns)
+
 
 # save results 
 saveRDS(full_results, paste0('~/Desktop/', method, '_', k_folds, '_', 
-                             max_age, '_', max_columns, '_', 
-                             m_beta_thresh, '_', combined, '_', 
-                             combined_data_type, '_full_results_cancer.rda'))
+                             max_columns, '_', gender, '_', p53, '_full_results_cancer.rda'))

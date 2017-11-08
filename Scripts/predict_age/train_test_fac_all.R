@@ -165,7 +165,7 @@ rg_cases <- subset_rg_set(rg_set = rgCases,
 rg_controls <- subset_rg_set(rg_set = rgControls, 
                              keep_gender = F,
                              keep_controls = T, 
-                             keep_snps = F, 
+                             keep_snps = T, 
                              get_island = "Island",
                              get_chr = NULL, 
                              get_type = NULL)
@@ -174,26 +174,26 @@ rg_controls <- subset_rg_set(rg_set = rgControls,
 rg_valid <- subset_rg_set(rg_set = rgValid, 
                           keep_gender = F,
                           keep_controls = T, 
-                          keep_snps = F, 
+                          keep_snps = T, 
                           get_island = "Island", 
                           get_chr = NULL, 
                           get_type = NULL)
 
 
 
-# rg_cases = rg_cases
-# rg_controls = rg_controls
-# rg_valid = rg_valid
-# k_folds = k_folds
-# m_beta_thresh = 0.5
-# method = method
-# controls = 'normal'
-# combined = F
-# combined_data_type = F
-# case_max_age = 1000
-# con_max_age = 1000
-# val_max_age = 1000
-# max_columns = 10000
+rg_cases = rg_cases
+rg_controls = rg_controls
+rg_valid = rg_valid
+k_folds = k_folds
+m_beta_thresh = 0.5
+method = method
+controls = 'normal'
+combined = F
+combined_data_type = F
+case_max_age = 1000
+con_max_age = 1000
+val_max_age = 1000
+max_columns = 10000
 
 full_pipeline <- function(rg_cases, 
                           rg_controls, 
@@ -222,6 +222,8 @@ full_pipeline <- function(rg_cases,
   # preprocess controls and valid
   m_controls <- preprocessMethod(rg_controls, preprocess = method, only_m_values = T)
   m_valid <- preprocessMethod(rg_valid, preprocess = method, only_m_values = T)
+  
+  # get controls old 
   
   for(i in 1:k_folds) {
     
@@ -377,7 +379,7 @@ full_pipeline <- function(rg_cases,
                                    controls_dat = m_controls_mod,
                                    valid_dat = m_valid_mod,
                                    test_dat = m_test_cases, 
-                                   age_cutoff = 72,
+                                   age_cutoff = 48,
                                    bh_features = bh_features,
                                    rand_feats = rand_feats,
                                    gender = T)
@@ -568,7 +570,7 @@ full_pipeline <- function(rg_cases,
                                    controls_dat = m_controls_mod,
                                    valid_dat = m_valid_mod,
                                    test_dat = m_test_cases, 
-                                   age_cutoff = 72,
+                                   age_cutoff = 48,
                                    bh_features = bh_features,
                                    rand_feats = rand_feats,
                                    gender = T)
@@ -603,18 +605,18 @@ full_pipeline <- function(rg_cases,
 # fixed variables
 ##########
 
-method = 'swan'
+method = 'noob'
 k_folds = 5
 max_age = 1000
-max_columns = 50000
+max_columns = 10000
 m_beta_thresh = 0.5
 combined = T
-combined_data_type = 'valid'
+combined_data_type = 'controls'
 
 #### TO FIX AND CHECK
  # remove sex chromosomes and just control for gender
  # check to see that you are removing cancer probes from bumphunter in the pipeline
-
+# age, cotrols  HERE HHHHEREEREREGHETRRE use all of data (valid with cases and old controls), remove age signature with bumphunter
 # run full pipeline 
 full_results <- full_pipeline(rg_cases = rg_cases, 
                               rg_controls = rg_controls, 
@@ -634,4 +636,4 @@ full_results <- full_pipeline(rg_cases = rg_cases,
 saveRDS(full_results, paste0('~/Desktop/', method, '_', k_folds, '_', 
                max_age, '_', max_columns, '_', 
                m_beta_thresh, '_', combined, '_', 
-               combined_data_type, '_no_gender_full_results.rda'))
+               combined_data_type, '48_normal_no_gender_full_results.rda'))

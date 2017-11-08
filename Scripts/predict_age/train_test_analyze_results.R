@@ -35,12 +35,56 @@ source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
 # read in results
 # list of 2 - results and clin
 # 
-full_results <- readRDS('~/Desktop/raw_5_1000_50000_0.5_FALSE_FALSE_full_results.rda')[[1]]
-full_results_clin <- readRDS('~/Desktop/raw_5_1000_50000_0.5_FALSE_FALSE_full_results.rda')[[2]]
+
+# raw, funnorm, noob, swan
+# fixed variables
+method = 'noob'
+combined = T
+combined_data_type = 'controls'
+
+# raw no combined
+full_results <- readRDS(paste0('~/Desktop/',method, '_5_1000_50000_0.5_' , combined,'_', combined_data_type, '_no_gender_full_results.rda'))[[1]]
+full_results_clin <- readRDS(paste0('~/Desktop/',method, '_5_1000_50000_0.5_' , combined,'_', combined_data_type, '_no_gender_full_results.rda'))[[2]]
+
+# create real value column
+full_results_clin$ground_truth[full_results_clin$batch == 'test_data' & full_results_clin$age_diagnosis < 72] <- 'a'
+full_results_clin$ground_truth[full_results_clin$batch == 'test_data' & full_results_clin$age_diagnosis > 72] <- 'b'
+
+full_results_clin$ground_truth[full_results_clin$batch == 'controls_data' & full_results_clin$age_sample_collection < 72] <- 'a'
+full_results_clin$ground_truth[full_results_clin$batch == 'controls_data' & full_results_clin$age_sample_collection > 72] <- 'b'
+
+full_results_clin$ground_truth[full_results_clin$batch == 'valid_data' & full_results_clin$age_diagnosis < 72] <- 'a'
+full_results_clin$ground_truth[full_results_clin$batch == 'valid_data' & full_results_clin$age_diagnosis > 72] <- 'b'
+
+# keep only necessary columns
+full_results_clin$F <- full_results_clin$M <- full_results_clin$p53_germline <-
+  full_results_clin$ids <- full_results_clin$sentrix_id <- NULL
+
+# create column that indicates of good or bad pred
+full_results_clin$result <- ifelse(full_results_clin$prediction == full_results_clin$ground_truth, 'good', 'bad')
+
+# subset by batch and look at pred vs real with age
+sub_batch <- subset(full_results_clin, batch == 'controls_data')
+
+# make indicator for fold 
+
+sub_batch$folds[1:30] <- '1'
+sub_batch$folds[31:60] <- '2'
+sub_batch$folds[61:90] <- '3'
+sub_batch$folds[91:120] <- '4'
+sub_batch$folds[121:150] <- '5'
+
+# keep only relevant columns 
+sub_batch$cancer_diagnosis_diagnoses <- sub_batch$age_diagnosis <- NULL 
+
+# group by fold and ground truth and get sum of goods and bads
+good_bad <- sub_batch %>%
+  group_by(folds, ground_truth, prediction) %>%
+  summarise(counts = n())
 
 
 
-
+# edit results and clin results
 colnames(full_results) <- tolower(colnames(full_results))
 colnames(full_results) <- gsub(' ', replacement = '_', colnames(full_results))
 
@@ -72,14 +116,14 @@ colnames(full_results) <- gsub(' ', replacement = '_', colnames(full_results))
 
 temp <- 
   full_results %>%
-  group_by(age_type, feature_num, feat_name, model_method) %>%
-  summarise(mean_acc = mean(balanced_accuracy, na.rm = T),
+  group_by(age_type, model_method) %>%
+  summarise(mean_feat = mean(feature_num, na.rm = T),
+            mean_acc = mean(balanced_accuracy, na.rm = T),
             mean_prec = mean(precision, na.rm = T),
             mean_tpr = mean(sensitivity, na.rm = T),
             mean_tnr = mean(specificity, na.rm = T))
 
 # remove svm and make fnr and fpr 
-temp <- temp[!grepl('svm', temp$model_method),]
 temp$mean_fnr <- 1 - temp$mean_tpr
 temp$mean_fpr <- 1 - temp$mean_tnr
 
