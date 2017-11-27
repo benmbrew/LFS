@@ -1,57 +1,40 @@
 # functions to be used in model_pipeline script
 
 cleanIdMap <- function(data, valid) {
-  
   data <- as.data.frame(data)
-  
   # new colnames, lowercase
   colnames(data) <- tolower(colnames(data))
-  
   # combine sentrix_id and sentrix_position 
   data$identifier <- paste(data$sentrix_id, data$sentrix_position, sep = '_')
   data$identifier <- as.factor(data$identifier)
-  
   return(data)
-  
 }
 
 # remove ages 
 remove_ages <- function(mod_dat, max_age){
-
     mod_dat <- subset(mod_dat, age_sample_collection <= max_age)
-  
   return(mod_dat)
 }
 
 # id function
 process_rg_set_single <- function(beta_data, id_map, clin) {
-  
   # cases
   beta_data <- findIds(beta_data, id_map = id_map)
-  
   # get id name (only cases)
   beta_data <- getIdName(beta_data)
-  
   # clean ids
   beta_data <- cleanIds(beta_data)
-  
   # remove 'ch' from column names
   beta_data <- beta_data[, !grepl('ch', colnames(beta_data))]
-  
   # inner join
   beta_data <- inner_join(clin, beta_data, by = 'ids')
-  
   # remove NAs from tm_donor 
   beta_data <- beta_data[!is.na(beta_data$tm_donor_),]
-  
   # remove duplicates
   beta_data <- beta_data[!duplicated(beta_data$tm_donor_),]
-  
   # get cg_sites
   cg_sites <- colnames(beta_data)[grepl('cg', colnames(beta_data))]
-  
   # saveRDS(cg_sites, paste0(model_data, '/four_fifty_feats.rda'))
-  
   # subset data by colmns of interest and cg_sites
   beta_data <- beta_data[, c('ids', 
                                'p53_germline', 
@@ -63,36 +46,21 @@ process_rg_set_single <- function(beta_data, id_map, clin) {
                                'family_name',
                                'tm_donor_',
                                cg_sites)]
-  
-  
     return(beta_data)
-    
-  
 }
 
 
 ########
 # binarize age variables 
 #########
-age_binary <- 
-  function(dat, type, cutoff) {
-    
+age_binary <- function(dat, type, cutoff) {
     if (type == 'cases') {
-      
       dat$age_diagnosis <- ifelse(dat$age_diagnosis > cutoff, 'yes', 'no')
       dat$age_sample_collection <- ifelse(dat$age_sample_collection > cutoff, 'yes', 'no')
-      
-      return(dat)
-      
-      
     } else {
-      
       dat$age_sample_collection <- ifelse(dat$age_sample_collection > cutoff, 'yes', 'no')
-      
-      return(dat)
-      
     }
-    
+  return(dat)
   }
 
 
@@ -104,14 +72,11 @@ age_binary <-
 # rgSet <- rgControls
 # id_map_dat <- id_map_con
 # type = 'controls'
-remove_outliers <- 
-  function(rgSet, id_map_dat, method, type) {
-    
-    
+remove_outliers <- function(rgSet, id_map_dat, method, type) {
     # get outlier ids
     outliers <- data.frame(ids =c('3010','3391','3392','3540'),
-                           batch = c('cases', 'controls', 'controls', 'valid'))
-
+                           batch = c('cases', 'controls', 'controls', 'valid')
+                           )
     # clean sample name
     column_split <- strsplit(as.character(id_map_dat$sample_name), '#')
     last_digits <- lapply(column_split, function(x) x[length(x)])
@@ -120,28 +85,20 @@ remove_outliers <-
     id_map_dat$ids <- sub_ids
     id_map_dat$ids <- gsub('A|B|_|-', '', id_map_dat$ids)
     id_map_dat$ids <- substr(id_map_dat$ids, 1,4) 
-    
     # combine outliers and id map by 
     temp <- inner_join(id_map_dat, outliers, by = 'ids')
     temp <- temp[grepl(type, temp$batch),]
-    
     # get identifier 
     temp_id <- as.character(temp$identifier)
-    
     # keep only
     rg_names <- colnames(rgSet)
     print(paste0(length(which(rg_names %in% temp_id)), ' found'))
-    
-  # intersecting index
+    # intersecting index
     int_index <- rg_names %in% temp_id
-    
     # subset rgSet by temp_id
     rgSet <- rgSet[, !int_index]
-    
     return(rgSet)
-    
-    
-  }
+}
 
 
 ##########
@@ -149,51 +106,34 @@ remove_outliers <-
 ##########
 
 subset_rg_set <- function(rg_set, keep_gender, keep_controls, keep_snps, get_island, get_type, get_chr) {
-  
   # get annotation
   temp_rg_set <- getAnnotation(rg_set)
-  
   # syubet set to get relevant columns
   rg_dat <- temp_rg_set[, c('chr', 'Name', 'Type', 'NextBase', 'Color', 'Relation_to_Island')]
-  
   if(!keep_gender) {
     # remove x and y chromosomes
     rg_dat_sub <- rg_dat[!grepl('X|Y', rg_dat$chr),]
-    
   } else {
     rg_dat_sub <- rg_dat
-    
   }
- 
   # subset by conditions
   if (!is.null(get_island)) {
     rg_dat_sub <- rg_dat_sub[grepl(get_island, rg_dat_sub$Relation_to_Island),]
-  }
-  
-  if (!is.null(get_type)) {
-    
+  } else if (!is.null(get_type)) {
     rg_dat_sub <- rg_dat_sub[grepl(get_type, rg_dat_sub$Type),]
-  }
-  
-  if(!is.null(get_chr)) {
+  } else if (!is.null(get_chr)) {
     rg_dat_sub <- rg_dat_sub[grepl(get_chr, rg_dat_sub$chr),]
   }
-  
   # now get character vectors for what probes to include and not include 
   keep_probes <- as.character(rg_dat_sub$Name)
   remove_probes <- rg_dat$Name[!as.character(rg_dat$Name) %in% as.character(rg_dat_sub$Name)]
-  
   # use subset function from minfi
   rg_set_new <- subsetByLoci(rg_set, 
                              includeLoci = keep_probes, 
                              excludeLoci = remove_probes, 
                              keepControls = keep_controls, 
                              keepSnps = keep_snps)
-  
-  
-  
   return(rg_set_new)
-  
 }
 
 ##########
@@ -203,11 +143,8 @@ subset_rg_set <- function(rg_set, keep_gender, keep_controls, keep_snps, get_isl
 preprocessMethod <- function(data, 
                              preprocess,
                              only_m_values) {
-  
   if (preprocess == 'raw') {
-    
     Mset <- preprocessRaw(data)
-    
   }
   
   if (preprocess == 'quan') {
@@ -216,54 +153,38 @@ preprocessMethod <- function(data,
                                quantileNormalize = TRUE, stratified = TRUE,
                                mergeManifest = FALSE, sex = NULL)
   }
-  
   if (preprocess == 'illumina') {
     Mset  <- preprocessIllumina(data)
   } 
-  
   if (preprocess == 'swan') {
     Mset  <-preprocessSWAN(data)
   } 
-  
   if (preprocess == 'funnorm') {
     Mset <-preprocessFunnorm(data)
-    
   }
-  
-  
   if (preprocess == 'noob') {
     Mset <-preprocessNoob(data)
-    
   }
-  
-  # 
   # map methyl set to genome (funnorm already does this)
   Gset <- mapToGenome(Mset)
-  
   # # get m values
   m <- getM(Mset)
-  
   # get beta values
   beta <- getBeta(Gset)
-  
   if(only_m_values) {
     return(m)
   } else {
     return(list(beta, m, Gset, Mset))
-    
   }
-  
 }
 
 # data_combat <- full_data_con
 
 run_combat <- function(data_combat) {
-  
   data_combat <- as.data.frame(data_combat)
   # get batch
   batch_indicator <- as.character(data_combat$batch)
   batch_indicator <- as.factor(batch_indicator)
-  
   # put model ids in rownames and remove columns
   mat_combat <- as.matrix(data_combat[, 9:ncol(data_combat)])
   rownames(mat_combat) <- NULL
@@ -271,24 +192,17 @@ run_combat <- function(data_combat) {
   # get features
   features <- colnames(mat_combat)
   mat_combat <- t(mat_combat)
-  
   # get intercept
   modcombat <- model.matrix(~1, data = data_combat)
   combat <- ComBat(dat = mat_combat, batch = batch_indicator, mod = modcombat, par.prior=TRUE, prior.plots=FALSE)
   any(is.na(mat_combat))
   any(is.na(batch_indicator))
   any(is.na(modcombat))
-  
-  
   # transpose and add back columns
   final_dat <- as.data.frame(t(combat))
   final_dat <- as.data.frame(cbind(clin_combat, final_dat))
-  
-  
   rownames(final_dat) <- NULL
-  
   return(final_dat)
-  
 }
 
 # ##########
@@ -316,40 +230,29 @@ run_combat <- function(data_combat) {
 # impute and scale for raw data
 ##########
 scaleImputeDat <- function(dat, scale) {
-  
   if (scale) {
-    
     # get row statistics
     rowMean <- apply(dat, 1, mean, na.rm=TRUE)
     rowSd <- apply(dat, 1, sd, na.rm=TRUE)
     # constantInd <- rowSd==0
     # rowSd[constantInd] <- 1
     rowStats <- list(mean=rowMean, sd=rowSd)
-    
     # apply normilization
     dat  <- (dat - rowStats$mean) / rowStats$sd
-    
     # make matrix
     dat <- as.matrix(dat)
-    
     # impute with knn
     dat_knn <-  impute.knn(dat, k = 10)$data
-    
     # get clin data back and return final data
     final_dat <- dat_knn
-    
   } else {
     # make matrix
     dat <- as.matrix(dat)
-    
     # impute with knn
     dat_knn <-  impute.knn(dat, k = 10)$data
-    
     # get clin data back and return final data
     final_dat <- dat_knn
-    
   }
-  
   return(final_dat)
 }
 
