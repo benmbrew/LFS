@@ -14,78 +14,81 @@ library(preprocessCore)
 library(IlluminaHumanMethylationEPICanno.ilm10b2.hg19)
 
 ##########
-# initialize folders
-##########
-home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
-project_folder <- paste0(home_folder, '/LFS')
-data_folder <- paste0(project_folder, '/Data')
-methyl_data <- paste0(data_folder, '/methyl_data')
-clin_data <- paste0(data_folder, '/clin_data')
-idat_data <- paste0(methyl_data, '/raw_files')
-model_data <- paste0(data_folder, '/model_data')
-
-
-##########
 # source all_functions.R script
 ##########
-source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
+source('LFS/Scripts/predict_age/all_functions.R')
 
 ##########
 # fixed variables
 ##########
-method = 'noob'
+method = 'raw'
 
 ##########
 # read in clinical data
 ##########
-clin <- read.csv(paste0(clin_data, '/clinical_two.csv'), stringsAsFactors = F)
+clin <- read.csv('LFS/Data/clin_data/clinical_two.csv', stringsAsFactors = F)
 
 # clean clinical ids
 clin$ids <-  gsub('A|B|_|-', '', clin$blood_dna_malkin_lab_)
 
 ##########
+# cases 
+##########
+
 # cases batch1
-##########
-id_map <- read.csv(paste0(methyl_data, '/ids_map.csv'), stringsAsFactors = F)
+id_map_tor <- read.csv('LFS/Data/methyl_data/cases_toronto/SampleSheet.csv', stringsAsFactors = F)
 
-##########
 #cases batch2
-##########
-id_map_other <- read.csv(paste0(methyl_data, '/batch_2014.csv'), stringsAsFactors = F)
-id_map_other$Project <- NULL
+id_map_mon <- read.csv('LFS/Data/methyl_data/cases_montreal/SampleSheet.csv', stringsAsFactors = F)
+id_map_mon$Project <- NULL
 
-##########
 # combine id_map and id_map_other
-##########
-id_map <- rbind(id_map, id_map_other)
-rm(id_map_other)
+id_map_cases <- rbind(id_map_tor, id_map_mon)
+rm(id_map_tor, id_map_mon)
 
-##########
-# clean idmap
-##########
-id_map <- cleanIdMap(id_map)
-
+# clean id map
+id_map_cases <- cleanIdMap(id_map_cases)
 ##########
 # read in idate for cases, controls, and validation set
 ##########t
-rgCases <- read.metharray.exp(idat_data)
+rgCases <- read.metharray.exp('LFS/Data/methyl_data/cases_montreal', recursive = T)
+
 
 ##########
 # get preprocedssing method
 ##########
 # use noob on beta then conver to m
-betaCases <- preprocessMethod(rgCases, preprocess = method, only_m_values = T)
+betaCases <- preprocessMethod(rgCases, preprocess = method)
 # remove rgset
 rm(rgCases)
 
 # save.image('~/Desktop/temp_cases_noob_m.RData')
 # load('~/Desktop/temp_cases_noob_m.RData')
+full_data <- readRDS('LFS/Data/model_data/raw_full_mod.rda')
+full_data$family_name.1 <- NULL
+full_data <- full_data[full_data$type != 'controls_wt_450k',]
 
+cases <- subset(full_data, type == 'cases_450k' & 
+                  p53_germline == 'Mut')
+cases <- cases[!is.na(cases$age_sample_collection),]
+controls <- subset(full_data, type == 'controls_850k' & 
+                     p53_germline == 'Mut')
+controls <- controls[!duplicated(controls$ids),]
+controls_old <- subset(full_data, type == 'controls_450k' & 
+                     p53_germline == 'Mut')
+valid <- subset(full_data, type == 'valid_850k' & 
+                     p53_germline == 'Mut')
+
+full_data <- rbind(cases, controls, valid)
+
+saveRDS(full_data, '~/Desktop/full_data_raw.rda')
+
+length(which(duplicated(full_data$ids)))
 ###########
 # id functions
 ###########
 # cases
-betaCases <- findIds(betaCases, id_map = id_map)
+betaCases <- findIds(betaCases, id_map = id_map_cases)
 
 # get id name (only cases)
 betaCases <- getIdName(betaCases)

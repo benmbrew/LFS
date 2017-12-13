@@ -123,60 +123,69 @@ rgValid <- remove_outliers(rgSet = rgValid,
 # save.image('~/Desktop/temp_450_850.RData')
 load('~/Desktop/temp_450_850.RData')
 
-# cases
-rg_cases <- subset_rg_set(rg_set = rgCases,
-                          keep_gender = F,
-                          keep_controls = T,
-                          keep_snps = T,
-                          get_island = "Island",
-                          get_chr = NULL,
-                          get_type = NULL)
 
-# controls
-rg_controls <- subset_rg_set(rg_set = rgControls,
-                             keep_gender = F,
-                             keep_controls = T,
-                             keep_snps = T,
-                             get_island = "Island",
-                             get_chr = NULL,
-                             get_type = NULL)
+# rg_cases = rg_cases
+# rg_controls = rg_controls
+# rg_valid = rg_valid
+# age_cutoff = 72
+# k_folds = 3
+# beta_thresh = 0.1
+# method = 'noob'
 
-# valid
-rg_valid <- subset_rg_set(rg_set = rgValid,
-                          keep_gender = F,
-                          keep_controls = T,
-                          keep_snps = T,
-                          get_island = "Island",
-                          get_chr = NULL,
-                          get_type = NULL)
-
-
-
-rg_cases = rgCases
-rg_controls = rgControls
-rg_valid = rgValid
-age_cutoff = 72
-k_folds = 3
-beta_thresh = 0.1
-method = 'noob'
-
-full_pipeline <- function(rg_cases, 
-                          rg_controls, 
-                          rg_valid, 
+full_pipeline <- function(rgCases, 
+                          rgControls, 
+                          rgValid, 
+                          method,
                           age_cutoff,
+                          gender,
+                          tech,
                           k_folds,
                           beta_thresh,
-                          method,
                           controls) {
+  
+  # dont control for gender in model if using funnorm
+  # control for gender if you use raw or noob
+  if (method == 'funnorm') {
+    keep_gender <- 
+      keep_controls <- T
+      keep_snps <- F
+  } else {
+    keep_gender <- 
+      keep_controls <- 
+      keep_snps <- F
+  }
+  # cases
+  rg_cases <- subset_rg_set(rg_set = rgCases,
+                            keep_gender = keep_gender,
+                            keep_controls = keep_controls,
+                            keep_snps = keep_snps,
+                            get_island = "Island",
+                            get_chr = NULL,
+                            get_type = NULL)
+  
+  # controls
+  rg_controls <- subset_rg_set(rg_set = rgControls,
+                               keep_gender = keep_gender,
+                               keep_controls = keep_controls,
+                               keep_snps = keep_snps,
+                               get_island = "Island",
+                               get_chr = NULL,
+                               get_type = NULL)
+  
+  # valid
+  rg_valid <- subset_rg_set(rg_set = rgValid,
+                            keep_gender = keep_gender,
+                            keep_controls = keep_controls,
+                            keep_snps = keep_snps,
+                            get_island = "Island",
+                            get_chr = NULL,
+                            get_type = NULL)
+  
   
   # list to store cv results
   temp_cases <- list()
   temp_controls <- list()
   temp_valid <- list()
-  
-  
-  # get vector of random folds
-  fold_vec <- sample(1:k_folds, dim(rg_cases)[2], replace = T)
   
   # preprocess controls and valid
   beta_cases <-  preprocessMethod(rg_cases, preprocess = method)
@@ -197,6 +206,16 @@ full_pipeline <- function(rg_cases,
                                           id_map = id_map_val, 
                                           clin = clin)
   
+  if(method == 'raw'){
+    # remove NAs
+    beta_cases <- removeNA(beta_cases, probe_start = 10)
+    beta_controls_mod <- removeNA(beta_controls_mod, probe_start = 10)
+    beta_valid_mod <- removeNA(beta_valid_mod, probe_start = 10)
+    # remove infinite values 
+    beta_cases <- removeInf(beta_cases, probe_start = 10)
+    beta_controls_mod <- removeInf(beta_controls_mod, probe_start = 10)
+    beta_valid_mod <- removeInf(beta_valid_mod, probe_start = 10)
+  }
   
   # get intersecting name
   intersect_names <- Reduce(intersect, list(colnames(beta_cases)[10:ncol(beta_cases)],
@@ -235,7 +254,7 @@ full_pipeline <- function(rg_cases,
   
   # remove NAs 
   beta_cases <-beta_cases[complete.cases(beta_cases),]
-  
+
   # combine beta cases and beta valid
   beta_cases_full <- rbind(beta_cases,
                            beta_valid_mod)
@@ -248,6 +267,18 @@ full_pipeline <- function(rg_cases,
   # add an indicator for 450 and 850
   beta_cases_full$tech <- ifelse(grepl('^57|97', beta_cases_full$sentrix_id), 'a', 'b')
   beta_controls_full$tech <- ifelse(grepl('^57|97', beta_controls_full$sentrix_id), 'a', 'b')
+
+  # get gender variable for each data set
+  beta_cases_full <- cbind(as.data.frame(class.ind(beta_cases_full$gender)), beta_cases_full)
+  beta_controls_full <- cbind(as.data.frame(class.ind(beta_controls_full$gender)), beta_controls_full)
+  
+  # get tech variable for each data set
+  beta_cases_full <- cbind(as.data.frame(class.ind(beta_cases_full$tech)), beta_cases_full)
+  beta_controls_full <- cbind(as.data.frame(class.ind(beta_controls_full$tech)), beta_controls_full)
+  
+  # remove original tech variable
+  beta_cases_full$tech <- NULL
+  beta_controls_full$tech <- NULL
   
   # get vector of random folds
   fold_vec <- sample(1:k_folds, nrow(beta_cases_full), replace = T)
@@ -266,8 +297,8 @@ full_pipeline <- function(rg_cases,
     ##########
     # use cases training and controls to get bumphunter features
     ##########
-    bh_feats <- bump_hunter(dat_1 = beta_train_cases[, -ncol(beta_train_cases)], 
-                            dat_2 = beta_controls_full[, -ncol(beta_controls_full)], 
+    bh_feats <- bump_hunter(dat_1 = beta_train_cases, 
+                            dat_2 = beta_controls_full, 
                             bump = 'cancer', 
                             boot_num = 5, 
                             thresh = beta_thresh,
@@ -281,58 +312,51 @@ full_pipeline <- function(rg_cases,
     # take remove features out of colnames 
     bh_features <- intersect_names[!intersect_names %in% remove_features]
     
-    
-    # get gender variable for each data set
-    beta_train_cases <- cbind(as.data.frame(class.ind(beta_train_cases$gender)), beta_train_cases)
-    beta_test_cases <- cbind(as.data.frame(class.ind(beta_test_cases$gender)), beta_test_cases)
-    beta_controls_full <- cbind(as.data.frame(class.ind(beta_controls_full$gender)), beta_controls_full)
-    
-    # get tech variable for each data set
-    beta_train_cases <- cbind(as.data.frame(class.ind(beta_train_cases$tech)), beta_train_cases)
-    beta_test_cases <- cbind(as.data.frame(class.ind(beta_test_cases$tech)), beta_test_cases)
-    beta_controls_full <- cbind(as.data.frame(class.ind(beta_controls_full$tech)), beta_controls_full)
-    
     # function to predict with all test, controls, controls old, and valid
     mod_result  <- run_enet_450_850(training_dat = beta_train_cases,
                                     controls_dat = beta_controls_full,
                                     test_dat = beta_test_cases,
                                     age_cutoff = age_cutoff,
-                                    bh_features = bh_features,
-                                    gender = T,
-                                    tech = T)
+                                    gender = gender,
+                                    tech = tech,
+                                    bh_features = bh_features)
     
     temp_cases[[i]] <- mod_result[[1]]
     temp_controls[[i]] <- mod_result[[2]]
-    
+
     print(i)
   }
   full_cases <- do.call(rbind, temp_cases)
   full_controls <- do.call(rbind, temp_controls)
-  
-  return(list(full_cases, full_controls, full_valid))
+
+  return(list(full_cases, full_controls))
 }
 
 
 ##########
 # fixed variables
 ##########
-
-age_cutoff = 48
-method = 'noob'
-k_folds = 5
-beta_thresh = 0.1
-control_type = 'full'
-
-# run full pipeline 
-full_results <- full_pipeline(rg_cases = rg_cases, 
-                              rg_controls = rg_controls, 
-                              rg_valid = rg_valid,
+#
+# method = 'noob'
+# gender = T
+# age_cutoff = 72
+# k_folds = 4
+# beta_thresh = 0.01
+# control_type = 'full'
+# tech = T
+#
+# run full pipeline
+full_results <- full_pipeline(rgCases = rgCases,
+                              rgControls = rgControls,
+                              rgValid = rgValid,
+                              method = method,
                               age_cutoff = age_cutoff,
+                              gender = gender,
                               k_folds = k_folds,
                               beta_thresh = beta_thresh,
-                              method = method, 
-                              controls = control_type)
+                              controls = control_type,
+                              tech = tech)
 
-# save results 
-saveRDS(full_results, paste0('../../Data/results_data/', method, '_', age_cutoff, '_', control_type, '_', beta_thresh, '.rda'))
+#save results
+saveRDS(full_results, paste0('../../Data/results_data/',method, '_', tech,'_' ,age_cutoff, '_', control_type, '_', beta_thresh, '.rda'))
 
