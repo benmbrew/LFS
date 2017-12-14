@@ -10,7 +10,6 @@ path_to_cases_mon <- '../../Data/methyl_data/cases_montreal'
 path_to_controls <- '../../Data/methyl_data/controls'
 path_to_valid <- '../../Data/methyl_data/validation'
 
-
 ##########
 # read in meth array - Data/methyl_data/cases_toronto, cases_montreal, controls, validation
 ##########
@@ -123,15 +122,6 @@ rgValid <- remove_outliers(rgSet = rgValid,
 # save.image('~/Desktop/temp_450_850.RData')
 load('~/Desktop/temp_450_850.RData')
 
-
-# rg_cases = rg_cases
-# rg_controls = rg_controls
-# rg_valid = rg_valid
-# age_cutoff = 72
-# k_folds = 3
-# beta_thresh = 0.1
-# method = 'noob'
-
 full_pipeline <- function(rgCases, 
                           rgControls, 
                           rgValid, 
@@ -149,10 +139,14 @@ full_pipeline <- function(rgCases,
     keep_gender <- 
       keep_controls <- T
       keep_snps <- F
+  } else if (method == 'noob') {
+    keep_gender <- F
+      keep_controls <- T
+      keep_snps <- F
   } else {
     keep_gender <- 
-      keep_controls <- 
-      keep_snps <- F
+    keep_controls <-
+    keep_snps <- F
   }
   # cases
   rg_cases <- subset_rg_set(rg_set = rgCases,
@@ -337,13 +331,13 @@ full_pipeline <- function(rgCases,
 # fixed variables
 ##########
 #
-# method = 'noob'
-# gender = T
-# age_cutoff = 72
-# k_folds = 4
-# beta_thresh = 0.01
-# control_type = 'full'
-# tech = T
+method = 'funnorm'
+age_cutoff = 48
+gender = F
+tech = F
+k_folds = 4
+beta_thresh = 0.01
+control_type = 'full'
 #
 # run full pipeline
 full_results <- full_pipeline(rgCases = rgCases,
@@ -358,5 +352,5 @@ full_results <- full_pipeline(rgCases = rgCases,
                               tech = tech)
 
 #save results
-saveRDS(full_results, paste0('../../Data/results_data/',method, '_', tech,'_' ,age_cutoff, '_', control_type, '_', beta_thresh, '.rda'))
+saveRDS(full_results, paste0('../../Data/results_data/',method, '_', age_cutoff, '_', gender, '_', tech,'_' , control_type, '_', beta_thresh, '.rda'))
 
