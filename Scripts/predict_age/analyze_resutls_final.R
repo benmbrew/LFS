@@ -1,4 +1,31 @@
-saveRDS(full_results, paste0('../../Data/results_data/', method, '_', age_cutoff, '_', control_type, '_', beta_thresh, '.rda'))
+library(tidyverse)
+library(reshape2)
+
+method = 'noob'
+age_cutoff = 72
+gender = T
+tech = T
+k_folds = 4
+beta_thresh = 0.01
+control_type = 'full'
+
+
+# load result data for 450_850 analysis
+temp_results <- readRDS(paste0('../../Data/results_data/',method, '_', 
+                               age_cutoff, '_', gender, '_', tech,'_' , 
+                               control_type, '_', beta_thresh, '.rda'))
+
+
+
+# get results from list 
+temp_cases <- temp_results[[1]]
+temp_controls <- temp_results[[2]]
+
+# cases are ok, but controls need to be avg over 4 folds 
+# create indicator for fold (1-47, by 4)
+temp_controls$fold <- 
+temp_controls <- temp_controls %>%
+  group_by()
 
 # get cases, controls and valid 
 cases <- full_results[[1]]
