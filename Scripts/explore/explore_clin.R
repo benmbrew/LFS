@@ -1,28 +1,31 @@
 # initialize folders
 library(gsubfn)
-library(tidyverse)
+librarty(tidyverse)
 
 
-### This Script will explore clinical data 
-# Initialize folders
-home_folder <- '~/hpf/largeprojects/agoldenb/ben/Projects/'
-project_folder <- paste0(home_folder, '/LFS')
-test <- paste0(project_folder, '/Scripts/classification_template')
-data_folder <- paste0(project_folder, '/Data')
-methyl_data <- paste0(data_folder, '/methyl_data')
-clin_data <- paste0(data_folder, '/clin_data')
-results_folder <- paste0(test, '/Results')
 
+path_to_clin <- '../../Data/clin_data'
 ##########
 # read in data 
 ##########
-clin <- read.csv(paste0(clin_data, '/clinical_two.csv'), stringsAsFactors = F)
+clin <- read_csv(paste0(path_to_clin, '/clinical_two.csv'))
 
 ##########
 # trim columns
 ##########
 clin$cancer_diagnosis_diagnoses <- trimws(clin$cancer_diagnosis_diagnoses, which = 'both')
 clin$p53_germline <- trimws(clin$p53_germline, which = 'both')
+
+##########
+# get summary statisctics for clinical data
+##########
+
+# keep only necessary columns 
+keep_cols <- c('tm_donor_', 'ids', 'family_name', 'relationship', 'gender', 'p53_germline', 'cancer_diagnosis_diagnoses', 'age_diagnosis', 'age_sample_collection',
+               'gdna.exon.intron' ,'gdna.base.change', 'gdna.codon', 'protein.codon.change', 'protein.codon.num')
+clin_sub <- clin[, keep_cols]
+
+length(which(duplicated((clin$family_name))))
 
 ##########
 # age of onset chart for p53 status 

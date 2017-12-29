@@ -333,7 +333,7 @@ full_pipeline <- function(rgCases,
 #
 method = 'funnorm'
 age_cutoff = 48
-gender = F
+gender = T
 tech = F
 k_folds = 4
 beta_thresh = 0.01
