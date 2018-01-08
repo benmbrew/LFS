@@ -63,6 +63,9 @@ getResidual <- function(data) {
     
   }
   
+  # general association between age and probe - some threshold 
+  # treating age as a batch effect (combat)
+  
   methyl_resid <- do.call('cbind', resid)
   methyl_resid <- cbind(data$age_diagnosis, data$age_sample_collection, methyl_resid)
   colnames(methyl_resid) <- c('age_diagnosis', 'age_sample_collection',genes)
