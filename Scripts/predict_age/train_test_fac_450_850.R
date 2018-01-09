@@ -120,18 +120,24 @@ rgValid <- remove_outliers(rgSet = rgValid,
 ##########
 
 # save.image('~/Desktop/temp_450_850.RData')
-load('~/Desktop/temp_450_850.RData')
+load('~/Desktop/all_new.RData')
 
 full_pipeline <- function(rgCases, 
                           rgControls, 
                           rgValid, 
                           method,
                           age_cutoff,
+                          remove_age_cgs,
+                          remove_age,
                           gender,
                           tech,
+                          base_change,
+                          exon_intron,
+                          control_for_family,
                           k_folds,
                           beta_thresh,
                           controls) {
+  
   
   # dont control for gender in model if using funnorm
   # control for gender if you use raw or noob
@@ -148,6 +154,8 @@ full_pipeline <- function(rgCases,
     keep_controls <-
     keep_snps <- F
   }
+  
+  
   # cases
   rg_cases <- subset_rg_set(rg_set = rgCases,
                             keep_gender = keep_gender,
@@ -202,22 +210,29 @@ full_pipeline <- function(rgCases,
   
   if(method == 'raw'){
     # remove NAs
-    beta_cases <- removeNA(beta_cases, probe_start = 10)
-    beta_controls_mod <- removeNA(beta_controls_mod, probe_start = 10)
-    beta_valid_mod <- removeNA(beta_valid_mod, probe_start = 10)
+    beta_cases <- removeNA(beta_cases, probe_start = 12)
+    beta_controls_mod <- removeNA(beta_controls_mod, probe_start = 12)
+    beta_valid_mod <- removeNA(beta_valid_mod, probe_start = 12)
     # remove infinite values 
-    beta_cases <- removeInf(beta_cases, probe_start = 10)
-    beta_controls_mod <- removeInf(beta_controls_mod, probe_start = 10)
-    beta_valid_mod <- removeInf(beta_valid_mod, probe_start = 10)
+    beta_cases <- removeInf(beta_cases, probe_start = 12)
+    beta_controls_mod <- removeInf(beta_controls_mod, probe_start = 12)
+    beta_valid_mod <- removeInf(beta_valid_mod, probe_start = 12)
   }
   
+
   # get intersecting name
-  intersect_names <- Reduce(intersect, list(colnames(beta_cases)[10:ncol(beta_cases)],
-                                            colnames(beta_controls_mod)[10:ncol(beta_controls_mod)],
-                                            colnames(beta_valid_mod)[10:ncol(beta_valid_mod)]))
+  intersect_names <- Reduce(intersect, list(colnames(beta_cases)[12:ncol(beta_cases)],
+                                            colnames(beta_controls_mod)[12:ncol(beta_controls_mod)],
+                                            colnames(beta_valid_mod)[12:ncol(beta_valid_mod)]))
+  
+  # read in probes associated with age
+  if (remove_cg_age) {
+    age_cgs <- read_rds('../../Data/age_probes.rda')
+    intersect_names <- intersect_names[!intersect_names %in% age_cgs]
+  }
   
   # get clin names
-  clin_names <- colnames(beta_cases)[1:9]
+  clin_names <- colnames(beta_cases)[1:11]
   
   
   # train data 
@@ -261,19 +276,65 @@ full_pipeline <- function(rgCases,
   # add an indicator for 450 and 850
   beta_cases_full$tech <- ifelse(grepl('^57|97', beta_cases_full$sentrix_id), 'a', 'b')
   beta_controls_full$tech <- ifelse(grepl('^57|97', beta_controls_full$sentrix_id), 'a', 'b')
-
+  
+  # recode gdna.base.change for to get base letter after mutation
+  beta_cases_full$gdna.base.change <- gsub(' b', 'none', substr(beta_cases_full$gdna.base.change, 3,4))
+  beta_controls_full$gdna.base.change <- gsub(' b', 'none', substr(beta_controls_full$gdna.base.change, 3,4))
+  
+  
+  # recode exon intron for eith exon or intron
+  beta_cases_full$gdna.exon.intron <- ifelse(grepl('Exon', beta_cases_full$gdna.exon.intron), 'exon',
+                                             ifelse(grepl('Intron', beta_cases_full$gdna.exon.intron), 'intron', 'not_clear'))
+  beta_controls_full$gdna.exon.intron <- ifelse(grepl('Exon', beta_controls_full$gdna.exon.intron), 'exon',
+                                             ifelse(grepl('Intron', beta_controls_full$gdna.exon.intron), 'intron', 'not_clear'))
+    
+  # get a base change variable for each data set
+  beta_cases_full <- cbind(as.data.frame(class.ind(beta_cases_full$gdna.base.change)), beta_cases_full)
+  beta_controls_full <- cbind(as.data.frame(class.ind(beta_controls_full$gdna.base.change)), beta_controls_full)
+  
+  # get a exon_intron variable for each data set 
+  beta_cases_full <- cbind(as.data.frame(class.ind(beta_cases_full$gdna.exon.intron)), beta_cases_full)
+  beta_controls_full <- cbind(as.data.frame(class.ind(beta_controls_full$gdna.exon.intron)), beta_controls_full)
+  
   # get gender variable for each data set
   beta_cases_full <- cbind(as.data.frame(class.ind(beta_cases_full$gender)), beta_cases_full)
   beta_controls_full <- cbind(as.data.frame(class.ind(beta_controls_full$gender)), beta_controls_full)
-  
+
   # get tech variable for each data set
   beta_cases_full <- cbind(as.data.frame(class.ind(beta_cases_full$tech)), beta_cases_full)
   beta_controls_full <- cbind(as.data.frame(class.ind(beta_controls_full$tech)), beta_controls_full)
   
-  # remove original tech variable
-  beta_cases_full$tech <- NULL
-  beta_controls_full$tech <- NULL
   
+  if(control_for_family) {
+    
+    # group by family name for both data sets (subset 1:12 because it will go quicker)
+    # and get counts for each family
+    temp_family_cases <- beta_cases_full[, 1:100] %>%
+      group_by(family_name) %>%
+      summarise(counts_cases = n()) 
+    
+    temp_family_controls <- beta_controls_full[, 1:100] %>%
+      group_by(family_name) %>%
+      summarise(counts_controls = n()) 
+    
+    # join by faimly name and get the number of time families in cases have more counts than families in controls
+    # cases has more 
+    temp_all <- inner_join(temp_family_cases, temp_family_controls, by = 'family_name')
+    temp_all$more_cases <- ifelse(temp_all$counts_cases > temp_all$counts_controls, TRUE, FALSE)
+    
+    remove_from_controls <- paste0('^', temp_all$family_name[which(temp_all$more_cases)], '$',collapse  = '|')
+    remove_from_cases <- paste0('^', temp_all$family_name[which(!temp_all$more_cases)], '$',collapse = '|')
+    
+    beta_cases_full <- beta_cases_full[!grepl(remove_from_cases, beta_cases_full$family_name), ]
+    beta_controls_full <- beta_controls_full[!grepl(remove_from_controls, beta_controls_full$family_name), ]
+    
+  }
+  
+  if (remove_age_cgs_lm) {
+    
+  }
+  
+ 
   # get vector of random folds
   fold_vec <- sample(1:k_folds, nrow(beta_cases_full), replace = T)
   
@@ -313,6 +374,8 @@ full_pipeline <- function(rgCases,
                                     age_cutoff = age_cutoff,
                                     gender = gender,
                                     tech = tech,
+                                    base_change = base_change,
+                                    exon_intron = exon_intron,
                                     bh_features = bh_features)
     
     temp_cases[[i]] <- mod_result[[1]]
@@ -331,26 +394,34 @@ full_pipeline <- function(rgCases,
 # fixed variables
 ##########
 #
-method = 'funnorm'
-age_cutoff = 48
-gender = T
+method = 'noob'
+age_cutoff = 72
+remove_age_cgs = TRUE
+gender = F
 tech = F
-k_folds = 4
+base_change = F
+exon_intron = T
+control_for_family = F
+k_folds = 5
 beta_thresh = 0.01
 control_type = 'full'
-#
+
 # run full pipeline
 full_results <- full_pipeline(rgCases = rgCases,
                               rgControls = rgControls,
                               rgValid = rgValid,
                               method = method,
                               age_cutoff = age_cutoff,
+                              remove_age_cgs = remove_age_cgs,
                               gender = gender,
+                              tech = tech,
+                              base_change = base_change,
+                              exon_intron = exon_intron,
+                              control_for_family = control_for_family,
                               k_folds = k_folds,
                               beta_thresh = beta_thresh,
-                              controls = control_type,
-                              tech = tech)
+                              controls = control_type)
+
 
 #save results
-saveRDS(full_results, paste0('../../Data/results_data/',method, '_', age_cutoff, '_', gender, '_', tech,'_' , control_type, '_', beta_thresh, '.rda'))
-
+saveRDS(full_results, paste0('../../Data/results_data/',age_cutoff,'_',method, '_', gender, '_', tech, '_', base_change,'_',exon_intron, '_', control_for_family,'.rda'))

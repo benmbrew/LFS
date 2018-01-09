@@ -121,7 +121,7 @@ rgValid <- remove_outliers(rgSet = rgValid,
 ##########
 
 # save.image('~/Desktop/temp_450_850.RData')
-load('~/Desktop/temp_450_850.RData')
+# load('~/Desktop/temp_450_850.RData')
 
 # cases
 rg_cases <- subset_rg_set(rg_set = rgCases,

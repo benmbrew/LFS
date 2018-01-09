@@ -14,6 +14,7 @@ library(e1071)
 library(nnet)
 library(glmnet)
 library(PRROC)
+library(GWAStools)
 
 
 
@@ -84,6 +85,8 @@ process_rg_set_single <- function(beta_data, id_map, clin) {
                              'sentrix_id',
                              'family_name',
                              'tm_donor_',
+                             'gdna.exon.intron',
+                             'gdna.base.change',
                              cg_sites)]
   return(beta_data)
 }
@@ -5199,12 +5202,23 @@ bump_hunter <- function(dat_1,
     designMatrix <- as.matrix(designMatrix)
   }
   
+  if(bump == 'age') {
+    
+    dat$type <- ifelse(dat$age_sample_collection > , 'controls', 'cases')
+    ##########
+    # get indicator and put into design matrix with intercept 1
+    #########
+    indicator_vector <- as.factor(dat$type)
+    designMatrix <- cbind(rep(1, nrow(dat)), indicator_vector)
+    designMatrix <- as.matrix(designMatrix)
+  }
+  
   ##########
   # Get genetic locations
   ##########
-  dat$ids <- dat$p53_germline <- dat$age_diagnosis <- dat$cancer_diagnosis_diagnoses  <- 
-    dat$age_sample_collection <- dat$type <- dat$gender <-  dat$family_name <- dat$sentrix_id <- 
-    dat$tm_donor_ <- NULL
+  cg_start <- which(grepl('cg', colnames(dat)))[1]
+  dat <- dat[, cg_start:(ncol(dat) -1) ]
+  
   
   # transpose methylation to join with cg_locations to get genetic location vector.
   dat <- as.data.frame(t(dat), stringsAsFactors = F)
@@ -5435,6 +5449,8 @@ run_enet_450_850 <- function(training_dat,
                              age_cutoff,
                              gender, 
                              tech,
+                             base_change,
+                             exon_intron,
                              bh_features) {
   
   
@@ -5456,6 +5472,24 @@ run_enet_450_850 <- function(training_dat,
     intersected_feats <- append('b', intersected_feats)
   }
   
+  if (base_change){
+    
+    
+    intersected_feats <- append('none', intersected_feats)
+    intersected_feats <- append('A', intersected_feats)
+    intersected_feats <- append('C', intersected_feats)
+    intersected_feats <- append('G', intersected_feats)
+    intersected_feats <- append('T', intersected_feats)
+  }
+  
+  if(exon_intron) {
+    
+    intersected_feats <- append('exon', intersected_feats)
+    intersected_feats <- append('intron', intersected_feats)
+    intersected_feats <- append('not_clear', intersected_feats)
+    
+    
+  }
   # intersected_feats_rand <- intersect(rand_feats, colnames(training_dat))
   # # get y
   train_y <- ifelse(training_dat$age_diagnosis < age_cutoff, 1, 0)
@@ -5465,8 +5499,9 @@ run_enet_450_850 <- function(training_dat,
   controls_y <-  ifelse(controls_dat$age_sample_collection < age_cutoff, 1, 0)
   
   # get clinical data
-  test_clin <- test_dat[, 1:9]
-  test_controls <- controls_dat[, 1:9]
+  cg_start <- which(grepl('cg', colnames(test_dat)))[1]
+  test_clin <- test_dat[, 1:(cg_start - 1)]
+  test_controls <- controls_dat[, 1:(cg_start - 1)]
 
   # get bumphunter features
   training_dat <- training_dat[, intersected_feats]
