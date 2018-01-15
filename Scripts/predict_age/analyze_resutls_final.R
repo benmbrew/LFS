@@ -2,34 +2,58 @@ library(tidyverse)
 library(reshape2)
 library(ROCR)
 
-method = 'funnorm'
+
+method = 'noob'
 age_cutoff = 72
-gender = F
+survival = F
+remove_age_cgs = F
+remove_age_lit = T
+gender = T
 tech = T
-k_folds = 4
-beta_thresh = 0.01
-control_type = 'full'
+base_change = F
+exon_intron = F
+control_for_family = F
 
+temp_results <- readRDS(paste0('../../Data/results_data/',age_cutoff,'_',method,'_', survival ,'_', remove_age_lit ,'_', remove_age_cgs ,'_',gender, '_', tech, '_', base_change,'_',exon_intron, '_', control_for_family,'.rda'))
 
-# load result data for 450_850 analysis
-temp_results <- readRDS(paste0('../../Data/results_data/',method, '_', 
-                               age_cutoff, '_', gender, '_', tech,'_' , 
-                               control_type, '_', beta_thresh, '.rda'))
 
 
 
 # get results from list 
 temp_cases <- temp_results[[1]]
+
+temp_cases <- temp_cases[ , c('test_pred', 'test_label', 
+                                 'age_diagnosis' ,  'age_sample_collection')]
+temp_cases$test_pred <- ifelse(temp_cases$test_pred > .5, 1, 0)
+
+temp_cases <- temp_cases[ 1:44,]
+
+temp_cases$pred_is <- ifelse(temp_cases$test_pred == temp_cases$test_label, 
+                                'good',
+                                'bad')
+
+
 temp_controls <- temp_results[[2]]
 
+temp_controls <- temp_controls[ , c('controls_age_pred', 'controls_age_label', 
+                                    'age_sample_collection')]
+temp_controls$controls_pred_label <- ifelse(temp_controls$controls_age_pred > .5, 1, 0)
+
+temp_controls <- temp_controls[ 1:44,]
+
+temp_controls$pred_is <- ifelse(temp_controls$controls_pred_label == temp_controls$controls_age_label, 
+                                     'good',
+                                     'bad')
+
+temp_controls <- temp_controls[temp_controls$age_sample_collection < 73,]
 # get person identfier 
-temp_controls$p_id <- rep.int(seq(1, 47, 1), 4)
+temp_controls$p_id <- rep.int(seq(1, 44, 1), 5)
 
 # group by fold and get mean 
 temp_controls_pred <- temp_controls %>%
   group_by(p_id) %>%
   summarise(mean_pred = mean(controls_age_pred, na.rm =T)) %>%
-  cbind(temp_controls[1:47,]) 
+  cbind(temp_controls[1:44,])
 
 # remove original prediction 
 temp_controls_pred$controls_age_pred <- NULL

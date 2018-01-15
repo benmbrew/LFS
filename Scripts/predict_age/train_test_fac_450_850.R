@@ -99,6 +99,12 @@ colnames(id_map_val)[5] <- 'Sample_Plate'
 # clean idmap
 id_map_val <- cleanIdMap(id_map_val)
 
+##########
+# load in gene cgs
+##########
+gene_probes <- read_csv('../../Data/all_gene_cpg_loc.csv')
+
+
 
 ##########
 # remove outliers (previously determined) from rgset before normalization
@@ -126,9 +132,10 @@ full_pipeline <- function(rgCases,
                           rgControls, 
                           rgValid, 
                           method,
+                          survival,
                           age_cutoff,
-                          remove_age_cgs,
-                          remove_age,
+                          remove_age_cgs_lit,
+                          remove_age_cgs_lm,
                           gender,
                           tech,
                           base_change,
@@ -187,8 +194,8 @@ full_pipeline <- function(rgCases,
   # list to store cv results
   temp_cases <- list()
   temp_controls <- list()
-  temp_valid <- list()
-  
+
+  surv_results <- list()
   # preprocess controls and valid
   beta_cases <-  preprocessMethod(rg_cases, preprocess = method)
   beta_controls <- preprocessMethod(rg_controls, preprocess = method)
@@ -226,9 +233,16 @@ full_pipeline <- function(rgCases,
                                             colnames(beta_valid_mod)[12:ncol(beta_valid_mod)]))
   
   # read in probes associated with age
-  if (remove_cg_age) {
-    age_cgs <- read_rds('../../Data/age_probes.rda')
+  if (remove_age_cgs_lit) {
+    age_cgs <- readRDS('../../Data/age_probes.rda')
     intersect_names <- intersect_names[!intersect_names %in% age_cgs]
+  }
+  
+  
+  # remove age
+  if (remove_age_cgs_lm) {
+    age_cgs_lm <- readRDS('../../Data/age_cgs_lm.rda')
+    intersect_names <- intersect_names[!intersect_names %in% age_cgs_lm]
   }
   
   # get clin names
@@ -304,6 +318,10 @@ full_pipeline <- function(rgCases,
   beta_cases_full <- cbind(as.data.frame(class.ind(beta_cases_full$tech)), beta_cases_full)
   beta_controls_full <- cbind(as.data.frame(class.ind(beta_controls_full$tech)), beta_controls_full)
   
+  # remove na in both
+  beta_cases_full <- beta_cases_full[!is.na(beta_cases_full$age_sample_collection),]
+  beta_controls_full <- beta_controls_full[!is.na(beta_controls_full$age_sample_collection),]
+  
   
   if(control_for_family) {
     
@@ -330,10 +348,16 @@ full_pipeline <- function(rgCases,
     
   }
   
-  if (remove_age_cgs_lm) {
+  if (survival) {
+    
+    full_data <- rbind(beta_cases_full,
+                       beta_controls_full)
+    
+    full_data <- full_data[full_data$age_sample_collection < 400,]
+    
+    fold_vec <- sample(1:k_folds, nrow(full_data), replace = T)
     
   }
-  
  
   # get vector of random folds
   fold_vec <- sample(1:k_folds, nrow(beta_cases_full), replace = T)
@@ -346,42 +370,69 @@ full_pipeline <- function(rgCases,
     test_index <- !train_index
     
     # split into training and test 
-    beta_train_cases <- beta_cases_full[train_index, ]
-    beta_test_cases <- beta_cases_full[test_index, ]
-    
-    ##########
-    # use cases training and controls to get bumphunter features
-    ##########
-    bh_feats <- bump_hunter(dat_1 = beta_train_cases, 
-                            dat_2 = beta_controls_full, 
-                            bump = 'cancer', 
-                            boot_num = 5, 
-                            thresh = beta_thresh,
-                            g_ranges = g_ranges)
-    
-    
-    # get feature list
-    colnames(bh_feats)[1] <- 'chr'
-    remove_features <- inner_join(bh_feats, g_ranges)$probe
-    
-    # take remove features out of colnames 
-    bh_features <- intersect_names[!intersect_names %in% remove_features]
-    
-    # function to predict with all test, controls, controls old, and valid
-    mod_result  <- run_enet_450_850(training_dat = beta_train_cases,
-                                    controls_dat = beta_controls_full,
-                                    test_dat = beta_test_cases,
-                                    age_cutoff = age_cutoff,
-                                    gender = gender,
-                                    tech = tech,
-                                    base_change = base_change,
-                                    exon_intron = exon_intron,
-                                    bh_features = bh_features)
-    
-    temp_cases[[i]] <- mod_result[[1]]
-    temp_controls[[i]] <- mod_result[[2]]
+    if(survival){
+      full_train_cases <- full_data[train_index, ]
+      full_test_cases <- full_data[test_index, ]
+      
+      # function to predict with all test, controls, controls old, and valid
+      surv_results[[i]]  <- run_coxreg(training_dat = full_train_cases,
+                                test_dat = full_test_cases,
+                                age_cutoff = age_cutoff,
+                                gender = gender,
+                                tech = tech,
+                                base_change = base_change,
+                                exon_intron = exon_intron,
+                                intersect_names = intersect_names)
+      
 
-    print(i)
+    } else {
+      
+      beta_train_cases <- beta_cases_full[train_index, ]
+      beta_test_cases <- beta_cases_full[test_index, ]
+      
+      
+      # use cases training and controls to get bumphunter features
+      bh_feats <- bump_hunter(dat_1 = beta_train_cases, 
+                              dat_2 = beta_controls_full, 
+                              bump = 'cancer', 
+                              boot_num = 5, 
+                              thresh = beta_thresh,
+                              g_ranges = g_ranges)
+      
+      
+      # get feature list
+      colnames(bh_feats)[1] <- 'chr'
+      remove_features <- inner_join(bh_feats, g_ranges)$probe
+      
+      # take remove features out of colnames 
+      bh_features <- intersect_names[!intersect_names %in% remove_features]
+      
+      # function to predict with all test, controls, controls old, and valid
+      mod_result  <- run_enet_450_850(training_dat = beta_train_cases,
+                                      controls_dat = beta_controls_full,
+                                      test_dat = beta_test_cases,
+                                      age_cutoff = age_cutoff,
+                                      gender = gender,
+                                      tech = tech,
+                                      base_change = base_change,
+                                      exon_intron = exon_intron,
+                                      bh_features = bh_features)
+      
+    
+      
+      
+      temp_cases[[i]] <- mod_result[[1]]
+      temp_controls[[i]] <- mod_result[[2]]
+      
+      print(i)
+    }
+    
+  }
+  
+  if(survival) {
+    surv_final <- do.call(rbind, surv_results)
+    return(surv_final)
+    
   }
   full_cases <- do.call(rbind, temp_cases)
   full_controls <- do.call(rbind, temp_controls)
@@ -396,22 +447,25 @@ full_pipeline <- function(rgCases,
 #
 method = 'noob'
 age_cutoff = 72
-remove_age_cgs = TRUE
-gender = F
-tech = F
+survival = F
+remove_age_cgs = F
+remove_age_lit = T
+gender = T
+tech = T
 base_change = F
-exon_intron = T
+exon_intron = F
 control_for_family = F
 k_folds = 5
-beta_thresh = 0.01
-control_type = 'full'
+beta_thresh = 0.1
 
 # run full pipeline
 full_results <- full_pipeline(rgCases = rgCases,
                               rgControls = rgControls,
                               rgValid = rgValid,
                               method = method,
+                              survival = survival,
                               age_cutoff = age_cutoff,
+                              remove_age_cgs_lit = remove_age_lit,
                               remove_age_cgs = remove_age_cgs,
                               gender = gender,
                               tech = tech,
@@ -424,4 +478,7 @@ full_results <- full_pipeline(rgCases = rgCases,
 
 
 #save results
-saveRDS(full_results, paste0('../../Data/results_data/',age_cutoff,'_',method, '_', gender, '_', tech, '_', base_change,'_',exon_intron, '_', control_for_family,'.rda'))
+# saveRDS(full_results, paste0('../../Data/results_data/noob_survival_72.rda'))
+
+saveRDS(full_results, paste0('../../Data/results_data/',age_cutoff,'_',method,'_', survival ,'_', remove_age_lit ,'_', remove_age_cgs ,'_',gender, '_', tech, '_', base_change,'_',exon_intron, '_', control_for_family,'.rda'))
+
