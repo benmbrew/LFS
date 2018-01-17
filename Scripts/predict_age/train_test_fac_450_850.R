@@ -99,11 +99,6 @@ colnames(id_map_val)[5] <- 'Sample_Plate'
 # clean idmap
 id_map_val <- cleanIdMap(id_map_val)
 
-##########
-# load in gene cgs
-##########
-gene_probes <- read_csv('../../Data/all_gene_cpg_loc.csv')
-
 
 
 ##########
@@ -134,6 +129,7 @@ full_pipeline <- function(rgCases,
                           method,
                           survival,
                           age_cutoff,
+                          cg_gene_regions,
                           remove_age_cgs_lit,
                           remove_age_cgs_lm,
                           gender,
@@ -145,6 +141,18 @@ full_pipeline <- function(rgCases,
                           beta_thresh,
                           controls) {
   
+  
+  
+  ##########
+  # load in gene cgs
+  ##########
+  gene_probes <- read_csv('../../Data/all_gene_cpg_loc.csv')
+  
+  gene_region <- paste(cg_gene_regions, collapse = '|')
+  # get probe gene region
+  gene_probes <- gene_probes[grepl(gene_region, gene_probes$focal_gene_regions),]
+  
+  gene_probes <- as.character(gene_probes$focal_CpGs[!duplicated(gene_probes$focal_CpGs)])
   
   # dont control for gender in model if using funnorm
   # control for gender if you use raw or noob
@@ -168,27 +176,30 @@ full_pipeline <- function(rgCases,
                             keep_gender = keep_gender,
                             keep_controls = keep_controls,
                             keep_snps = keep_snps,
-                            get_island = "Island",
+                            get_island = NULL,
                             get_chr = NULL,
-                            get_type = NULL)
+                            get_type = NULL,
+                            gene_probes = gene_probes)
   
   # controls
   rg_controls <- subset_rg_set(rg_set = rgControls,
                                keep_gender = keep_gender,
                                keep_controls = keep_controls,
                                keep_snps = keep_snps,
-                               get_island = "Island",
+                               get_island = NULL,
                                get_chr = NULL,
-                               get_type = NULL)
+                               get_type = NULL,
+                               gene_probes = gene_probes)
   
   # valid
   rg_valid <- subset_rg_set(rg_set = rgValid,
                             keep_gender = keep_gender,
                             keep_controls = keep_controls,
                             keep_snps = keep_snps,
-                            get_island = "Island",
+                            get_island = NULL,
                             get_chr = NULL,
-                            get_type = NULL)
+                            get_type = NULL,
+                            gene_probes = gene_probes)
   
   
   # list to store cv results
@@ -202,16 +213,16 @@ full_pipeline <- function(rgCases,
   beta_valid <- preprocessMethod(rg_valid, preprocess = method)
   
   # get controls
-  beta_cases <- process_rg_set_single(beta_data = beta_cases[1:50000,], 
+  beta_cases <- process_rg_set_single(beta_data = beta_cases, 
                                       id_map = id_map_cases, 
                                       clin = clin)
   # get controls
-  beta_controls_mod <- process_rg_set_single(beta_data = beta_controls[1:50000,], 
+  beta_controls_mod <- process_rg_set_single(beta_data = beta_controls, 
                                              id_map = id_map_con, 
                                              clin = clin)
   
   # get valid
-  beta_valid_mod <- process_rg_set_single(beta_data = beta_valid[1:50000,], 
+  beta_valid_mod <- process_rg_set_single(beta_data = beta_valid, 
                                           id_map = id_map_val, 
                                           clin = clin)
   
@@ -231,6 +242,10 @@ full_pipeline <- function(rgCases,
   intersect_names <- Reduce(intersect, list(colnames(beta_cases)[12:ncol(beta_cases)],
                                             colnames(beta_controls_mod)[12:ncol(beta_controls_mod)],
                                             colnames(beta_valid_mod)[12:ncol(beta_valid_mod)]))
+  
+  # get the probes that are associated with genes
+  intersect_names <- intersect(intersect_names, 
+                               gene_probes)
   
   # read in probes associated with age
   if (remove_age_cgs_lit) {
@@ -447,6 +462,7 @@ full_pipeline <- function(rgCases,
 #
 method = 'noob'
 age_cutoff = 72
+cg_gene_regions <- c('Body')
 survival = F
 remove_age_cgs = F
 remove_age_lit = T
@@ -465,6 +481,7 @@ full_results <- full_pipeline(rgCases = rgCases,
                               method = method,
                               survival = survival,
                               age_cutoff = age_cutoff,
+                              cg_gene_regions = cg_gene_regions,
                               remove_age_cgs_lit = remove_age_lit,
                               remove_age_cgs = remove_age_cgs,
                               gender = gender,

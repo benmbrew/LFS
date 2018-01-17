@@ -239,7 +239,7 @@ remove_outliers <- function(rgSet, id_map_dat, method, type) {
 # function for subsetting rgsetts
 ##########
 
-subset_rg_set <- function(rg_set, keep_gender, keep_controls, keep_snps, get_island, get_type, get_chr) {
+subset_rg_set <- function(rg_set, keep_gender, keep_controls, keep_snps, get_island, get_type, get_chr, gene_probes) {
   # get annotation
   temp_rg_set <- getAnnotation(rg_set)
   # syubet set to get relevant columns
@@ -260,10 +260,11 @@ subset_rg_set <- function(rg_set, keep_gender, keep_controls, keep_snps, get_isl
   }
   # now get character vectors for what probes to include and not include 
   keep_probes <- as.character(rg_dat_sub$Name)
+  keep_int <- intersect(keep_probes, gene_probes)
   remove_probes <- rg_dat$Name[!as.character(rg_dat$Name) %in% as.character(rg_dat_sub$Name)]
   # use subset function from minfi
   rg_set_new <- subsetByLoci(rg_set, 
-                             includeLoci = keep_probes, 
+                             includeLoci = keep_int, 
                              excludeLoci = remove_probes, 
                              keepControls = keep_controls, 
                              keepSnps = keep_snps)
