@@ -146,16 +146,20 @@ coxph_pred_clin <- function(clin_dat){
 ##########
 # fit a random forest 
 ##########
-clin_dat <- clin
-colnames(clin)
+
 random_forest_pred_clin <- function(clin_dat,
-                                    age_cutoff,
-                                    features){
+                                    age_cutoff){
   
   # get variables of interest 
   clin_dat <- clin_dat %>%
     select(age_diagnosis, age_sample_collection, gender, cancer_diagnosis_diagnoses, gdna_base_change, 
            gdna_exon_intron)
+  
+  # turn into factors
+  clin_dat$gender <- as.factor(clin_dat$gender)
+  clin_dat$gdna_base_change <- as.factor(clin_dat$gdna_base_change)
+  clin_dat$gdna_exon_intron <- as.factor(clin_dat$gdna_exon_intron)
+  
   
   # get controls data 
   clin_dat_controls <-clin_dat %>%
@@ -166,13 +170,19 @@ random_forest_pred_clin <- function(clin_dat,
     filter(cancer_diagnosis_diagnoses != 'Unaffected')
   clin_dat_cases$cancer_diagnosis_diagnoses <- NULL
   
+  # remove age variables from contorls
+  controls_y <- as.factor(make.names(ifelse(clin_dat_controls$age_sample_collection< age_cutoff, 1, 0)))
+  clin_dat_controls <- clin_dat_controls[,!grepl('age', colnames(clin_dat_controls))]
+  
   
   # break into training and test set 
   k_folds <- 5
   fold_vec <- sample(1:k_folds, nrow(clin_dat_cases), replace = T)
   
   # get list to store results
-  results_list <- list()
+  test_results <- list()
+  controls_results <- list()
+  
   
   # combine 
   for(i in 1:k_folds) {
@@ -186,8 +196,8 @@ random_forest_pred_clin <- function(clin_dat,
     clin_test <- clin_dat_cases[test_index,]
     
     # get test outcome 
-    train_y <- make.names(ifelse(clin_train$age_diagnosis < age_cutoff, 1, 0))
-    test_y <-  make.names(ifelse(clin_test$age_diagnosis < age_cutoff, 1, 0))
+    train_y <- as.factor(make.names(ifelse(clin_train$age_diagnosis < age_cutoff, 1, 0)))
+    test_y <-  as.factor(make.names(ifelse(clin_test$age_diagnosis < age_cutoff, 1, 0)))
     
     # remove age from columns 
     clin_train <- clin_train[,!grepl('age', colnames(clin_train))]
@@ -208,13 +218,12 @@ random_forest_pred_clin <- function(clin_dat,
     tunegrid <- expand.grid(.mtry=mtry)
     
     model  <- train(x = clin_train
-                    , y =train_y
+                    , y = train_y
                     , method = "rf"
                     , metric = "ROC"
                     , trControl = fitControl
                     , tuneGrid = tunegrid
-                    , importance = T
-                    , verbose = FALSE)
+                    , importance = T)
     
     temp <- varImp(model)[[1]]
     importance <- cbind(rownames(temp), temp$Overall)
@@ -225,34 +234,20 @@ random_forest_pred_clin <- function(clin_dat,
     
     # get controls
     test.predictions_controls <- predict(model,
-                                         controls_dat)
+                                         clin_dat_controls)
     
     
+    test_results[[i]] <- as.data.frame(cbind(test.predictions, test_y))
+    controls_results[[i]] <- as.data.frame(cbind(test.predictions_controls, controls_y))
     
-    # get controls old
-    test.predictions_controls_old <- predict(model,
-                                             controls_dat_old)
-    
-    
-    # get controls
-    test.predictions_controls_full <- predict(model,
-                                              controls_dat_full)
-    
-    
-    # estimate coxph model.
-    coxfit <-coxph(formula = Surv(time_to_event, cancer_status, type = 'right') ~ gender + gdna_base_change + gdna_exon_intron, data = clin_train)
-    
-    # predict on test set 
-    pred_y <- predict(coxfit, clin_test, type = 'risk')
-    
-    # combine with real y
-    results_dat <- as.data.frame(cbind(pred_y, test_y))
-    results_list[[i]] <- results_dat
+    message('finished with fold ', i)
     
   }
-  final_results <- do.call(rbind,results_list)
-  return(final_results)
+  final_test <- do.call(rbind,test_results)
+  final_controls <- do.call(rbind, controls_results)
+  return(list(final_test, final_controls))
 }
 
-
-
+temp <- random_forest_pred_clin(clin, age_cutoff ='72')
+final_test <- temp[[1]]
+final_controls <- temp[[2]]

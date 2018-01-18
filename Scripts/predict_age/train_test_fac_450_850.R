@@ -99,8 +99,6 @@ colnames(id_map_val)[5] <- 'Sample_Plate'
 # clean idmap
 id_map_val <- cleanIdMap(id_map_val)
 
-
-
 ##########
 # remove outliers (previously determined) from rgset before normalization
 ##########
@@ -113,7 +111,6 @@ rgValid <- remove_outliers(rgSet = rgValid,
                            id_map = id_map_val,
                            method = 'doesnt_matter',
                            type = 'valid')
-
 
 
 ##########
@@ -143,9 +140,7 @@ full_pipeline <- function(rgCases,
   
   
   
-  ##########
-  # load in gene cgs
-  ##########
+  # load in gene cpgs
   gene_probes <- read_csv('../../Data/all_gene_cpg_loc.csv')
   
   gene_region <- paste(cg_gene_regions, collapse = '|')
@@ -459,20 +454,20 @@ full_pipeline <- function(rgCases,
 ##########
 # fixed variables
 ##########
-#
+#1stExon   3'UTR   5'UTR    Body TSS1500  TSS200
 method = 'noob'
 age_cutoff = 72
-cg_gene_regions <- c('Body')
+cg_gene_regions <- c("Body")
 survival = F
 remove_age_cgs = F
 remove_age_lit = T
 gender = T
 tech = T
-base_change = F
+base_change = T
 exon_intron = F
-control_for_family = F
+control_for_family = T
 k_folds = 5
-beta_thresh = 0.1
+beta_thresh = 0.05
 
 # run full pipeline
 full_results <- full_pipeline(rgCases = rgCases,
@@ -497,5 +492,6 @@ full_results <- full_pipeline(rgCases = rgCases,
 #save results
 # saveRDS(full_results, paste0('../../Data/results_data/noob_survival_72.rda'))
 
-saveRDS(full_results, paste0('../../Data/results_data/',age_cutoff,'_',method,'_', survival ,'_', remove_age_lit ,'_', remove_age_cgs ,'_',gender, '_', tech, '_', base_change,'_',exon_intron, '_', control_for_family,'.rda'))
+saveRDS(full_results, paste0('../../Data/results_data/',age_cutoff,'_',method,'_', cg_gene_regions,'_',survival ,'_', remove_age_lit ,'_', remove_age_cgs ,'_',gender, '_', tech, '_', base_change,'_',exon_intron, '_', control_for_family,'.rda'))
+
 
