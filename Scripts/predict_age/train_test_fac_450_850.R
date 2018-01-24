@@ -356,6 +356,10 @@ full_pipeline <- function(rgCases,
     beta_cases_full <- beta_cases_full[!grepl(remove_from_cases, beta_cases_full$family_name), ]
     beta_controls_full <- beta_controls_full[!grepl(remove_from_controls, beta_controls_full$family_name), ]
     
+    # remove cases that are over a certain age
+    # beta_cases_full <- beta_cases_full[beta_cases_full$age_sample_collection < 400,]
+    
+    
   }
   
   if (survival) {
@@ -367,11 +371,13 @@ full_pipeline <- function(rgCases,
     
     fold_vec <- sample(1:k_folds, nrow(full_data), replace = T)
     
+  } else {
+    # get vector of random folds
+    fold_vec <- sample(1:k_folds, nrow(beta_cases_full), replace = T)
+    
   }
  
-  # get vector of random folds
-  fold_vec <- sample(1:k_folds, nrow(beta_cases_full), replace = T)
-  
+ 
   # combine 
   for(i in 1:k_folds) {
     
@@ -386,13 +392,13 @@ full_pipeline <- function(rgCases,
       
       # function to predict with all test, controls, controls old, and valid
       surv_results[[i]]  <- run_coxreg(training_dat = full_train_cases,
-                                test_dat = full_test_cases,
-                                age_cutoff = age_cutoff,
-                                gender = gender,
-                                tech = tech,
-                                base_change = base_change,
-                                exon_intron = exon_intron,
-                                intersect_names = intersect_names)
+                                       test_dat = full_test_cases,
+                                       age_cutoff = age_cutoff,
+                                       gender = gender,
+                                       tech = tech,
+                                       base_change = base_change,
+                                       exon_intron = exon_intron,
+                                       intersect_names = intersect_names)
       
 
     } else {
@@ -451,6 +457,10 @@ full_pipeline <- function(rgCases,
 }
 
 
+load('~/Desktop/all_new.RData')
+
+source('all_functions.R')
+
 ##########
 # fixed variables
 ##########
@@ -458,14 +468,14 @@ full_pipeline <- function(rgCases,
 method = 'noob'
 age_cutoff = 72
 cg_gene_regions <- c("Body")
-survival = F
+survival = T
 remove_age_cgs = F
 remove_age_lit = T
 gender = T
 tech = T
-base_change = T
+base_change = F
 exon_intron = F
-control_for_family = T
+control_for_family = F
 k_folds = 5
 beta_thresh = 0.05
 
@@ -488,10 +498,73 @@ full_results <- full_pipeline(rgCases = rgCases,
                               beta_thresh = beta_thresh,
                               controls = control_type)
 
+full_results <-full_results[order(full_results$test_pred, decreasing = TRUE), ]
 
-#save results
+
+ #save results
 # saveRDS(full_results, paste0('../../Data/results_data/noob_survival_72.rda'))
 
-saveRDS(full_results, paste0('../../Data/results_data/',age_cutoff,'_',method,'_', cg_gene_regions,'_',survival ,'_', remove_age_lit ,'_', remove_age_cgs ,'_',gender, '_', tech, '_', base_change,'_',exon_intron, '_', control_for_family,'.rda'))
+# saveRDS(full_results, paste0('../../Data/results_data/',age_cutoff,'_',method,'_', cg_gene_regions,'_',survival ,'_', remove_age_lit ,'_', remove_age_cgs ,'_',gender, '_', tech, '_', base_change,'_',exon_intron, '_', control_for_family,'.rda'))
 
+
+
+
+
+
+# get results from list 
+temp_cases <- full_results[[1]]
+
+temp_cases <- temp_cases[ , c('test_pred', 'test_label', 
+                              'age_diagnosis' ,  'age_sample_collection')]
+temp_cases$test_pred_label <- ifelse(temp_cases$test_pred > .5, 1, 0)
+
+temp_cases$pred_is <- ifelse(temp_cases$test_pred_label == temp_cases$test_label, 
+                             'good',
+                             'bad')
+
+
+temp_controls <- full_results[[2]]
+
+temp_controls <- temp_controls[ , c('controls_age_pred', 'controls_age_label', 
+                                    'age_sample_collection')]
+temp_controls$controls_pred_label <- ifelse(temp_controls$controls_age_pred > .5, 1, 0)
+
+temp_controls$pred_is <- ifelse(temp_controls$controls_pred_label == temp_controls$controls_age_label, 
+                                'good',
+                                'bad')
+
+# get person identfier 
+temp_controls$p_id <- rep.int(seq(1, 44, 1), 5)
+
+# group by fold and get mean 
+temp_controls_pred <- temp_controls %>%
+  group_by(p_id) %>%
+  summarise(mean_pred = mean(controls_age_pred, na.rm =T)) %>%
+  cbind(temp_controls[1:44,])
+
+# remove original prediction 
+temp_controls_pred$controls_age_pred <- NULL
+rm(temp_controls,temp_results)
+
+
+##########
+# examin cases with prediction objects (ROC, TRP, etc)
+##########
+
+temp_pred_cases <- prediction(temp_cases$test_pred, temp_cases$test_label)
+temp_roc <- performance(temp_pred_cases, measure = 'tpr', x.measure = 'tnr')
+cutoffs <- data.frame(cut=temp_roc@alpha.values[[1]], tpr=temp_roc@x.values[[1]], 
+                      tnr=temp_roc@y.values[[1]])
+
+plot(cutoffs$cut, cutoffs$tpr,type="l",col="red")
+par(new=TRUE)
+plot(cutoffs$cut, cutoffs$tnr,type="l",col="blue",xaxt="n",yaxt="n",xlab="",ylab="")
+
+temp_pr <- performance(temp_pred_cases, measure = 'prec', x.measure = 'rec')
+temp_lc <- performance(temp_pred_cases, measure="lift")
+
+plot(temp_roc)
+plot(temp_pr)
+plot(temp_lc)
+caret::confusionMatrix(round(temp_cases$test_pred, 0.1), temp_cases$test_label)
 

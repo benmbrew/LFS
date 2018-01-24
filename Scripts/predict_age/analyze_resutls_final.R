@@ -2,21 +2,28 @@ library(tidyverse)
 library(reshape2)
 library(ROCR)
 
+# 72_noob_body_false_true_false_true_true_false_false_false
 
-method = 'noob'
+#1stExon   3'UTR   5'UTR    Body TSS1500  TSS200
 age_cutoff = 72
+method = 'noob'
+cg_gene_regions <- "Body"
 survival = F
-remove_age_cgs = F
 remove_age_lit = T
+remove_age_cgs = T
 gender = T
 tech = T
 base_change = F
 exon_intron = F
 control_for_family = F
+k_folds = 5
+beta_thresh = 0.05
 
-temp_results <- readRDS(paste0('../../Data/results_data/',age_cutoff,'_',method,'_', survival ,'_', remove_age_lit ,'_', remove_age_cgs ,'_',gender, '_', tech, '_', base_change,'_',exon_intron, '_', control_for_family,'.rda'))
+# 72_noob_body_false_true_false_true_true_false_false_false
 
-
+temp_results <- readRDS(paste0('../../Data/results_data/',age_cutoff,'_',method,'_', cg_gene_regions,'_',
+                               survival ,'_', remove_age_lit,'_', remove_age_cgs ,'_',gender, '_', tech, '_', 
+                               base_change,'_',exon_intron, '_', control_for_family,'.rda'))
 
 
 # get results from list 
@@ -25,8 +32,6 @@ temp_cases <- temp_results[[1]]
 temp_cases <- temp_cases[ , c('test_pred', 'test_label', 
                                  'age_diagnosis' ,  'age_sample_collection')]
 temp_cases$test_pred <- ifelse(temp_cases$test_pred > .5, 1, 0)
-
-temp_cases <- temp_cases[ 1:44,]
 
 temp_cases$pred_is <- ifelse(temp_cases$test_pred == temp_cases$test_label, 
                                 'good',
@@ -65,7 +70,14 @@ rm(temp_controls,temp_results)
 ##########
 
 temp_pred_cases <- prediction(temp_cases$test_pred, temp_cases$test_label)
-temp_roc <- performance(temp_pred_cases, measure = 'tpr', x.measure = 'fpr')
+temp_roc <- performance(temp_pred_cases, measure = 'tpr', x.measure = 'tnr')
+cutoffs <- data.frame(cut=temp_roc@alpha.values[[1]], tpr=temp_roc@x.values[[1]], 
+                      tnr=temp_roc@y.values[[1]])
+
+plot(cutoffs$cut, cutoffs$tpr,type="l",col="red")
+par(new=TRUE)
+plot(cutoffs$cut, cutoffs$tnr,type="l",col="blue",xaxt="n",yaxt="n",xlab="",ylab="")
+
 temp_pr <- performance(temp_pred_cases, measure = 'prec', x.measure = 'rec')
 temp_lc <- performance(temp_pred_cases, measure="lift")
 
