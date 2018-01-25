@@ -5650,6 +5650,9 @@ run_enet_450_850 <- function(training_dat,
 run_coxreg <- function(training_dat, 
                        controls_dat,
                        test_dat,
+                       random_forest,
+                       rf_surv_fac,
+                       rf_surv_con,
                        age_cutoff,
                        gender,
                        tech,
@@ -5663,35 +5666,35 @@ run_coxreg <- function(training_dat,
     
     test_clin <- test_dat[, 14:23]
     
-    intersected_feats <- intersect(intersect_names, colnames(training_dat))
+    intersect_names <- intersect(intersect_names, colnames(training_dat))
     
     if(gender) {
       
-      intersected_feats <- append('M', intersected_feats)
-      intersected_feats <- append('F', intersected_feats)
+      intersect_names <- append('M', intersect_names)
+      intersect_names <- append('F', intersect_names)
     }
     
     if (tech) {
       
-      intersected_feats <- append('a', intersected_feats)
-      intersected_feats <- append('b', intersected_feats)
+      intersect_names <- append('a', intersect_names)
+      intersect_names <- append('b', intersect_names)
     }
     
     if (base_change){
       
       
-      intersected_feats <- append('none', intersected_feats)
-      intersected_feats <- append('A', intersected_feats)
-      intersected_feats <- append('C', intersected_feats)
-      intersected_feats <- append('G', intersected_feats)
-      intersected_feats <- append('T', intersected_feats)
+      intersect_names <- append('none', intersect_names)
+      intersect_names <- append('A', intersect_names)
+      intersect_names <- append('C', intersect_names)
+      intersect_names <- append('G', intersect_names)
+      intersect_names <- append('T', intersect_names)
     }
     
     if(exon_intron) {
       
-      intersected_feats <- append('exon', intersected_feats)
-      intersected_feats <- append('intron', intersected_feats)
-      intersected_feats <- append('not_clear', intersected_feats)
+      intersect_names <- append('exon', intersect_names)
+      intersect_names <- append('intron', intersect_names)
+      intersect_names <- append('not_clear', intersect_names)
       
     }
     
@@ -5700,34 +5703,45 @@ run_coxreg <- function(training_dat,
     training_dat$time_to_event <- training_dat$age_diagnosis
     missing_ind <- is.na(training_dat$time_to_event)
     training_dat$time_to_event[missing_ind] <- training_dat$age_sample_collection[missing_ind]
-    training_dat$cancer_status <- as.factor(ifelse(training_dat$cancer_diagnosis_diagnoses != 'Unaffected', 'a', 'b'))
     
     # # get test dat surv
     test_dat$time_to_event <- test_dat$age_diagnosis
     missing_ind <- is.na(test_dat$time_to_event)
     test_dat$time_to_event[missing_ind] <- test_dat$age_sample_collection[missing_ind]
-    test_dat$cancer_status <- as.factor(ifelse(test_dat$cancer_diagnosis_diagnoses != 'Unaffected', 'a', 'b'))
+   
+    if(rf_surv_fac) {
     
-    training_dat <- training_dat[, c('cancer_status', intersect_names)]
-    test_dat <- test_dat[, c('cancer_status', intersect_names)]
+      training_dat$cancer_status <- as.factor(ifelse(training_dat$cancer_diagnosis_diagnoses != 'Unaffected', 'a', 'b'))
+      test_dat$cancer_status <- as.factor(ifelse(test_dat$cancer_diagnosis_diagnoses != 'Unaffected', 'a', 'b'))
+      
+      training_dat <- training_dat[, c('cancer_status', intersect_names)]
+      test_dat <- test_dat[, c('cancer_status', intersect_names)]
+      # get survival object
+      surv_mod <- rfsrc(cancer_status ~., data = training_dat, ntree = 1000, tree.err = TRUE)
+      
+      # surv_mod <- rfsrc(Surv(time_to_event, cancer_status, type = 'right') ~., data = training_dat, ntree = 100, tree.err = TRUE)
+      surv_pred <- predict(surv_mod, test_dat,importance = FALSE)
+      temp_dat <- cbind(pred_y = surv_pred$predicted[,1], test_clin)
+      
+    }
+    
+    if(rf_surv_con){
+      
+      training_dat$cancer_status <- ifelse(training_dat$cancer_diagnosis_diagnoses != 'Unaffected', 1, 0)
+      test_dat$cancer_status <- ifelse(test_dat$cancer_diagnosis_diagnoses != 'Unaffected', 1, 0)
+      
+      training_dat <- training_dat[, c('cancer_status', 'time_to_event',intersect_names)]
+      test_dat <- test_dat[, c('cancer_status', 'time_to_event',intersect_names)]
+      surv_mod <- rfsrc(Surv(time_to_event, cancer_status)~., data = training_dat, ntree = 1000, tree.err = TRUE)
+      surv_pred <- predict(surv_mod, test_dat, importance = FALSE)
+      temp_dat <- cbind(pred_y = surv_pred$predicted, test_clin)
+      
+    }
+    
+    return(temp_dat)
     
     
-    # # keep only features in the model
-    # training_dat$p53_germline <- training_dat$cancer_diagnosis_diagnoses <- training_dat$age_diagnosis <- 
-    #   training_dat$age_sample_collection <- training_dat$gender <- training_dat$sentrix_id <- training_dat$family_name <-
-    #   training_dat$tm_donor_ <- training_dat$gdna.base.change <- training_dat$gdna.exon.intron <- training_dat$ids  <- 
-    #   training_dat$tech <- NULL
-# 
-#     train_features <- colnames(training_dat)
-#     
-#     # get test dat
-#     test_dat <- test_dat[,train_features]
-    # get survival object
-    surv_mod <- rfsrc(cancer_status ~., data = training_dat, ntree = 1000, tree.err = TRUE)
     
-    # surv_mod <- rfsrc(Surv(time_to_event, cancer_status, type = 'right') ~., data = training_dat, ntree = 100, tree.err = TRUE)
-    surv_pred <- predict.rfsrc(surv_mod, test_dat,importance = FALSE)
-    surv_pred$predicted
     
   } else {
     # get survival time as days to onset and days to sample collection in one column for training dat
@@ -5780,8 +5794,7 @@ run_coxreg <- function(training_dat,
     
     # get survival object
     surv_outcome <- Surv(time_to_event,cancer_status, type = 'right')
-    
-    
+  
     # fit coxph
     
     # start elastic net tuning
@@ -5897,9 +5910,5 @@ run_coxreg <- function(training_dat,
     return(temp_dat)
   }
   
-  
-  
-         
-         
 }
 

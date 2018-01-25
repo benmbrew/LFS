@@ -125,6 +125,9 @@ full_pipeline <- function(rgCases,
                           rgValid, 
                           method,
                           survival,
+                          random_forest,
+                          rf_surv_fac,
+                          rf_surv_con,
                           age_cutoff,
                           cg_gene_regions,
                           remove_age_cgs_lit,
@@ -200,8 +203,8 @@ full_pipeline <- function(rgCases,
   # list to store cv results
   temp_cases <- list()
   temp_controls <- list()
-
   surv_results <- list()
+  
   # preprocess controls and valid
   beta_cases <-  preprocessMethod(rg_cases, preprocess = method)
   beta_controls <- preprocessMethod(rg_controls, preprocess = method)
@@ -394,6 +397,9 @@ full_pipeline <- function(rgCases,
       surv_results[[i]]  <- run_coxreg(training_dat = full_train_cases,
                                        test_dat = full_test_cases,
                                        age_cutoff = age_cutoff,
+                                       random_forest = random_forest,
+                                       rf_surv_fac = rf_surv_fac,
+                                       rf_surv_con = rf_surv_con,
                                        gender = gender,
                                        tech = tech,
                                        base_change = base_change,
@@ -468,6 +474,9 @@ source('all_functions.R')
 method = 'noob'
 age_cutoff = 72
 cg_gene_regions <- c("Body")
+random_forest = T
+rf_surv_fac = F
+rf_surv_con = T
 survival = T
 remove_age_cgs = F
 remove_age_lit = T
@@ -485,6 +494,9 @@ full_results <- full_pipeline(rgCases = rgCases,
                               rgValid = rgValid,
                               method = method,
                               survival = survival,
+                              random_forest = random_forest,
+                              rf_surv_fac = rf_surv_fac,
+                              rf_surv_con = rf_surv_con,
                               age_cutoff = age_cutoff,
                               cg_gene_regions = cg_gene_regions,
                               remove_age_cgs_lit = remove_age_lit,
@@ -501,6 +513,12 @@ full_results <- full_pipeline(rgCases = rgCases,
 full_results <-full_results[order(full_results$test_pred, decreasing = TRUE), ]
 
 
+# random forest fac
+controls <- full_results %>% 
+  filter(cancer_diagnosis_diagnoses == 'Unaffected')
+
+controls <- controls[order(controls$pred_y, decreasing = T),]
+# get the individuals 
  #save results
 # saveRDS(full_results, paste0('../../Data/results_data/noob_survival_72.rda'))
 
