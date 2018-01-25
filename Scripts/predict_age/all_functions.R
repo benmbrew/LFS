@@ -17,7 +17,7 @@ library(survival)
 library(broom)
 library(randomForestSRC)
 library(data.table)
-
+library(c060)
 
 ##########
 # function that Loops through list, preprocesses, and convert to beta, m, and cn values 
@@ -3321,24 +3321,37 @@ runEnetRandResid <- function(training_dat,
 ##########
 predCancer <- function(training_dat, 
                        test_dat,
-                       clin_dat,
                        bh_features,
                        gender,
-                       p53) 
+                       tech,
+                       intersect_names) 
 {
   
   # get intersection of bh features and real data
-  bh_features <- as.character(unlist(bh_features))
+  intersected_feats <- intersect(intersect_names, colnames(training_dat))
   
-  intersected_feats <- intersect(bh_features, colnames(training_dat))
   
-  # # get y
-  train_y <- as.factor(ifelse(!grepl('Unaffected',training_dat$cancer_diagnosis_diagnoses), 'a', 'b'))
-  test_y <- as.factor(ifelse(!grepl('Unaffected',test_dat$cancer_diagnosis_diagnoses), 'a', 'b'))
+  if(gender) {
+    
+    intersected_feats <- append('M', intersected_feats)
+    intersected_feats <- append('F', intersected_feats)
+  }
   
-  train_y <- factor(train_y, levels = c('a', 'b'))
-  test_y <- factor(test_y, levels = c('a', 'b'))
+  if (tech) {
+    
+    intersected_feats <- append('a', intersected_feats)
+    intersected_feats <- append('b', intersected_feats)
+  }
   
+  # # get 
+  train_y <- ifelse(!grepl('Unaffected',training_dat$cancer_diagnosis_diagnoses), 1, 0)
+  test_y <- ifelse(!grepl('Unaffected',test_dat$cancer_diagnosis_diagnoses), 1, 0)
+  
+  
+  # get clinical data
+  cg_start <- which(grepl('cg', colnames(test_dat)))[1]
+  test_clin <- test_dat[, 1:(cg_start - 1)]
+
   # get bumphunter features
   training_dat <- training_dat[, intersected_feats]
   test_dat <- test_dat[, intersected_feats]
@@ -3438,20 +3451,18 @@ predCancer <- function(training_dat,
                   ,nlambda = 100
                   ,family = type_family)
   
+  
   # This returns 100 prediction with 1-100 lambdas
   temp_test.predictions <- predict(model, 
                                    data.matrix(test_dat),
-                                   type = 'class')
+                                   type = 'response')
   
   
+  # get predictions with corresponding lambda.
   test.predictions <- temp_test.predictions[, temp.min_lambda_index]
-  test.predictions <- factor(test.predictions, levels = c('a', 'b'))
   
-  test_stats <- caret::confusionMatrix(test_y, test.predictions)
-  importance <- coef(model)
-  
-  # get prediction in clinical data
-  clin_dat$prediction <- test.predictions
+  # combine predictions and real labels 
+  temp_dat <- as.data.frame(cbind(test_pred = test.predictions, test_label = test_y, test_clin))
   
   return(list(importance, test_stats, clin_data))
   
@@ -5751,6 +5762,7 @@ run_coxreg <- function(training_dat,
     
     time_to_event[missing_ind] <- time_to_collection[missing_ind]
     
+    
     # get cancer status 
     cancer_status <- ifelse(training_dat$cancer_diagnosis_diagnoses != 'Unaffected', 1, 0)
     
@@ -5892,10 +5904,9 @@ run_coxreg <- function(training_dat,
                     ,nlambda = 100
                     ,family = type_family)
     
-    # Predictions on test data
-    
+   
     # This returns 100 prediction with 1-100 lambdas
-    temp_test.predictions <- predict(model, 
+    temp_test.predictions <- predict.coxnet(model, 
                                      data.matrix(test_dat),
                                      type = 'response')
     

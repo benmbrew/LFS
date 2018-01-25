@@ -1,97 +1,87 @@
 
+# source all_functions.R to load libraries and my functions
+source('all_functions.R')
 
 ##########
-# load libraries
+# get base directory for 4 batch
 ##########
-library(tidyverse)
-library(data.table)
-library(GenomicRanges)
-library(biovizBase)m
-library(GEOquery)
-library(IlluminaHumanMethylation450kmanifest)
-library(preprocessCore)
-library(IlluminaHumanMethylationEPICanno.ilm10b2.hg19)
-library(caret)
-library(glmnet)
-library(randomForest)
-library(kernlab)
-library(pROC)
-# library(Metrics)
-# library(ModelMetrics)
-library(doParallel) 
-library(nnet)
-library(dplyr)
-library(bumphunter)
-library(sqldf)
-library(e1071)
-library(reshape2)
-registerDoParallel(1)
-
-
+path_to_cases_tor <- '../../Data/methyl_data/cases_toronto'
+path_to_cases_mon <- '../../Data/methyl_data/cases_montreal'
+path_to_controls <- '../../Data/methyl_data/controls'
+path_to_valid <- '../../Data/methyl_data/validation'
 
 ##########
-# initialize folders
+# read in meth array - Data/methyl_data/cases_toronto, cases_montreal, controls, validation
 ##########
-home_folder <- '/home/benbrew/hpf/largeprojects/agoldenb/ben/Projects'
-project_folder <- paste0(home_folder, '/LFS')
-data_folder <- paste0(project_folder, '/Data')
-methyl_data <- paste0(data_folder, '/methyl_data')
-clin_data <- paste0(data_folder, '/clin_data')
-idat_data_case <- paste0(methyl_data, '/raw_files')
-idat_data_con <- paste0(methyl_data, '/controls')
-idat_data_val <- paste0(data_folder, '/methyl_data/validation/idat_files')
-model_data <- paste0(data_folder, '/model_data')
-map_data <- paste0(data_folder, '/methyl_data/validation')
 
-load('~/Desktop/temp_rg_data.RData')
+# cases 
+rgCasesT <- read.metharray.exp(path_to_cases_tor, recursive = T)
+rgCasesM <- read.metharray.exp(path_to_cases_mon, recursive = T)
 
+# combine cases arrays 
+rgCases <- combineArrays(rgCasesT, rgCasesM)
+rm(rgCasesT, rgCasesM)
 
+# controls
+rgControls <- read.metharray.exp(path_to_controls, recursive = T)
+
+rgValid <- read.metharray.exp(path_to_valid, recursive = T)
 
 ##########
-# source all_functions.R script
+# load genomic methyl set (from controls) - you need genetic locations by probe from this object
 ##########
-source(paste0(project_folder, '/Scripts/predict_age/all_functions.R'))
+ratio_set <- readRDS('../../Data/model_data/raw_ratio_set.rda')
+
+# get granges object
+g_ranges <- as.data.frame(getLocations(ratio_set))
+
+# get probes from rownames
+g_ranges$probe <- rownames(g_ranges)
+
+# remove ch and duplicatee
+g_ranges <- g_ranges[!duplicated(g_ranges$start),]
+g_ranges <- g_ranges[!grepl('ch', g_ranges$probe),]
 
 ##########
 # read in clinical data
 ##########
-clin <- read.csv(paste0(clin_data, '/clinical_two.csv'), stringsAsFactors = F)
+clin <- read.csv('../../Data/clin_data/clinical_two.csv', stringsAsFactors = F)
 
 # clean clinical ids
 clin$ids <-  gsub('A|B|_|-', '', clin$blood_dna_malkin_lab_)
+
 
 ##########
 # cases 
 ##########
 
 # cases batch1
-id_map <- read.csv(paste0(methyl_data, '/ids_map.csv'), stringsAsFactors = F)
+id_map_tor <- read.csv(paste0(path_to_cases_tor, '/SampleSheet.csv'), stringsAsFactors = F)
 
 #cases batch2
-id_map_other <- read.csv(paste0(methyl_data, '/batch_2014.csv'), stringsAsFactors = F)
-id_map_other$Project <- NULL
+id_map_mon <- read.csv(paste0(path_to_cases_mon, '/SampleSheet.csv'), stringsAsFactors = F)
+id_map_mon$Project <- NULL
 
 # combine id_map and id_map_other
-id_map <- rbind(id_map, id_map_other)
-rm(id_map_other)
+id_map_cases <- rbind(id_map_tor, id_map_mon)
+rm(id_map_tor, id_map_mon)
 
 # clean id map
-id_map <- cleanIdMap(id_map)
+id_map_cases <- cleanIdMap(id_map_cases)
 
 
 ##########
 # Controls batch1
 ##########
-id_map_con <- read.csv(paste0(methyl_data, '/ids_map_controls.csv'), stringsAsFactors = F)
+id_map_con <- read.csv(paste0(path_to_controls, '/SampleSheet.csv'), stringsAsFactors = F)
 
 # clean idmap
 id_map_con <- cleanIdMap(id_map_con)
 
-
 ##########
 # valid
 ##########
-id_map_val <- read.csv(paste0(map_data, '/id_map_validation.csv'), stringsAsFactors = F)
+id_map_val <- read.csv(paste0(path_to_valid, '/SampleSheet.csv'))
 
 # homogenize valid map data with cases and controls
 id_map_val <- id_map_val[, c('Sample.ID', 'Sample.Group', 'Sentrix.Barcode', 'Sample.Section',
@@ -109,18 +99,6 @@ colnames(id_map_val)[5] <- 'Sample_Plate'
 # clean idmap
 id_map_val <- cleanIdMap(id_map_val)
 
-
-##########
-# read in meth array
-##########
-rgCases <- read.metharray.exp(idat_data_case)
-
-rgControls <- read.metharray.exp(idat_data_con)
-
-rgValid <- read.metharray.exp(idat_data_val)
-
-
-
 ##########
 # remove outliers (previously determined) from rgset before normalization
 ##########
@@ -134,260 +112,340 @@ rgValid <- remove_outliers(rgSet = rgValid,
                            method = 'doesnt_matter',
                            type = 'valid')
 
-# save.image('~/Desktop/temp_rg_data.RData')
-# load('~/Desktop/temp_rg_data.RData')
-
 
 ##########
 # subset data - remove controls probes on each data set only if raw preprocessing
 ##########
 
-# cases 
-rg_cases <- subset_rg_set(rg_set = rgCases, 
-                          keep_gender = T,
-                          keep_controls = T, 
-                          keep_snps = T, 
-                          get_island = "Island", 
-                          get_chr = NULL, 
-                          get_type = NULL)
+# save.image('~/Desktop/temp_450_850.RData')
+load('~/Desktop/all_new.RData')
 
-# controls
-rg_controls <- subset_rg_set(rg_set = rgControls, 
-                             keep_gender = T,
-                             keep_controls = T, 
-                             keep_snps = T, 
-                             get_island = "Island",
-                             get_chr = NULL, 
-                             get_type = NULL)
-
-# valid 
-rg_valid <- subset_rg_set(rg_set = rgValid, 
-                          keep_gender = T,
-                          keep_controls = T, 
-                          keep_snps = T, 
-                          get_island = "Island", 
-                          get_chr = NULL, 
-                          get_type = NULL)
-
-
-rm(rgCases, rgControls, rgValid)
-
-# rg_cases = rg_cases
-# rg_controls = rg_controls
-# rg_valid = rg_valid
-# k_folds = 5
-# m_beta_thresh = 0.5
-# method = 'raw'
-# controls = 'normal'
-# gender = T 
-# p53 = F
-# max_columns = 10000
-
-full_pipeline_cancer <- function(rg_cases, 
-                                 rg_controls, 
-                                 rg_valid,
-                                 gender, 
-                                 p53,
-                                 k_folds,
-                                 method,
-                                 max_columns) {
-  
-  # list to store cv results
-  results_list <- list()
-  clin_results <- list()
-
-  # arguments or functions for subsetting data in different ways 
-  # for example, remove chromosome, type I and type II probes, Chr17, remove Ch6
-  
-  # preprocess controls and valid
-  m_cases <- preprocessMethod(rg_cases, preprocess = method, only_m_values = T)
-  m_controls <- preprocessMethod(rg_controls, preprocess = method, only_m_values = T)
-  m_valid <- preprocessMethod(rg_valid, preprocess = method, only_m_values = T)
+full_pipeline <- function(rgCases, 
+                          rgControls, 
+                          rgValid, 
+                          method,
+                          cg_gene_regions,
+                          gender,
+                          tech,
+                          control_for_family,
+                          k_folds) {
   
   
-  # do cases first (will return list of 2, second element is old controls)
-  m_cases <- process_rg_set_single(beta_data = m_cases[1:max_columns,], 
-                                         id_map = id_map, 
-                                         clin = clin)
-  # get controls
-  m_controls <- process_rg_set_single(beta_data = m_controls[1:max_columns,], 
-                                          id_map = id_map_con, 
-                                          clin = clin)
   
-  # get valid
-  m_valid  <- process_rg_set_single(beta_data = m_valid[1:max_columns,], 
-                                       id_map = id_map_val, 
-                                       clin = clin)
+  # load in gene cpgs
+  gene_probes <- read_csv('../../Data/all_gene_cpg_loc.csv')
   
-  ##########
-  # function to remove infinite values
-  ##########
+  gene_region <- paste(cg_gene_regions, collapse = '|')
+  # get probe gene region
+  gene_probes <- gene_probes[grepl(gene_region, gene_probes$focal_gene_regions),]
+  
+  gene_probes <- as.character(gene_probes$focal_CpGs[!duplicated(gene_probes$focal_CpGs)])
+  
+  # dont control for gender in model if using funnorm
+  # control for gender if you use raw or noob
+  if (method == 'funnorm') {
+    keep_gender <- 
+      keep_controls <- T
+    keep_snps <- F
+  } else if (method == 'noob') {
+    keep_gender <- F
+    keep_controls <- T
+    keep_snps <- F
+  } else {
+    keep_gender <- 
+      keep_controls <-
+      keep_snps <- F
+  }
+  
   
   # cases
-  m_cases <- removeInf(m_cases, probe_start = 10)
-
-  # controls 
-  m_controls <- removeInf(m_controls, probe_start = 10)
+  rg_cases <- subset_rg_set(rg_set = rgCases,
+                            keep_gender = keep_gender,
+                            keep_controls = keep_controls,
+                            keep_snps = keep_snps,
+                            get_island = NULL,
+                            get_chr = NULL,
+                            get_type = NULL,
+                            gene_probes = gene_probes)
   
-  # valid 
-  m_valid <- removeInf(m_valid, probe_start = 10)
+  # controls
+  rg_controls <- subset_rg_set(rg_set = rgControls,
+                               keep_gender = keep_gender,
+                               keep_controls = keep_controls,
+                               keep_snps = keep_snps,
+                               get_island = NULL,
+                               get_chr = NULL,
+                               get_type = NULL,
+                               gene_probes = gene_probes)
   
-  ##########
-  # bumphunter 
-  ##########
-  intersect_names <- Reduce(intersect, list(colnames(m_cases)[10:ncol(m_cases)],
-                                            colnames(m_controls)[10:ncol(m_controls)],
-                                            colnames(m_valid)[10:ncol(m_valid)]))
+  # valid
+  rg_valid <- subset_rg_set(rg_set = rgValid,
+                            keep_gender = keep_gender,
+                            keep_controls = keep_controls,
+                            keep_snps = keep_snps,
+                            get_island = NULL,
+                            get_chr = NULL,
+                            get_type = NULL,
+                            gene_probes = gene_probes)
   
+  
+  # list to store cv results
+  temp_cases <- list()
+  temp_controls <- list()
+  surv_results <- list()
+  
+  # preprocess controls and valid
+  beta_cases <-  preprocessMethod(rg_cases, preprocess = method)
+  beta_controls <- preprocessMethod(rg_controls, preprocess = method)
+  beta_valid <- preprocessMethod(rg_valid, preprocess = method)
+  
+  # get controls
+  beta_cases <- process_rg_set_single(beta_data = beta_cases, 
+                                      id_map = id_map_cases, 
+                                      clin = clin)
+  # get controls
+  beta_controls_mod <- process_rg_set_single(beta_data = beta_controls, 
+                                             id_map = id_map_con, 
+                                             clin = clin)
+  
+  # get valid
+  beta_valid_mod <- process_rg_set_single(beta_data = beta_valid, 
+                                          id_map = id_map_val, 
+                                          clin = clin)
+ 
+  # get intersecting name
+  intersect_names <- Reduce(intersect, list(colnames(beta_cases)[12:ncol(beta_cases)],
+                                            colnames(beta_controls_mod)[12:ncol(beta_controls_mod)],
+                                            colnames(beta_valid_mod)[12:ncol(beta_valid_mod)]))
+  
+  # get the probes that are associated with genes
+  intersect_names <- intersect(intersect_names, 
+                               gene_probes)
+  
+ 
+  
+  # get clin names
+  clin_names <- colnames(beta_cases)[1:11]
   
   # train data 
-  m_cases <- m_cases[, c('ids',
-                         'p53_germline',
-                         'cancer_diagnosis_diagnoses',
-                         'age_diagnosis',
-                         'age_sample_collection',
-                         'gender',
-                         'sentrix_id',
-                         'family_name',
-                         'tm_donor_',
-                         intersect_names)]
-  
-  # controls data 
-  m_controls <- m_controls[, c('ids',
-                               'p53_germline',
-                               'cancer_diagnosis_diagnoses',
-                               'age_diagnosis',
-                               'age_sample_collection',
-                               'gender',
-                               'sentrix_id',
-                               'family_name',
-                               'tm_donor_',
+  beta_cases <- beta_cases[, c(clin_names,
                                intersect_names)]
   
+  # controls data 
+  beta_controls_mod <- beta_controls_mod[, c(clin_names,
+                                             intersect_names)]
+  
   # train data 
-  m_valid <- m_valid[, c('ids',
-                         'p53_germline',
-                         'cancer_diagnosis_diagnoses',
-                         'age_diagnosis',
-                         'age_sample_collection',
-                         'gender',
-                         'sentrix_id',
-                         'family_name',
-                         'tm_donor_',
-                         intersect_names)]
+  beta_valid_mod <- beta_valid_mod[, c(clin_names,
+                                       intersect_names)]
   
-  # combined data sets
-  m_full <- rbind(m_cases, m_controls, m_valid)
+  # get old controls (mut and no cancer from cases)
+  beta_controls_mod_old <- rbind(subset(beta_cases, p53_germline == 'Mut' & 
+                                          cancer_diagnosis_diagnoses == 'Unaffected'))
   
-  # remove dups 
-  m_full_mod <- m_full[!duplicated(m_full$ids),]
-  m_full_mod <- m_full_mod[!duplicated(m_full_mod$tm_donor_),]
+  # get model data in cases for training and test
+  beta_cases <- getModData(beta_cases)
   
-  rm(m_cases, m_controls, m_valid)
-  rm(rg_cases, rg_controls, rg_valid)
+  # get rid of cancer samples in controls 
+  beta_controls_mod <- beta_controls_mod[grepl('Unaffected', beta_controls_mod$cancer_diagnosis_diagnoses),]
   
-  # remove columns 
-  m_full$ids <- m_full$sentrix_id <- m_full$family_name <- m_full$tm_donor_ <-
-    m_full$age_diagnosis <- m_full$age_sample_collection <- NULL
+  #subset valid - get ids from train and test
+  case_ids <- beta_cases$ids
+  beta_valid_mod <- beta_valid_mod[!beta_valid_mod$ids %in% case_ids,]
+  
+  # remove NAs 
+  beta_cases <-beta_cases[complete.cases(beta_cases),]
+  
+  # combine beta cases and beta valid
+  beta_cases_full <- rbind(beta_cases,
+                           beta_valid_mod)
+  
+  # combine beta_controls and beta_controls_old
+  beta_controls_full <- rbind(beta_controls_mod, 
+                              beta_controls_mod_old)
+  beta_controls_full <- beta_controls_full[!duplicated(beta_controls_full$ids),]
+  
+  # add an indicator for 450 and 850
+  beta_cases_full$tech <- ifelse(grepl('^57|97', beta_cases_full$sentrix_id), 'a', 'b')
+  beta_controls_full$tech <- ifelse(grepl('^57|97', beta_controls_full$sentrix_id), 'a', 'b')
+  
+  # get gender variable for each data set
+  beta_cases_full <- cbind(as.data.frame(class.ind(beta_cases_full$gender)), beta_cases_full)
+  beta_controls_full <- cbind(as.data.frame(class.ind(beta_controls_full$gender)), beta_controls_full)
+  
+  # get tech variable for each data set
+  beta_cases_full <- cbind(as.data.frame(class.ind(beta_cases_full$tech)), beta_cases_full)
+  beta_controls_full <- cbind(as.data.frame(class.ind(beta_controls_full$tech)), beta_controls_full)
+  
+  # remove na in both
+  beta_cases_full <- beta_cases_full[!is.na(beta_cases_full$age_sample_collection),]
+  beta_controls_full <- beta_controls_full[!is.na(beta_controls_full$age_sample_collection),]
   
   
-  if(gender) {
-    # get gender variable for each data set
-    m_full <- cbind(as.data.frame(class.ind(m_full$gender)), m_full)
+  if(control_for_family) {
+    
+    # group by family name for both data sets (subset 1:12 because it will go quicker)
+    # and get counts for each family
+    temp_family_cases <- beta_cases_full[, 1:100] %>%
+      group_by(family_name) %>%
+      summarise(counts_cases = n()) 
+    
+    temp_family_controls <- beta_controls_full[, 1:100] %>%
+      group_by(family_name) %>%
+      summarise(counts_controls = n()) 
+    
+    # join by faimly name and get the number of time families in cases have more counts than families in controls
+    # cases has more 
+    temp_all <- inner_join(temp_family_cases, temp_family_controls, by = 'family_name')
+    temp_all$more_cases <- ifelse(temp_all$counts_cases > temp_all$counts_controls, TRUE, FALSE)
+    
+    remove_from_controls <- paste0('^', temp_all$family_name[which(temp_all$more_cases)], '$',collapse  = '|')
+    remove_from_cases <- paste0('^', temp_all$family_name[which(!temp_all$more_cases)], '$',collapse = '|')
+    
+    beta_cases_full <- beta_cases_full[!grepl(remove_from_cases, beta_cases_full$family_name), ]
+    beta_controls_full <- beta_controls_full[!grepl(remove_from_controls, beta_controls_full$family_name), ]
+    
+    # remove cases that are over a certain age
+    # beta_cases_full <- beta_cases_full[beta_cases_full$age_sample_collection < 400,]
+    # combine cases and contorls
+    full_data <- rbind(beta_cases_full, 
+                       beta_controls_full)
     
   }
+
+  # get vector of random folds
+  fold_vec <- sample(1:k_folds, nrow(full_data), replace = T)
   
-  if (p53) {
-    
-    # get dummy variale for p53
-    m_full <- cbind(as.data.frame(class.ind(m_full$p53_germline)), m_full)
-    
-  } else {
-    
-    # subset to LFS only
-    m_full <- m_full[grepl('Mut', m_full$p53_germline),]
-  }
-  
-  # remove NAs
-  m_full <- m_full[complete.cases(m_full),]
-  
-  # get folds 
-  fold_vec <- sample(1:k_folds, nrow(m_full), replace = T)
-  
-  
-  # train and test
+  # combine 
   for(i in 1:k_folds) {
     
     # get train and test index
     train_index <- !grepl(i, fold_vec)
     test_index <- !train_index
     
-    # get training rgsets 
-    m_train <- m_full[train_index,]
-    m_test <- m_full[test_index,]
-    
-    # test clin
-    test_clin <- as.data.frame(m_test[, c('p53_germline', 'cancer_diagnosis_diagnoses', 'gender')])
+    # get training and test set
+    training_dat <- full_data[train_index, ]
+    test_dat <- full_data[test_index, ]
     
     # function to predict with all test, controls, controls old, and valid
-    # HERE
-    mod_result <- predCancer(training_dat = m_train, 
-                             test_dat = m_test, 
-                             clin_dat = test_clin,
-                             bh_features = intersect_names,
-                             gender = gender,
-                             p53 = p53)
+    mod_result  <- predCancer(training_dat = training_dat,
+                              test_dat = test_dat,
+                              gender = gender,
+                              tech = tech,
+                              intersect_names = intersect_names)
     
-    
-    # returns test_stats, test_stats_age, test_stats_controls, test_stats_valid, test_stats_age_valid
-    temp.results <- get_class_results_cancer(mod_result, 
-                                             dims_of_dat = length(intersect_names), 
-                                             mod_name = 'enet', 
-                                             gender = gender,
-                                             p53 = p53)
-    
-    results_list[[i]] <- temp.results[[1]]
-    clin_results[[i]] <- temp.results[[2]]
-  
+    temp_cases[[i]] <- mod_result[[1]]
+
     print(i)
-    
   }
+    
   
-  #combine all the folds 
-  results_final <- do.call(rbind, results_list)
-  results_final_clin <- do.call(rbind, clin_results)
+  full_cases <- do.call(rbind, temp_cases)
+  full_controls <- do.call(rbind, temp_controls)
   
-  
-  return(list(results_final, results_final_clin))
+  return(list(full_cases, full_controls))
 }
 
+
+load('~/Desktop/all_new.RData')
+
+source('all_functions.R')
 
 ##########
 # fixed variables
 ##########
-
-method = 'funnorm'
-k_folds = 5
+#1stExon   3'UTR   5'UTR    Body TSS1500  TSS200
+method = 'noob'
+cg_gene_regions <- c("Body")
 gender = T
-p53 = F
-max_columns = 50000
+tech = T
+control_for_family = T
+k_folds = 5
+
+# run full pipeline
+full_results <- full_pipeline(rgCases = rgCases,
+                              rgControls = rgControls,
+                              rgValid = rgValid,
+                              method = method,
+                              cg_gene_regions = cg_gene_regions,
+                              gender = gender,
+                              tech = tech,
+                              control_for_family = control_for_family,
+                              k_folds = k_folds)
+
+full_results <-full_results[order(full_results$test_pred, decreasing = TRUE), ]
 
 
-#### TO FIX AND CHECK
-# remove sex chromosomes and just control for gender
-# check to see that you are removing cancer probes from bumphunter in the pipeline
+# random forest fac
+controls <- full_results %>% 
+  filter(cancer_diagnosis_diagnoses == 'Unaffected')
 
-# run full pipeline 
-full_results <- full_pipeline_cancer(rg_cases = rg_cases, 
-                                     rg_controls = rg_controls, 
-                                     rg_valid = rg_valid, 
-                                     gender = gender, 
-                                     p53 = p53, 
-                                     k_folds = k_folds, 
-                                     method = method, 
-                                     max_columns = max_columns)
+controls <- controls[order(controls$pred_y, decreasing = T),]
+# get the individuals 
+#save results
+# saveRDS(full_results, paste0('../../Data/results_data/noob_survival_72.rda'))
+
+# saveRDS(full_results, paste0('../../Data/results_data/',age_cutoff,'_',method,'_', cg_gene_regions,'_',survival ,'_', remove_age_lit ,'_', remove_age_cgs ,'_',gender, '_', tech, '_', base_change,'_',exon_intron, '_', control_for_family,'.rda'))
 
 
-# save results 
-saveRDS(full_results, paste0('~/Desktop/', method, '_', k_folds, '_', 
-                             max_columns, '_', gender, '_', p53, '_full_results_cancer.rda'))
+
+
+
+
+# get results from list 
+temp_cases <- full_results[[1]]
+
+temp_cases <- temp_cases[ , c('test_pred', 'test_label', 
+                              'age_diagnosis' ,  'age_sample_collection')]
+temp_cases$test_pred_label <- ifelse(temp_cases$test_pred > .5, 1, 0)
+
+temp_cases$pred_is <- ifelse(temp_cases$test_pred_label == temp_cases$test_label, 
+                             'good',
+                             'bad')
+
+
+temp_controls <- full_results[[2]]
+
+temp_controls <- temp_controls[ , c('controls_age_pred', 'controls_age_label', 
+                                    'age_sample_collection')]
+temp_controls$controls_pred_label <- ifelse(temp_controls$controls_age_pred > .5, 1, 0)
+
+temp_controls$pred_is <- ifelse(temp_controls$controls_pred_label == temp_controls$controls_age_label, 
+                                'good',
+                                'bad')
+
+# get person identfier 
+temp_controls$p_id <- rep.int(seq(1, 44, 1), 5)
+
+# group by fold and get mean 
+temp_controls_pred <- temp_controls %>%
+  group_by(p_id) %>%
+  summarise(mean_pred = mean(controls_age_pred, na.rm =T)) %>%
+  cbind(temp_controls[1:44,])
+
+# remove original prediction 
+temp_controls_pred$controls_age_pred <- NULL
+rm(temp_controls,temp_results)
+
+
+##########
+# examin cases with prediction objects (ROC, TRP, etc)
+##########
+
+temp_pred_cases <- prediction(temp_cases$test_pred, temp_cases$test_label)
+temp_roc <- performance(temp_pred_cases, measure = 'tpr', x.measure = 'tnr')
+cutoffs <- data.frame(cut=temp_roc@alpha.values[[1]], tpr=temp_roc@x.values[[1]], 
+                      tnr=temp_roc@y.values[[1]])
+
+plot(cutoffs$cut, cutoffs$tpr,type="l",col="red")
+par(new=TRUE)
+plot(cutoffs$cut, cutoffs$tnr,type="l",col="blue",xaxt="n",yaxt="n",xlab="",ylab="")
+
+temp_pr <- performance(temp_pred_cases, measure = 'prec', x.measure = 'rec')
+temp_lc <- performance(temp_pred_cases, measure="lift")
+
+plot(temp_roc)
+plot(temp_pr)
+plot(temp_lc)
+caret::confusionMatrix(round(temp_cases$test_pred, 0.1), temp_cases$test_label)
+

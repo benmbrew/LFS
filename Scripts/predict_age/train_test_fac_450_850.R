@@ -361,8 +361,7 @@ full_pipeline <- function(rgCases,
     
     # remove cases that are over a certain age
     # beta_cases_full <- beta_cases_full[beta_cases_full$age_sample_collection < 400,]
-    
-    
+  
   }
   
   if (survival) {
@@ -474,19 +473,19 @@ source('all_functions.R')
 method = 'noob'
 age_cutoff = 72
 cg_gene_regions <- c("Body")
-random_forest = T
+random_forest = F
 rf_surv_fac = F
-rf_surv_con = T
-survival = T
+rf_surv_con = F
+survival = F
 remove_age_cgs = F
 remove_age_lit = T
 gender = T
 tech = T
 base_change = F
 exon_intron = F
-control_for_family = F
+control_for_family = T
 k_folds = 5
-beta_thresh = 0.05
+beta_thresh = 0.1
 
 # run full pipeline
 full_results <- full_pipeline(rgCases = rgCases,
