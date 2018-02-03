@@ -118,7 +118,7 @@ rgValid <- remove_outliers(rgSet = rgValid,
 ##########
 
 # save.image('~/Desktop/temp_450_850.RData')
-load('~/Desktop/all_new.RData')
+# load('~/Desktop/all_new.RData')
 
 full_pipeline <- function(rgCases, 
                           rgControls, 
@@ -483,8 +483,8 @@ gender = T
 tech = T
 base_change = F
 exon_intron = F
-control_for_family = T
-k_folds = 5
+control_for_family = F
+k_folds = 4
 beta_thresh = 0.1
 
 # run full pipeline
@@ -544,20 +544,22 @@ temp_controls <- full_results[[2]]
 
 temp_controls <- temp_controls[ , c('controls_age_pred', 'controls_age_label', 
                                     'age_sample_collection')]
-temp_controls$controls_pred_label <- ifelse(temp_controls$controls_age_pred > .5, 1, 0)
 
-temp_controls$pred_is <- ifelse(temp_controls$controls_pred_label == temp_controls$controls_age_label, 
-                                'good',
-                                'bad')
 
 # get person identfier 
-temp_controls$p_id <- rep.int(seq(1, 44, 1), 5)
+temp_controls$p_id <- rep.int(seq(1, 44, 1), 4)
 
 # group by fold and get mean 
 temp_controls_pred <- temp_controls %>%
   group_by(p_id) %>%
   summarise(mean_pred = mean(controls_age_pred, na.rm =T)) %>%
   cbind(temp_controls[1:44,])
+
+temp_controls$controls_pred_label <- ifelse(temp_controls$controls_age_pred > .5, 1, 0)
+
+temp_controls$pred_is <- ifelse(temp_controls$controls_pred_label == temp_controls$controls_age_label, 
+                                'good',
+                                'bad')
 
 # remove original prediction 
 temp_controls_pred$controls_age_pred <- NULL
