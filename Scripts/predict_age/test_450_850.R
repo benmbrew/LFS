@@ -120,26 +120,26 @@ rgValid <- remove_outliers(rgSet = rgValid,
 # save.image('~/Desktop/temp_450_850.RData')
 # load('~/Desktop/all_new.RData')
 
-full_pipeline <- function(rgCases, 
-                          rgControls, 
-                          rgValid, 
-                          method,
-                          survival,
-                          random_forest,
-                          rf_surv_fac,
-                          rf_surv_con,
-                          age_cutoff,
-                          cg_gene_regions,
-                          remove_age_cgs_lit,
-                          remove_age_cgs_lm,
-                          gender,
-                          tech,
-                          base_change,
-                          exon_intron,
-                          control_for_family,
-                          k_folds,
-                          beta_thresh,
-                          controls) {
+full_pipeline_test <- function(rgCases, 
+                               rgControls, 
+                               rgValid, 
+                               method,
+                               survival,
+                               random_forest,
+                               rf_surv_fac,
+                               rf_surv_con,
+                               age_cutoff,
+                               cg_gene_regions,
+                               remove_age_cgs_lit,
+                               remove_age_cgs_lm,
+                               gender,
+                               tech,
+                               base_change,
+                               exon_intron,
+                               control_for_family,
+                               k_folds,
+                               beta_thresh,
+                               controls) {
   
   
   
@@ -157,15 +157,15 @@ full_pipeline <- function(rgCases,
   if (method == 'funnorm') {
     keep_gender <- 
       keep_controls <- T
-      keep_snps <- F
+    keep_snps <- F
   } else if (method == 'noob') {
     keep_gender <- F
-      keep_controls <- T
-      keep_snps <- F
+    keep_controls <- T
+    keep_snps <- F
   } else {
     keep_gender <- 
-    keep_controls <-
-    keep_snps <- F
+      keep_controls <-
+      keep_snps <- F
   }
   
   
@@ -235,7 +235,7 @@ full_pipeline <- function(rgCases,
     beta_valid_mod <- removeInf(beta_valid_mod, probe_start = 12)
   }
   
-
+  
   # get intersecting name
   intersect_names <- Reduce(intersect, list(colnames(beta_cases)[12:ncol(beta_cases)],
                                             colnames(beta_controls_mod)[12:ncol(beta_controls_mod)],
@@ -290,16 +290,19 @@ full_pipeline <- function(rgCases,
   
   # remove NAs 
   beta_cases <-beta_cases[complete.cases(beta_cases),]
-
+  
   # combine beta cases and beta valid
   beta_cases_full <- rbind(beta_cases,
                            beta_valid_mod)
   
+  # remove duplicate tm_donor
+  beta_cases_full <- beta_cases_full[!duplicated(beta_cases_full$tm_donor_),]
+
   # combine beta_controls and beta_controls_old
-  beta_controls_full <- rbind(beta_controls_mod, 
-                              beta_controls_mod_old)
-  beta_controls_full <- beta_controls_full[!duplicated(beta_controls_full$ids),]
-  
+  beta_controls_full <- rbind(beta_controls_mod_old, 
+                              beta_controls_mod)
+  beta_controls_full <- beta_controls_full[!duplicated(beta_controls_full$tm_donor_),]
+
   # add an indicator for 450 and 850
   beta_cases_full$tech <- ifelse(grepl('^57|97', beta_cases_full$sentrix_id), 'a', 'b')
   beta_controls_full$tech <- ifelse(grepl('^57|97', beta_controls_full$sentrix_id), 'a', 'b')
@@ -313,8 +316,8 @@ full_pipeline <- function(rgCases,
   beta_cases_full$gdna.exon.intron <- ifelse(grepl('Exon', beta_cases_full$gdna.exon.intron), 'exon',
                                              ifelse(grepl('Intron', beta_cases_full$gdna.exon.intron), 'intron', 'not_clear'))
   beta_controls_full$gdna.exon.intron <- ifelse(grepl('Exon', beta_controls_full$gdna.exon.intron), 'exon',
-                                             ifelse(grepl('Intron', beta_controls_full$gdna.exon.intron), 'intron', 'not_clear'))
-    
+                                                ifelse(grepl('Intron', beta_controls_full$gdna.exon.intron), 'intron', 'not_clear'))
+  
   # get a base change variable for each data set
   beta_cases_full <- cbind(as.data.frame(class.ind(beta_cases_full$gdna.base.change)), beta_cases_full)
   beta_controls_full <- cbind(as.data.frame(class.ind(beta_controls_full$gdna.base.change)), beta_controls_full)
@@ -326,7 +329,7 @@ full_pipeline <- function(rgCases,
   # get gender variable for each data set
   beta_cases_full <- cbind(as.data.frame(class.ind(beta_cases_full$gender)), beta_cases_full)
   beta_controls_full <- cbind(as.data.frame(class.ind(beta_controls_full$gender)), beta_controls_full)
-
+  
   # get tech variable for each data set
   beta_cases_full <- cbind(as.data.frame(class.ind(beta_cases_full$tech)), beta_cases_full)
   beta_controls_full <- cbind(as.data.frame(class.ind(beta_controls_full$tech)), beta_controls_full)
@@ -348,7 +351,7 @@ full_pipeline <- function(rgCases,
     
     # remove these ids from controls
     remove_controls <- temp_fam$tm_donor_[temp_fam$keep_status == 'remove' &
-                                            grepl('Unaffected', temp_fam$cancer_diagnosis_diagnoses)]
+                                         grepl('Unaffected', temp_fam$cancer_diagnosis_diagnoses)]
     remove_controls <- paste0('^', remove_controls, '$',collapse  = '|')
     
     # removed these from each case and control
@@ -358,30 +361,45 @@ full_pipeline <- function(rgCases,
     hist(beta_cases_full$age_sample_collection)
     hist(beta_controls_full$age_sample_collection)
     
+    
+    
     # # group by family name for both data sets (subset 1:12 because it will go quicker)
     # # and get counts for each family
     # temp_family_cases <- beta_cases_full[, 1:100] %>%
     #   group_by(family_name) %>%
-    #   summarise(counts_cases = n()) 
+    #   summarise(counts_cases = n(),
+    #             mean_age_case = mean(age_sample_collection, na.rm = T)) 
     # 
     # temp_family_controls <- beta_controls_full[, 1:100] %>%
     #   group_by(family_name) %>%
-    #   summarise(counts_controls = n()) 
+    #   summarise(counts_controls = n(),
+    #             mean_age_con = mean(age_sample_collection, na.rm = T)) 
     # 
     # # join by faimly name and get the number of time families in cases have more counts than families in controls
     # # cases has more 
     # temp_all <- inner_join(temp_family_cases, temp_family_controls, by = 'family_name')
     # temp_all$more_cases <- ifelse(temp_all$counts_cases > temp_all$counts_controls, TRUE, FALSE)
     # 
+    # # add indicator for avg age being under 80
+    # temp_all$age <- ifelse(temp_all$mean_age_case > temp_all$mean_age_con, 'controls', 'cases')
+    # 
     # remove_from_controls <- paste0('^', temp_all$family_name[which(temp_all$more_cases)], '$',collapse  = '|')
     # remove_from_cases <- paste0('^', temp_all$family_name[which(!temp_all$more_cases)], '$',collapse = '|')
     # 
     # beta_cases_full <- beta_cases_full[!grepl(remove_from_cases, beta_cases_full$family_name), ]
     # beta_controls_full <- beta_controls_full[!grepl(remove_from_controls, beta_controls_full$family_name), ]
+    # 
+    # # remove cases that are over a certain age
+    # clin_cases <- beta_cases_full[, 1:23]
+    # clin_controls <- beta_controls_full[, 1:23]
+    # family_intersect <- paste0('^', unique(clin_cases$family_name)[unique(clin_cases$family_name) %in% unique(clin_controls$family_name)],
+    #                            '$',collapse = '|')
+    # 
+    # full_clin <- rbind(clin_cases,
+    #                    clin_controls)
+    # full_clin <- full_clin[grepl(family_intersect, full_clin$family_name),]
+    # write_csv(full_clin, '~/Desktop/full_clin.csv')
     
-    # remove cases that are over a certain age
-    # beta_cases_full <- beta_cases_full[beta_cases_full$age_sample_collection < 400,]
-  
   }
   
   if (survival) {
@@ -398,75 +416,53 @@ full_pipeline <- function(rgCases,
     fold_vec <- sample(1:k_folds, nrow(beta_cases_full), replace = T)
     
   }
- 
- 
-  # combine 
-  for(i in 1:k_folds) {
+  
+  # split into training and test 
+  if(survival){
+    full_train_cases <- full_data[train_index, ]
+    full_test_cases <- full_data[test_index, ]
     
-    # get train and test index
-    train_index <- !grepl(i, fold_vec)
-    test_index <- !train_index
+    # function to predict with all test, controls, controls old, and valid
+    surv_results      <- run_coxreg(training_dat = full_train_cases,
+                                    test_dat = full_test_cases,
+                                    age_cutoff = age_cutoff,
+                                    random_forest = random_forest,
+                                    rf_surv_fac = rf_surv_fac,
+                                    rf_surv_con = rf_surv_con,
+                                    gender = gender,
+                                    tech = tech,
+                                    base_change = base_change,
+                                    exon_intron = exon_intron,
+                                    intersect_names = intersect_names)
     
-    # split into training and test 
-    if(survival){
-      full_train_cases <- full_data[train_index, ]
-      full_test_cases <- full_data[test_index, ]
-      
-      # function to predict with all test, controls, controls old, and valid
-      surv_results[[i]]  <- run_coxreg(training_dat = full_train_cases,
-                                       test_dat = full_test_cases,
-                                       age_cutoff = age_cutoff,
-                                       random_forest = random_forest,
-                                       rf_surv_fac = rf_surv_fac,
-                                       rf_surv_con = rf_surv_con,
-                                       gender = gender,
-                                       tech = tech,
-                                       base_change = base_change,
-                                       exon_intron = exon_intron,
-                                       intersect_names = intersect_names)
-      
-
-    } else {
-      
-      beta_train_cases <- beta_cases_full[train_index, ]
-      beta_test_cases <- beta_cases_full[test_index, ]
-      
-      
-      # use cases training and controls to get bumphunter features
-      bh_feats <- bump_hunter(dat_1 = beta_train_cases, 
-                              dat_2 = beta_controls_full, 
-                              bump = 'cancer', 
-                              boot_num = 5, 
-                              thresh = beta_thresh,
-                              g_ranges = g_ranges)
-      
-      
-      # get feature list
-      colnames(bh_feats)[1] <- 'chr'
-      remove_features <- inner_join(bh_feats, g_ranges)$probe
-      
-      # take remove features out of colnames 
-      bh_features <- intersect_names[!intersect_names %in% remove_features]
-      
-      # function to predict with all test, controls, controls old, and valid
-      mod_result  <- run_enet_450_850(training_dat = beta_train_cases,
-                                      controls_dat = beta_controls_full,
-                                      test_dat = beta_test_cases,
-                                      age_cutoff = age_cutoff,
-                                      gender = gender,
-                                      tech = tech,
-                                      base_change = base_change,
-                                      exon_intron = exon_intron,
-                                      bh_features = bh_features)
-      
     
-      
-      
-      temp_cases[[i]] <- mod_result[[1]]
-      temp_controls[[i]] <- mod_result[[2]]
-      
-      print(i)
-    }
+  } else {
+    
+    # use cases training and controls to get bumphunter features
+    bh_feats <- bump_hunter(dat_1 = beta_cases_full, 
+                            dat_2 = beta_controls_full, 
+                            bump = 'cancer', 
+                            boot_num = 5, 
+                            thresh = beta_thresh,
+                            g_ranges = g_ranges)
+    
+    
+    # get feature list
+    colnames(bh_feats)[1] <- 'chr'
+    remove_features <- inner_join(bh_feats, g_ranges)$probe
+    
+    # take remove features out of colnames 
+    bh_features <- intersect_names[!intersect_names %in% remove_features]
+    
+    # function to predict with all test, controls, controls old, and valid
+    mod_result  <- run_enet_450_850_test(cases_dat = beta_cases_full,
+                                         controls_dat = beta_controls_full,
+                                         age_cutoff = age_cutoff,
+                                         gender = gender,
+                                         tech = tech,
+                                         base_change = base_change,
+                                         exon_intron = exon_intron,
+                                         bh_features = bh_features)
     
   }
   
@@ -475,10 +471,8 @@ full_pipeline <- function(rgCases,
     return(surv_final)
     
   }
-  full_cases <- do.call(rbind, temp_cases)
-  full_controls <- do.call(rbind, temp_controls)
 
-  return(list(full_cases, full_controls))
+  return(mod_result)
 }
 
 
@@ -503,51 +497,46 @@ gender = T
 tech = T
 base_change = F
 exon_intron = F
-control_for_family = F
-k_folds = 4
-beta_thresh = 0.1
+control_for_family = T
+beta_thresh = 0.05
 
 # run full pipeline
-full_results <- full_pipeline(rgCases = rgCases,
-                              rgControls = rgControls,
-                              rgValid = rgValid,
-                              method = method,
-                              survival = survival,
-                              random_forest = random_forest,
-                              rf_surv_fac = rf_surv_fac,
-                              rf_surv_con = rf_surv_con,
-                              age_cutoff = age_cutoff,
-                              cg_gene_regions = cg_gene_regions,
-                              remove_age_cgs_lit = remove_age_lit,
-                              remove_age_cgs = remove_age_cgs,
-                              gender = gender,
-                              tech = tech,
-                              base_change = base_change,
-                              exon_intron = exon_intron,
-                              control_for_family = control_for_family,
-                              k_folds = k_folds,
-                              beta_thresh = beta_thresh,
-                              controls = control_type)
-
-full_results <-full_results[order(full_results$test_pred, decreasing = TRUE), ]
+full_results <- full_pipeline_test(rgCases = rgCases,
+                                   rgControls = rgControls,
+                                   rgValid = rgValid,
+                                   method = method,
+                                   survival = survival,
+                                   random_forest = random_forest,
+                                   rf_surv_fac = rf_surv_fac,
+                                   rf_surv_con = rf_surv_con,
+                                   age_cutoff = age_cutoff,
+                                   cg_gene_regions = cg_gene_regions,
+                                   remove_age_cgs_lit = remove_age_lit,
+                                   remove_age_cgs = remove_age_cgs,
+                                   gender = gender,
+                                   tech = tech,
+                                   base_change = base_change,
+                                   exon_intron = exon_intron,
+                                   control_for_family = control_for_family,
+                                   k_folds = k_folds,
+                                   beta_thresh = beta_thresh,
+                                   controls = control_type)
 
 
-# random forest fac
-controls <- full_results %>% 
-  filter(cancer_diagnosis_diagnoses == 'Unaffected')
 
-controls <- controls[order(controls$pred_y, decreasing = T),]
-# get the individuals 
- #save results
+
+#save results
 # saveRDS(full_results, paste0('../../Data/results_data/noob_survival_72.rda'))
 
 # saveRDS(full_results, paste0('../../Data/results_data/',age_cutoff,'_',method,'_', cg_gene_regions,'_',survival ,'_', remove_age_lit ,'_', remove_age_cgs ,'_',gender, '_', tech, '_', base_change,'_',exon_intron, '_', control_for_family,'.rda'))
+temp_controls <- full_results[[1]]
+cases_clin <- full_results[[2]]
+temp_controls <- temp_controls[ , c('controls_age_pred', 'controls_age_label', 
+                                    'age_sample_collection', 'family_name')]
 
+temp_controls <- temp_controls[temp_controls$age_sample_collection < 73,]
 
-
-
-
-
+temp <- temp_controls[temp_controls$age_sample_collection < 73,]
 # get results from list 
 temp_cases <- full_results[[1]]
 
