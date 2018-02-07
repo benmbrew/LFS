@@ -120,9 +120,73 @@ rgValid <- remove_outliers(rgSet = rgValid,
 # save.image('~/Desktop/temp_450_850.RData')
 # load('~/Desktop/all_new.RData')
 
-full_pipeline_test <- function(rgCases, 
-                               rgControls, 
-                               rgValid, 
+# load in gene cpgs
+gene_probes <- read_csv('../../Data/all_gene_cpg_loc.csv')
+
+gene_region <- paste(cg_gene_regions, collapse = '|')
+# get probe gene region
+gene_probes <- gene_probes[grepl(gene_region, gene_probes$focal_gene_regions),]
+
+gene_probes <- as.character(gene_probes$focal_CpGs[!duplicated(gene_probes$focal_CpGs)])
+
+# dont control for gender in model if using funnorm
+# control for gender if you use raw or noob
+if (method == 'funnorm') {
+  keep_gender <- 
+    keep_controls <- T
+  keep_snps <- F
+} else if (method == 'noob') {
+  keep_gender <- F
+  keep_controls <- T
+  keep_snps <- F
+} else {
+  keep_gender <- 
+    keep_controls <-
+    keep_snps <- F
+}
+
+
+# cases
+rg_cases <- subset_rg_set(rg_set = rgCases,
+                          keep_gender = keep_gender,
+                          keep_controls = keep_controls,
+                          keep_snps = keep_snps,
+                          get_island = NULL,
+                          get_chr = NULL,
+                          get_type = NULL,
+                          gene_probes = gene_probes)
+
+# controls
+rg_controls <- subset_rg_set(rg_set = rgControls,
+                             keep_gender = keep_gender,
+                             keep_controls = keep_controls,
+                             keep_snps = keep_snps,
+                             get_island = NULL,
+                             get_chr = NULL,
+                             get_type = NULL,
+                             gene_probes = gene_probes)
+
+# valid
+rg_valid <- subset_rg_set(rg_set = rgValid,
+                          keep_gender = keep_gender,
+                          keep_controls = keep_controls,
+                          keep_snps = keep_snps,
+                          get_island = NULL,
+                          get_chr = NULL,
+                          get_type = NULL,
+                          gene_probes = gene_probes)
+
+
+# preprocess controls and valid
+beta_cases <-  preprocessMethod(rg_cases, preprocess = method)
+beta_controls <- preprocessMethod(rg_controls, preprocess = method)
+beta_valid <- preprocessMethod(rg_valid, preprocess = method)
+
+
+
+full_pipeline_test <- function(beta_cases, 
+                               beta_controls, 
+                               beta_valid, 
                                method,
                                survival,
                                random_forest,
@@ -143,72 +207,11 @@ full_pipeline_test <- function(rgCases,
   
   
   
-  # load in gene cpgs
-  gene_probes <- read_csv('../../Data/all_gene_cpg_loc.csv')
-  
-  gene_region <- paste(cg_gene_regions, collapse = '|')
-  # get probe gene region
-  gene_probes <- gene_probes[grepl(gene_region, gene_probes$focal_gene_regions),]
-  
-  gene_probes <- as.character(gene_probes$focal_CpGs[!duplicated(gene_probes$focal_CpGs)])
-  
-  # dont control for gender in model if using funnorm
-  # control for gender if you use raw or noob
-  if (method == 'funnorm') {
-    keep_gender <- 
-      keep_controls <- T
-    keep_snps <- F
-  } else if (method == 'noob') {
-    keep_gender <- F
-    keep_controls <- T
-    keep_snps <- F
-  } else {
-    keep_gender <- 
-      keep_controls <-
-      keep_snps <- F
-  }
-  
-  
-  # cases
-  rg_cases <- subset_rg_set(rg_set = rgCases,
-                            keep_gender = keep_gender,
-                            keep_controls = keep_controls,
-                            keep_snps = keep_snps,
-                            get_island = NULL,
-                            get_chr = NULL,
-                            get_type = NULL,
-                            gene_probes = gene_probes)
-  
-  # controls
-  rg_controls <- subset_rg_set(rg_set = rgControls,
-                               keep_gender = keep_gender,
-                               keep_controls = keep_controls,
-                               keep_snps = keep_snps,
-                               get_island = NULL,
-                               get_chr = NULL,
-                               get_type = NULL,
-                               gene_probes = gene_probes)
-  
-  # valid
-  rg_valid <- subset_rg_set(rg_set = rgValid,
-                            keep_gender = keep_gender,
-                            keep_controls = keep_controls,
-                            keep_snps = keep_snps,
-                            get_island = NULL,
-                            get_chr = NULL,
-                            get_type = NULL,
-                            gene_probes = gene_probes)
-  
   
   # list to store cv results
   temp_cases <- list()
   temp_controls <- list()
   surv_results <- list()
-  
-  # preprocess controls and valid
-  beta_cases <-  preprocessMethod(rg_cases, preprocess = method)
-  beta_controls <- preprocessMethod(rg_controls, preprocess = method)
-  beta_valid <- preprocessMethod(rg_valid, preprocess = method)
   
   # get controls
   beta_cases <- process_rg_set_single(beta_data = beta_cases, 
@@ -341,42 +344,42 @@ full_pipeline_test <- function(rgCases,
   
   if(control_for_family) {
     
-    # read family dictionary
+    # # read family dictionary
     temp_fam <- read_csv('../../full_clin.csv')
-    
+
     # remove these ids from cases
     remove_cases <- temp_fam$tm_donor_[temp_fam$keep_status == 'remove' &
                                          !grepl('Unaffected', temp_fam$cancer_diagnosis_diagnoses)]
     remove_cases <- paste0('^', remove_cases, '$',collapse  = '|')
-    
+
     # remove these ids from controls
     remove_controls <- temp_fam$tm_donor_[temp_fam$keep_status == 'remove' &
                                          grepl('Unaffected', temp_fam$cancer_diagnosis_diagnoses)]
     remove_controls <- paste0('^', remove_controls, '$',collapse  = '|')
-    
+
     # removed these from each case and control
     beta_cases_full <- beta_cases_full[!grepl(remove_cases, beta_cases_full$tm_donor_),]
     beta_controls_full <- beta_controls_full[!grepl(remove_controls, beta_controls_full$tm_donor_),]
-    
-    hist(beta_cases_full$age_sample_collection)
-    hist(beta_controls_full$age_sample_collection)
-    
-    
+
+    # hist(beta_cases_full$age_sample_collection)
+    # hist(beta_controls_full$age_sample_collection)
+
+
     
     # # group by family name for both data sets (subset 1:12 because it will go quicker)
     # # and get counts for each family
     # temp_family_cases <- beta_cases_full[, 1:100] %>%
     #   group_by(family_name) %>%
     #   summarise(counts_cases = n(),
-    #             mean_age_case = mean(age_sample_collection, na.rm = T)) 
+    #             mean_age_case = mean(age_sample_collection, na.rm = T))
     # 
     # temp_family_controls <- beta_controls_full[, 1:100] %>%
     #   group_by(family_name) %>%
     #   summarise(counts_controls = n(),
-    #             mean_age_con = mean(age_sample_collection, na.rm = T)) 
+    #             mean_age_con = mean(age_sample_collection, na.rm = T))
     # 
     # # join by faimly name and get the number of time families in cases have more counts than families in controls
-    # # cases has more 
+    # # cases has more
     # temp_all <- inner_join(temp_family_cases, temp_family_controls, by = 'family_name')
     # temp_all$more_cases <- ifelse(temp_all$counts_cases > temp_all$counts_controls, TRUE, FALSE)
     # 
@@ -388,7 +391,7 @@ full_pipeline_test <- function(rgCases,
     # 
     # beta_cases_full <- beta_cases_full[!grepl(remove_from_cases, beta_cases_full$family_name), ]
     # beta_controls_full <- beta_controls_full[!grepl(remove_from_controls, beta_controls_full$family_name), ]
-    # 
+
     # # remove cases that are over a certain age
     # clin_cases <- beta_cases_full[, 1:23]
     # clin_controls <- beta_controls_full[, 1:23]
@@ -413,7 +416,7 @@ full_pipeline_test <- function(rgCases,
     
   } else {
     # get vector of random folds
-    fold_vec <- sample(1:k_folds, nrow(beta_cases_full), replace = T)
+    # fold_vec <- sample(1:k_folds, nrow(beta_cases_full), replace = T)
     
   }
   
@@ -491,19 +494,19 @@ random_forest = F
 rf_surv_fac = F
 rf_surv_con = F
 survival = F
-remove_age_cgs = F
+remove_age_cgs = T
 remove_age_lit = T
 gender = T
 tech = T
 base_change = F
 exon_intron = F
 control_for_family = T
-beta_thresh = 0.05
+beta_thresh = 0.01
 
 # run full pipeline
-full_results <- full_pipeline_test(rgCases = rgCases,
-                                   rgControls = rgControls,
-                                   rgValid = rgValid,
+full_results <- full_pipeline_test(beta_cases = beta_cases,
+                                   beta_controls = beta_controls,
+                                   beta_valid = beta_valid,
                                    method = method,
                                    survival = survival,
                                    random_forest = random_forest,
@@ -521,8 +524,6 @@ full_results <- full_pipeline_test(rgCases = rgCases,
                                    k_folds = k_folds,
                                    beta_thresh = beta_thresh,
                                    controls = control_type)
-
-
 
 
 #save results

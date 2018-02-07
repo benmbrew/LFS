@@ -5645,7 +5645,7 @@ run_enet_450_850 <- function(training_dat,
   temp_dat_con <- as.data.frame(cbind(controls_age_pred = test.predictions_con, controls_age_label = controls_y, test_controls))
   
   ###########################################################################################
-  return(list(temp_dat, temp_dat_con))
+  return(list(temp_dat, temp_dat_con, model, elastic_net.cv_model$lambda.min, best_alpha))
   
 }
 
@@ -6096,4 +6096,221 @@ run_coxreg <- function(training_dat,
   }
   
 }
+
+
+run_enet_all <- function(training_dat = train_cases,
+                         controls_dat = beta_controls_mod,
+                         valid_dat = beta_valid_mod,
+                         test_dat = test_cases,
+                         age_cutoff = age_cutoff,
+                         gender = gender,
+                         tech = tech,
+                         base_change = base_change,
+                         exon_intron = exon_intron,
+                         bh_features = bh_features) {
+  
+  
+  
+  # get intersection of bh features and real data
+  bh_features <- as.character(unlist(bh_features))
+  
+  intersected_feats <- intersect(bh_features, colnames(training_dat))
+  
+  if(gender) {
+    
+    intersected_feats <- append('M', intersected_feats)
+    intersected_feats <- append('F', intersected_feats)
+  }
+  
+  # if (tech) {
+  #   
+  #   intersected_feats <- append('a', intersected_feats)
+  #   intersected_feats <- append('b', intersected_feats)
+  # }
+  
+  # if (base_change){
+  #   
+  #   
+  #   intersected_feats <- append('none', intersected_feats)
+  #   intersected_feats <- append('A', intersected_feats)
+  #   intersected_feats <- append('C', intersected_feats)
+  #   intersected_feats <- append('G', intersected_feats)
+  #   intersected_feats <- append('T', intersected_feats)
+  # }
+  # 
+  # if(exon_intron) {
+  #   
+  #   intersected_feats <- append('exon', intersected_feats)
+  #   intersected_feats <- append('intron', intersected_feats)
+  #   intersected_feats <- append('not_clear', intersected_feats)
+  #   
+  #   
+  # }
+  # 
+  
+  # intersected_feats_rand <- intersect(rand_feats, colnames(training_dat))
+  # # get y
+  train_y <- ifelse(training_dat$age_diagnosis < age_cutoff, 1, 0)
+  test_y <-  ifelse(test_dat$age_diagnosis < age_cutoff, 1, 0)
+  # controls
+  controls_y <-  ifelse(controls_dat$age_sample_collection < age_cutoff, 1, 0)
+  valid_y <-  ifelse(valid_dat$age_sample_collection < age_cutoff, 1, 0)
+  
+  
+  # get clinical data
+  cg_start <- which(grepl('cg', colnames(test_dat)))[1]
+  test_clin <- test_dat[, 1:(cg_start - 1)]
+  controls_clin <- controls_dat[, 1:(cg_start - 1)]
+  valid_clin <- valid_dat[, 1:(cg_start - 1)]
+  
+  
+  # get bumphunter features
+  training_dat <- training_dat[, intersected_feats]
+  test_dat <- test_dat[, intersected_feats]
+  controls_dat <- controls_dat[, intersected_feats]
+  valid_dat <- valid_dat[, intersected_feats]
+  
+  
+  # start elastic net tuning
+  N_CV_REPEATS = 2
+  nfolds = 3
+  
+  ###### ENET
+  # create vector and list to store best alpha on training data. alpha is the parameter that choses the 
+  # the optimal proportion lambda, the tuning parameter for L1 (ridge) and L2 (lasso)
+  elastic_net.cv_error = vector()
+  elastic_net.cv_model = list()
+  elastic_net.ALPHA <- c(1:9) / 10 # creates possible alpha values for model to choose from
+  
+  # set parameters for training model
+  type_family <- 'binomial'
+  type_measure <- 'auc'
+  
+  # create error matrix for for opitmal alpha that can run in parraellel if you have bigger data 
+  # or if you have a high number fo N_CV_REPEATS
+  temp.cv_error_matrix <- foreach (temp = 1:N_CV_REPEATS, .combine=rbind, .errorhandling="stop") %do% {      
+    for (alpha in 1:length(elastic_net.ALPHA)) # for i in 1:9 - the model will run 9 times
+    {      
+      elastic_net.cv_model[[alpha]] = cv.glmnet(x = as.matrix(training_dat)
+                                                , y =  train_y
+                                                , alpha = elastic_net.ALPHA[alpha] # first time with 0.1 and so on
+                                                , type.measure = type_measure
+                                                , family = type_family
+                                                , standardize = FALSE 
+                                                , nfolds = nfolds 
+                                                , nlambda = 10
+                                                , parallel = TRUE
+      )
+      elastic_net.cv_error[alpha] = min(elastic_net.cv_model[[alpha]]$cvm)
+    }
+    elastic_net.cv_error # stores 9 errors    
+  }
+  
+  if (N_CV_REPEATS == 1) {
+    temp.cv_error_mean = temp.cv_error_matrix
+  } else {
+    temp.cv_error_mean = apply(temp.cv_error_matrix, 2, mean) # take the mean of the 5 iterations  
+    # as your value for alpha
+  }
+  
+  # stop if you did not recover error for any models 
+  stopifnot(length(temp.cv_error_mean) == length(elastic_net.ALPHA))
+  
+  # get index of best alpha (lowest error) - alpha is values 0.1-0.9
+  temp.best_alpha_index = which(min(temp.cv_error_mean) == temp.cv_error_mean)[length(which(min(temp.cv_error_mean) == temp.cv_error_mean))] 
+  # print(paste("Best ALPHA:", elastic_net.ALPHA[temp.best_alpha_index])) # print the value for alpha
+  best_alpha <- elastic_net.ALPHA[temp.best_alpha_index]
+  temp.non_zero_coeff = 0
+  temp.loop_count = 0
+  # loop runs initially because temp.non_zero coefficient <3 and then stops 
+  # usually after one iteration because the nzero variable selected by lambda is greater that 3. if it keeps looping
+  # it they are never greater than 1, then the model does not converge. 
+  while (temp.non_zero_coeff < 1) { 
+    elastic_net.cv_model = cv.glmnet(x = as.matrix(training_dat)
+                                     , y =  train_y
+                                     , alpha = elastic_net.ALPHA[temp.best_alpha_index]
+                                     , type.measure = type_measure
+                                     , family = type_family
+                                     , standardize=FALSE
+                                     , nlambda = 100
+                                     , nfolds = nfolds
+                                     , parallel = TRUE
+    )
+    
+    # get optimal lambda - the tuning parameter for ridge and lasso
+    # THIS IS IMPORTANT BECAUSE WHEN YOU TRAIN THE MODEL ON 100 SEPERATE VALUES OF LAMBDA
+    # AND WHEN YOU TEST THE MODEL IT WILL RETURN PREDCITION FOR ALL THOSE VALUES (1-100). YOU NEED TO 
+    # GRAB THE PREDICTION WITH SAME LAMBDA THAT YOU TRAINED ON. ITS ALL IN THE CODE, BUT JUST WANTED TO 
+    # GIVE YOU REASONS
+    temp.min_lambda_index = which(elastic_net.cv_model$lambda == elastic_net.cv_model$lambda.min) 
+    
+    # # number of non zero coefficients at that lambda    
+    temp.non_zero_coeff = elastic_net.cv_model$nzero[temp.min_lambda_index] 
+    temp.loop_count = temp.loop_count + 1
+    
+    # set seed for next loop iteration
+    as.numeric(Sys.time())-> t 
+    set.seed((t - floor(t)) * 1e8 -> seed) 
+    if (temp.loop_count > 10) {
+      print("diverged")
+      temp.min_lambda_index = 50 # if it loops more than 5 times, then model did not converge
+      break
+    }
+  }# while loop ends 
+  # print(temp.non_zero_coeff)  
+  
+  model  = glmnet(x = as.matrix(training_dat)
+                  , y =  train_y
+                  ,alpha = elastic_net.ALPHA[temp.best_alpha_index]
+                  ,standardize=FALSE
+                  ,nlambda = 100
+                  ,family = type_family)
+  
+  # Predictions on test data
+  
+  # This returns 100 prediction with 1-100 lambdas
+  temp_test.predictions <- predict(model, 
+                                   data.matrix(test_dat),
+                                   type = 'response')
+  
+  
+  # get predictions with corresponding lambda.
+  test.predictions <- temp_test.predictions[, temp.min_lambda_index]
+  
+  # combine predictions and real labels 
+  temp_dat <- as.data.frame(cbind(test_pred = test.predictions, test_label = test_y, test_clin))
+  
+  
+  # Predictions on controls data
+  
+  # This returns 100 prediction with 1-100 lambdas
+  temp_test.predictions_con <- predict(model, 
+                                       data.matrix(controls_dat),
+                                       type = 'response')
+  
+  # get predictions with corresponding lambda.
+  test.predictions_con <- temp_test.predictions_con[, temp.min_lambda_index]
+  
+  # combine predictions and real labels 
+  temp_dat_con <- as.data.frame(cbind(controls_age_pred = test.predictions_con, controls_age_label = controls_y, controls_clin))
+  
+  # Predictions on controls data
+  
+  # This returns 100 prediction with 1-100 lambdas
+  temp_test.predictions_valid <- predict(model, 
+                                       data.matrix(valid_dat),
+                                       type = 'response')
+  
+  # get predictions with corresponding lambda.
+  test.predictions_valid <- temp_test.predictions_valid[, temp.min_lambda_index]
+  
+  # combine predictions and real labels 
+  temp_dat_valid <- as.data.frame(cbind(valid_age_pred = test.predictions_valid, valid_age_label = valid_y, valid_clin))
+  
+  ###########################################################################################
+  return(list(temp_dat, temp_dat_con, temp_dat_valid,model, elastic_net.cv_model$lambda.min, best_alpha))
+  
+}
+
+
 

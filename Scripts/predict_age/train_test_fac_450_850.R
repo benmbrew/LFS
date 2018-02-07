@@ -203,6 +203,9 @@ full_pipeline <- function(rgCases,
   # list to store cv results
   temp_cases <- list()
   temp_controls <- list()
+  temp_models <- list()
+  temp_lambda <- list()
+  temp_alpha <- list()
   surv_results <- list()
   
   # preprocess controls and valid
@@ -355,8 +358,8 @@ full_pipeline <- function(rgCases,
     beta_cases_full <- beta_cases_full[!grepl(remove_cases, beta_cases_full$tm_donor_),]
     beta_controls_full <- beta_controls_full[!grepl(remove_controls, beta_controls_full$tm_donor_),]
     
-    hist(beta_cases_full$age_sample_collection)
-    hist(beta_controls_full$age_sample_collection)
+    # hist(beta_cases_full$age_sample_collection)
+    # hist(beta_controls_full$age_sample_collection)
     
     # # group by family name for both data sets (subset 1:12 because it will go quicker)
     # # and get counts for each family
@@ -459,11 +462,12 @@ full_pipeline <- function(rgCases,
                                       exon_intron = exon_intron,
                                       bh_features = bh_features)
       
-    
-      
-      
       temp_cases[[i]] <- mod_result[[1]]
       temp_controls[[i]] <- mod_result[[2]]
+      temp_models[[i]] <- mod_result[[3]]
+      temp_lambda[[i]] <- mod_result[[4]]
+      temp_alpha[[i]] <- mod_result[[5]]
+      
       
       print(i)
     }
@@ -473,12 +477,11 @@ full_pipeline <- function(rgCases,
   if(survival) {
     surv_final <- do.call(rbind, surv_results)
     return(surv_final)
-    
   }
   full_cases <- do.call(rbind, temp_cases)
   full_controls <- do.call(rbind, temp_controls)
 
-  return(list(full_cases, full_controls))
+  return(list(full_cases, full_controls, temp_models, temp_lambda, temp_alpha))
 }
 
 
@@ -497,15 +500,17 @@ random_forest = F
 rf_surv_fac = F
 rf_surv_con = F
 survival = F
-remove_age_cgs = F
+remove_age_cgs = T
 remove_age_lit = T
 gender = T
 tech = T
 base_change = F
 exon_intron = F
 control_for_family = F
-k_folds = 4
-beta_thresh = 0.1
+k_folds = 5
+beta_thresh = 0.05
+
+set.seed(10)
 
 # run full pipeline
 full_results <- full_pipeline(rgCases = rgCases,
@@ -529,8 +534,9 @@ full_results <- full_pipeline(rgCases = rgCases,
                               beta_thresh = beta_thresh,
                               controls = control_type)
 
-full_results <-full_results[order(full_results$test_pred, decreasing = TRUE), ]
 
+# full_results <-full_results[order(full_results$test_pred, decreasing = TRUE), ]
+temp <- full_results[[2]]
 
 # random forest fac
 controls <- full_results %>% 
@@ -567,13 +573,13 @@ temp_controls <- temp_controls[ , c('controls_age_pred', 'controls_age_label',
 
 
 # get person identfier 
-temp_controls$p_id <- rep.int(seq(1, 44, 1), 4)
+temp_controls$p_id <- rep.int(seq(1, 35, 1), 4)
 
 # group by fold and get mean 
 temp_controls_pred <- temp_controls %>%
   group_by(p_id) %>%
   summarise(mean_pred = mean(controls_age_pred, na.rm =T)) %>%
-  cbind(temp_controls[1:44,])
+  cbind(temp_controls[1:35,])
 
 temp_controls$controls_pred_label <- ifelse(temp_controls$controls_age_pred > .5, 1, 0)
 
