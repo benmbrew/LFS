@@ -113,12 +113,87 @@ rgValid <- remove_outliers(rgSet = rgValid,
                            type = 'valid')
 
 
+# load in gene cpgs
+gene_probes <- read_csv('../../Data/all_gene_cpg_loc.csv')
+
+gene_region <- paste(cg_gene_regions, collapse = '|')
+# get probe gene region
+gene_probes <- gene_probes[grepl(gene_region, gene_probes$focal_gene_regions),]
+
+gene_probes <- as.character(gene_probes$focal_CpGs[!duplicated(gene_probes$focal_CpGs)])
+
+# dont control for gender in model if using funnorm
+# control for gender if you use raw or noob
+if (method == 'funnorm') {
+  keep_gender <- 
+    keep_controls <- T
+  keep_snps <- F
+} else if (method == 'noob') {
+  keep_gender <- F
+  keep_controls <- T
+  keep_snps <- F
+} else {
+  keep_gender <- 
+    keep_controls <-
+    keep_snps <- F
+}
+
+
+# cases
+rg_cases <- subset_rg_set(rg_set = rgCases,
+                          keep_gender = keep_gender,
+                          keep_controls = keep_controls,
+                          keep_snps = keep_snps,
+                          get_island = NULL,
+                          get_chr = NULL,
+                          get_type = NULL,
+                          gene_probes = gene_probes)
+
+# controls
+rg_controls <- subset_rg_set(rg_set = rgControls,
+                             keep_gender = keep_gender,
+                             keep_controls = keep_controls,
+                             keep_snps = keep_snps,
+                             get_island = NULL,
+                             get_chr = NULL,
+                             get_type = NULL,
+                             gene_probes = gene_probes)
+
+# valid
+rg_valid <- subset_rg_set(rg_set = rgValid,
+                          keep_gender = keep_gender,
+                          keep_controls = keep_controls,
+                          keep_snps = keep_snps,
+                          get_island = NULL,
+                          get_chr = NULL,
+                          get_type = NULL,
+                          gene_probes = gene_probes)
+
+
+# preprocess controls and valid
+beta_cases <-  preprocessMethod(rg_cases, preprocess = method)
+beta_controls <- preprocessMethod(rg_controls, preprocess = method)
+beta_valid <- preprocessMethod(rg_valid, preprocess = method)
+
+# get controls
+beta_cases <- process_rg_set_single(beta_data = beta_cases, 
+                                    id_map = id_map_cases, 
+                                    clin = clin)
+# get controls
+beta_controls_mod <- process_rg_set_single(beta_data = beta_controls, 
+                                           id_map = id_map_con, 
+                                           clin = clin)
+
+# get valid
+beta_valid_mod <- process_rg_set_single(beta_data = beta_valid, 
+                                        id_map = id_map_val, 
+                                        clin = clin)
+
+# save.image('~/Desktop/m_values.RData')
+
 ##########
 # subset data - remove controls probes on each data set only if raw preprocessing
 ##########
-
-# save.image('~/Desktop/temp_450_850.RData')
-load('~/Desktop/all_new.RData')
 
 full_pipeline <- function(rgCases, 
                           rgControls, 
@@ -131,87 +206,15 @@ full_pipeline <- function(rgCases,
                           k_folds) {
   
   
+ 
   
-  # load in gene cpgs
-  gene_probes <- read_csv('../../Data/all_gene_cpg_loc.csv')
-  
-  gene_region <- paste(cg_gene_regions, collapse = '|')
-  # get probe gene region
-  gene_probes <- gene_probes[grepl(gene_region, gene_probes$focal_gene_regions),]
-  
-  gene_probes <- as.character(gene_probes$focal_CpGs[!duplicated(gene_probes$focal_CpGs)])
-  
-  # dont control for gender in model if using funnorm
-  # control for gender if you use raw or noob
-  if (method == 'funnorm') {
-    keep_gender <- 
-      keep_controls <- T
-    keep_snps <- F
-  } else if (method == 'noob') {
-    keep_gender <- F
-    keep_controls <- T
-    keep_snps <- F
-  } else {
-    keep_gender <- 
-      keep_controls <-
-      keep_snps <- F
-  }
-  
-  
-  # cases
-  rg_cases <- subset_rg_set(rg_set = rgCases,
-                            keep_gender = keep_gender,
-                            keep_controls = keep_controls,
-                            keep_snps = keep_snps,
-                            get_island = NULL,
-                            get_chr = NULL,
-                            get_type = NULL,
-                            gene_probes = gene_probes)
-  
-  # controls
-  rg_controls <- subset_rg_set(rg_set = rgControls,
-                               keep_gender = keep_gender,
-                               keep_controls = keep_controls,
-                               keep_snps = keep_snps,
-                               get_island = NULL,
-                               get_chr = NULL,
-                               get_type = NULL,
-                               gene_probes = gene_probes)
-  
-  # valid
-  rg_valid <- subset_rg_set(rg_set = rgValid,
-                            keep_gender = keep_gender,
-                            keep_controls = keep_controls,
-                            keep_snps = keep_snps,
-                            get_island = NULL,
-                            get_chr = NULL,
-                            get_type = NULL,
-                            gene_probes = gene_probes)
   
   
   # list to store cv results
   temp_cases <- list()
   temp_controls <- list()
   surv_results <- list()
-  
-  # preprocess controls and valid
-  beta_cases <-  preprocessMethod(rg_cases, preprocess = method)
-  beta_controls <- preprocessMethod(rg_controls, preprocess = method)
-  beta_valid <- preprocessMethod(rg_valid, preprocess = method)
-  
-  # get controls
-  beta_cases <- process_rg_set_single(beta_data = beta_cases, 
-                                      id_map = id_map_cases, 
-                                      clin = clin)
-  # get controls
-  beta_controls_mod <- process_rg_set_single(beta_data = beta_controls, 
-                                             id_map = id_map_con, 
-                                             clin = clin)
-  
-  # get valid
-  beta_valid_mod <- process_rg_set_single(beta_data = beta_valid, 
-                                          id_map = id_map_val, 
-                                          clin = clin)
+
  
   # get intersecting name
   intersect_names <- Reduce(intersect, list(colnames(beta_cases)[12:ncol(beta_cases)],

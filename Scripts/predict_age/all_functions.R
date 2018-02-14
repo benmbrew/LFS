@@ -50,8 +50,8 @@ preprocessMethod <- function(data, preprocess) {
   # # get m values
   m <- getM(Mset)
   # get beta values
-  beta <- getBeta(Gset)
-  return(beta)
+  # beta <- getBeta(Gset)
+  return(m)
 }
 
 # functions to be used in model_pipeline script
@@ -5285,7 +5285,7 @@ bump_hunter <- function(dat_1,
                            nullMethod = "bootstrap",
                            cutoff = DELTA_BETA_THRESH,
                            B = NUM_BOOTSTRAPS,
-                           type = "Beta")
+                           type = "M")
     
     bump_hunter_results[[i]] <- tab[[i]]$table
     bump_hunter_results[[i]]$run <- DELTA_BETA_THRESH[i]

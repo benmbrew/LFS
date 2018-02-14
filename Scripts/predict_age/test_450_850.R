@@ -117,9 +117,6 @@ rgValid <- remove_outliers(rgSet = rgValid,
 # subset data - remove controls probes on each data set only if raw preprocessing
 ##########
 
-# save.image('~/Desktop/temp_450_850.RData')
-# load('~/Desktop/all_new.RData')
-
 # load in gene cpgs
 gene_probes <- read_csv('../../Data/all_gene_cpg_loc.csv')
 
@@ -182,6 +179,22 @@ beta_cases <-  preprocessMethod(rg_cases, preprocess = method)
 beta_controls <- preprocessMethod(rg_controls, preprocess = method)
 beta_valid <- preprocessMethod(rg_valid, preprocess = method)
 
+# get controls
+beta_cases <- process_rg_set_single(beta_data = beta_cases, 
+                                    id_map = id_map_cases, 
+                                    clin = clin)
+# get controls
+beta_controls_mod <- process_rg_set_single(beta_data = beta_controls, 
+                                           id_map = id_map_con, 
+                                           clin = clin)
+
+# get valid
+beta_valid_mod <- process_rg_set_single(beta_data = beta_valid, 
+                                        id_map = id_map_val, 
+                                        clin = clin)
+
+
+load('~/Desktop/m_values.RData')
 
 
 full_pipeline_test <- function(beta_cases, 
@@ -213,19 +226,7 @@ full_pipeline_test <- function(beta_cases,
   temp_controls <- list()
   surv_results <- list()
   
-  # get controls
-  beta_cases <- process_rg_set_single(beta_data = beta_cases, 
-                                      id_map = id_map_cases, 
-                                      clin = clin)
-  # get controls
-  beta_controls_mod <- process_rg_set_single(beta_data = beta_controls, 
-                                             id_map = id_map_con, 
-                                             clin = clin)
-  
-  # get valid
-  beta_valid_mod <- process_rg_set_single(beta_data = beta_valid, 
-                                          id_map = id_map_val, 
-                                          clin = clin)
+
   
   if(method == 'raw'){
     # remove NAs
@@ -479,8 +480,6 @@ full_pipeline_test <- function(beta_cases,
 }
 
 
-load('~/Desktop/all_new.RData')
-
 source('all_functions.R')
 
 ##########
@@ -494,14 +493,14 @@ random_forest = F
 rf_surv_fac = F
 rf_surv_con = F
 survival = F
-remove_age_cgs = T
-remove_age_lit = T
+remove_age_cgs_lm = F
+remove_age_cgs_lit = T
 gender = T
 tech = T
 base_change = F
 exon_intron = F
-control_for_family = T
-beta_thresh = 0.01
+control_for_family = F
+beta_thresh = 0.1
 
 # run full pipeline
 full_results <- full_pipeline_test(beta_cases = beta_cases,

@@ -51,7 +51,6 @@ clin <- read.csv('../../Data/clin_data/clinical_two.csv', stringsAsFactors = F)
 # clean clinical ids
 clin$ids <-  gsub('A|B|_|-', '', clin$blood_dna_malkin_lab_)
 
-
 ##########
 # cases 
 ##########
@@ -69,7 +68,6 @@ rm(id_map_tor, id_map_mon)
 
 # clean id map
 id_map_cases <- cleanIdMap(id_map_cases)
-
 
 ##########
 # Controls batch1
@@ -100,7 +98,6 @@ colnames(id_map_val)[5] <- 'Sample_Plate'
 # clean idmap
 id_map_val <- cleanIdMap(id_map_val)
 
-
 ##########
 # remove outliers (previously determined) from rgset before normalization
 ##########
@@ -119,10 +116,6 @@ rgValid <- remove_outliers(rgSet = rgValid,
 ##########
 # subset data - remove controls probes on each data set only if raw preprocessing
 ##########
-
-load('~/Desktop/all_new.RData')
-source('all_functions.R')
-
 
 # load in gene cpgs
 gene_probes <- read_csv('../../Data/all_gene_cpg_loc.csv')
@@ -200,6 +193,10 @@ beta_controls_mod <- process_rg_set_single(beta_data = beta_controls,
 beta_valid_mod <- process_rg_set_single(beta_data = beta_valid, 
                                         id_map = id_map_val, 
                                         clin = clin)
+
+# save.image('~/Desktop/m_values.RData')
+load('~/Desktop/m_values.RData')
+
 
 full_pipeline_test <- function(beta_cases, 
                                beta_controls, 
@@ -518,12 +515,6 @@ full_pipeline_test <- function(beta_cases,
   return(list(full_cases, full_controls, temp_models, temp_lambda, temp_alpha))
 }
 
-
-
-load('~/Desktop/all_new.RData')
-
-source('all_functions.R')
-
 ##########
 # fixed variables
 ##########
@@ -535,14 +526,14 @@ random_forest = F
 rf_surv_fac = F
 rf_surv_con = F
 survival = F
-remove_age_cgs = T
-remove_age_lit = T
+remove_age_cgs_lm = F
+remove_age_cgs_lit = T
 gender = T
 tech = T
 base_change = F
 exon_intron = F
-control_for_family = T
-beta_thresh = 0.01
+control_for_family = F
+beta_thresh = 0.1
 k_folds <- 5
 # run full pipeline
 full_results <- full_pipeline_test(beta_cases = beta_cases,
