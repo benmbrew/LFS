@@ -1,194 +1,19 @@
 
+
+# set preprocessing method
+method <- 'noob'
+
+# set type of data, beta or m
+methyl_type <- 'm'
+
 # source all_functions.R to load libraries and my functions
 source('all_functions.R')
 
-##########
-# get base directory for 4 batch
-##########
-path_to_cases_tor <- '../../Data/methyl_data/cases_toronto'
-path_to_cases_mon <- '../../Data/methyl_data/cases_montreal'
-path_to_controls <- '../../Data/methyl_data/controls'
-path_to_valid <- '../../Data/methyl_data/validation'
-
-##########
-# read in meth array - Data/methyl_data/cases_toronto, cases_montreal, controls, validation
-##########
-
-# cases 
-rgCasesT <- read.metharray.exp(path_to_cases_tor, recursive = T)
-rgCasesM <- read.metharray.exp(path_to_cases_mon, recursive = T)
-
-# combine cases arrays 
-rgCases <- combineArrays(rgCasesT, rgCasesM)
-rm(rgCasesT, rgCasesM)
-
-# controls
-rgControls <- read.metharray.exp(path_to_controls, recursive = T)
-
-rgValid <- read.metharray.exp(path_to_valid, recursive = T)
-
-##########
-# load genomic methyl set (from controls) - you need genetic locations by probe from this object
-##########
-ratio_set <- readRDS('../../Data/model_data/raw_ratio_set.rda')
-
-# get granges object
-g_ranges <- as.data.frame(getLocations(ratio_set))
-
-# get probes from rownames
-g_ranges$probe <- rownames(g_ranges)
-
-# remove ch and duplicatee
-g_ranges <- g_ranges[!duplicated(g_ranges$start),]
-g_ranges <- g_ranges[!grepl('ch', g_ranges$probe),]
-
-##########
-# read in clinical data
-##########
-clin <- read.csv('../../Data/clin_data/clinical_two.csv', stringsAsFactors = F)
-
-# clean clinical ids
-clin$ids <-  gsub('A|B|_|-', '', clin$blood_dna_malkin_lab_)
-
-
-##########
-# cases 
-##########
-
-# cases batch1
-id_map_tor <- read.csv(paste0(path_to_cases_tor, '/SampleSheet.csv'), stringsAsFactors = F)
-
-#cases batch2
-id_map_mon <- read.csv(paste0(path_to_cases_mon, '/SampleSheet.csv'), stringsAsFactors = F)
-id_map_mon$Project <- NULL
-
-# combine id_map and id_map_other
-id_map_cases <- rbind(id_map_tor, id_map_mon)
-rm(id_map_tor, id_map_mon)
-
-# clean id map
-id_map_cases <- cleanIdMap(id_map_cases)
-
-
-##########
-# Controls batch1
-##########
-id_map_con <- read.csv(paste0(path_to_controls, '/SampleSheet.csv'), stringsAsFactors = F)
-
-# clean idmap
-id_map_con <- cleanIdMap(id_map_con)
-
-##########
-# valid
-##########
-id_map_val <- read.csv(paste0(path_to_valid, '/SampleSheet.csv'))
-
-# homogenize valid map data with cases and controls
-id_map_val <- id_map_val[, c('Sample.ID', 'Sample.Group', 'Sentrix.Barcode', 'Sample.Section',
-                             'Project', 'Pool_ID', 'Sample_Well')]
-
-# sub out '.' for '_'
-colnames(id_map_val) <- gsub('.', '_', colnames(id_map_val), fixed = T)
-
-# change 'Sample_ID' to 'Sample_Name' and 'Sentrix_Barcode' to 'Sentrix_ID'
-colnames(id_map_val)[1] <- 'Sample_Name'
-colnames(id_map_val)[3] <- 'Sentrix_ID'
-colnames(id_map_val)[4] <- 'Sentrix_Position'
-colnames(id_map_val)[5] <- 'Sample_Plate'
-
-# clean idmap
-id_map_val <- cleanIdMap(id_map_val)
-
-##########
-# remove outliers (previously determined) from rgset before normalization
-##########
-rgControls <- remove_outliers(rgSet = rgControls,
-                              id_map = id_map_con,
-                              method = 'doesnt_matter',
-                              type = 'controls')
-
-rgValid <- remove_outliers(rgSet = rgValid,
-                           id_map = id_map_val,
-                           method = 'doesnt_matter',
-                           type = 'valid')
-
-# load in gene cpgs
-gene_probes <- read_csv('../../Data/all_gene_cpg_loc.csv')
-
-gene_region <- paste(cg_gene_regions, collapse = '|')
-# get probe gene region
-gene_probes <- gene_probes[grepl(gene_region, gene_probes$focal_gene_regions),]
-
-gene_probes <- as.character(gene_probes$focal_CpGs[!duplicated(gene_probes$focal_CpGs)])
-
-# dont control for gender in model if using funnorm
-# control for gender if you use raw or noob
-if (method == 'funnorm') {
-  keep_gender <- 
-    keep_controls <- T
-  keep_snps <- F
-} else if (method == 'noob') {
-  keep_gender <- F
-  keep_controls <- T
-  keep_snps <- F
-} else {
-  keep_gender <- 
-    keep_controls <-
-    keep_snps <- F
-}
-
-
-# cases
-rg_cases <- subset_rg_set(rg_set = rgCases,
-                          keep_gender = keep_gender,
-                          keep_controls = keep_controls,
-                          keep_snps = keep_snps,
-                          get_island = NULL,
-                          get_chr = NULL,
-                          get_type = NULL,
-                          gene_probes = gene_probes)
-
-# controls
-rg_controls <- subset_rg_set(rg_set = rgControls,
-                             keep_gender = keep_gender,
-                             keep_controls = keep_controls,
-                             keep_snps = keep_snps,
-                             get_island = NULL,
-                             get_chr = NULL,
-                             get_type = NULL,
-                             gene_probes = gene_probes)
-
-# valid
-rg_valid <- subset_rg_set(rg_set = rgValid,
-                          keep_gender = keep_gender,
-                          keep_controls = keep_controls,
-                          keep_snps = keep_snps,
-                          get_island = NULL,
-                          get_chr = NULL,
-                          get_type = NULL,
-                          gene_probes = gene_probes)
-
-
-# preprocess controls and valid
-beta_cases <-  preprocessMethod(rg_cases, preprocess = method)
-beta_controls <- preprocessMethod(rg_controls, preprocess = method)
-beta_valid <- preprocessMethod(rg_valid, preprocess = method)
-
-# get controls
-beta_cases <- process_rg_set_single(beta_data = beta_cases, 
-                                    id_map = id_map_cases, 
-                                    clin = clin)
-# get controls
-beta_controls_mod <- process_rg_set_single(beta_data = beta_controls, 
-                                           id_map = id_map_con, 
-                                           clin = clin)
-
-# get valid
-beta_valid_mod <- process_rg_set_single(beta_data = beta_valid, 
-                                        id_map = id_map_val, 
-                                        clin = clin)
-
-load('~/Desktop/m_values.RData')
+#HERE
+# make an if statement to get data 
+# clean up all_functions.R 
+# move scripts to old scripts if not using 
+# maybe in get_data we can specify if we use combined data or not
 
 ##########
 # subset data - remove controls probes on each data set only if raw preprocessing
@@ -215,11 +40,7 @@ full_pipeline <- function(rgCases,
                           k_folds,
                           beta_thresh,
                           controls) {
-  
-  
-  
- 
-  
+
   
   # list to store cv results
   temp_cases <- list()
@@ -229,7 +50,7 @@ full_pipeline <- function(rgCases,
   temp_alpha <- list()
   surv_results <- list()
   
-
+  
   
   if(method == 'raw'){
     # remove NAs
@@ -242,7 +63,7 @@ full_pipeline <- function(rgCases,
     beta_valid_mod <- removeInf(beta_valid_mod, probe_start = 12)
   }
   
-
+  
   # get intersecting name
   intersect_names <- Reduce(intersect, list(colnames(beta_cases)[12:ncol(beta_cases)],
                                             colnames(beta_controls_mod)[12:ncol(beta_controls_mod)],
@@ -297,7 +118,7 @@ full_pipeline <- function(rgCases,
   
   # remove NAs 
   beta_cases <-beta_cases[complete.cases(beta_cases),]
-
+  
   # combine beta cases and beta valid
   beta_cases_full <- rbind(beta_cases,
                            beta_valid_mod)
@@ -320,8 +141,8 @@ full_pipeline <- function(rgCases,
   beta_cases_full$gdna.exon.intron <- ifelse(grepl('Exon', beta_cases_full$gdna.exon.intron), 'exon',
                                              ifelse(grepl('Intron', beta_cases_full$gdna.exon.intron), 'intron', 'not_clear'))
   beta_controls_full$gdna.exon.intron <- ifelse(grepl('Exon', beta_controls_full$gdna.exon.intron), 'exon',
-                                             ifelse(grepl('Intron', beta_controls_full$gdna.exon.intron), 'intron', 'not_clear'))
-    
+                                                ifelse(grepl('Intron', beta_controls_full$gdna.exon.intron), 'intron', 'not_clear'))
+  
   # get a base change variable for each data set
   beta_cases_full <- cbind(as.data.frame(class.ind(beta_cases_full$gdna.base.change)), beta_cases_full)
   beta_controls_full <- cbind(as.data.frame(class.ind(beta_controls_full$gdna.base.change)), beta_controls_full)
@@ -333,7 +154,7 @@ full_pipeline <- function(rgCases,
   # get gender variable for each data set
   beta_cases_full <- cbind(as.data.frame(class.ind(beta_cases_full$gender)), beta_cases_full)
   beta_controls_full <- cbind(as.data.frame(class.ind(beta_controls_full$gender)), beta_controls_full)
-
+  
   # get tech variable for each data set
   beta_cases_full <- cbind(as.data.frame(class.ind(beta_cases_full$tech)), beta_cases_full)
   beta_controls_full <- cbind(as.data.frame(class.ind(beta_controls_full$tech)), beta_controls_full)
@@ -388,7 +209,7 @@ full_pipeline <- function(rgCases,
     
     # remove cases that are over a certain age
     # beta_cases_full <- beta_cases_full[beta_cases_full$age_sample_collection < 400,]
-  
+    
   }
   
   if (survival) {
@@ -405,8 +226,8 @@ full_pipeline <- function(rgCases,
     fold_vec <- sample(1:k_folds, nrow(beta_cases_full), replace = T)
     
   }
- 
- 
+  
+  
   # combine 
   for(i in 1:k_folds) {
     
@@ -432,7 +253,7 @@ full_pipeline <- function(rgCases,
                                        exon_intron = exon_intron,
                                        intersect_names = intersect_names)
       
-
+      
     } else {
       
       beta_train_cases <- beta_cases_full[train_index, ]
@@ -484,7 +305,7 @@ full_pipeline <- function(rgCases,
   }
   full_cases <- do.call(rbind, temp_cases)
   full_controls <- do.call(rbind, temp_controls)
-
+  
   return(list(full_cases, full_controls, temp_models, temp_lambda, temp_alpha))
 }
 
@@ -544,7 +365,7 @@ controls <- temp %>%
 
 controls <- controls[order(controls$pred_y, decreasing = T),]
 # get the individuals 
- #save results
+#save results
 # saveRDS(full_results, paste0('../../Data/results_data/noob_survival_72.rda'))
 
 # saveRDS(full_results, paste0('../../Data/results_data/',age_cutoff,'_',method,'_', cg_gene_regions,'_',survival ,'_', remove_age_lit ,'_', remove_age_cgs ,'_',gender, '_', tech, '_', base_change,'_',exon_intron, '_', control_for_family,'.rda'))

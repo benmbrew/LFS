@@ -225,6 +225,7 @@ full_pipeline_test <- function(beta_cases,
   # list to store cv results
   temp_cases <- list()
   temp_controls <- list()
+  temp_valid <- list()
   temp_models <- list()
   temp_lambda <- list()
   temp_alpha <- list()
@@ -495,9 +496,11 @@ full_pipeline_test <- function(beta_cases,
       
       temp_cases[[i]] <- mod_result[[1]]
       temp_controls[[i]] <- mod_result[[2]]
-      temp_models[[i]] <- mod_result[[3]]
-      temp_lambda[[i]] <- mod_result[[4]]
-      temp_alpha[[i]] <- mod_result[[5]]
+      temp_valid[[i]] <- mod_result[[3]]
+      temp_models[[i]] <- mod_result[[4]]
+      temp_lambda[[i]] <- mod_result[[5]]
+      temp_alpha[[i]] <- mod_result[[6]]
+
       
       
       print(i)
@@ -512,7 +515,7 @@ full_pipeline_test <- function(beta_cases,
   full_cases <- do.call(rbind, temp_cases)
   full_controls <- do.call(rbind, temp_controls)
   
-  return(list(full_cases, full_controls, temp_models, temp_lambda, temp_alpha))
+  return(list(full_cases, full_controls, temp_valid,temp_models, temp_lambda, temp_alpha))
 }
 
 ##########
@@ -533,8 +536,9 @@ tech = T
 base_change = F
 exon_intron = F
 control_for_family = F
-beta_thresh = 0.1
+beta_thresh = 1
 k_folds <- 5
+
 # run full pipeline
 full_results <- full_pipeline_test(beta_cases = beta_cases,
                                    beta_controls = beta_controls,
@@ -562,14 +566,7 @@ full_results <- full_pipeline_test(beta_cases = beta_cases,
 # saveRDS(full_results, paste0('../../Data/results_data/noob_survival_72.rda'))
 
 # saveRDS(full_results, paste0('../../Data/results_data/',age_cutoff,'_',method,'_', cg_gene_regions,'_',survival ,'_', remove_age_lit ,'_', remove_age_cgs ,'_',gender, '_', tech, '_', base_change,'_',exon_intron, '_', control_for_family,'.rda'))
-temp_controls <- full_results[[1]]
-cases_clin <- full_results[[2]]
-temp_controls <- temp_controls[ , c('controls_age_pred', 'controls_age_label', 
-                                    'age_sample_collection', 'family_name')]
 
-temp_controls <- temp_controls[temp_controls$age_sample_collection < 73,]
-
-temp <- temp_controls[temp_controls$age_sample_collection < 73,]
 # get results from list 
 temp_cases <- full_results[[1]]
 
@@ -582,6 +579,7 @@ temp_cases$pred_is <- ifelse(temp_cases$test_pred_label == temp_cases$test_label
                              'bad')
 
 
+# controls 
 temp_controls <- full_results[[2]]
 
 temp_controls <- temp_controls[ , c('controls_age_pred', 'controls_age_label', 
@@ -589,13 +587,13 @@ temp_controls <- temp_controls[ , c('controls_age_pred', 'controls_age_label',
 
 
 # get person identfier 
-temp_controls$p_id <- rep.int(seq(1, 44, 1), 4)
+temp_controls$p_id <- rep.int(seq(1, 30, 1), 5)
 
 # group by fold and get mean 
 temp_controls_pred <- temp_controls %>%
   group_by(p_id) %>%
   summarise(mean_pred = mean(controls_age_pred, na.rm =T)) %>%
-  cbind(temp_controls[1:44,])
+  cbind(temp_controls[1:30,])
 
 temp_controls$controls_pred_label <- ifelse(temp_controls$controls_age_pred > .5, 1, 0)
 
@@ -606,6 +604,34 @@ temp_controls$pred_is <- ifelse(temp_controls$controls_pred_label == temp_contro
 # remove original prediction 
 temp_controls_pred$controls_age_pred <- NULL
 rm(temp_controls,temp_results)
+
+
+# valid 
+temp_valid <- full_results[[2]]
+
+temp_valid <- temp_valid[ , c('valid_age_pred', 'valid_age_label', 
+                              'age_sample_collection')]
+
+
+# get person identfier 
+temp_valid$p_id <- rep.int(seq(1, 44, 1), 4)
+
+# group by fold and get mean 
+temp_valid_pred <- temp_valid %>%
+  group_by(p_id) %>%
+  summarise(mean_pred = mean(valid_age_pred, na.rm =T)) %>%
+  cbind(temp_valid[1:44,])
+
+temp_valid$valid_pred_label <- ifelse(temp_valid$valid_age_pred > .5, 1, 0)
+
+temp_valid$pred_is <- ifelse(temp_valid$valid_pred_label == temp_valid$valid_age_label, 
+                             'good',
+                             'bad')
+
+# remove original prediction 
+temp_valid_pred$valid_age_pred <- NULL
+rm(temp_valid,temp_results)
+
 
 
 ##########

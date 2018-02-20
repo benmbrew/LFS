@@ -8,11 +8,9 @@ source('all_functions.R')
 remove_age_cgs_lit <- TRUE
 remove_age_cgs_lm <- FALSE
 
-
 ##########
 # subset data - remove controls probes on each data set only if raw preprocessing
 ##########
-
 
 # get intersecting name
 intersect_names <- Reduce(intersect, list(colnames(beta_cases)[12:ncol(beta_cases)],
@@ -101,25 +99,35 @@ beta_controls_full <- beta_controls_full[!is.na(beta_controls_full$age_sample_co
 temp_cases <- beta_cases_full[, c('ids', 'gender', 'family_name')]
 temp_controls <- beta_controls_full[, c('ids', 'gender', 'family_name')]
 
-write_csv(temp_cases, '../../Data/cases_family.csv')
+# write_csv(temp_cases, '../../Data/cases_family.csv')
+temp_cases <- read_csv('../../Data/cases_family.csv')
+temp_cases$ids <- as.character(temp_cases$ids)
 
+# remove unneeded objects
+rm(beta_controls, beta_valid, id_map_cases, id_map_con, id_map_val)
 
 
 # create a training and test set with as much overlap of families as possible 
+# assign temp_cases train and test to beta_cases_full
+# sort both data sets to ensure correct data
+beta_cases_full <- beta_cases_full[order(beta_cases_full$ids),]
+temp_cases <- temp_cases[order(temp_cases$ids),]
 
+beta_cases_full$train_test <- temp_cases$same_family_test
 
 
 # create a training and test set with no overlap 
+beta_train <- beta_cases_full[beta_cases_full$train_test == 'train',]
+beta_test <- beta_cases_full[beta_cases_full$train_test == 'test',]
 
+# remove last two variables 
+beta_train$tech <- beta_train$train_test <- 
+  beta_test$tech <- beta_test$train_test <- NULL
 
-
-
-beta_train_cases <- beta_cases_full[train_index, ]
-beta_test_cases <- beta_cases_full[test_index, ]
-
+beta_controls_full$tech <- NULL
 
 # use cases training and controls to get bumphunter features
-bh_feats <- bump_hunter(dat_1 = beta_train_cases, 
+bh_feats <- bump_hunter(dat_1 = beta_train, 
                         dat_2 = beta_controls_full, 
                         bump = 'cancer', 
                         boot_num = 5, 
@@ -135,15 +143,37 @@ remove_features <- inner_join(bh_feats, g_ranges)$probe
 bh_features <- intersect_names[!intersect_names %in% remove_features]
 
 # function to predict with all test, controls, controls old, and valid
-mod_result  <- run_enet_450_850(training_dat = beta_train_cases,
-                                controls_dat = beta_controls_full,
-                                test_dat = beta_test_cases,
-                                age_cutoff = age_cutoff,
-                                gender = gender,
-                                tech = tech,
-                                base_change = base_change,
-                                exon_intron = exon_intron,
-                                bh_features = bh_features)
+mod_result  <- run_enet_family(training_dat = beta_train,
+                               test_dat = beta_test,
+                               age_cutoff = 72,
+                               gender = TRUE,
+                               tech = TRUE,
+                               bh_features = bh_features)
+
+
+##########
+# examin cases with prediction objects (ROC, TRP, etc)
+##########
+library(ROCR)
+
+temp_pred_cases <- prediction(mod_result$test_pred, as.character(mod_result$test_label))
+temp_roc <- performance(temp_pred_cases, measure = 'tpr', x.measure = 'tnr')
+cutoffs <- data.frame(cut=temp_roc@alpha.values[[1]], tpr=temp_roc@x.values[[1]], 
+                      tnr=temp_roc@y.values[[1]])
+
+plot(cutoffs$cut, cutoffs$tpr,type="l",col="red")
+par(new=TRUE)
+plot(cutoffs$cut, cutoffs$tnr,type="l",col="blue",xaxt="n",yaxt="n",xlab="",ylab="")
+
+
+temp_pr <- performance(temp_pred_cases, measure = 'prec', x.measure = 'rec')
+temp_lc <- performance(temp_pred_cases, measure="lift")
+
+plot(temp_roc)
+plot(temp_pr)
+plot(temp_lc)
+caret::confusionMatrix(round(temp_cases$test_pred, 0.1), temp_cases$test_label)
+
 
 
 
