@@ -4,7 +4,7 @@ temp_cases <- temp_clin[!grepl('Unaffected', temp_clin$cancer_diagnosis_diagnose
 temp_controls <- temp_clin[grepl('Unaffected', temp_clin$cancer_diagnosis_diagnoses),]
 
 # validation or combined data 
-data_used <- 'old'
+data_used <- 'new'
 
 # get cg regions
 cg_gene_regions = 'Body'

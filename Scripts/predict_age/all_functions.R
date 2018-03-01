@@ -366,9 +366,24 @@ get_family_cancer <- function(cases_full, controls_full){
     tally() %>% 
     left_join(temp_full)
   
-  temp <- temp_full %>%
-    group_by()
-  
+  temp$num_with_cancer <- NA
+  temp$cancer_ratio <- NA
+ for(fam_name in unique(temp$family_name)){
+   sub_fam <- temp[temp$family_name == fam_name,]
+   if(nrow(sub_fam) > 1) {
+     num_cancer <- length(which(sub_fam$cancer_fac == 'cancer'))
+     num_no <- length(which(sub_fam$cancer_fac == 'no_cancer'))
+     sub_fam$num_with_cancer <- ifelse(sub_fam$cancer_fac == 'cancer',
+                                       num_cancer - 1, num_cancer)
+     # HERE sub_fam$cancer_ratio <- 
+   } else {
+     sub_fam$num_with_cancer <- 0
+     sub_fam$cancer_ratio <- 0
+   }
+   temp[temp$family_name == fam_name,] <- sub_fam
+   
+ }
+
 }
 
 ##########
