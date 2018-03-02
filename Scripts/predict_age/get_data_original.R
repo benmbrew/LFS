@@ -228,8 +228,8 @@ data_valid_mod <- data_valid_mod[, c(clin_names,
                                      intersect_names)]
 
 # get old controls (mut and no cancer from cases)
-data_controls_mod_old <- rbind(subset(data_cases, p53_germline == 'Mut' & 
-                                        cancer_diagnosis_diagnoses == 'Unaffected'))
+# data_controls_mod_old <- rbind(subset(data_cases, p53_germline == 'Mut' & 
+#                                         cancer_diagnosis_diagnoses == 'Unaffected'))
 
 # get model data in cases for training and test
 data_cases <- getModData(data_cases)
@@ -238,68 +238,79 @@ data_cases <- getModData(data_cases)
 data_controls_mod <- data_controls_mod[grepl('Unaffected', data_controls_mod$cancer_diagnosis_diagnoses),]
 
 #subset valid - get ids from train and test
-case_ids <- data_cases$ids
-data_valid_mod <- data_valid_mod[!data_valid_mod$ids %in% case_ids,]
+case_ids <- data_cases$tm_donor_
+data_valid_mod <- data_valid_mod[!data_valid_mod$tm_donor_ %in% case_ids,]
 
 # remove NAs 
 data_cases <-data_cases[complete.cases(data_cases),]
 
-# save temp object to desktop
-# save.image('~/Desktop/temp_original.RData')
-# save.image('~/Desktop/temp_original.RData')
 
-# HERE MAKE SURE YO UKEEP THIS ORIGINAL WITH 3 DATA SETS
 # add an indicator for 450 and 850
 data_cases$tech <- ifelse(grepl('^57|97', data_cases$sentrix_id), 'a', 'b')
 data_controls_mod$tech <- ifelse(grepl('^57|97', data_controls_mod$sentrix_id), 'a', 'b')
-data_controls_mod_old$tech <- ifelse(grepl('^57|97', data_controls_mod_old$sentrix_id), 'a', 'b')
+# data_controls_mod_old$tech <- ifelse(grepl('^57|97', data_controls_mod_old$sentrix_id), 'a', 'b')
 data_valid_mod$tech <- ifelse(grepl('^57|97', data_valid_mod$sentrix_id), 'a', 'b')
 
 # get gender variable for each data set
 data_cases <- cbind(as.data.frame(class.ind(data_cases$gender)), data_cases)
 data_controls_mod <- cbind(as.data.frame(class.ind(data_controls_mod$gender)), data_controls_mod)
-data_controls_mod_old <- cbind(as.data.frame(class.ind(data_controls_mod_old$gender)), data_controls_mod_old)
+# data_controls_mod_old <- cbind(as.data.frame(class.ind(data_controls_mod_old$gender)), data_controls_mod_old)
 data_valid_mod <- cbind(as.data.frame(class.ind(data_valid_mod$gender)), data_valid_mod)
 
 # get tech variable for each data set
 data_cases <- cbind(as.data.frame(class.ind(data_cases$tech)), data_cases)
 data_controls_mod <- cbind(as.data.frame(class.ind(data_controls_mod$tech)), data_controls_mod)
-data_controls_mod_old <- cbind(as.data.frame(class.ind(data_controls_mod_old$tech)), data_controls_mod_old)
+# data_controls_mod_old <- cbind(as.data.frame(class.ind(data_controls_mod_old$tech)), data_controls_mod_old)
 data_valid_mod <- cbind(as.data.frame(class.ind(data_valid_mod$tech)), data_valid_mod)
 
 # remove tech variable at end of data frame
 data_cases$tech <- NULL
 data_controls_mod$tech <- NULL
-data_controls_mod_old$tech <- NULL
+# data_controls_mod_old$tech <- NULL
 data_valid_mod$tech <- NULL
 
 # remove na in both
 data_cases <- data_cases[!is.na(data_cases$age_sample_collection),]
 data_controls_mod <- data_controls_mod[!is.na(data_controls_mod$age_sample_collection),]
-data_controls_mod_old <- data_controls_mod_old[!is.na(data_controls_mod_old$age_sample_collection),]
+# data_controls_mod_old <- data_controls_mod_old[!is.na(data_controls_mod_old$age_sample_collection),]
 data_valid_mod <- data_valid_mod[!is.na(data_valid_mod$age_sample_collection),]
 
 
 # remove duplicates from each one
 data_cases <- data_cases[!duplicated(data_cases$tm_donor_),]
 data_controls_mod <- data_controls_mod[!duplicated(data_controls_mod$tm_donor_),]
-data_controls_mod_old <- data_controls_mod_old[!duplicated(data_controls_mod_old$tm_donor_),]
+# data_controls_mod_old <- data_controls_mod_old[!duplicated(data_controls_mod_old$tm_donor_),]
 data_valid_mod <- data_valid_mod[!duplicated(data_valid_mod$tm_donor_),]
 
 # save.image(paste0(data_dir,paste0(data_used,'_',methyl_type, '_processed_temp', '.RData')))
 load(paste0(data_dir,paste0(data_used,'_',methyl_type, '_processed_temp', '.RData')))
 
-# create indicator for number of members in family with cancer
-# HERE - go to get_family_cancer function 
+# get cancer indicator and ratio for family members
+get_family_list <- get_family_cancer_old(data_cases, data_controls_mod, data_valid_mod)
+
+# extract from list 
+data_cases <- get_family_list[[1]]
+data_controls_mod <- get_family_list[[2]]
+data_valid_mod <- get_family_list[[3]]
+
+# remove duplicates
+data_cases <- data_cases[!duplicated(data_cases$tm_donor_),]
+#subset valid - get ids from train and test
+case_ids <- data_cases$tm_donor_
+data_valid_mod <- data_valid_mod[!data_valid_mod$tm_donor_ %in% case_ids,]
 
 
-# create variabl that is ratio of people in family with cancer
+# add a and b variable 
+data_cases$b <- 0
+data_controls_mod$a <- 0
+data_valid_mod$a <- 0
+
 
 
 # remove unneeded objects
 rm(list=ls(pattern="^rg"))
 rm(list=ls(pattern="^id"))
-rm(data_valid, data_controls, ratio_set, gene_probes,
+rm(data_valid, data_controls, ratio_set, gene_probes, get_family_list,
    age_cgs, case_ids, clin_names, data_dir, gene_region,
    intersect_names, keep_controls, keep_gender,
    keep_snps, remove_age_cgs_lm, remove_age_cgs_lit)

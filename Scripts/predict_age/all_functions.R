@@ -321,26 +321,26 @@ subset_rg_set <- function(rg_set, keep_gender, keep_controls, keep_snps, get_isl
 
 
 
-# data_combat <- full_data_con
-
-run_combat <- function(data_combat) {
-  data_combat <- as.data.frame(data_combat)
+# combat function
+run_combat <- function(temp_data) {
+  temp_data <- as.data.frame(temp_data)
+  # get tech variable variable back to categories 
+  temp_data$tech <- ifelse(temp_data$a == 1, 'batch_1', 'batch_2')
+  
   # get batch
-  batch_indicator <- as.character(data_combat$batch)
+  batch_indicator <- as.character(temp_data$tech)
   batch_indicator <- as.factor(batch_indicator)
   # put model ids in rownames and remove columns
-  mat_combat <- as.matrix(data_combat[, 9:ncol(data_combat)])
+  mat_combat <- as.matrix(temp_data[, grepl('^cg', names(temp_data))])
   rownames(mat_combat) <- NULL
-  clin_combat <- as.data.frame(data_combat[, 1:8])
+  clin_combat <- as.data.frame(temp_data[, !grepl('^cg', names(temp_data))])
   # get features
   features <- colnames(mat_combat)
   mat_combat <- t(mat_combat)
   # get intercept
-  modcombat <- model.matrix(~1, data = data_combat)
+  modcombat <- model.matrix(~1, data = temp_data)
   combat <- ComBat(dat = mat_combat, batch = batch_indicator, mod = modcombat, par.prior=TRUE, prior.plots=FALSE)
-  any(is.na(mat_combat))
-  any(is.na(batch_indicator))
-  any(is.na(modcombat))
+  
   # transpose and add back columns
   final_dat <- as.data.frame(t(combat))
   final_dat <- as.data.frame(cbind(clin_combat, final_dat))
@@ -351,8 +351,7 @@ run_combat <- function(data_combat) {
 ##########
 # get family cancer status and ratio
 ##########
-cases_full <- data_cases_full
-controls_full <- data_controls_full
+
 get_family_cancer <- function(cases_full, controls_full){
   #combine data subseted data
   temp_full <- bind_rows(cases_full[, c('tm_donor_', 'cancer_diagnosis_diagnoses', 'family_name')],
@@ -366,24 +365,130 @@ get_family_cancer <- function(cases_full, controls_full){
     tally() %>% 
     left_join(temp_full)
   
-  temp$num_with_cancer <- NA
-  temp$cancer_ratio <- NA
- for(fam_name in unique(temp$family_name)){
-   sub_fam <- temp[temp$family_name == fam_name,]
-   if(nrow(sub_fam) > 1) {
-     num_cancer <- length(which(sub_fam$cancer_fac == 'cancer'))
-     num_no <- length(which(sub_fam$cancer_fac == 'no_cancer'))
-     sub_fam$num_with_cancer <- ifelse(sub_fam$cancer_fac == 'cancer',
+  temp$fam_num_cancer <- NA
+  temp$fam_cancer_ratio <- NA
+  for(fam_name in unique(temp$family_name)){
+    sub_fam <- temp[temp$family_name == fam_name,]
+    if(nrow(sub_fam) > 1) {
+      num_cancer <- length(which(sub_fam$cancer_fac == 'cancer'))
+      num_no <- length(which(sub_fam$cancer_fac == 'no_cancer'))
+      tot_fam_num <- nrow(sub_fam)
+      stopifnot((num_cancer + num_no) == tot_fam_num)
+      
+      # get number of family members with cancer 
+      sub_fam$fam_num_cancer <- ifelse(sub_fam$cancer_fac == 'cancer',
                                        num_cancer - 1, num_cancer)
-     # HERE sub_fam$cancer_ratio <- 
-   } else {
-     sub_fam$num_with_cancer <- 0
-     sub_fam$cancer_ratio <- 0
-   }
-   temp[temp$family_name == fam_name,] <- sub_fam
-   
- }
+      
+      # condition for if the denominator is zero - that is no non cancers in family - just put number of family members with cancer 
+      # this applies to the situation where there might be a non cancer present, 
+      if(num_no == 0) {
+        sub_fam$fam_cancer_ratio <- num_cancer - 1
+        
+      } else if(num_no == 1){
+        # get ratio of family members that have cancer to those that don't have cancer
+        sub_fam$fam_cancer_ratio <- ifelse(sub_fam$cancer_fac == 'cancer',
+                                           (num_cancer - 1)/num_no, num_cancer)
+      } else {
+        
+        # conidtion if num_cancer is zero
+        if(num_cancer == 0) {
+          # get ratio of family members that have cancer to those that don't have cancer
+          sub_fam$fam_cancer_ratio <- 0
+        } else {
+          # get ratio of family members that have cancer to those that don't have cancer
+          sub_fam$fam_cancer_ratio <- ifelse(sub_fam$cancer_fac == 'cancer',
+                                             (num_cancer - 1)/num_no, num_cancer/(num_no - 1))
+        }
+        
+      }
+      
+    } else {
+      sub_fam$fam_num_cancer <- 0
+      sub_fam$fam_cancer_ratio <- 0
+    }
+    temp[temp$family_name == fam_name,] <- sub_fam
+    
+  }
+  # remove columns not needed in join
+  temp <- temp[, c('tm_donor_', 'family_name', 'fam_num_cancer', 'fam_cancer_ratio')]
+  
+  # join temp back with cases and controls 
+  cases_full <- inner_join(temp, cases_full)
+  controls_full <- inner_join(temp, controls_full)
+  
+  return(list(cases_full, controls_full))
+  
+}
 
+
+get_family_cancer_old <- function(cases, controls, valid){
+  #combine data subseted data
+  temp_full <- bind_rows(cases[, c('tm_donor_', 'cancer_diagnosis_diagnoses', 'family_name')],
+                         controls[, c('tm_donor_', 'cancer_diagnosis_diagnoses', 'family_name')],
+                         valid[,c('tm_donor_', 'cancer_diagnosis_diagnoses', 'family_name') ])
+  # create cancer indicator
+  temp_full$cancer_fac <- ifelse(grepl('Unaffected', temp_full$cancer_diagnosis_diagnoses), 'no_cancer', 'cancer')
+  temp_full$cancer_diagnosis_diagnoses <- NULL
+  
+  temp <- temp_full %>%
+    group_by(family_name) %>%
+    tally() %>% 
+    left_join(temp_full)
+  
+  temp$fam_num_cancer <- NA
+  temp$fam_cancer_ratio <- NA
+  for(fam_name in unique(temp$family_name)){
+    sub_fam <- temp[temp$family_name == fam_name,]
+    if(nrow(sub_fam) > 1) {
+      num_cancer <- length(which(sub_fam$cancer_fac == 'cancer'))
+      num_no <- length(which(sub_fam$cancer_fac == 'no_cancer'))
+      tot_fam_num <- nrow(sub_fam)
+      stopifnot((num_cancer + num_no) == tot_fam_num)
+      
+      # get number of family members with cancer 
+      sub_fam$fam_num_cancer <- ifelse(sub_fam$cancer_fac == 'cancer',
+                                       num_cancer - 1, num_cancer)
+      
+      # condition for if the denominator is zero - that is no non cancers in family - just put number of family members with cancer 
+      # this applies to the situation where there might be a non cancer present, 
+      if(num_no == 0) {
+        sub_fam$fam_cancer_ratio <- num_cancer - 1
+        
+      } else if(num_no == 1){
+        # get ratio of family members that have cancer to those that don't have cancer
+        sub_fam$fam_cancer_ratio <- ifelse(sub_fam$cancer_fac == 'cancer',
+                                           (num_cancer - 1)/num_no, num_cancer)
+      } else {
+        
+        # conidtion if num_cancer is zero
+        if(num_cancer == 0) {
+          # get ratio of family members that have cancer to those that don't have cancer
+          sub_fam$fam_cancer_ratio <- 0
+        } else {
+          # get ratio of family members that have cancer to those that don't have cancer
+          sub_fam$fam_cancer_ratio <- ifelse(sub_fam$cancer_fac == 'cancer',
+                                             (num_cancer - 1)/num_no, num_cancer/(num_no - 1))
+        }
+        
+      }
+      
+    } else {
+      sub_fam$fam_num_cancer <- 0
+      sub_fam$fam_cancer_ratio <- 0
+    }
+    temp[temp$family_name == fam_name,] <- sub_fam
+    
+  }
+  # remove columns not needed in join
+  temp <- temp[, c('tm_donor_', 'family_name', 'fam_num_cancer', 'fam_cancer_ratio')]
+  
+  # join temp back with cases and controls 
+  cases <- inner_join(temp, cases)
+  controls <- inner_join(temp, controls)
+  valid <- inner_join(temp, valid)
+  
+  return(list(cases, controls, valid))
+  
 }
 
 ##########
@@ -526,22 +631,36 @@ testKS <- function(x, y)
 # get pca function
 ##########
 
-getPCA <- function(pca_data, 
-                   column_name, 
-                   name, 
-                   gene_start, 
-                   pca1,
-                   pca2,
-                   use_legend) 
-{
+get_pca <- function(pca_data, 
+                    column_name,
+                    pc_x,
+                    pc_y,
+                    main_title) {
+  # make function to get pca variables 
+  pca_data$tech <- ifelse(pca_data$a == 1, 'batch_1', 'batch_2')
+  
+  # get cancer fac
+  pca_data$cancer_fac <- ifelse(!grepl('Unaffected', pca_data$cancer_diagnosis_diagnoses), 'cancer', 'no_cancer')
+  
+  # get an age category and fac
+  pca_data$age_cat <- ifelse(pca_data$age_sample_collection >= 0 & pca_data$age_sample_collection <= 50, '0_50', 
+                             ifelse(pca_data$age_sample_collection > 50 & pca_data$age_sample_collection <= 100, '51_100',
+                                    ifelse(pca_data$age_sample_collection > 100 & pca_data$age_sample_collection <= 150, '101_150',
+                                           ifelse(pca_data$age_sample_collection > 150 & pca_data$age_sample_collection <= 200, '151_200', 
+                                                  ifelse(pca_data$age_sample_collection > 200 & pca_data$age_sample_collection <= 250,'201_250',
+                                                         ifelse(pca_data$age_sample_collection > 250 & pca_data$age_sample_collection <= 300, '251_300', '300+'))))))
+  
+  # relevel this data
+  pca_data$age_cat <- factor(pca_data$age_cat, levels = c('0_50', '51_100', '101_150', '151_200', '201_250', '251_300', '300+'))
   
   
+  pca_data$age_fac <- ifelse(pca_data$age_sample_collection >= 200, 'adult', 'not_adult')
+  
+  
+  pca_data <- as.data.frame(pca_data)
   pca_data[, column_name] <- as.factor(pca_data[, column_name])
-  
-  
   # get features sites
-  cg_sites <- colnames(pca_data)[gene_start:ncol(pca_data)]
-  
+  cg_sites <- names(pca_data)[grepl('^cg', names(pca_data))]
   # subset by no NAs for column_name
   pca_data <- pca_data[!is.na(pca_data[, column_name]), ]
   
@@ -554,36 +673,36 @@ getPCA <- function(pca_data,
   data_length <- ncol(pca_data)
   pca <- prcomp(pca_data[,2:data_length])
   
-  #fill in factors with colors 
-  col_vec <- c('blue','red' , 'green', 'brown', 'orange', 'purple', 'lightblue', 
-               'blueviolet', 'bisque', 'cyan', 'deeppink',
-               'grey', 'yellow', 'bisque1', 'darkblue','darkred', 
-               'darkgreen', 'darkorchid', 'gold', 'darkorange', 'coral',
-               'greenyellow', 'bisque2')
+  # get pca dataframe with results and factor to color
+  pca_results <- data.frame(pca$x[, 1:10], column_name = pca_data[, column_name])
   
-  colors <- col_vec[pca_data[, column_name]]
+  # get actual PC
+  pca_results <- pca_results[ c(pc_x,pc_y, ncol(pca_results))]
+  real_x_axis <- names(pca_results)[1]
+  real_y_axis <- names(pca_results)[2]
   
+  # now rename first two to var1, var2 so it can still plot
+  names(pca_results)[1:2] <- c('V1', 'V2')
   
-  plot <- plot(pca$x[, pca1], 
-               pca$x[, pca2],
-               xlab = 'pca',
-               ylab = 'pca',
-               bty = 'n',
-               cex = 1.3,
-               main = name,
-               pch = 16,
-               col = adjustcolor(colors, alpha.f = 0.7)
-  )
-  abline(v = c(0,0),
-         h = c(0,0))
-  
-  if(use_legend) {
-    legend('topright',  
-           legend = unique(pca_data[, column_name]), 
-           col=unique(colors), 
-           pch=16,  
-           cex = 0.7)
-  }
+  # get color
+  cols <- colorRampPalette(brewer.pal(n = 9, 'Spectral'))(length(unique(pca_results$column_name)))
+
+  plot <- 
+    ggplot(pca_results, 
+           aes(V1, V2, 
+           col = column_name)) +
+    geom_point(size = 3, 
+               alpha = 0.7) +
+    xlab(real_x_axis) + 
+    ylab(real_y_axis) +
+    scale_color_manual(name = '',
+                       values = cols) + 
+    ggtitle(main_title) +
+    geom_hline(yintercept= 0, linetype="dashed", 
+               color = "grey", size=1) +
+    geom_vline(xintercept=0, linetype="dashed", 
+               color = "grey", size=1) +
+    theme_minimal()
   
   return(plot)
 }

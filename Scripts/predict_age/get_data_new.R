@@ -277,17 +277,17 @@ data_controls_full <- data_controls_full[!duplicated(data_controls_full$tm_donor
 
 load(paste0(data_dir,paste0(data_used,'_',methyl_type, '_processed_temp', '.RData')))
 
-# create indicator for number of members in family with cancer
-# HERE - go to get_family_cancer function 
-
-
-# create variabl that is ratio of people in family with cancer
+# create indicator for number of members in family with cancer and ratio of people in family with cancer
+# each individual's cancer status will be unknown, so leave them out.
+get_family_list <- get_family_cancer(data_cases_full, data_controls_full)
+data_cases_full <- get_family_list[[1]] #cases
+data_controls_full <- get_family_list[[2]] #controls
 
 
 # remove unneeded objects
 rm(list=ls(pattern="^rg"))
 rm(list=ls(pattern="^id"))
-rm(data_valid, data_controls, ratio_set,
+rm(data_valid, data_controls, ratio_set, get_family_list,
    data_controls_mod, data_controls_mod_old,
    data_valid_mod, data_cases, gene_probes,
    age_cgs, case_ids, clin_names, data_dir, gene_region,
