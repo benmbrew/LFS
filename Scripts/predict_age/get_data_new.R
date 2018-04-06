@@ -43,7 +43,7 @@ g_ranges <- g_ranges[!grepl('ch', g_ranges$probe),]
 ##########
 # read in clinical data
 ##########
-clin <- read.csv('../../Data/clin_data/clinical_two.csv', stringsAsFactors = F)
+clin <- read.csv('../../Data/clin_data/new_clin.csv', stringsAsFactors = F)
 
 # clean clinical ids
 clin$ids <-  gsub('A|B|_|-', '', clin$blood_dna_malkin_lab_)
@@ -100,15 +100,15 @@ id_map_val <- cleanIdMap(id_map_val)
 ##########
 # remove outliers (previously determined) from rgset before normalization
 ##########
-rgControls <- remove_outliers(rgSet = rgControls,
-                              id_map = id_map_con,
-                              method = 'doesnt_matter',
-                              type = 'controls')
-
-rgValid <- remove_outliers(rgSet = rgValid,
-                           id_map = id_map_val,
-                           method = 'doesnt_matter',
-                           type = 'valid')
+# rgControls <- remove_outliers(rgSet = rgControls,
+#                               id_map = id_map_con,
+#                               method = 'doesnt_matter',
+#                               type = 'controls')
+# 
+# rgValid <- remove_outliers(rgSet = rgValid,
+#                            id_map = id_map_val,
+#                            method = 'doesnt_matter',
+#                            type = 'valid')
 
 # load in gene cpgs
 gene_probes <- read_csv('../../Data/all_gene_cpg_loc.csv')
@@ -122,9 +122,9 @@ gene_probes <- as.character(gene_probes$focal_CpGs[!duplicated(gene_probes$focal
 # dont control for gender in model if using funnorm
 # control for gender if you use raw or noob
 if (method == 'funnorm') {
-  keep_gender <- 
+  keep_gender <- T
     keep_controls <- T
-  keep_snps <- F
+  keep_snps <- T
 } else if (method == 'noob') {
   keep_gender <- F
   keep_controls <- T
@@ -171,7 +171,7 @@ rg_valid <- subset_rg_set(rg_set = rgValid,
 data_cases <-  preprocessMethod(rg_cases, preprocess = method, methyl_type = methyl_type)
 data_controls <- preprocessMethod(rg_controls, preprocess = method, methyl_type = methyl_type)
 data_valid <- preprocessMethod(rg_valid, preprocess = method, methyl_type = methyl_type)
-
+# HERE
 # get controls
 data_cases <- process_rg_set_single(beta_data = data_cases, 
                                     id_map = id_map_cases, 
@@ -207,7 +207,7 @@ intersect_names <- Reduce(intersect, list(colnames(data_cases)[12:ncol(data_case
                                           colnames(data_valid_mod)[12:ncol(data_valid_mod)]))
 
 # get the probes that are associated with genes
-intersect_names <- intersect(intersect_names, 
+intersect_names <- intersect(intersect_names,
                              gene_probes)
 
 # get clin names
@@ -227,18 +227,24 @@ data_valid_mod <- data_valid_mod[, c(clin_names,
                                      intersect_names)]
 
 # get old controls (mut and no cancer from cases)
-data_controls_mod_old <- rbind(subset(data_cases, p53_germline == 'Mut' & 
+data_controls_mod_old <- rbind(subset(data_cases, p53_germline == 'MUT' &
                                         cancer_diagnosis_diagnoses == 'Unaffected'))
 
+#HERE
+# # get the data here - combine when done running 
+# full_data <- rbind(data_cases,
+#                    data_controls_mod,
+#                    data_valid_mod)
+# 
+# saveRDS(full_data, paste0(data_dir, 'all_data.rda'))
+
+# data_cases_all <- data_cases
+# saveRDS(data_cases_all, paste0(data_dir, 'cases_all.rda'))
 # get model data in cases for training and test
 data_cases <- getModData(data_cases)
 
 # get rid of cancer samples in controls 
 data_controls_mod <- data_controls_mod[grepl('Unaffected', data_controls_mod$cancer_diagnosis_diagnoses),]
-
-#subset valid - get ids from train and test
-case_ids <- data_cases$ids
-data_valid_mod <- data_valid_mod[!data_valid_mod$ids %in% case_ids,]
 
 # remove NAs 
 data_cases <-data_cases[complete.cases(data_cases),]
@@ -250,7 +256,8 @@ data_cases_full <- rbind(data_cases,
 # combine data_controls and data_controls_old
 data_controls_full <- rbind(data_controls_mod, 
                             data_controls_mod_old)
-data_controls_full <- data_controls_full[!duplicated(data_controls_full$ids),]
+
+# data_controls_full <- data_controls_full[!duplicated(data_controls_full$ids),]
 
 # add an indicator for 450 and 850
 data_cases_full$tech <- ifelse(grepl('^57|97', data_cases_full$sentrix_id), 'a', 'b')
@@ -258,6 +265,7 @@ data_controls_full$tech <- ifelse(grepl('^57|97', data_controls_full$sentrix_id)
 
 # get gender variable for each data set
 data_cases_full <- cbind(as.data.frame(class.ind(data_cases_full$gender)), data_cases_full)
+
 data_controls_full <- cbind(as.data.frame(class.ind(data_controls_full$gender)), data_controls_full)
 
 # get tech variable for each data set
@@ -269,19 +277,41 @@ data_controls_full$tech <- NULL
 
 # remove na in both
 data_cases_full <- data_cases_full[!is.na(data_cases_full$age_sample_collection),]
+
 data_controls_full <- data_controls_full[!is.na(data_controls_full$age_sample_collection),]
 
 # remove duplicates from each one
-data_cases_full <- data_cases_full[!duplicated(data_cases_full$tm_donor_),]
+temp <- data_cases_full[, 1:30]
+tm_dup <- temp$tm_donor_[duplicated(temp$tm_donor_)]
+dups <- temp %>% filter(tm_donor_ %in% tm_dup) %>% arrange(tm_donor_)
+
+
+full_data <- rbind(data_cases_full,
+                   data_controls_full)
+
+temp_image <- clin[clin$image_status == 'yes',]
+
+shared_ids <- full_data$ids[full_data$ids %in% temp_image$blood_dna_malkin_lab]
+
+full_data1 <- full_data[full_data$ids %in% shared_ids, ]
+length(which(duplicated(full_data1$ids)))
+
+data_cases_full_last <- data_cases_full[!duplicated(data_cases_full$tm_donor_, fromLast = TRUE),]
+data_cases_full_first <- data_cases_full[!duplicated(data_cases_full$tm_donor_, fromLast = FALSE),]
+
 data_controls_full <- data_controls_full[!duplicated(data_controls_full$tm_donor_),]
 
-load(paste0(data_dir,paste0(data_used,'_',methyl_type, '_processed_temp', '.RData')))
+save.image(paste0(data_dir,paste0(data_used,'_',methyl_type, '_processed_temp_outlier_more', '.RData')))
 
 # create indicator for number of members in family with cancer and ratio of people in family with cancer
 # each individual's cancer status will be unknown, so leave them out.
-get_family_list <- get_family_cancer(data_cases_full, data_controls_full)
-data_cases_full <- get_family_list[[1]] #cases
-data_controls_full <- get_family_list[[2]] #controls
+get_family_list_first <- get_family_cancer(data_cases_full_first, data_controls_full)
+get_family_list_last <- get_family_cancer(data_cases_full_last, data_controls_full)
+
+data_cases_full_first <- get_family_list_first[[1]] #cases
+data_cases_full_last <- get_family_list_last[[1]] #cases
+data_controls_full <- get_family_list_first[[2]] #controls
+
 
 
 # remove unneeded objects
@@ -296,6 +326,6 @@ rm(data_valid, data_controls, ratio_set, get_family_list,
 
 
 # savae data
-save.image(paste0(data_dir,paste0(data_used,'_',methyl_type, '_processed', '.RData')))
+save.image(paste0(data_dir,paste0(data_used,'_',methyl_type, '_processed_beta_first_last_gen', '.RData')))
 ############
 

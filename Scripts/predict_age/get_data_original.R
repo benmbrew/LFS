@@ -102,15 +102,15 @@ id_map_val <- cleanIdMap(id_map_val)
 ##########
 # remove outliers (previously determined) from rgset before normalization
 ##########
-rgControls <- remove_outliers(rgSet = rgControls,
-                              id_map = id_map_con,
-                              method = 'doesnt_matter',
-                              type = 'controls')
-
-rgValid <- remove_outliers(rgSet = rgValid,
-                           id_map = id_map_val,
-                           method = 'doesnt_matter',
-                           type = 'valid')
+# rgControls <- remove_outliers(rgSet = rgControls,
+#                               id_map = id_map_con,
+#                               method = 'doesnt_matter',
+#                               type = 'controls')
+# 
+# rgValid <- remove_outliers(rgSet = rgValid,
+#                            id_map = id_map_val,
+#                            method = 'doesnt_matter',
+#                            type = 'valid')
 
 # load in gene cpgs
 gene_probes <- read_csv('../../Data/all_gene_cpg_loc.csv')
@@ -283,7 +283,7 @@ data_controls_mod <- data_controls_mod[!duplicated(data_controls_mod$tm_donor_),
 data_valid_mod <- data_valid_mod[!duplicated(data_valid_mod$tm_donor_),]
 
 # save.image(paste0(data_dir,paste0(data_used,'_',methyl_type, '_processed_temp', '.RData')))
-load(paste0(data_dir,paste0(data_used,'_',methyl_type, '_processed_temp', '.RData')))
+load(paste0(data_dir,paste0(data_used,'_',methyl_type, '_processed_temp_outlier', '.RData')))
 
 # get cancer indicator and ratio for family members
 get_family_list <- get_family_cancer_old(data_cases, data_controls_mod, data_valid_mod)
@@ -293,11 +293,9 @@ data_cases <- get_family_list[[1]]
 data_controls_mod <- get_family_list[[2]]
 data_valid_mod <- get_family_list[[3]]
 
-# remove duplicates
+# remove duplicates - HERE
 data_cases <- data_cases[!duplicated(data_cases$tm_donor_),]
 #subset valid - get ids from train and test
-case_ids <- data_cases$tm_donor_
-data_valid_mod <- data_valid_mod[!data_valid_mod$tm_donor_ %in% case_ids,]
 
 
 # add a and b variable 
@@ -317,5 +315,5 @@ rm(data_valid, data_controls, ratio_set, gene_probes, get_family_list,
 
 
 # save data
-save.image(paste0(data_dir,paste0(data_used,'_',methyl_type, '_processed', '.RData')))
+save.image(paste0(data_dir,paste0(data_used,'_',methyl_type, '_processed_outlier_beta_first_last', '.RData')))
 

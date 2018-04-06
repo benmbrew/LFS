@@ -25,6 +25,9 @@ if(paste0(data_used,'_',methyl_type, '_final', '.RData') %in% dir(data_dir)) {
 # read in wt data
 data_wt <- readRDS(paste0(data_dir,paste0('new','_',methyl_type, '_wild_type', '.rda')))
 
+full_data <- full_data[full_data$tm_donor_ != '3955',]
+full_data_combat <- full_data[full_data_combat$tm_donor_ != '3955',]
+
 # source all_functions.R to load libraries and my functions
 source('all_functions.R')
 ##########
@@ -45,10 +48,14 @@ run_model <- function(data_full,
                       enet,
                       wt_data,
                       bump_type,
+                      gender,
+                      tech,
+                      fam_num,
+                      fam_ratio,
                       remove_age_cgs_lit,
                       remove_age_cgs_lm,
-                      k_folds = k_folds,
-                      beta_thresh = beta_thresh) {
+                      k_folds,
+                      beta_thresh) {
   
   
   intersect_names <- colnames(data_full)
@@ -139,7 +146,7 @@ run_model <- function(data_full,
       
       # use cases training and controls to get bumphunter features
       bh_feats <- bump_hunter(dat_1 = train_cases, 
-                              dat_2 = controls_full,
+                              dat_2 = controls,
                               wild_type = NULL,
                               bump = 'cancer', 
                               boot_num = 5, 
@@ -152,7 +159,7 @@ run_model <- function(data_full,
       remove_features <- inner_join(bh_feats, g_ranges)$probe
       
       # get features
-      temp_features <- colnames(train_cases)[18:ncol(train_cases)]
+      temp_features <- colnames(cases)[grepl('^cg', colnames(cases))]
       # take remove features out of colnames 
       remaining_features <- temp_features[!temp_features %in% remove_features]
       
@@ -165,18 +172,19 @@ run_model <- function(data_full,
                                   valid_dat = valid,
                                   test_dat = test_cases,
                                   age_cutoff = 72,
-                                  gender = T,
-                                  tech = T,
-                                  fam_num = T,
-                                  fam_ratio = T,
+                                  gender = gender,
+                                  tech = tech,
+                                  fam_num = fam_num,
+                                  fam_ratio = fam_ratio,
                                   bh_features = remaining_features)
       
       
       temp_cases[[i]] <- mod_result[[1]]
       temp_controls[[i]] <- mod_result[[2]]
-      temp_models[[i]] <- mod_result[[3]]
-      temp_lambda[[i]] <- mod_result[[4]]
-      temp_alpha[[i]] <- mod_result[[5]]
+      temp_valid[[i]] <- mod_result[[3]]
+      temp_models[[i]] <- mod_result[[4]]
+      temp_lambda[[i]] <- mod_result[[5]]
+      temp_alpha[[i]] <- mod_result[[6]]
       
       
       
@@ -188,10 +196,10 @@ run_model <- function(data_full,
                             valid_dat = valid,
                             test_dat = test_cases,
                             age_cutoff = 72,
-                            gender = T,
-                            tech = T,
-                            fam_num = T,
-                            fam_ratio = T,
+                            gender = gender,
+                            tech = tech,
+                            fam_num = fam_num,
+                            fam_ratio = fam_ratio,
                             bh_features = remaining_features)
       
       temp_cases[[i]] <- mod_result[[1]]
@@ -235,72 +243,17 @@ run_model <- function(data_full,
 
 
 # run full pipeline
-full_results <- run_model(full_data[, 1:5000],
-                          enet = F,
+full_results <- run_model(full_data[, c(1:5000, ncol(full_data))],
+                          enet = T,
                           wt_data = data_wt,
-                          bump_type = 'both',
+                          bump_type = 'cancer',
+                          gender = T,
+                          tech = T,
+                          fam_num = T,
+                          fam_ratio = T,
                           remove_age_cgs_lit =T,
                           remove_age_cgs_lm = F,
                           k_folds = 5,
                           beta_thresh = 0.1)
 
-
-# get results from list 
-temp_cases <- full_results[[1]]
-
-temp_cases <- temp_cases[ , c('test_pred', 'test_label', 
-                              'age_diagnosis' ,  'age_sample_collection')]
-temp_cases$test_pred_label <- ifelse(temp_cases$test_pred > .5, 1, 0)
-
-temp_cases$pred_is <- ifelse(temp_cases$test_pred_label == temp_cases$test_label, 
-                             'good',
-                             'bad')
-
-
-temp_controls <- full_results[[2]]
-
-temp_controls <- temp_controls[ , c('controls_age_pred', 'controls_age_label', 
-                                    'age_sample_collection')]
-
-
-# get person identfier 
-temp_controls$p_id <- rep.int(seq(1, 35, 1), 4)
-
-# group by fold and get mean 
-temp_controls_pred <- temp_controls %>%
-  group_by(p_id) %>%
-  summarise(mean_pred = mean(controls_age_pred, na.rm =T)) %>%
-  cbind(temp_controls[1:35,])
-
-temp_controls$controls_pred_label <- ifelse(temp_controls$controls_age_pred > .5, 1, 0)
-
-temp_controls$pred_is <- ifelse(temp_controls$controls_pred_label == temp_controls$controls_age_label, 
-                                'good',
-                                'bad')
-
-# remove original prediction 
-temp_controls_pred$controls_age_pred <- NULL
-rm(temp_controls,temp_results)
-
-temp_controls_pred <- temp_controls_pred[order(temp_controls_pred$age_sample_collection, decreasing = F),]
-
-##########
-# examin cases with prediction objects (ROC, TRP, etc)
-##########
-temp_pred_cases <- prediction(temp_cases$test_pred, temp_cases$test_label)
-temp_roc <- performance(temp_pred_cases, measure = 'tpr', x.measure = 'tnr')
-cutoffs <- data.frame(cut=temp_roc@alpha.values[[1]], tpr=temp_roc@x.values[[1]], 
-                      tnr=temp_roc@y.values[[1]])
-
-plot(cutoffs$cut, cutoffs$tpr,type="l",col="red")
-par(new=TRUE)
-plot(cutoffs$cut, cutoffs$tnr,type="l",col="blue",xaxt="n",yaxt="n",xlab="",ylab="")
-
-temp_pr <- performance(temp_pred_cases, measure = 'prec', x.measure = 'rec')
-temp_lc <- performance(temp_pred_cases, measure="lift")
-
-plot(temp_roc)
-plot(temp_pr)
-plot(temp_lc)
-caret::confusionMatrix(round(temp_cases$test_pred, 0.1), temp_cases$test_label)
 

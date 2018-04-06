@@ -10,7 +10,7 @@ cg_gene_regions = 'Body'
 method <- 'noob'
 
 # set type of data, beta or m
-methyl_type <- 'm'
+methyl_type <- 'beta'
 
 # source all_functions.R to load libraries and my functions
 source('all_functions.R')

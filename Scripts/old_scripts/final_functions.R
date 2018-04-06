@@ -2425,25 +2425,7 @@ linearTransform <- function (cases_12,
   
 }
 
-##########
-# function to plot each id against the other
-##########
 
-plotCaseCon <- 
-  function (cases, controls, row_index) {
-    
-    cases_cg <- as.numeric(cases[row_index, 8:ncol(cases)])
-    controls_cg <- as.numeric(controls[row_index, 8:ncol(controls)])
-    
-    smoothScatter(cases_cg, 
-                  controls_cg, 
-                  main = paste0(row_index, '_', 'sample'),
-                  xlab = 'cases', 
-                  ylab = 'controls',
-                  xlim = c(0, 10),
-                  ylim = c(0,10))
-    
-  }
 
 # subset to get methylation data 
 get_model_dat <- function(full_data, probe_start, seed_num, k) {

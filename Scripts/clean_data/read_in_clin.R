@@ -21,8 +21,11 @@ if('new_clin.RData' %in% dir()){
   load('new_clin.RData')
 } else {
   # read in data - DWT - dead weight tonnage (tons) - how much the ship can carry
-  clin_1  <- read_excel('../../Data/clin_data/Malkin_clinical.xlsx', sheet = 1)
-  clin_2  <- read_excel('../../Data/clin_data/Malkin_clinical.xlsx', sheet = 2)
+  clin_1  <- read_excel('../../Data/clin_data/Malkin_clinical.xlsx', sheet = 1, col_types = c('text', 'text','text', 'text','text', 'text', 'text', 'text','text', 'text','text','date', 'text') )
+  clin_2  <- read_excel('../../Data/clin_data/Malkin_clinical.xlsx', sheet = 2, col_types = c('text', 'text','text', 'text','text', 'text', 'text', 'text','text', 'text','text','text','date', 'text'))
+  
+  
+  clin_2_  <- read_excel('../../Data/clin_data/Malkin_clinical.xlsx', sheet = 2)
   
   # add MDM2 to LFS family
   clin_1$MDM2 <- NA
@@ -53,7 +56,7 @@ if('new_clin.RData' %in% dir()){
   
   
  # remove leading and trailing white spaces to all columns
-  clin <- as.data.frame(apply(clin, 2, function(x){
+  clin[, c(1:12, ncol(clin))] <- as.data.frame(apply(clin[, c(1:12, ncol(clin))], 2, function(x){
     trimws(x, 'both')
   }), stringsAsFactors = FALSE
   )
@@ -79,10 +82,10 @@ if('new_clin.RData' %in% dir()){
   # function to split rows with multiple sample ids
   #########
   
-  # HERE important note - write data and then read back in new version that has hand edits.
-  # write_csv(clin, '../../Data/clin_data/temp_clin.csv')
-  clin <- read.csv('../../Data/clin_data/temp_clin.csv')
-  names(clin) <- gsub('.', '_', names(clin), fixed = TRUE)
+  # # HERE important note - write data and then read back in new version that has hand edits.
+  # # write_csv(clin, '../../Data/clin_data/temp_clin.csv')
+  # clin <- read.csv('../../Data/clin_data/temp_clin.csv')
+  # names(clin) <- gsub('.', '_', names(clin), fixed = TRUE)
   
 
   splitRows <- function(data, duplicate_table){
@@ -185,11 +188,11 @@ if('new_clin.RData' %in% dir()){
   clin$dob <- ifelse(grepl('known', as.character(clin$dob)), NA,  as.character(clin$dob))
   
   # extract only the last four characters to get year of birth
-  substrRight <- function(x, n){
-    substr(x, nchar(x)-n+1, nchar(x))
-  }
-  clin$yob <- as.numeric(substrRight(as.character(clin$dob), 4))
-  clin$age <- 2016 - clin$yob
+  # substrRight <- function(x, n){
+  #   substr(x, nchar(x)-n+1, nchar(x))
+  # }
+  clin$yob <- as.numeric(as.character(substr(clin$dob, 1, 4)))
+  # clin$age <- 2016 - clin$yob
   
   # clean p53
   clin$p53_germline <- as.character(clin$p53_germline)

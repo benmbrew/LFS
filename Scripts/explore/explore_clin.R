@@ -1,14 +1,211 @@
 # initialize folders
 library(gsubfn)
 librarty(tidyverse)
+library(dplyr)
+library(RColorBrewer)
+# validation or combined data 
+data_used <- 'new'
+
+# get cg regions
+cg_gene_regions = 'Body'
+
+# set preprocessing method
+method <- 'noob'
+
+# set type of data, beta or m
+methyl_type <- 'beta'
+
+# set data directory
+data_dir <- '../../Data/'
+
+load(paste0(data_dir,paste0(data_used,'_',methyl_type, '_final_beta_first_last', '.RData')))
+
+# source all_functions.R to load libraries and my functions
+source('all_functions.R')
+
+# read in wt data
+data_wt <- readRDS(paste0(data_dir,paste0('new','_',methyl_type, '_wild_type', '.rda')))
+
+full_data_first <- full_data_first[full_data_first$tm_donor_ != '3955',]
+full_data_last <- full_data_last[full_data_last$tm_donor_ != '3955',]
+
+# bar chart for p53_germline and gender, with mean age of onset, sample collection,
+clin$age_diagnosis <- round((clin$age_diagnosis/12),2)
+clin$age_sample_collection <- round((clin$age_sample_collection/12),2)
+full_data_first$age_diagnosis <- round((full_data_first$age_diagnosis/12),2)
+full_data_first$age_sample_collection <- round((full_data_first$age_sample_collection/12),2)
 
 
 
-path_to_clin <- '../../Data/clin_data'
-##########
-# read in data 
-##########
-clin <- read_csv(paste0(path_to_clin, '/clinical_two.csv'))
+temp <- clin %>% filter(!is.na(p53_germline)) %>% 
+  filter(p53_germline != 'no result') %>% group_by(p53_germline) %>% 
+  summarise(mean_onset = mean(age_diagnosis, na.rm = TRUE),
+            mean_sample = mean(age_sample_collection, na.rm = TRUE),
+            counts = n(),
+            per_cancer = round(sum(!grepl('Unaffected', cancer_diagnosis_diagnoses))/counts, 2),
+            per_female = round(sum(!grepl('M', gender))/counts, 2))
+
+
+
+clin$cancer_diagnosis_diagnoses <- gsub('Anaplastic ERMS', 'ERMS', clin$cancer_diagnosis_diagnoses)
+clin$cancer_diagnosis_diagnoses <- gsub('Breast ca', 'Breast', clin$cancer_diagnosis_diagnoses)
+
+temp <- clin %>% filter(!is.na(cancer_diagnosis_diagnoses)) %>%
+  group_by(cancer_diagnosis_diagnoses) %>% 
+  summarise(counts = n()) %>% arrange(-counts) %>% filter(!grepl('Unaffected', cancer_diagnosis_diagnoses))
+
+temp$cancer_cat <- ifelse(temp$counts < 9, 'Other', temp$cancer_diagnosis_diagnoses)
+
+temp_1<- temp %>% group_by(cancer_cat) %>%
+  summarise(sum_counts = sum(counts, na.rm = T)) %>% arrange(-sum_counts)
+
+library(RColorBrewer)
+library(wordcloud)
+temp_1 <- temp_1[1:7,]
+
+ggplot(temp_1, aes(x= '', y = sum_counts, fill = cancer_cat)) +
+  geom_bar(width = 1, stat = "identity") +
+  coord_polar("y", start = 0) +  scale_fill_brewer(name = '',palette="Blues")+
+  theme_minimal(base_size = 20, base_family = 'Ubuntu') + 
+  labs(x = '', y = '')
+
+
+pie(temp_1$sum_counts, labels = temp_1$cancer_cat, col = brewer.pal(8, 'Set1'))
+
+temp_cancer <- clin[!grepl('Unaffected', clin$cancer_diagnosis_diagnoses),]
+wordcloud(temp_cancer$cancer_diagnosis_diagnoses, random.order = FALSE,rot.per=0.35,
+          colors = brewer.pal(8, "Dark2"), use.r.layout=TRUE)
+
+
+
+# get pie chart for Mut and WT and unknown 
+temp_p53 <- 
+  clin %>% 
+  group_by(p53_germline) %>%
+  summarise(counts = n())
+
+temp_p53$p53_germline <- gsub('no result', NA, temp_p53$p53_germline)
+
+ggplot(temp_p53, aes(x= '', y = counts, fill = p53_germline)) +
+  geom_bar(width = 1, stat = "identity") +
+  coord_polar("y", start = 0) +  scale_fill_brewer(palette="Dark2")+
+  theme_minimal(base_size = 12, base_family = 'Ubuntu') + 
+  labs(x = '', y = '')
+
+
+# plot age diagnosis against age of sample collection
+temp_mod <- full_data_first[!duplicated(full_data_first$tm_donor_), 1:17]
+
+ggplot(temp_mod, aes(age_diagnosis, age_sample_collection)) + 
+  geom_point(size = 4, col = 'black', alpha = 0.6) +
+  labs(x = 'Age of onset', y = 'Age of sample collection') +
+  theme_minimal(base_size = 18, base_family = 'Ubuntu')  
+  
+
+
+# temp_dat <- clin
+# temp_dat <- full_data_first[, 1:15]
+# var1 = 'gender'
+# var2 = 'p53_germline'
+# var3=  'age_sample_collection'
+# title = 'P53'
+get_bar_plot <- function(temp_dat, var1, var2, var3, title) {
+  
+  temp <- temp_dat[, c(var1, var2, var3)]
+  
+  orig_labs <- names(temp)[1:3]
+  orig_labs <- gsub('_', ' ', orig_labs)
+  orig_labs <- Hmisc::capitalize(orig_labs)
+  
+  names(temp)[1:3] <- c('V1', 'V2', 'V3')
+  
+  temp <- 
+    temp %>%
+    group_by(V1, V2) %>%
+    summarise(mean_value = round(mean(V3, na.rm = T),2),
+                                counts = n())
+  
+  temp <- temp[complete.cases(temp),]
+  
+  
+  cols <- brewer.pal(8, name = 'Set1')
+  
+  
+  p <- ggplot(temp,
+              aes(V1, mean_value, 
+              fill = V2)) + geom_bar(stat = 'identity', 
+                                    position = 'dodge',
+                                    alpha = 0.8) +
+    scale_fill_manual(name = '', values = cols) +
+    labs(x = orig_labs[1], y = orig_labs[3]) +
+    ggtitle(title) +
+    geom_text(aes(label=mean_value), position=position_dodge(width=0.9), 
+              vjust=-0.25, size = 5) +
+    theme_minimal(base_size = 14, base_family = 'Ubuntu')
+    
+  return(p)
+
+}
+
+# get a temporary clinical data set used in model
+temp_mod_dat <- full_data_first[, 1:17]
+temp_mod_con <- temp_mod_dat[grepl('Unaffected', temp_mod_dat$cancer_diagnosis_diagnoses),]
+temp_con_last <- temp_mod_con[!duplicated(temp_mod_con$tm_donor_, fromLast = T),]
+temp_con_first <- temp_mod_con[!duplicated(temp_mod_con$tm_donor_, fromLast = F),]
+
+
+# recode for just a cancer classifier in clin and modle data
+clin$cancer_fac <- ifelse(grepl('Unaffected', clin$cancer_diagnosis_diagnoses), 
+                          'No', 
+                          ifelse(is.na(clin$cancer_diagnosis_diagnoses),
+                                 NA, 'Yes'))
+
+# recode for just a cancer classifier in temp_mod_dat and modle data
+temp_mod_dat$cancer_fac <- ifelse(grepl('Unaffected', temp_mod_dat$cancer_diagnosis_diagnoses), 
+                          'No', 
+                          ifelse(is.na(temp_mod_dat$cancer_diagnosis_diagnoses),
+                                 NA, 'Yes'))
+
+
+# p53 and gender 
+get_bar_plot(clin, var1 = 'gender', var2 = 'p53_germline', var3 = 'age_diagnosis', title = 'All clinical data')
+get_bar_plot(temp_mod_dat, var1 = 'gender', var2 = 'p53_germline', var3 = 'age_diagnosis', title = 'Data used in model')
+
+# gender and cases controls  
+get_bar_plot(clin, var1 = 'gender', var2 = 'cancer_fac', var3 = 'age_diagnosis', title = 'All clinical data')
+get_bar_plot(temp_mod_dat, var1 = 'gender', var2 = 'cancer_fac', var3 = 'age_diagnosis', title = 'All clinical data')
+
+# p53 and gender 
+get_bar_plot(clin, var1 = 'gender', var2 = 'p53_germline', var3 = 'age_sample_collection', title = 'All clinical data')
+get_bar_plot(temp_mod_dat, var1 = 'gender', var2 = 'p53_germline', var3 = 'age_sample_collection', title = 'Data used in model')
+
+# gender and cases controls  
+get_bar_plot(clin, var1 = 'gender', var2 = 'cancer_fac', var3 = 'age_sample_collection', title = 'All clinical data')
+get_bar_plot(temp_mod_dat, var1 = 'gender', var2 = 'cancer_fac', var3 = 'age_sample_collection', title = 'All clinical data')
+
+
+# histogram for onset, and onset by cases and controls
+# Histogram overlaid with kernel density curve
+# ggplot(clin, aes(x=age_sample_collection)) + 
+#   geom_histogram(aes(y=..density..),      # Histogram with density instead of count on y-axis
+#                  binwidth=.5,
+#                  colour="black", fill="white") +
+#   geom_density(alpha=.2, fill="#FF6666")  # Overlay with transparent density plot
+
+length(which(is.na(clin$cancer_diagnosis_diagnoses)))
+length(which(is.na(clin$age_sample_collection)))
+
+temp_mod_dat <- temp_mod_dat[!duplicated(temp_mod_dat$tm_donor_),]
+
+ggplot(clin, aes(x=age_diagnosis)) + 
+  geom_histogram(aes(y=..count..),      # Histogram with density instead of count on y-axis
+                 binwidth=20,
+                 colour="black", fill="grey") +
+  geom_density(aes(y = ..density.. *(430*20)),
+               alpha=.2, fill="blue") +
+  labs(title = '', x = 'Age of onset', y = 'Counts') +
+  theme_minimal(base_size = 20, base_family = 'Ubuntu')
+
 
 ##########
 # trim columns
