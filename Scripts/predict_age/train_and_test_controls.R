@@ -318,7 +318,7 @@ temp_cases <- temp_cases[order(temp_cases$age_sample_collection, decreasing = T)
 length(which(temp_cases_young$pred_is == 'good'))
 
 # temp_cases <- temp_cases[order(temp_cases$test_pred, decreasing = T),]
-save.image('~/Desktop/paper_cases.RData')
+save.image('/../../paper_cases.RData')
 
 ##########
 # examin cases with prediction objects (ROC, TRP, etc)

@@ -3,6 +3,7 @@ library(gsubfn)
 librarty(tidyverse)
 library(dplyr)
 library(RColorBrewer)
+library(plotly)
 # validation or combined data 
 data_used <- 'new'
 
@@ -61,7 +62,7 @@ temp_1<- temp %>% group_by(cancer_cat) %>%
 
 library(RColorBrewer)
 library(wordcloud)
-temp_1 <- temp_1[1:7,]
+temp_1 <- temp_1[1:10,]
 
 ggplot(temp_1, aes(x= '', y = sum_counts, fill = cancer_cat)) +
   geom_bar(width = 1, stat = "identity") +
@@ -69,6 +70,7 @@ ggplot(temp_1, aes(x= '', y = sum_counts, fill = cancer_cat)) +
   theme_minimal(base_size = 20, base_family = 'Ubuntu') + 
   labs(x = '', y = '')
 
+temp_p
 
 pie(temp_1$sum_counts, labels = temp_1$cancer_cat, col = brewer.pal(8, 'Set1'))
 
@@ -85,6 +87,41 @@ temp_p53 <-
   summarise(counts = n())
 
 temp_p53$p53_germline <- gsub('no result', NA, temp_p53$p53_germline)
+
+pie(temp_p53$counts, labels = temp_p53$p53_germline, col = brewer.pal(8, 'Set1'))
+temp_p53 <- temp_p53[complete.cases(temp_p53),]
+temp_p53$counts<- ifelse(temp_p53$counts == 280, 277, temp_p53$counts)
+
+
+
+f <- list(
+  family = "Ubuntu",
+  size = 20,
+  color = "white"
+)
+
+colors <- c('rgb(171,104,87)', 'rgb(114,147,203)')
+
+p1 <-  plot_ly(temp_p53,labels = ~p53_germline, values = ~counts,
+               type ='pie',
+               textposition = 'inside',
+               textinfo = 'label+percent+value',
+               insidetextfont = f,
+               hoverinfo = 'label+value',
+               marker = list(colors = colors,
+                             line = list(color = '#FFFFFF', width = 1)))  %>%
+  
+  config(displayModeBar = F) %>%
+  
+  layout(title = 'LFS', showlegend = F,
+         annotations = list(
+           showarrow = FALSE,
+           text = '',
+           font = list(color = '#1F2023',
+                       family = 'sans serif')), 
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
 
 ggplot(temp_p53, aes(x= '', y = counts, fill = p53_germline)) +
   geom_bar(width = 1, stat = "identity") +
@@ -194,19 +231,32 @@ get_bar_plot(temp_mod_dat, var1 = 'gender', var2 = 'cancer_fac', var3 = 'age_sam
 
 length(which(is.na(clin$cancer_diagnosis_diagnoses)))
 length(which(is.na(clin$age_sample_collection)))
+length(which(is.na(clin$age_diagnosis)))
+
 
 temp_mod_dat <- temp_mod_dat[!duplicated(temp_mod_dat$tm_donor_),]
 
-ggplot(clin, aes(x=age_diagnosis)) + 
+g1 <- ggplot(clin, aes(x=age_diagnosis)) + 
   geom_histogram(aes(y=..count..),      # Histogram with density instead of count on y-axis
-                 binwidth=20,
+                 binwidth=5,
                  colour="black", fill="grey") +
-  geom_density(aes(y = ..density.. *(430*20)),
+  geom_density(aes(y = ..density.. *(427*5)),
                alpha=.2, fill="blue") +
-  labs(title = '', x = 'Age of onset', y = 'Counts') +
-  theme_minimal(base_size = 20, base_family = 'Ubuntu')
+  labs(title = '', x = 'Age of diagnosis', y = 'Counts') +
+  theme_minimal(base_size = 12, base_family = 'Ubuntu')
 
+g2 <- ggplot(clin, aes(x=age_sample_collection)) + 
+  geom_histogram(aes(y=..count..),      # Histogram with density instead of count on y-axis
+                 binwidth=5,
+                 colour="black", fill="grey") +
+  geom_density(aes(y = ..density.. *(430*5)),
+               alpha=.2, fill="blue") +
+  labs(title = '', x = 'Age of sample collection', y = 'Counts') +
+  theme_minimal(base_size = 12, base_family = 'Ubuntu')
 
+library(gridExtra)
+
+grid.arrange(g1, g2, nrow= 2)
 ##########
 # trim columns
 ##########
