@@ -196,7 +196,6 @@ all_con_m <- all_con_m[all_con_m$ids != '3010',]
 all_con_beta<- all_con_beta[all_con_beta$ids != '2564',]
 all_con_beta<- all_con_beta[all_con_beta$ids != '3010',]
 
-
 # remove datasets
 rm(cases_450,
    con_450, 
@@ -285,6 +284,24 @@ saveRDS(all_cases_m_combat, '../../Data/all_cases_m_combat.rda')
 saveRDS(all_con_m, '../../Data/all_con_m.rda')
 saveRDS(all_con_m_combat, '../../Data/all_con_m_combat.rda')
 
+# check PCs
+get_pca(pca_data = all_cases_beta, 
+        age_cutoff = 72,
+        column_name = 'tech',
+        show_variance = FALSE,
+        pc_x = 1,
+        pc_y = 2,
+        main_title = 'PC 1 and 2 cases beta no combat')
+
+
+# check PCs
+get_pca(pca_data = all_cases_beta_combat, 
+        age_cutoff = 72,
+        column_name = 'tech',
+        show_variance = FALSE,
+        pc_x = 1,
+        pc_y = 2,
+        main_title = 'PC 1 and 2 cases beta combat')
 
 # check PCs
 get_pca(pca_data = all_cases_m, 
@@ -293,7 +310,60 @@ get_pca(pca_data = all_cases_m,
         show_variance = FALSE,
         pc_x = 1,
         pc_y = 2,
-        main_title = 'PC 1 and 2 cases beta values without combat')
-###----------------------------------------------------------------------------------
-# remove first PC from analysis
+        main_title = 'PC 1 and 2 cases m no combat')
+
+
+# check PCs
+get_pca(pca_data = all_cases_m_combat, 
+        age_cutoff = 72,
+        column_name = 'tech',
+        show_variance = FALSE,
+        pc_x = 1,
+        pc_y = 2,
+        main_title = 'PC 1 and 2 cases m combat')
+
+
+# check PCs
+get_pca(pca_data = all_con_beta, 
+        age_cutoff = 72,
+        column_name = 'tech',
+        show_variance = FALSE,
+        pc_x = 1,
+        pc_y = 2,
+        main_title = 'PC 1 and 2 con beta no combat')
+
+
+
+# check PCs
+get_pca(pca_data = all_con_beta_combat, 
+        age_cutoff = 72,
+        column_name = 'tech',
+        show_variance = FALSE,
+        pc_x = 1,
+        pc_y = 2,
+        main_title = 'PC 1 and 2 con beta combat')
+
+# check PCs
+get_pca(pca_data = all_con_m, 
+        age_cutoff = 72,
+        column_name = 'tech',
+        show_variance = FALSE,
+        pc_x = 1,
+        pc_y = 2,
+        main_title = 'PC 1 and 2 con m no combat')
+
+
+
+# check PCs
+get_pca(pca_data = all_con_m_combat, 
+        age_cutoff = 72,
+        column_name = 'tech',
+        show_variance = FALSE,
+        pc_x = 1,
+        pc_y = 2,
+        main_title = 'PC 1 and 2 con m combat')
+
+
+
+
 
