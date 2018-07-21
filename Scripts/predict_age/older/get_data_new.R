@@ -46,7 +46,7 @@ g_ranges <- g_ranges[!grepl('ch', g_ranges$probe),]
 clin <- read.csv('../../Data/clin_data/new_clin.csv', stringsAsFactors = F)
 
 # clean clinical ids
-clin$ids <-  gsub('A|B|_|-', '', clin$blood_dna_malkin_lab_)
+clin$ids <-  gsub('A|B|_|-', '', clin$blood_dna_malkin_lab)
 
 
 ##########
@@ -172,8 +172,10 @@ data_cases <-  preprocessMethod(rg_cases, preprocess = method, methyl_type = met
 data_controls <- preprocessMethod(rg_controls, preprocess = method, methyl_type = methyl_type)
 data_valid <- preprocessMethod(rg_valid, preprocess = method, methyl_type = methyl_type)
 # HERE
+
+colnames(clin)[30] <- 'blah'
 # get controls
-data_cases <- process_rg_set_single(beta_data = data_cases, 
+data_cases1 <- process_rg_set_single(beta_data = data_cases, 
                                     id_map = id_map_cases, 
                                     clin = clin)
 # get controls

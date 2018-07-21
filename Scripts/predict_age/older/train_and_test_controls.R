@@ -10,13 +10,14 @@ cg_gene_regions = 'Body'
 method <- 'noob'
 
 # set type of data, beta or m
-methyl_type <- 'beta'
+methyl_type <- 'm'
 
 # set data directory
 data_dir <- '../../Data/'
 
-load(paste0(data_dir,paste0(data_used,'_',methyl_type, '_final_beta_first_last', '.RData')))
 
+temp_data <- full_data_first %>% filter(ids %in% these_ids)
+temp_data <- full_data_first[full_data_first$ids %in% these_ids,]
 # source all_functions.R to load libraries and my functions
 source('all_functions.R')
 

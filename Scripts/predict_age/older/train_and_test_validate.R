@@ -1,7 +1,7 @@
 
 
 # validation or combined data 
-data_used <- 'old'
+data_used <- 'new'
 
 # get cg regions
 cg_gene_regions = 'Body'

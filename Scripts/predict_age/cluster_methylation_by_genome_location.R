@@ -1,0 +1,1 @@
+# this script will cluster on the methylation data and see if it is clustering by genomic location

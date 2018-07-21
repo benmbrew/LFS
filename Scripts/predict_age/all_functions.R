@@ -16,6 +16,11 @@ library(PRROC)
 library(survival)
 library(broom)
 library(sva)
+library(wateRmelon)
+library(RPMM)
+library(RColorBrewer)
+
+registerDoParallel(1)
 
 
 get_diff_dups <- function(temp_data) {
@@ -59,24 +64,26 @@ preprocessMethod <- function(data, preprocess, methyl_type) {
     Mset  <- preprocessIllumina(data)
   } 
   if (preprocess == 'swan') {
-    Mset  <-preprocessSWAN(data)
+    Mset  <- preprocessSWAN(data)
   }
   if (preprocess == 'funnorm') {
-    Mset <-preprocessFunnorm(data)
+    Mset <- preprocessFunnorm(data)
   }
   if (preprocess == 'noob') {
-    Mset <-preprocessNoob(data)
-  }
-  # map methyl set to genome (funnorm already does this)
-  Gset <- mapToGenome(Mset)
+    Mset <- preprocessNoob(data, dyeMethod = 'single')
+   }
+  # # map methyl set to genome (funnorm already does this)
+  # Gset <- mapToGenome(Mset)
   # # get m values
   if(methyl_type == 'beta') {
-    dat <- getBeta(Gset)
+    # dat_beta <- getBeta(Mset)
+    dat <- wateRmelon::BMIQ(Mset)
   } else {
     dat <- getM(Mset)
   }
   return(dat)
 }
+
 
 # functions to be used in model_pipeline script
 # data <- id_map
@@ -184,14 +191,33 @@ process_rg_set <-
 
 
 # # id function
-# beta_data <- beta_valid[1:10000,]
-# id_map <- id_map_val
+# beta_data <- data_cases[1:10000,]
+# id_map <- id_map_cases
 process_rg_set_single <- function(beta_data, id_map, clin) {
   colnames(clin)[7] <- 'ids'
   beta_data <- findIds(beta_data, id_map)
   beta_data <- getIdName(beta_data)
   beta_data <- cleanIds(beta_data)
   beta_data <- beta_data[, !grepl('ch', colnames(beta_data))]
+  # there are duplicate ids - loop through ids and avg duplicates 
+  # dup_ids <- beta_data$ids[duplicated(beta_data$ids)]
+  # col_list <- list()
+  # sample_list <- list()
+  # for(i in 1:length(dup_ids)){
+  #   id_name <- dup_ids[i]
+  #   sub_dat <- beta_data[beta_data$ids == id_name, ]
+  #   for(j in 1:ncol(sub_dat)){
+  #     temp_col <- sub_dat[, j]
+  #     col_list[[j]] <- mean(temp_col)
+  #     print(j)
+  #   }
+  #   sample_list[[i]] <- append(id_name, unlist(col_list))
+  #  print(i)
+  # }
+  # 
+  # remove duplicated ids
+  # beta_data <- beta_data[!duplicated(beta_data$ids), ]
+  # clin <- clin[!duplicated(clin$ids), ]
   beta_data <- dplyr::inner_join(clin, beta_data, by = 'ids')
   beta_data <- beta_data[!is.na(beta_data$tm_donor),]
   beta_data <- beta_data[!duplicated(beta_data$tm_donor),]
@@ -330,7 +356,7 @@ subset_rg_set <- function(rg_set, keep_gender, keep_controls, keep_snps, get_isl
   remove_probes <- rg_dat$Name[!as.character(rg_dat$Name) %in% as.character(rg_dat_sub$Name)]
   # use subset function from minfi
   rg_set_new <- subsetByLoci(rg_set, 
-                             includeLoci = keep_int, 
+                             includeLoci = keep_probes, 
                              excludeLoci = remove_probes, 
                              keepControls = keep_controls, 
                              keepSnps = keep_snps)
@@ -343,7 +369,7 @@ subset_rg_set <- function(rg_set, keep_gender, keep_controls, keep_snps, get_isl
 run_combat <- function(temp_data) {
   temp_data <- as.data.frame(temp_data)
   # get tech variable variable back to categories 
-  temp_data$tech <- ifelse(temp_data$a == 1, 'batch_1', 'batch_2')
+  temp_data$tech <- ifelse(temp_data$tech == '450k', 'batch_1', 'batch_2')
   
   # get batch
   batch_indicator <- as.character(temp_data$tech)
@@ -648,11 +674,11 @@ testKS <- function(x, y)
 ##########
 # get pca function
 ##########
-pca_data <- temp
 
 get_pca <- function(pca_data, 
                     column_name,
                     age_cutoff,
+                    show_variance,
                     pc_x,
                     pc_y,
                     main_title) {
@@ -681,7 +707,7 @@ get_pca <- function(pca_data,
   pca_data[, column_name] <- as.factor(pca_data[, column_name])
   
   # get other clinical data
-  column_names <- c('tm_donor_','ids' ,'cancer_diagnosis_diagnoses', 
+  column_names <- c('tm_donor','ids' ,'cancer_diagnosis_diagnoses', 
                     'age_diagnosis', 'age_sample_collection', 'gender')
   # remove column_name
   column_names <- column_names[!column_names %in% column_name]
@@ -700,61 +726,47 @@ get_pca <- function(pca_data,
   data_length <- ncol(pca_data)
   pca <- prcomp(pca_data[,8:data_length])
   
-  # get pca dataframe with results and factor to color
-  pca_results <- data.frame(pca$x[, 1:10], column_name = pca_data[, column_name],
-                            pca_data[, column_names])
-  
-  ####
-  results_list <- list()
-  for(i in unique(pca_results$tm_donor_)){
-    temp_tm <- pca_results[pca_results$tm_donor_ == i,]
-    temp_tm$diff <- abs(temp_tm$age_sample_collection[1] - temp_tm$age_sample_collection[2] )
-    temp_tm$corr <- cor(as.numeric(temp_tm[1, 1:10]), as.numeric(temp_tm[2, 1:10]))
-    temp_tm$first_sample <- temp_tm$age_sample_collection[1]
-    temp_tm$second_sample <- temp_tm$age_sample_collection[2]
-    temp_tm <- temp_tm[, c('tm_donor_', 'ids', 'diff', 'corr', 'first_sample', 'second_sample')]
-  results_list[[i]] <- temp_tm
+  if(show_variance){
+    # plot lambda
+    return(plot(pca, xlim = c(0,10), type = 'l', main = 'PCs and variance'))
+  } else {
+    # get pca dataframe with results and factor to color
+    pca_results <- data.frame(pca$x[, 1:10], column_name = pca_data[, column_name],
+                              pca_data[, column_names])
     
+    # get actual PC
+    pca_results <- pca_results[ c(pc_x,pc_y, 11:ncol(pca_results))]
+    real_x_axis <- names(pca_results)[1]
+    real_y_axis <- names(pca_results)[2]
+    
+    # now rename first two to var1, var2 so it can still plot
+    names(pca_results)[1:2] <- c('V1', 'V2')
+    
+    # get color
+    cols <- colorRampPalette(brewer.pal(n = 9, 'Spectral'))(length(unique(pca_results$column_name)))
+    
+    plot <- 
+      ggplot(pca_results, 
+             aes(V1, V2, 
+                 col = column_name)) +
+      geom_point(size = 3, 
+                 alpha = 0.7) +
+      xlab(real_x_axis) + 
+      ylab(real_y_axis) +
+      scale_color_manual(name = '',
+                         values = cols) + 
+      ggtitle(main_title) +
+      geom_hline(yintercept= 0, linetype="dashed", 
+                 color = "grey", size=1) +
+      geom_vline(xintercept=0, linetype="dashed", 
+                 color = "grey", size=1) +
+      theme_minimal(base_size = 18, base_family = 'ubuntu')
+    
+    # plot <- ggplotly(plot)
+    
+    return(plot)
   }
   
-  results_list <- do.call(rbind, results_list)
-  results_list <- results_list[!duplicated(results_list$tm_donor_),]
-  results_list$both_samples <- paste0(results_list$second_sample, ' / ', results_list$first_sample)
-  
-  ggplot(results_list, aes(diff, corr)) + geom_point(aes(size = first_sample), col = 'black', alpha = 0.7) +
-    xlim(c(0, 50)) + theme_bw(base_size = 12, base_family = 'Calibri') + labs(x = 'Difference in months', y = 'Correlation of first 10 PCs') + theme(legend.position = 'none') 
-  
-  # get actual PC
-  pca_results <- pca_results[ c(pc_x,pc_y, 11:ncol(pca_results))]
-  real_x_axis <- names(pca_results)[1]
-  real_y_axis <- names(pca_results)[2]
-  
-  # now rename first two to var1, var2 so it can still plot
-  names(pca_results)[1:2] <- c('V1', 'V2')
-  
-  # get color
-  cols <- colorRampPalette(brewer.pal(n = 9, 'Spectral'))(length(unique(pca_results$column_name)))
-
-  plot <- 
-    ggplot(pca_results, 
-           aes(V1, V2, 
-           col = column_name)) +
-    geom_point(size = 3, 
-               alpha = 0.7) +
-    xlab(real_x_axis) + 
-    ylab(real_y_axis) +
-    scale_color_manual(name = '',
-                       values = cols) + 
-    ggtitle(main_title) +
-    geom_hline(yintercept= 0, linetype="dashed", 
-               color = "grey", size=1) +
-    geom_vline(xintercept=0, linetype="dashed", 
-               color = "grey", size=1) +
-    theme_minimal(base_size = 18, base_family = 'ubuntu')
-  
-  # plot <- ggplotly(plot)
-  
-  return(plot)
 }
 
 # add age as dummy variable 
