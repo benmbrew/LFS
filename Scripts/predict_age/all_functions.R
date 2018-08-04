@@ -356,7 +356,7 @@ subset_rg_set <- function(rg_set, keep_gender, keep_controls, keep_snps, get_isl
   remove_probes <- rg_dat$Name[!as.character(rg_dat$Name) %in% as.character(rg_dat_sub$Name)]
   # use subset function from minfi
   rg_set_new <- subsetByLoci(rg_set, 
-                             includeLoci = keep_probes, 
+                             includeLoci = keep_int, 
                              excludeLoci = remove_probes, 
                              keepControls = keep_controls, 
                              keepSnps = keep_snps)

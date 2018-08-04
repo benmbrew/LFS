@@ -70,6 +70,7 @@ con_wt_450 <- readRDS('../../Data/controls_wt_450.rda')
 con_850_m <- readRDS('../../Data/controls_850_m.rda')
 cases_850_m <- readRDS('../../Data/cases_850_m.rda')
 
+
 # read in 450k 
 cases_450_m <-readRDS('../../Data/cases_450_m.rda')
 con_450_m <- readRDS('../../Data/controls_450_m.rda')
@@ -102,6 +103,7 @@ saveRDS(con_wt_450_m, '../../Data/con_wt_450_m.rda')
 saveRDS(cases_wt_450_m, '../../Data/cases_wt_450_m.rda')
 
 rm(con_wt_450_m, cases_wt_450_m)
+
 
 ###----------------------------------------------------------------------------------
 # get pc of all data sets with lambda chart
@@ -216,6 +218,21 @@ all_cases_m <- all_cases_m[!duplicated(all_cases_m$tm_donor),]
 all_con_beta <- all_con_beta[!duplicated(all_con_beta$tm_donor, fromLast = TRUE),]
 all_con_m <- all_con_m[!duplicated(all_con_m$tm_donor, fromLast = TRUE),]
 
+# remove case controls from control dataset 
+all_con_beta <- all_con_beta[grepl('Unaffected', all_con_beta$cancer_diagnosis_diagnoses),]
+all_con_m <- all_con_m[grepl('Unaffected', all_con_m$cancer_diagnosis_diagnoses),]
+
+# remove WT 
+remove_wild_type <- function(m_or_beta_values){
+  m_or_beta_values <- m_or_beta_values[m_or_beta_values$p53_germline == 'MUT',]
+  return(m_or_beta_values)
+}
+all_cases_beta <- remove_wild_type(all_cases_beta)
+all_cases_m <- remove_wild_type(all_cases_m)
+
+all_con_beta <- remove_wild_type(all_con_beta)
+all_con_m <- remove_wild_type(all_con_m)
+
 # plot pc
 # run PCA
 get_pca(pca_data = all_cases_beta, 
@@ -265,6 +282,19 @@ all_cases_m_combat <- run_combat(all_cases_m)
 # run combat on controls (beta and m) to obtain a batch corrected 850k controls.
 all_con_beta_combat <- run_combat(all_con_beta)
 all_con_m_combat <- run_combat(all_con_m)
+
+# subset each data set by age diagnosis if cases or age of sample collection if controls- all 8 datasets
+all_cases_beta <- all_cases_beta[!is.na(all_cases_beta$age_diagnosis),]
+all_cases_beta_combat <- all_cases_beta_combat[!is.na(all_cases_beta_combat$age_diagnosis),]
+
+all_cases_m <- all_cases_m[!is.na(all_cases_m$age_diagnosis),]
+all_cases_m_combat <- all_cases_m_combat[!is.na(all_cases_m_combat$age_diagnosis),]
+
+all_con_beta <- all_con_beta[!is.na(all_con_beta$age_sample_collection),]
+all_con_beta_combat <- all_con_beta_combat[!is.na(all_con_beta_combat$age_sample_collection),]
+
+all_con_m <- all_con_m[!is.na(all_con_m$age_sample_collection),]
+all_con_m_combat <- all_con_m_combat[!is.na(all_con_m_combat$age_sample_collection),]
 
 # save beta data
 # cases

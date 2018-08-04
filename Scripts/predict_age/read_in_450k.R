@@ -8,7 +8,7 @@ path_to_cases_mon <- '../../Data/methyl_data/cases_montreal'
 
 # set preprocessing method
 method <- 'noob'
-methyl_type <- 'm'
+methyl_type <- 'beta'
 
 # get functions
 source('all_functions.R')
@@ -25,21 +25,20 @@ rgCasesM <- read.metharray.exp(path_to_cases_mon, recursive = T)
 rgCases <- combineArrays(rgCasesT, rgCasesM)
 rm(rgCasesT, rgCasesM)
 
-
- ##########
-# load genomic methyl set (from controls) - you need genetic locations by probe from this object
 ##########
-ratio_set <- readRDS('../../Data/model_data/raw_ratio_set.rda')
-
-# get granges object
-g_ranges <- as.data.frame(getLocations(ratio_set))
-
-# get probes from rownames
-g_ranges$probe <- rownames(g_ranges)
-
-# remove ch and duplicatee
-g_ranges <- g_ranges[!duplicated(g_ranges$start),]
-g_ranges <- g_ranges[!grepl('ch', g_ranges$probe),]
+# load genomic methyl set (from controls) - you need genetic locations by probe from this object
+# ##########
+# ratio_set <- readRDS('../../Data/model_data/raw_ratio_set.rda')
+# 
+# # get granges object
+# g_ranges <- as.data.frame(getLocations(ratio_set))
+# 
+# # get probes from rownames
+# g_ranges$probe <- rownames(g_ranges)
+# 
+# # remove ch and duplicatee
+# g_ranges <- g_ranges[!duplicated(g_ranges$start),]
+# g_ranges <- g_ranges[!grepl('ch', g_ranges$probe),]
 
 ##########
 # read in clinical data
@@ -88,24 +87,17 @@ rg_cases <- subset_rg_set(rg_set = rgCases,
                           get_chr = NULL,
                           get_type = NULL,
                           gene_probes = gene_probes)
-
+rm(rgCases)
 
 
 # preprocess controls and valid
-data_cases <-  preprocessMethod(rgCases, preprocess = method, methyl_type = 'm')
+data_cases <-  preprocessMethod(rg_cases, preprocess = method, methyl_type = 'beta')
 
-# load('~/Desktop/temp_450_rg.RData')
-names(as.data.frame(data_cases))
-
-data_cases <- as.data.frame(data_cases)
-
+temp <- GenomicRatioSet(data_cases)
 # get cases mapped to clinical data 
 data_cases <- process_rg_set_single(beta_data = data_cases, 
                                     id_map = id_map_cases, 
                                     clin = clin)
-
-
-# save both beta and m for the following data sets 
 
 # get cases 450 and controls 450
 data_cases_450 <- data_cases[!data_cases$cancer_diagnosis_diagnoses %in% 'Unaffected',]
