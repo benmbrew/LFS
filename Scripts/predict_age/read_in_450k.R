@@ -93,7 +93,7 @@ rm(rgCases)
 # preprocess controls and valid
 data_cases <-  preprocessMethod(rg_cases, preprocess = method, methyl_type = 'beta')
 
-temp <- GenomicRatioSet(data_cases)
+# temp <- GenomicRatioSet(data_cases)
 # get cases mapped to clinical data 
 data_cases <- process_rg_set_single(beta_data = data_cases, 
                                     id_map = id_map_cases, 
@@ -108,7 +108,7 @@ data_wt_cases_450 <- data_cases_450[data_cases_450$p53_germline == 'WT',]
 data_wt_controls_450 <- data_controls_450[data_controls_450$p53_germline == 'WT',]
 
 # save all four data sets: 1) LFS cancer, LFS controls, WT cancer, WT controls
-saveRDS(data_cases_450, '../../Data/cases_450_m.rda')
-saveRDS(data_controls_450, '../../Data/controls_450_m.rda')
-saveRDS(data_wt_cases_450, '../../Data/cases_wt_450_m.rda')
-saveRDS(data_controls_450, '../../Data/controls_wt_450_m.rda')
+saveRDS(data_cases_450, '../../Data/cases_450_beta.rda')
+saveRDS(data_controls_450, '../../Data/controls_450_beta.rda')
+saveRDS(data_wt_cases_450, '../../Data/cases_wt_450_beta.rda')
+saveRDS(data_controls_450, '../../Data/controls_wt_450_beta.rda')

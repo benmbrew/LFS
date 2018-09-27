@@ -1,53 +1,3 @@
-# ids_450 <- con_450$ids
-# ids_850 <- con_850$ids
-# re <- intersect(ids_450, ids_850)
-# 
-# con_450_m <- con_450_m[!con_450_m$ids %in% re, ]
-# con_850_m <- con_850_m[!con_850_m$ids %in% re, ]
-# 
-# con_450_m <- con_450_m[con_450_m$p53_germline == 'MUT',]
-# con_850_m <- con_850_m[con_850_m$p53_germline == 'MUT',]
-# 
-# con_450_m <- con_450_m[!is.na(con_450_m$age_sample_collection),]
-# con_850_m <- con_850_m[!is.na(con_850_m$age_sample_collection),]
-# 
-# cases_450_m <- cases_450_m[cases_450_m$p53_germline == 'MUT',]
-# cases_450_m <- cases_450_m[!is.na(cases_450_m$age_sample_collection),]
-# ids_450 <- cases_450$ids
-# cases_850_m <- cases_850_m[!cases_850_m$ids %in% ids_450,]
-# cases_850_m <- cases_850_m[!duplicated(cases_850_m$ids),]
-# 
-# 
-# saveRDS(con_450_m, '~/Desktop/for_valli/controls_m_450k.rda')
-# saveRDS(con_850_m, '~/Desktop/for_valli/controls_m_850k.rda')
-# saveRDS(cases_450_m, '~/Desktop/for_valli/cases_m_450k.rda')
-# saveRDS(cases_850_m, '~/Desktop/for_valli/cases_m_850k.rda')
-# 
-# 
-# cases_450 <- cases_450[cases_450$p53_germline == 'MUT',]
-# cases_450 <- cases_450[!is.na(cases_450$age_sample_collection),]
-# ids_450 <- cases_450$ids
-# cases_850 <- cases_850[!cases_850$ids %in% ids_450,]
-# cases_850 <- cases_850[!duplicated(cases_850$ids),]
-# 
-# ids_450 <- con_450$ids
-# ids_850 <- con_850$ids
-# re <- intersect(ids_450, ids_850)
-# 
-# con_450 <- con_450[!con_450$ids %in% re, ]
-# con_850 <- con_850[!con_850$ids %in% re, ]
-# 
-# con_450 <- con_450[con_450$p53_germline == 'MUT',]
-# con_850 <- con_850[con_850$p53_germline == 'MUT',]
-# 
-# con_450 <- con_450[!is.na(con_450$age_sample_collection),]
-# con_850 <- con_850[!is.na(con_850$age_sample_collection),]
-# 
-# saveRDS(cases_450, '~/Desktop/for_valli/cases_bmiq_beta_450k.rda')
-# saveRDS(cases_850, '~/Desktop/for_valli/cases_bmiq_beta_850k.rda')
-# saveRDS(con_450, '~/Desktop/for_valli/controls_bmiq_beta_450k.rda')
-# saveRDS(con_850, '~/Desktop/for_valli/controls_bmiq_beta_850k.rda')
-
 
 # get functions
 source('all_functions.R')
@@ -55,28 +5,28 @@ source('all_functions.R')
 ##### -------- beta
 
 # read in 850k
-con_850 <- readRDS('../../Data/controls_850.rda')
+con_850 <- readRDS('../../Data/controls_850_beta.rda')
 cases_850 <- readRDS('../../Data/cases_850.rda')
 
-# read in 450k 
-cases_450 <-readRDS('../../Data/cases_450.rda')
-con_450 <- readRDS('../../Data/controls_450.rda')
-cases_wt_450 <- readRDS('../../Data/cases_wt_450.rda')
-con_wt_450 <- readRDS('../../Data/controls_wt_450.rda')
-
-##### -------- m values (log2(meth/unmeth))
+# read in 450k
+cases_450 <-readRDS('../../Data/cases_450_beta.rda')
+con_450 <- readRDS('../../Data/controls_450_beta.rda')
+cases_wt_450 <- readRDS('../../Data/cases_wt_450_beta.rda')
+con_wt_450 <- readRDS('../../Data/controls_wt_450_beta.rda')
+# 
+# ##### -------- m values (log2(meth/unmeth))
 
 # read in 850k
-con_850_m <- readRDS('../../Data/controls_850_m.rda')
-cases_850_m <- readRDS('../../Data/cases_850_m.rda')
+con_850_m <- readRDS('../../Data/controls_850.rda')
+cases_850_m <- readRDS('../../Data/cases_850.rda')
 
 
-# read in 450k 
-cases_450_m <-readRDS('../../Data/cases_450_m.rda')
-con_450_m <- readRDS('../../Data/controls_450_m.rda')
-cases_wt_450_m  <- readRDS('../../Data/cases_wt_450_m.rda')
-con_wt_450_m <- readRDS('../../Data/controls_wt_450_m.rda')
-
+# read in 450k
+cases_450_m <-readRDS('../../Data/cases_450.rda')
+con_450_m <- readRDS('../../Data/controls_450.rda')
+cases_wt_450_m  <- readRDS('../../Data/cases_wt_450.rda')
+con_wt_450_m <- readRDS('../../Data/controls_wt_450.rda')
+# 
 
 # ---------------homogenize column names by subsetting by 850k
 features_850 <- colnames(cases_850)
@@ -101,7 +51,7 @@ con_wt_450_m <- con_wt_450_m[, features_850]
 # save wild type
 saveRDS(con_wt_450_m, '../../Data/con_wt_450_m.rda')
 saveRDS(cases_wt_450_m, '../../Data/cases_wt_450_m.rda')
-
+# 
 rm(con_wt_450_m, cases_wt_450_m)
 
 
@@ -109,7 +59,7 @@ rm(con_wt_450_m, cases_wt_450_m)
 # get pc of all data sets with lambda chart
 
 # run PCA
-get_pca(pca_data = cases_450, 
+get_pca(pca_data = cases_450_m, 
         age_cutoff = 72,
         column_name = 'gender',
         show_variance = FALSE,
@@ -117,7 +67,7 @@ get_pca(pca_data = cases_450,
         pc_y = 2,
         main_title = 'PC 1 and 2')
 
-get_pca(pca_data = cases_450, 
+get_pca(pca_data = cases_450_m, 
         age_cutoff = 72,
         column_name = 'gender',
         show_variance = TRUE,
@@ -154,7 +104,7 @@ names(con_450)[10] <- 'cancer_status'
 names(cases_850)[10] <- 'cancer_status'
 names(con_850)[10] <- 'cancer_status'
 
-# add indicator for 850 or 450
+# # add indicator for 850 or 450
 cases_450_m$gdna.base.change <- '450k'
 con_450_m$gdna.base.change <- '450k'
 con_850_m$gdna.base.change <- '850k'
@@ -235,7 +185,7 @@ all_con_m <- remove_wild_type(all_con_m)
 
 # plot pc
 # run PCA
-get_pca(pca_data = all_cases_beta, 
+get_pca(pca_data = all_cases_m, 
         age_cutoff = 72,
         column_name = 'tech',
         show_variance = FALSE,
@@ -243,16 +193,16 @@ get_pca(pca_data = all_cases_beta,
         pc_y = 2,
         main_title = 'PC 1 and 2 cases beta values')
 
-get_pca(pca_data = all_cases_m, 
-        age_cutoff = 72,
-        column_name = 'tech',
-        show_variance = FALSE,
-        pc_x = 1,
-        pc_y = 2,
-        main_title = 'PC 1 and 2 cases m values')
+# get_pca(pca_data = all_cases_m, 
+#         age_cutoff = 72,
+#         column_name = 'tech',
+#         show_variance = FALSE,
+#         pc_x = 1,
+#         pc_y = 2,
+#         main_title = 'PC 1 and 2 cases m values')
 
 # run PCA
-get_pca(pca_data = all_con_beta, 
+get_pca(pca_data = all_con_m, 
         age_cutoff = 72,
         column_name = 'tech',
         show_variance = FALSE,
@@ -260,13 +210,13 @@ get_pca(pca_data = all_con_beta,
         pc_y = 2,
         main_title = 'PC 1 and 2 controls beta values')
 
-get_pca(pca_data = all_con_m, 
-        age_cutoff = 72,
-        column_name = 'tech',
-        show_variance = FALSE,
-        pc_x = 1,
-        pc_y = 2,
-        main_title = 'PC 1 and 2 controls m values')
+# get_pca(pca_data = all_con_m, 
+#         age_cutoff = 72,
+#         column_name = 'tech',
+#         show_variance = FALSE,
+#         pc_x = 1,
+#         pc_y = 2,
+#         main_title = 'PC 1 and 2 controls m values')
 
 
 
@@ -334,7 +284,7 @@ get_pca(pca_data = all_cases_beta_combat,
         main_title = 'PC 1 and 2 cases beta combat')
 
 # check PCs
-get_pca(pca_data = all_cases_m, 
+get_pca(pca_data = all_cases_m,
         age_cutoff = 72,
         column_name = 'tech',
         show_variance = FALSE,
@@ -344,7 +294,7 @@ get_pca(pca_data = all_cases_m,
 
 
 # check PCs
-get_pca(pca_data = all_cases_m_combat, 
+get_pca(pca_data = all_cases_m_combat,
         age_cutoff = 72,
         column_name = 'tech',
         show_variance = FALSE,
@@ -373,8 +323,8 @@ get_pca(pca_data = all_con_beta_combat,
         pc_y = 2,
         main_title = 'PC 1 and 2 con beta combat')
 
-# check PCs
-get_pca(pca_data = all_con_m, 
+# # check PCs
+get_pca(pca_data = all_con_m,
         age_cutoff = 72,
         column_name = 'tech',
         show_variance = FALSE,
@@ -385,15 +335,11 @@ get_pca(pca_data = all_con_m,
 
 
 # check PCs
-get_pca(pca_data = all_con_m_combat, 
+get_pca(pca_data = all_con_m_combat,
         age_cutoff = 72,
         column_name = 'tech',
         show_variance = FALSE,
         pc_x = 1,
         pc_y = 2,
         main_title = 'PC 1 and 2 con m combat')
-
-
-
-
 

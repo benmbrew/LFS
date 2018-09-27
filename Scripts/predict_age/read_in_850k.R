@@ -6,7 +6,7 @@ path_to_valid <- '../../Data/methyl_data/validation'
 
 # set preprocessing method
 method <- 'noob'
-methyl_type <- 'beta'
+methyl_type <- 'm'
 
 # get functions
 source('all_functions.R')
@@ -22,22 +22,23 @@ rm(cases)
 # controls
 rgControls <- read.metharray.exp(path_to_controls, recursive = T)
 
+
 rgValid <- read.metharray.exp(path_to_valid, recursive = T)
 
 ##########
 # load genomic methyl set (from controls) - you need genetic locations by probe from this object
-##########
-ratio_set <- readRDS('../../Data/model_data/raw_ratio_set.rda')
-
-# get granges object
-g_ranges <- as.data.frame(getLocations(ratio_set))
-
-# get probes from rownames
-g_ranges$probe <- rownames(g_ranges)
-
-# remove ch and duplicatee
-g_ranges <- g_ranges[!duplicated(g_ranges$start),]
-g_ranges <- g_ranges[!grepl('ch', g_ranges$probe),]
+# ##########
+# ratio_set <- readRDS('../../Data/model_data/raw_ratio_set.rda')
+# 
+# # get granges object
+# g_ranges <- as.data.frame(getLocations(ratio_set))
+# 
+# # get probes from rownames
+# g_ranges$probe <- rownames(g_ranges)
+# 
+# # remove ch and duplicatee
+# g_ranges <- g_ranges[!duplicated(g_ranges$start),]
+# g_ranges <- g_ranges[!grepl('ch', g_ranges$probe),]
 
 ##########
 # read in clinical data
@@ -145,7 +146,8 @@ data_valid <- process_rg_set_single(beta_data = data_valid,
                                        id_map = id_map_val, 
                                        clin = clin)
 # save data
-saveRDS(data_controls, '../../Data/controls_850_m.rda')
-saveRDS(data_valid, '../../Data/cases_850_m.rda')
+saveRDS(data_controls, '../../Data/controls_850_beta.rda')
+saveRDS(data_valid, '../../Data/cases_850_beta.rda')
+
 
 

@@ -13,13 +13,15 @@ library(e1071)
 library(nnet)
 library(glmnet)
 library(PRROC)
+library(ROCR)
 library(survival)
 library(broom)
 library(sva)
 library(wateRmelon)
 library(RPMM)
-library(RColorBrewer)
+##################
 
+library(RColorBrewer)
 registerDoParallel(1)
 
 
@@ -331,7 +333,14 @@ remove_outliers <- function(rgSet, id_map_dat, method, type) {
 # function for subsetting rgsetts
 ##########
 
-subset_rg_set <- function(rg_set, keep_gender, keep_controls, keep_snps, get_island, get_type, get_chr, gene_probes) {
+subset_rg_set <- function(rg_set, 
+                          keep_gender, 
+                          keep_controls, 
+                          keep_snps, 
+                          get_island, 
+                          get_type, 
+                          get_chr, 
+                          gene_probes) {
   # get annotation
   temp_rg_set <- getAnnotation(rg_set)
   # syubet set to get relevant columns
@@ -1093,16 +1102,19 @@ pred_cancer_rf <- function(train_dat,
 }
 
 # 
-# dat_1 <- train_train
+# dat_1 <- train_cases
 # dat_2 <- controls_full
 # bump<- 'cancer'
 # boot_num = 3
 # m_beta_thresh = 0.5
+
+
 bump_hunter <- function(dat_1,
                         dat_2,
                         wild_type,
                         bump,
                         boot_num,
+                        methyl_type,
                         thresh,
                         g_ranges) {
   
@@ -1202,7 +1214,7 @@ bump_hunter <- function(dat_1,
                            nullMethod = "bootstrap",
                            cutoff = DELTA_BETA_THRESH,
                            B = NUM_BOOTSTRAPS,
-                           type = 'Beta')
+                           type = methyl_type)
     
     bump_hunter_results[[i]] <- tab[[i]]$table
     bump_hunter_results[[i]]$run <- DELTA_BETA_THRESH[i]
@@ -1928,17 +1940,22 @@ get_age_cat_dummy <- function(temp_dat) {
   temp_dat$temp_age_var <- NULL
   return(temp_dat)
 }
-
+#
+# training_dat = train_cases
+# controls_dat = controls_full
+# test_dat = test_cases
+# age_cutoff = 72
+# gender = FALSE
+# tech = TRUE
+# bh_features
+#
 
 run_enet_450_850 <- function(training_dat,
                              controls_dat,
                              test_dat,
                              age_cutoff,
-                             age_dum,
                              gender, 
                              tech,
-                             fam_num,
-                             fam_ratio,
                              bh_features) {
   
   
@@ -1949,29 +1966,17 @@ run_enet_450_850 <- function(training_dat,
   intersected_feats <- intersect(bh_features, colnames(training_dat))
   
   if(gender) {
-    intersected_feats <- c('M', intersected_feats)
-    intersected_feats <- c('F', intersected_feats)
+    intersected_feats <- c('Female', 'Male', intersected_feats)
   }
   if (tech) {
-    intersected_feats <- c('a', intersected_feats)
-    intersected_feats <- c('b', intersected_feats)
-  }
-  if (fam_num){
-    intersected_feats <- c('fam_num_cancer', intersected_feats)
-  }
-  if (fam_ratio){
-    intersected_feats <- c('fam_cancer_ratio', intersected_feats)
+    intersected_feats <- c('batch_1', 'batch_2', intersected_feats)
   }
   
-  if (age_dum){
-    intersected_feats <- c('first', 'second', 'third',intersected_feats)
-  }
-
   # intersected_feats_rand <- intersect(rand_feats, colnames(training_dat))
   # # get y
-  train_y <- ifelse(training_dat$age_diagnosis < age_cutoff, 1, 0)
-  test_y <-  ifelse(test_dat$age_diagnosis < age_cutoff, 1, 0)
-  controls_y <-  ifelse(controls_dat$age_sample_collection < age_cutoff, 1, 0)
+  train_y <- as.factor(ifelse(training_dat$age_diagnosis < age_cutoff, 'positive', 'negative'))
+  test_y <-  as.factor(ifelse(test_dat$age_diagnosis < age_cutoff, 'positive', 'negative'))
+  controls_y <-  as.factor(ifelse(controls_dat$age_sample_collection < age_cutoff, 'positive', 'negative'))
   
   # get clinical data
   test_clin <- test_dat[, !grepl('^cg', colnames(test_dat))]

@@ -24,6 +24,24 @@ load(paste0(data_dir,paste0(data_used,'_',methyl_type, '_final_beta_first_last',
 # source all_functions.R to load libraries and my functions
 source('all_functions.R')
 
+clin <- read.csv('new_clin.csv')
+
+# keep only Mut, Cancer, not NA in age, and have methylation
+clin <- clin[clin$methyl_status == 'yes',]
+clin <- clin[clin$p53 == 'MUT',]
+clin <- clin[clin$cancer_diagnosis_diagnoses != 'Unaffected',]
+clin <- clin[!is.na(clin$age_diagnosis),]
+clin <- clin[!duplicated(clin$tm_donor),]
+clin <- clin[!duplicated(clin$blood_dna_malkin_lab),]
+clin <- clin[!is.na(clin$age_sample_collection),]
+
+
+summary(as.factor(clin$cancer_diagnosis_diagnoses))
+clin$cancer_diagnosis_diagnoses <- as.character(clin$cancer_diagnosis_diagnoses)
+clin$cancer_diagnosis_diagnoses <- ifelse(!grepl('ACC|Breast|Erms|OS|CPC', clin$cancer_diagnosis_diagnoses), 
+                                          'Other', clin$cancer_diagnosis_diagnoses)
+
+
 # read in wt data
 data_wt <- readRDS(paste0(data_dir,paste0('new','_',methyl_type, '_wild_type', '.rda')))
 
