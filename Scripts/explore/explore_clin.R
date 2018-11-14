@@ -519,6 +519,21 @@ qplot(sub_clin$age_sample_collection, geom="histogram", bins = 25, fill=I("blue"
 
 
 
+temp_p53 <- clin %>%
+  filter(!is.na(p53_germline)) %>%
+  group_by(p53_germline) %>%
+  summarise(counts = n())
+
+pie(temp_p53$counts,temp_p53$p53_germline , main="",border = 'black', radius = 1,
+    col = adjustcolor(c('grey', 'blue'), alpha.f =0.6), cex = 1.2)
+
+temp_gen <- clin %>%
+  filter(!is.na(gender)) %>%
+  group_by(gender) %>%
+  summarise(counts = n())
+
+pie(temp_gen$counts,temp_gen$gender , main="",border = 'black',clockwise = TRUE,
+    col = adjustcolor(c('darkgrey', 'red'), alpha.f =0.6), cex = 1.2)
 
 ##########
 # generate random heatmap
