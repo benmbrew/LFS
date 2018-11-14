@@ -1,19 +1,13 @@
+# this script will be used to reproduce the original held out validation set for true accuracy. 
+# can also test on controls here
 
 # source functions script
 source('all_functions.R')
 
-
 # create fixed objects to model and pipeline inputs
-methyl_type <- 'm'
+methyl_type <- 'beta'
 combat <- TRUE
-if(combat){
-  tech <- FALSE
-} else {
-  tech <- TRUE
-}
-gender <- TRUE
-k_folds <- 10
-beta_thresh <- 0.1
+
 ##########
 # load genomic methyl set (from controls) - you need genetic locations by probe from this object
 ##########
@@ -32,6 +26,10 @@ g_ranges <- g_ranges[!grepl('ch', g_ranges$probe),]
 
 # read in all data
 if(methyl_type == 'beta'){
+  # beta controls wt 
+  con_450_wt <- readRDS('../../Data/con_wt_450_beta.rda')
+  con_450_wt$tech <- 'batch_1'
+  
   if(combat){
     all_cases <- readRDS('../../Data/all_cases_beta_combat.rda')
     all_con <- readRDS('../../Data/all_con_beta_combat.rda')
@@ -44,10 +42,16 @@ if(methyl_type == 'beta'){
     # recode to homogenize with combat data
     all_cases$tech <- ifelse(all_cases$tech == '450k', 'batch_1', 'batch_2')
     all_con$tech <- ifelse(all_con$tech == '450k', 'batch_1', 'batch_2')
+   
+    
     
     message('loaded beta values, with no combat')
   }
 } else {
+  
+  # read in wild type controls (healthy non LFS patients, to be compared with healthy (controls) LFS patients)
+  con_450_wt <- readRDS('../../Data/con_wt_450_m.rda')
+  con_450_wt$tech <- 'batch_1'
   if(combat){
     all_cases <- readRDS('../../Data/all_cases_m_combat.rda')
     all_con <- readRDS('../../Data/all_con_m_combat.rda')
@@ -60,61 +64,176 @@ if(methyl_type == 'beta'){
     # recode to homogenize with combat data
     all_cases$tech <- ifelse(all_cases$tech == '450k', 'batch_1', 'batch_2')
     all_con$tech <- ifelse(all_con$tech == '450k', 'batch_1', 'batch_2')
+   
     
     message('loaded m values, with no combat')
   }
 }
 
-# create tech and gender dummy variables 
 
-# tech
-all_cases <- cbind(as.data.frame(class.ind(all_cases$tech)), 
-                               all_cases)
 
-all_con <- cbind(as.data.frame(class.ind(all_con$tech)), 
-                             all_con)
+##########
+# seperate 450 fron 850
+##########
 
-# rempove old tech variable 
-all_cases$tech <- all_con$tech <- NULL
+#CASES
+cases_450 <- all_cases[all_cases$tech == 'batch_1',]
+cases_450 <- cases_450[!is.na(cases_450$age_sample_collection),]
+cases_450 <- cases_450[!is.na(cases_450$age_diagnosis),]
+cases_450 <- cases_450[!is.na(cases_450$gender),]
+
+cases_850 <- all_cases[all_cases$tech == 'batch_2',]
+cases_850 <- cases_850[!is.na(cases_850$age_sample_collection),]
+cases_850 <- cases_850[!is.na(cases_850$age_diagnosis),]
+cases_850 <- cases_850[!is.na(cases_850$gender),]
+
+rm(all_cases)
 
 # gender
-all_cases <- cbind(as.data.frame(class.ind(all_cases$gender)), 
-                               all_cases)
+cases_450 <- cbind(as.data.frame(class.ind(cases_450$gender)), 
+                   cases_450)
 
-all_con <- cbind(as.data.frame(class.ind(all_con$gender)), 
-                             all_con)
+cases_850 <- cbind(as.data.frame(class.ind(cases_850$gender)), 
+                   cases_850)
 
 # rempove old tech variable 
-all_cases$gender <- all_con$gender <- NULL
+cases_450$gender <- cases_850$gender <- NULL
 
+
+# tech
+cases_450 <- cbind(as.data.frame(class.ind(cases_450$tech)), 
+                   cases_450)
+
+cases_850 <- cbind(as.data.frame(class.ind(cases_850$tech)), 
+                   cases_850)
+
+# rempove old tech variable 
+cases_450$tech <- cases_850$tech <- NULL
+
+
+#########
 # make ages back to months (times by 12)
+#########
 
 # cases
-all_cases$age_diagnosis <- 
-  round(all_cases$age_diagnosis*12, 2)
-all_cases$age_sample_collection <- 
-  round(all_cases$age_sample_collection*12, 2)
 
-# controls
-all_con$age_diagnosis <- 
-  round(all_con$age_diagnosis*12, 2)
-all_con$age_sample_collection <- 
-  round(all_con$age_sample_collection*12, 2)
+# 450
+cases_450$age_diagnosis <- 
+  round(cases_450$age_diagnosis*12, 2)
+cases_450$age_sample_collection <- 
+  round(cases_450$age_sample_collection*12, 2)
 
-# Remove NA in age of dianogsis for cases
-all_cases <- all_cases[!is.na(all_cases$age_sample_collection),]
-all_con <- all_con[!is.na(all_con$age_sample_collection),]
+# 850
+cases_850$age_diagnosis <- 
+  round(cases_850$age_diagnosis*12, 2)
+cases_850$age_sample_collection <- 
+  round(cases_850$age_sample_collection*12, 2)
+
+
+#CONTROLS
+con_450 <- all_con[all_con$tech == 'batch_1',]
+con_450 <- con_450[!is.na(con_450$age_sample_collection),]
+con_450 <- con_450[!is.na(con_450$gender),]
+
+con_850 <- all_con[all_con$tech == 'batch_2',]
+con_850 <- con_850[!is.na(con_850$age_sample_collection),]
+con_850 <- con_850[!is.na(con_850$gender),]
+
+rm(all_con)
+# gender
+con_450 <- cbind(as.data.frame(class.ind(con_450$gender)), 
+                   con_450)
+
+con_850 <- cbind(as.data.frame(class.ind(con_850$gender)), 
+                   con_850)
+
+# rempove old tech variable 
+con_450$gender <- con_850$gender <- NULL
+
+# tech
+con_450 <- cbind(as.data.frame(class.ind(con_450$tech)), 
+                 con_450)
+
+con_850 <- cbind(as.data.frame(class.ind(con_850$tech)), 
+                 con_850)
+
+# rempove old tech variable 
+con_450$tech <- con_850$tech <- NULL
+
+# apply to wt controls
+con_450_wt <- con_450_wt[!is.na(con_450_wt$age_sample_collection),]
+con_450_wt <- con_450_wt[!is.na(con_450_wt$gender),]
+
+# ge tgender 
+con_450_wt <- cbind(as.data.frame(class.ind(con_450_wt$gender)), 
+                 con_450_wt)
+
+# rempove old tech variable 
+con_450_wt$gender <- NULL
+
+# tech
+con_450_wt <- cbind(as.data.frame(class.ind(con_450_wt$tech)), 
+                 con_450_wt)
+con_450_wt$tech <- NULL
+
+
+#########
+# make ages back to months (times by 12)
+#########
+
+# 450
+con_450$age_diagnosis <- 
+  round(con_450$age_diagnosis*12, 2)
+con_450$age_sample_collection <- 
+  round(con_450$age_sample_collection*12, 2)
+
+# 850
+con_850$age_diagnosis <- 
+  round(con_850$age_diagnosis*12, 2)
+con_850$age_sample_collection <- 
+  round(con_850$age_sample_collection*12, 2)
+
+# 450 wt
+con_450_wt$age_diagnosis <- 
+  round(con_450_wt$age_diagnosis*12, 2)
+
+
+# split into wt and mut data
+con_450_mut <- con_450_wt[con_450_wt$p53_germline == 'MUT',]
+con_450_wt <- con_450_wt[con_450_wt$p53_germline == 'WT',]
+
+# run bumphunter on LFS healthy patients (LFS no cancer) and LFS cancer patients (LFS cancer)
+bh_feats <- bump_hunter(dat_1 = con_450_wt, 
+                        dat_2 = con_450_mut, 
+                        bump = 'lfs', 
+                        boot_num = 5, 
+                        beta_thresh = 0.05,
+                        methyl_type = methyl_type,
+                        g_ranges = g_ranges)
+
+# subset all dady by bh_feats
+cases_full <- 
 
 # prepare data sets for modelling
-# cases_full <- all_cases
-# controls_full <- all_con
-# k_folds = 5
-# beta_thresh = 0.05
-# g_ranges = g_ranges
-# i = 1
+cases_full <- cases_450
+controls_full <- con_450
+controls_wt <- con_450_wt
+valid_full <- cases_850
+combine_controls <- FALSE
+extra_controls <- NULL
+k_folds = 5
+tech <- FALSE
+gender <- TRUE
+beta_thresh = 0.05
+g_ranges = g_ranges
+i = 1
 
 run_model <- function(cases_full,
                       controls_full,
+                      controls_wt,
+                      valid_full,
+                      combine_controls,
+                      extra_controls,
                       k_folds = k_folds,
                       tech = tech,
                       gender = gender,
@@ -126,10 +245,13 @@ run_model <- function(cases_full,
   # create lists to store model results
   temp_cases <- list()
   temp_controls <- list()
+  temp_valid <- list()
   temp_models <- list()
   temp_lambda_min <- list()
   temp_lambda_1se <- list()
   temp_alpha <- list()
+  
+  
   
   # get vector of random folds
   fold_vec <- sample(1:k_folds, nrow(cases_full), replace = T)
@@ -146,6 +268,7 @@ run_model <- function(cases_full,
     test_cases <- cases_full[test_index, ]
     
     
+    
     # use cases training and controls to get bumphunter features
     bh_feats <- bump_hunter(dat_1 = train_cases, 
                             dat_2 = controls_full , 
@@ -154,6 +277,7 @@ run_model <- function(cases_full,
                             thresh = beta_thresh,
                             methyl_type = methyl_type,
                             g_ranges = g_ranges)
+    
     
     
     # get intersect_names
@@ -166,14 +290,17 @@ run_model <- function(cases_full,
     # take remove features out of colnames 
     bh_features <- intersect_names[!intersect_names %in% remove_features]
     
+    # HERE
     # function to predict with all test, controls, controls old, and valid
-    mod_result  <- run_enet_450_850(training_dat = train_cases,
+    mod_result  <- run_enet_all_test(cases_dat = cases_full,
                                     controls_dat = controls_full,
-                                    test_dat = test_cases,
+                                    valid_dat = valid_full,
                                     age_cutoff = 72,
                                     gender = gender, 
                                     tech = tech,
                                     bh_features = bh_features)
+    
+    
     
     # store restults for each result object in its list category
     temp_cases[[i]] <- mod_result[[1]]
@@ -212,78 +339,6 @@ temp_4 <- temp_res[[4]]
 temp_5 <- temp_res[[5]]
 temp_6 <- temp_res[[6]]
 
-# save temporary best model image
-# rm(all_cases, all_con, g_ranges, ratio_set)
-# save.image('../../Data/temp_best_model_beta_nocombat_nogender_yestech.RData')
-
-## ANALYSIS
-# creat an extra test_pred label called test_pred_lab that assumes 'positive' if over 0.50
-# and negative otherwise. Don't ovewrite test_pred
-temp_1$test_pred_label <- as.factor(ifelse(temp_1$test_pred > 0.5, 'positive', 'negative'))
- 
-# get the confusion matrix
-caret::confusionMatrix(temp_1$test_pred_label, temp_1$test_label)
-
-########
-temp_2 <- temp_res[[2]]
-
-# get label for controls
-temp_2$controls_age_pred_label <- as.factor(ifelse(temp_2$controls_age_pred > 0.5, 'positive', 'negative'))
-
-# look at controls
-temp_con <- temp_2 %>%
-  group_by(ids) %>%
-  summarise(mean_controls_age_pred = mean(controls_age_pred),
-            sum_controls_age_pred_label_positive = sum(controls_age_pred_label == 'positive'),
-            sum_controls_age_pred_label_negative = sum(controls_age_pred_label == 'negative')) %>%
-  left_join(temp_2, by = 'ids') %>% 
-  dplyr::select(ids, mean_controls_age_pred, sum_controls_age_pred_label_positive,
-                sum_controls_age_pred_label_negative, controls_age_label,
-                age_sample_collection) %>%
-  distinct()
-
-# get mean pred label
-temp_con$mean_controls_age_pred_label <- as.factor(ifelse(temp_con$mean_controls_age_pred > 0.5, 'positive', 'negative'))
-
-
-# saveRDS(list(temp_1, temp_2, temp_3, temp_4, temp_5, temp_6), '../../Data/temp_8611.rda')
-
-temp_auc <- performance(temp_pred_cases, measure = 'auc')
-temp_roc <- performance(temp_pred_cases, measure = 'tpr', x.measure = 'fpr')
-temp_pr <- performance(temp_pred_cases, measure = 'prec', x.measure = 'rec')
-temp_roc <- as.data.frame(cbind(unlist(temp_pr@x.values),unlist(temp_pr@y.values)))
-temp_lc <- performance(temp_pred_cases, measure="lift")
-hist(temp_1_new$test_pred, 
-     main = 'Predicted Risk Score on Cases', 
-     xlab = 'Risk scores', 
-     col = 'darkgrey')
 
 
 
-
-# Controls 
-temp_2 <- full_results[[2]]
-
-temp_2 <- temp_2[ , c('controls_age_pred', 'controls_age_label',
-                                    'age_sample_collection')]
-
-temp_2 <- temp_2[order(temp_2$controls_age_pred, decreasing = T),]
-
-# get person identfier
-temp_2$p_id <- rep.int(seq(1, 41, 1), 5)
-
-# group by fold and get mean
-temp_2_pred <- temp_2 %>%
-  group_by(p_id) %>%
-  summarise(mean_pred = mean(controls_age_pred, na.rm =T)) %>%
-  cbind(temp_2[1:41,])
-
-temp_2$controls_pred_label <- ifelse(temp_2$controls_age_pred > .5, 1, 0)
-
-temp_2$pred_is <- ifelse(temp_2$controls_pred_label == temp_2$controls_age_label,
-                                'good',
-                                'bad')
-# remove original prediction
-temp_2_pred$controls_age_pred <- NULL
-
-temp_2_pred <- temp_2_pred[order(temp_2_pred$age_sample_collection, decreasing = F),]

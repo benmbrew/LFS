@@ -80,7 +80,7 @@ gene_probes <- as.character(gene_probes$focal_CpGs[!duplicated(gene_probes$focal
 
 # cases
 rg_cases <- subset_rg_set(rg_set = rgCases,
-                          keep_gender = FALSE,
+                          keep_gender = TRUE,
                           keep_controls = TRUE,
                           keep_snps = FALSE,
                           get_island = NULL,
@@ -108,7 +108,7 @@ data_wt_cases_450 <- data_cases_450[data_cases_450$p53_germline == 'WT',]
 data_wt_controls_450 <- data_controls_450[data_controls_450$p53_germline == 'WT',]
 
 # save all four data sets: 1) LFS cancer, LFS controls, WT cancer, WT controls
-saveRDS(data_cases_450, '../../Data/cases_450_beta.rda')
-saveRDS(data_controls_450, '../../Data/controls_450_beta.rda')
-saveRDS(data_wt_cases_450, '../../Data/cases_wt_450_beta.rda')
-saveRDS(data_controls_450, '../../Data/controls_wt_450_beta.rda')
+saveRDS(data_cases_450, '../../Data/cases_450_beta_sex.rda')
+saveRDS(data_controls_450, '../../Data/controls_450_beta_sex.rda')
+saveRDS(data_wt_cases_450, '../../Data/cases_wt_450_beta_sex.rda')
+saveRDS(data_controls_450, '../../Data/controls_wt_450_beta_sex.rda')
