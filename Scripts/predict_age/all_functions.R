@@ -1102,11 +1102,7 @@ pred_cancer_rf <- function(train_dat,
 }
 
 # 
-# dat_1 <- train_cases
-# dat_2 <- controls_full
-# bump<- 'cancer'
-# boot_num = 3
-# m_beta_thresh = 0.5
+
 
 
 bump_hunter <- function(dat_1,
@@ -1115,33 +1111,29 @@ bump_hunter <- function(dat_1,
                         bump,
                         boot_num,
                         methyl_type,
-                        thresh,
+                        beta_thresh,
                         g_ranges) {
   
-  # combine data
-  dat <- rbind(dat_1, dat_2)
+  
   
   if(bump == 'lfs'){
-    
+    dat_wt <- dat_1
     # get mutual cgs
-    dat_names <- colnames(dat)[grepl('^cg', colnames(dat))]
-    wt_names <- colnames(wild_type)[grepl('^cg', colnames(wild_type))]
+    wt_names <- colnames(dat_wt)[grepl('^cg', colnames(dat_wt))]
+    dat_names <- colnames(dat_2)[grepl('^cg', colnames(dat_2))]
     wt_intersect <- intersect(wt_names, dat_names)
     
     # stor clinical data
-    clin_dat_names <- colnames(dat)[!grepl('^cg', colnames(dat))]
-    clin_wt_names <- colnames(wild_type)[!grepl('^cg', colnames(wild_type))]
+    clin_wt_names <- colnames(dat_wt)[!grepl('^cg', colnames(dat_wt))]
+    clin_con_names <- colnames(dat_2)[!grepl('^cg', colnames(dat_2))]
     
     # get data
-    dat <- dat[, c(clin_dat_names, wt_intersect)]
-    wild_type <- wild_type[, c(clin_wt_names, wt_intersect)]
-    
-    # drop columns so they can match
-    dat$fam_cancer_ratio <- dat$fam_num_cancer <- NULL
+    dat_wt <- dat_wt[, c(clin_wt_names, wt_intersect)]
+    dat_2 <- dat_2[, c(clin_con_names, wt_intersect)]
     
     # combine data
-    dat <- rbind(dat,
-                 wild_type)
+    dat <- rbind(dat_wt, 
+                 dat_2)
     
     # remove NAs 
     dat <- dat[!is.na(dat$p53_germline),]
@@ -1152,7 +1144,8 @@ bump_hunter <- function(dat_1,
     designMatrix <- cbind(rep(1, nrow(dat)), indicator_vector)
     designMatrix <- as.matrix(designMatrix)
   } else if(bump == 'cancer') {
-    
+    # combine data
+    dat <- rbind(dat_1, dat_2)
     dat$type <- ifelse(grepl('Unaffected', dat$cancer_diagnosis_diagnoses), 'controls', 'cases')
     indicator_vector <- as.factor(dat$type)
     designMatrix <- cbind(rep(1, nrow(dat)), indicator_vector)
@@ -1200,7 +1193,7 @@ bump_hunter <- function(dat_1,
   stopifnot(dim(beta)[1] == length(pos))
   
   # set paramenters 
-  DELTA_BETA_THRESH = thresh # DNAm difference threshold
+  DELTA_BETA_THRESH = beta_thresh # DNAm difference threshold
   NUM_BOOTSTRAPS = boot_num  # number of randomizations
   
   # create tab list
@@ -2124,15 +2117,10 @@ run_enet_450_850 <- function(training_dat,
 run_enet_all <- function(training_dat,
                         controls_dat,
                         valid_dat,
-                        test_dat,
                         age_cutoff,
-                        age_dum,
                         gender,
                         tech,
-                        fam_num,
-                        fam_ratio,
                         bh_features) {
-  
   
   
   # get intersection of bh features and real data
@@ -2141,44 +2129,30 @@ run_enet_all <- function(training_dat,
   intersected_feats <- intersect(bh_features, colnames(training_dat))
   
   if(gender) {
-    intersected_feats <- c('M', intersected_feats)
-    intersected_feats <- c('F', intersected_feats)
+    intersected_feats <- c('Female', 'Male', intersected_feats)
   }
   if (tech) {
-    intersected_feats <- c('a', intersected_feats)
-    intersected_feats <- c('b', intersected_feats)
-  }
-  if (fam_num){
-    intersected_feats <- c('fam_num_cancer', intersected_feats)
-  }
-  if (fam_ratio){
-    intersected_feats <- c('fam_cancer_ratio', intersected_feats)
-  }
-  
-  
-  if (age_dum){
-    intersected_feats <- c('age_dum_young', 'age_dum_old' ,intersected_feats)
+    intersected_feats <- c('batch_1', 'batch_2', intersected_feats)
   }
   
   # intersected_feats_rand <- intersect(rand_feats, colnames(training_dat))
   # # get y
-  train_y <- ifelse(training_dat$age_diagnosis < age_cutoff, 1, 0)
-  test_y <-  ifelse(test_dat$age_diagnosis < age_cutoff, 1, 0)
-  # controls
-  controls_y <-  ifelse(controls_dat$age_sample_collection < age_cutoff, 1, 0)
-  valid_y <-  ifelse(valid_dat$age_sample_collection < age_cutoff, 1, 0)
-  
+  train_y <- as.factor(ifelse(training_dat$age_diagnosis < age_cutoff, 'positive', 'negative'))
+  valid_y <-  as.factor(ifelse(valid_dat$age_diagnosis < age_cutoff, 'positive', 'negative'))
+  controls_y <-  as.factor(ifelse(controls_dat$age_sample_collection < age_cutoff, 'positive', 'negative'))
   
   # get clinical data
-  cg_start <- which(grepl('cg', colnames(test_dat)))[1]
-  test_clin <- test_dat[, 1:(cg_start - 1)]
-  controls_clin <- controls_dat[, 1:(cg_start - 1)]
-  valid_clin <- valid_dat[, 1:(cg_start - 1)]
+  valid_clin <- test_dat[, !grepl('^cg', colnames(test_dat))]
+  controls_clin <- controls_dat[, !grepl('^cg', colnames(controls_dat))]
   
+  # get model data
+  training_dat <- training_dat[, intersected_feats]
+  controls_dat <- controls_dat[, intersected_feats]
+  valid_dat <- valid_dat[, intersected_feats]
   
+
   # get bumphunter features
   training_dat <- training_dat[, intersected_feats]
-  test_dat <- test_dat[, intersected_feats]
   controls_dat <- controls_dat[, intersected_feats]
   valid_dat <- valid_dat[, intersected_feats]
   
@@ -2279,20 +2253,7 @@ run_enet_all <- function(training_dat,
                   ,family = type_family)
   
   # Predictions on test data
-  
-  # This returns 100 prediction with 1-100 lambdas
-  temp_test.predictions <- predict(model, 
-                                   data.matrix(test_dat),
-                                   type = 'response')
-  
-  
-  # get predictions with corresponding lambda.
-  test.predictions <- temp_test.predictions[, temp.min_lambda_index]
-  
-  # combine predictions and real labels 
-  temp_dat <- as.data.frame(cbind(test_pred = test.predictions, test_label = test_y, test_clin))
-  
-  
+
   # Predictions on controls data
   
   # This returns 100 prediction with 1-100 lambdas
@@ -2330,54 +2291,32 @@ run_enet_all <- function(training_dat,
 # age_cutoff = 72
 # gender = gender
 # tech = tech
-# fam_num = fam_num
-# fam_ratio = fam_ratio
 # bh_features = remaining_features
 
 run_enet_test <- function(cases_dat,
-                              controls_dat,
-                              age_cutoff,
-                              age_dum,
-                              gender,
-                              tech,
-                              fam_num,
-                              fam_ratio,
-                              bh_features) {
+                          controls_dat,
+                          age_cutoff,
+                          gender,
+                          tech,
+                          bh_features) {
   
   # get intersection of bh features and real data
   bh_features <- as.character(unlist(bh_features))
   
-  intersected_feats <- intersect(bh_features, colnames(cases_dat))
+  intersected_feats <- intersect(bh_features, colnames(training_dat))
   
   if(gender) {
-    
-    intersected_feats <- append('M', intersected_feats)
-    intersected_feats <- append('F', intersected_feats)
+    intersected_feats <- c('Female', 'Male', intersected_feats)
   }
-  
   if (tech) {
-    
-    intersected_feats <- append('a', intersected_feats)
-    intersected_feats <- append('b', intersected_feats)
+    intersected_feats <- c('batch_1', 'batch_2', intersected_feats)
   }
-  
-  if (fam_num){
-    intersected_feats <- c('fam_num_cancer', intersected_feats)
-  }
-  if (fam_ratio){
-    intersected_feats <- c('fam_cancer_ratio', intersected_feats)
-  }
-  
-  if (age_dum){
-    intersected_feats <- c('first', 'second', 'third','fourth', 'fifth',intersected_feats)
-  }
-  
   
   # intersected_feats_rand <- intersect(rand_feats, colnames(training_dat))
   # # get y
-  cases_y <- ifelse(cases_dat$age_diagnosis < age_cutoff, 1, 0)
+  cases_y <- ifelse(cases_dat$age_diagnosis < age_cutoff, 'positive', 'negative')
   # controls
-  controls_y <-  ifelse(controls_dat$age_sample_collection < age_cutoff, 1, 0)
+  controls_y <-  ifelse(controls_dat$age_sample_collection < 'positive', 'negative')
 
   
   # get clinical data
@@ -2508,59 +2447,49 @@ run_enet_test <- function(cases_dat,
   return(list(model, temp_dat_con, temp.non_zero_coeff_min, temp.non_zero_coeff_1se, best_alpha))
   
 }
+# cases_dat = cases_full
+# controls_dat = controls_full
+# valid_dat = valid_full
+# age_cutoff = 72
+# gender = gender 
+# tech = tech
+# bh_features = bh_features
 
 
 run_enet_all_test <- function(cases_dat,
-                                  controls_dat,
-                                  valid_dat,
-                                  test_dat,
-                                  age_cutoff,
-                                  gender,
-                                  tech,
-                                  fam_num,
-                                  fam_ratio,
-                                  bh_features) {
+                              controls_dat,
+                              valid_dat,
+                              age_cutoff,
+                              gender,
+                              tech,
+                              bh_features) {
   
   # get intersection of bh features and real data
   bh_features <- as.character(unlist(bh_features))
   
-  intersected_feats <- intersect(bh_features, colnames(cases_dat))
+  intersected_feats <- intersect(bh_features, colnames(training_dat))
   
   if(gender) {
-    
-    intersected_feats <- append('M', intersected_feats)
-    intersected_feats <- append('F', intersected_feats)
+    intersected_feats <- c('Female', 'Male', intersected_feats)
   }
-  
   if (tech) {
-    
-    intersected_feats <- append('a', intersected_feats)
-    intersected_feats <- append('b', intersected_feats)
+    intersected_feats <- c('batch_1', 'batch_2', intersected_feats)
   }
-  
-  if (fam_num){
-    intersected_feats <- c('fam_num_cancer', intersected_feats)
-  }
-  if (fam_ratio){
-    intersected_feats <- c('fam_cancer_ratio', intersected_feats)
-  }
-  
   
   # intersected_feats_rand <- intersect(rand_feats, colnames(training_dat))
   # # get y
-  cases_y <- ifelse(cases_dat$age_diagnosis < age_cutoff, 1, 0)
-  # controls
-  controls_y <-  ifelse(controls_dat$age_sample_collection < age_cutoff, 1, 0)
-  valid_y <-  ifelse(valid_dat$age_sample_collection < age_cutoff, 1, 0)
-  
+  train_y <- as.factor(ifelse(training_dat$age_diagnosis < age_cutoff, 'positive', 'negative'))
+  test_y <-  as.factor(ifelse(test_dat$age_diagnosis < age_cutoff, 'positive', 'negative'))
+  controls_y <-  as.factor(ifelse(controls_dat$age_sample_collection < age_cutoff, 'positive', 'negative'))
   
   # get clinical data
-  cg_start <- which(grepl('cg', colnames(cases_dat)))[1]
-  cases_clin <- cases_dat[, 1:(cg_start - 1)]
-  controls_clin <- controls_dat[, 1:(cg_start - 1)]
-  valid_clin <- valid_dat[, 1:(cg_start - 1)]
+  test_clin <- test_dat[, !grepl('^cg', colnames(test_dat))]
+  controls_clin <- controls_dat[, !grepl('^cg', colnames(controls_dat))]
   
-  
+  # get model data
+  training_dat <- training_dat[, intersected_feats]
+  test_dat <- test_dat[, intersected_feats]
+  controls_dat <- controls_dat[, intersected_feats]
   # get bumphunter features
   cases_dat <- cases_dat[, intersected_feats]
   controls_dat <- controls_dat[, intersected_feats]
