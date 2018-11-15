@@ -321,7 +321,7 @@ all_con_m <- all_con_m[!is.na(all_con_m$age_sample_collection),]
 all_con_m_combat <- all_con_m_combat[!is.na(all_con_m_combat$age_sample_collection),]
 
 all_con_beta_wt <- all_con_beta_wt[!is.na(all_con_beta_wt$age_sample_collection),]
-all_con_beta_wt_combat <- all_con_beta_wt_comba[!is.na(all_con_beta_wt_combat$age_sample_collection),]
+all_con_beta_wt_combat <- all_con_beta_wt_combat[!is.na(all_con_beta_wt_combat$age_sample_collection),]
 
 all_con_m_wt <- all_con_m_wt[!is.na(all_con_m_wt$age_sample_collection),]
 all_con_m_wt_combat <- all_con_m_wt_combat[!is.na(all_con_m_wt_combat$age_sample_collection),]
