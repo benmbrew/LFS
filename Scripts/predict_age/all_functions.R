@@ -1,28 +1,26 @@
 
-##########
+#########
 # load libraries
-##########
-library(tidyverse)
-library(IlluminaHumanMethylation450kmanifest)
-library(preprocessCore)
-library(caret)
-library(pROC)
-library(doParallel) 
-library(bumphunter)
-library(e1071)
-library(nnet)
-library(glmnet)
-library(PRROC)
-library(ROCR)
-library(survival)
-library(broom)
-library(sva)
-library(wateRmelon)
-library(RPMM)
-##################
+# ##########
+# library(IlluminaHumanMethylation450kmanifest)
+# library(tidyverse)
+# library(preprocessCore)
+# library(bumphunter)
+# library(caret)
+# library(pROC)
+# library(doParallel)
+# library(e1071)
+# library(nnet)
+# library(glmnet)
+# library(PRROC)
+# library(ROCR)
+# library(survival)
+# library(wateRmelon)
+# library(RPMM)
+# library(RColorBrewer)
+# ##################
 
-library(RColorBrewer)
-registerDoParallel(1)
+registerDoParallel(2)
 
 
 get_diff_dups <- function(temp_data) {
@@ -679,10 +677,75 @@ testKS <- function(x, y)
 }
 
 
+linearTransform <- function (temp_450, 
+                             temp_850, 
+                             full_data,
+                             pred_direction) {
+  
+  probe_model <- list()
+  probe_850_result <- list()
+  
+  for (i in 12:ncol(full_data)) {
+    
+    probe_450 <- as.data.frame(temp_450[, i])
+    probe_850<- as.data.frame(temp_850[, i])
+    model_data <- data.frame(probe_850= probe_850, probe_450 = probe_450)
+    names(model_data) <- c('probe_850', 'probe_450')
+    probe_model[[i]] <- lm(probe_450 ~ probe_850, data = model_data)
+    probe_full <- as.numeric(full_data[, i])
+    model_data_new <- data.frame(probe_full = probe_full)
+    names(model_data_new) <- 'probe_850'
+    probe_850_result[[i]] <- predict(probe_model[[i]], 
+                                     newdata = model_data_new, 
+                                     type = 'response')
+    
+    print(i) 
+  }
+  
+  # transpose results
+  temp <- do.call(rbind, probe_850_result)
+  transform_850 <- t(temp)
+  
+  # add cg sites
+  colnames(transform_850) <- colnames(full_data)[12:ncol(full_data)]
+  transform_850 <- as.data.frame(transform_850)
+  
+  # add clinical variables
+  transform_850 <- as.data.frame(cbind(id = full_data$id, 
+                                       p53_germline = full_data$p53_germline, 
+                                       cancer_diagnosis_diagnoses = full_data$cancer_diagnosis_diagnoses, 
+                                       age_diagnosis = full_data$age_diagnosis, 
+                                       age_sample_collection = full_data$age_sample_collection,
+                                       gender = full_data$gender, 
+                                       sentrix_id = full_data$sentrix_id, 
+                                       family_name = full_data$family_name,
+                                       tm_donor = full_data$tm_donor,
+                                       cancer_status = full_data$cancer_status,
+                                       tech = full_data$tech,
+                                       transform_850))
+  
+  # make numeric
+  transform_850[, 12:ncol(transform_850)] <- apply(transform_850[, 12:ncol(transform_850)], 
+                                                   2, 
+                                                   function(x) as.numeric(x))
+  
+  
+  return(transform_850)
+  
+}
+
+
 
 ##########
 # get pca function
 ##########
+# pca_data = all_cases_beta_combat
+# age_cutoff = 72
+# column_name = 'tech'
+# show_variance = FALSE
+# pc_x = 1
+# pc_y = 2
+# main_title = 'PC:cases bet'
 
 get_pca <- function(pca_data, 
                     column_name,
@@ -1101,8 +1164,21 @@ pred_cancer_rf <- function(train_dat,
   
 }
 
+get_age_removal <- function(temp_dat){
+  clin_names <- names(temp_dat)[1:11]
+  cpg_names <- names(temp_dat)[12:ncol(temp_dat)]
+  # remove age_probes 
+  intersect_probes <- intersect(cpg_names, age_probes)
+  new_probes <- cpg_names[!cpg_names %in% intersect_probes]
+  temp_dat <- temp_dat[, c(clin_names, new_probes)]
+  
+  return(temp_dat)
+}
+
 # subset all dady by bh_feats
 join_new_features <- function(temp_dat, new_features){
+  # new_features$start <- as.character(new_features$start)
+  # new_features$end <- as.character(new_features$end)
   clin_name <- colnames(temp_dat)[!grepl('^cg', colnames(temp_dat))]
   colnames(new_features)[1] <- 'chr'
   keep_features <- inner_join(new_features, g_ranges)$probe
@@ -1110,6 +1186,19 @@ join_new_features <- function(temp_dat, new_features){
   return(final_dat)
   
 }
+
+remove_cancer_feats <- function(temp_dat, bh_feats){
+  clin_names <- names(temp_dat)[!grepl('^cg', names(temp_dat))]
+  final_dat <- temp_dat[, c(clin_names, bh_feats)]
+  return(final_dat)
+}
+# dat_1 = con_wt
+# dat_2 = con_mut
+# bump = 'lfs'
+# boot_num = 5 
+# beta_thresh = beta_thresh
+# methyl_type = methyl_type
+# g_ranges = g_ranges
 
 bump_hunter <- function(dat_1,
                         dat_2,
@@ -1160,14 +1249,15 @@ bump_hunter <- function(dat_1,
   
   # get probe data 
   dat <- dat[, grepl('^cg', colnames(dat))]
+  # features <- names(dat)[grepl('^cg', colnames(dat))]
 
   # transpose methylation to join with cg_locations to get genetic location vector.
   dat <- as.data.frame(t(dat), stringsAsFactors = F)
   
   # make probe a column in methyl
   dat$probe <- rownames(dat)
-  rownames(dat) <- NULL
-  
+
+
   # get probe column in granges 
   g_ranges$probe <- rownames(g_ranges)
   
@@ -1175,8 +1265,8 @@ bump_hunter <- function(dat_1,
   methyl_cg <- dplyr::inner_join(dat, g_ranges, by = 'probe')
   
   # get chr and pos vector 
-  chr <- methyl_cg$seqnames
-  pos <- methyl_cg$start
+  chr <- methyl_cg$chr
+  pos <- as.numeric(methyl_cg$start)
   
   # create beta matrix
   beta <- methyl_cg[, 1:(ncol(methyl_cg) - 6)]
@@ -1188,7 +1278,7 @@ bump_hunter <- function(dat_1,
   } 
   
   beta <- as.matrix(beta)
-  
+
   ##########
   # Run bumphunter
   ##########
@@ -1207,7 +1297,7 @@ bump_hunter <- function(dat_1,
   bump_hunter_results <- list()
   for (i in 1:length(DELTA_BETA_THRESH)) {
     tab[[i]] <- bumphunter(beta, 
-                           designMatrix, 
+                           designMatrix,
                            chr = chr, 
                            pos = pos,
                            nullMethod = "bootstrap",
@@ -2453,13 +2543,14 @@ run_enet_test <- function(cases_dat,
   return(list(model, temp_dat_con, temp.non_zero_coeff_min, temp.non_zero_coeff_1se, best_alpha))
   
 }
-# training_dat = train_cases
-# test_dat = test_cases
-# controls_dat = controls_full
-# valid_dat = valid_full
-# age_cutoff = 72
-# gender = TRUE
-# tech = FALSE
+# training_dat = train_cases[, 1:100]
+# test_dat = test_cases[, 1:100]
+# controls_dat = controls_full[, 1:100]
+# valid_dat = valid_full[, 1:100]
+# age_cutoff = age_cutoff
+# gender = gender
+# tech = tech
+# offset = use_offset
 # bh_features = bh_features
 
 run_enet_all_test <- function(training_dat,
@@ -2492,6 +2583,13 @@ run_enet_all_test <- function(training_dat,
   # get clinical data
   test_clin <- test_dat[, !grepl('^cg', colnames(test_dat))]
 
+  # if(use_offset){
+  #   offsetted_train <- as.numeric(training_dat$age_sample_collection)
+  #   offsetted_test <- as.numeric(test_dat$age_sample_collection)
+  #   
+  # } else {
+  #   offsetted <- NULL
+  # }
   
   # get model data
   training_dat <- training_dat[, intersected_feats]
@@ -2513,6 +2611,7 @@ run_enet_all_test <- function(training_dat,
   type_family <- 'binomial'
   type_measure <- 'auc'
   
+  
   # create error matrix for for opitmal alpha that can run in parraellel if you have bigger data 
   # or if you have a high number fo N_CV_REPEATS
   temp.cv_error_matrix <- foreach (temp = 1:N_CV_REPEATS, .combine=rbind, .errorhandling="stop") %do% {      
@@ -2527,6 +2626,7 @@ run_enet_all_test <- function(training_dat,
                                                 , nfolds = nfolds 
                                                 , nlambda = 10
                                                 , parallel = TRUE
+                                                , offset = NULL
       )
       elastic_net.cv_error[alpha] = min(elastic_net.cv_model[[alpha]]$cvm)
     }
@@ -2622,24 +2722,19 @@ run_enet_all_test <- function(training_dat,
   
 }
 
-
-# training_dat = train_data
-# test_dat = test_data
-# age_cutoff = 72
+# 
+# training_dat = train_cases
+# test_dat = test_cases
+# age_cutoff = age_cutoff
 # gender = gender
 # tech = tech
-# fam_num = fam_num
-# fam_ratio = fam_ratio
-# bh_features = remaining_features
+# bh_features = bh_features
 run_enet_surv <- function(training_dat,
-                             test_dat,
-                             age_cutoff,
-                             age_dum,
-                             gender, 
-                             tech,
-                             fam_num,
-                             fam_ratio,
-                             bh_features) {
+                         test_dat,
+                         age_cutoff,
+                         gender, 
+                         tech,
+                         bh_features) {
   
   
   
@@ -2649,24 +2744,12 @@ run_enet_surv <- function(training_dat,
   intersected_feats <- intersect(bh_features, colnames(training_dat))
   
   if(gender) {
-    intersected_feats <- c('M', intersected_feats)
-    intersected_feats <- c('F', intersected_feats)
+    intersected_feats <- c('Female', 'Male', intersected_feats)
   }
   if (tech) {
-    intersected_feats <- c('a', intersected_feats)
-    intersected_feats <- c('b', intersected_feats)
-  }
-  if (fam_num){
-    intersected_feats <- c('fam_num_cancer', intersected_feats)
-  }
-  if (fam_ratio){
-    intersected_feats <- c('fam_cancer_ratio', intersected_feats)
+    intersected_feats <- c('batch_1', 'batch_2', intersected_feats)
   }
   
-  
-  if (age_dum){
-    intersected_feats <- c('age_dum_young', 'age_dum_old' ,intersected_feats)
-  }
   
   # get survival time as days to onset and days to sample collection in one column for training dat
   time_to_event <- training_dat$age_diagnosis
@@ -2676,7 +2759,17 @@ run_enet_surv <- function(training_dat,
   time_to_event[missing_ind] <- time_to_collection[missing_ind]
   
   # get cancer status 
-  cancer_status <- ifelse(training_dat$cancer_diagnosis_diagnoses != 'Unaffected', 1, 0)
+  cancer_status <- ifelse(training_dat$cancer_diagnosis_diagnoses != 'Unaffected', TRUE, FALSE)
+  
+  # for test dat
+  time_to_event_test <- test_dat$age_diagnosis
+  missing_ind_test <- is.na(time_to_event_test)
+  time_to_collection_test <- test_dat$age_sample_collection
+  
+  time_to_event_test[missing_ind_test] <- time_to_collection_test[missing_ind_test]
+  
+  # get cancer status 
+  cancer_status_test <- ifelse(test_dat$cancer_diagnosis_diagnoses != 'Unaffected', TRUE, FALSE)
   
   # get clinical data
   test_clin <- test_dat[, !grepl('^cg', colnames(test_dat))]
@@ -2687,11 +2780,13 @@ run_enet_surv <- function(training_dat,
 
   # get survival object
   surv_outcome <- Surv(time_to_event,cancer_status, type = 'right')
+  # get survival object
+  surv_outcome_test <- Surv(time_to_event_test,cancer_status_test, type = 'right')
   
   # fit coxph
   # start elastic net tuning
   N_CV_REPEATS = 2
-  nfolds = 3
+  nfolds = 5
   
   ###### ENET
   # create vector and list to store best alpha on training data. alpha is the parameter that choses the 
@@ -2783,8 +2878,7 @@ run_enet_surv <- function(training_dat,
   
   # This returns 100 prediction with 1-100 lambdas
   temp_test.predictions <- predict.coxnet(model, 
-                                          data.matrix(test_dat),
-                                          type = 'response')
+                                          data.matrix(test_dat))
   
   # get predictions with corresponding lambda.
   test.predictions <- temp_test.predictions[, temp.min_lambda_index]
@@ -2792,9 +2886,8 @@ run_enet_surv <- function(training_dat,
   # combine predictions and real labels 
   temp_dat <- as.data.frame(cbind(test_pred = test.predictions,  test_clin))
   
-  
   ###########################################################################################
-  return(list(temp_dat, model))
+  return(temp_dat)
 
   
 }
@@ -3414,5 +3507,4 @@ run_glmm_lasso <- function(training_dat,
   return(list(temp_dat, temp_dat_con, model, elastic_net.cv_model$lambda.min, best_alpha))
   
 }
-
 

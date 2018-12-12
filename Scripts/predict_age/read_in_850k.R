@@ -6,11 +6,10 @@ path_to_valid <- '../../Data/methyl_data/validation'
 
 # set preprocessing method
 method <- 'noob'
-methyl_type <- 'm'
+methyl_type <- 'beta'
 
 # get functions
 source('all_functions.R')
-
 # read in 450k data to get variable names to grab intersection
 cases <- readRDS('../../Data/cases_450.rda')
 features_450 <- colnames(cases)[12:ncol(cases)]
@@ -25,6 +24,7 @@ rgControls <- read.metharray.exp(path_to_controls, recursive = T)
 
 rgValid <- read.metharray.exp(path_to_valid, recursive = T)
 
+# save.image('~/Desktop/temp_850.RData')
 ##########
 # load genomic methyl set (from controls) - you need genetic locations by probe from this object
 # ##########
@@ -105,13 +105,13 @@ gene_probes <- as.character(gene_probes$focal_CpGs[!duplicated(gene_probes$focal
 
 # controls
 rg_controls <- subset_rg_set(rg_set = rgControls,
-                          keep_gender = FALSE,
-                          keep_controls = TRUE,
-                          keep_snps = FALSE,
-                          get_island = NULL,
-                          get_chr = NULL,
-                          get_type = NULL,
-                          gene_probes = gene_probes)
+                            keep_gender = FALSE,
+                            keep_controls = TRUE,
+                            keep_snps = FALSE,
+                            get_island = NULL,
+                            get_chr = NULL,
+                            get_type = NULL,
+                            gene_probes = gene_probes)
 
 # validation
 rg_val <- subset_rg_set(rg_set = rgValid,
@@ -126,8 +126,8 @@ rg_val <- subset_rg_set(rg_set = rgValid,
 
 
 # preprocess controls and valid
-data_controls <-  preprocessMethod(rg_controls, preprocess = method, methyl_type = 'm')
-data_valid <-  preprocessMethod(rg_val, preprocess = method, methyl_type = 'm')
+data_controls <-  preprocessMethod(rg_controls, preprocess = method, methyl_type = 'beta')
+data_valid <-  preprocessMethod(rg_val, preprocess = method, methyl_type = 'beta')
 
 
 # subset by feature_450
@@ -148,6 +148,4 @@ data_valid <- process_rg_set_single(beta_data = data_valid,
 # save data
 saveRDS(data_controls, '../../Data/controls_850_beta.rda')
 saveRDS(data_valid, '../../Data/cases_850_beta.rda')
-
-
 

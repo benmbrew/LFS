@@ -6,14 +6,14 @@ source('all_functions.R')
 
 # read in 850k
 con_850 <- readRDS('../../Data/controls_850_beta.rda')
-cases_850 <- readRDS('../../Data/cases_850.rda')
+cases_850 <- readRDS('../../Data/cases_850_beta.rda')
 
 # read in 450k
 cases_450 <-readRDS('../../Data/cases_450_beta.rda')
 con_450 <- readRDS('../../Data/controls_450_beta.rda')
 cases_wt_450 <- readRDS('../../Data/cases_wt_450_beta.rda')
 con_wt_450 <- readRDS('../../Data/controls_wt_450_beta.rda')
-# 
+
 # ##### -------- m values (log2(meth/unmeth))
 
 # read in 850k
@@ -155,6 +155,11 @@ names(con_450_m)[10] <- 'cancer_status'
 names(con_wt_450_m)[10] <- 'cancer_status'
 names(cases_850_m)[10] <- 'cancer_status'
 names(con_850_m)[10] <- 'cancer_status'
+# do back check here
+# cases_450, cases_450_m, cases_850, cases_850_m, cases_wt_450, cases_wt_450_m,
+# con_450, con_450_m, con_850, con_850_m, con_wt_450, con_wt_450_m
+# temp <- cases_wt_450[, c(1:30)]
+
 
 # create cases only and controls only
 # cases
@@ -176,17 +181,17 @@ all_con_beta_wt <- rbind(con_wt_450,
 all_con_m_wt <- rbind(con_wt_450_m,
                       con_850_m)
 
-# remove outliers '2564', '3010'
+# remove outliers '2564', '3010', 
 all_con_m <- all_con_m[all_con_m$ids != '2564',]
 all_con_m <- all_con_m[all_con_m$ids != '3010',]
 
-all_con_beta<- all_con_beta[all_con_beta$ids != '2564',]
-all_con_beta<- all_con_beta[all_con_beta$ids != '3010',]
+all_con_beta <- all_con_beta[all_con_beta$ids != '2564',]
+all_con_beta <- all_con_beta[all_con_beta$ids != '3010',]
 
 all_con_beta_wt <- all_con_beta_wt[all_con_beta_wt$ids != '2564',]
 all_con_beta_wt <- all_con_beta_wt[all_con_beta_wt$ids != '3010',]
 
-all_con_m_wt <- all_con_beta_wt[all_con_beta_wt$ids != '2564',]
+all_con_m_wt <- all_con_m_wt[all_con_m_wt$ids != '2564',]
 all_con_m_wt <- all_con_m_wt[all_con_m_wt$ids != '3010',]
 
 con_wt_450_m <- con_wt_450_m[con_wt_450_m$ids != '2564',]
@@ -194,6 +199,10 @@ con_wt_450_m <- con_wt_450_m[con_wt_450_m$ids != '3010',]
 
 con_wt_450 <- con_wt_450[con_wt_450$ids != '2564',]
 con_wt_450 <- con_wt_450[con_wt_450$ids != '3010',]
+
+# 4089, 4122 from 450 and 850 cases
+all_cases_beta <- all_cases_beta[all_cases_beta$tm_donor != '4089',]
+all_cases_m <- all_cases_m[all_cases_m$tm_donor != '4089',]
 
 saveRDS(con_wt_450_m, '../../Data/con_wt_450_m.rda')
 saveRDS(cases_wt_450_m, '../../Data/cases_wt_450_m.rda')
@@ -206,7 +215,6 @@ saveRDS(cases_wt_450, '../../Data/cases_wt_450_beta.rda')
 
 rm(con_wt_450, cases_wt_450)
 
-
 # remove datasets
 rm(cases_450,
    con_450, 
@@ -217,7 +225,12 @@ rm(cases_450,
    cases_850_m,
    con_850_m)
 
-# remove duplicates from datasets 
+# # remove duplicates from datasets 
+saveRDS(all_cases_beta,'../../Data/all_cases_beta_transform.rda')
+saveRDS(all_con_beta,'../../Data/all_con_beta_transform.rda')
+
+saveRDS(all_cases_m,'../../Data/all_cases_m_transform.rda')
+saveRDS(all_con_m,'../../Data/all_con_m_transform.rda')
 
 
 # Cases - for tm donor make sure you keep 450k over 850k. 
@@ -239,7 +252,6 @@ all_con_m_wt <- all_con_m_wt[!duplicated(all_con_m_wt$tm_donor, fromLast = TRUE)
 # remove case controls from control dataset 
 all_con_beta_wt <- all_con_beta_wt[grepl('Unaffected', all_con_beta_wt$cancer_diagnosis_diagnoses),]
 all_con_m_wt <- all_con_m_wt[grepl('Unaffected', all_con_m_wt$cancer_diagnosis_diagnoses),]
-
 
 
 # remove WT 
@@ -327,7 +339,6 @@ all_con_m_wt <- all_con_m_wt[!is.na(all_con_m_wt$age_sample_collection),]
 all_con_m_wt_combat <- all_con_m_wt_combat[!is.na(all_con_m_wt_combat$age_sample_collection),]
 
 
-
 # save beta data
 # cases
 saveRDS(all_cases_beta, '../../Data/all_cases_beta.rda')
@@ -352,83 +363,81 @@ saveRDS(all_con_beta_wt_combat, '../../Data/all_con_beta_wt_combat.rda')
 saveRDS(all_con_m_wt, '../../Data/all_con_m_wt.rda')
 saveRDS(all_con_m_wt_combat, '../../Data/all_con_m_wt_combat.rda')
 
+# check PCs
+get_pca(pca_data = all_cases_beta,
+        age_cutoff = 72,
+        column_name = 'tech',
+        show_variance = FALSE,
+        pc_x = 1,
+        pc_y = 2,
+        main_title = 'beta cancer no combat')
+
+
+# check PCs
+get_pca(pca_data = all_cases_beta_combat,
+        age_cutoff = 72,
+        column_name = 'tech',
+        show_variance = FALSE,
+        pc_x = 1,
+        pc_y = 2,
+        main_title = 'beta cancer with combat')
+
+# check PCs
+get_pca(pca_data = all_cases_m,
+        age_cutoff = 72,
+        column_name = 'tech',
+        show_variance = FALSE,
+        pc_x = 1,
+        pc_y = 2,
+        main_title = 'm cancer no combat')
+
+
+# check PCs
+# all_cases_m_combat$tech <- ifelse(all_cases_m_combat$tech == 'batch_1', '450k', '850k')
+get_pca(pca_data = all_cases_m_combat,
+        age_cutoff = 72,
+        column_name = 'tech',
+        show_variance = FALSE,
+        pc_x = 1,
+        pc_y = 2,
+        main_title = 'm cancer with combat')
+
+
+# check PCs
+get_pca(pca_data = all_con_beta,
+        age_cutoff = 72,
+        column_name = 'tech',
+        show_variance = FALSE,
+        pc_x = 1,
+        pc_y = 2,
+        main_title = 'beta no cancer no combat')
+
+# check PCs
+get_pca(pca_data = all_con_beta_combat,
+        age_cutoff = 72,
+        column_name = 'tech',
+        show_variance = FALSE,
+        pc_x = 1,
+        pc_y = 2,
+        main_title = 'beta no cancer with combat')
+
 # # check PCs
-# get_pca(pca_data = all_cases_beta, 
-#         age_cutoff = 72,
-#         column_name = 'tech',
-#         show_variance = FALSE,
-#         pc_x = 1,
-#         pc_y = 2,
-#         main_title = 'PC 1 and 2 cases beta no combat')
-# 
-# 
-# # check PCs
-# get_pca(pca_data = all_cases_beta_combat, 
-#         age_cutoff = 72,
-#         column_name = 'tech',
-#         show_variance = FALSE,
-#         pc_x = 1,
-#         pc_y = 2,
-#         main_title = 'PC 1 and 2 cases beta combat')
-# 
-# # check PCs
-# get_pca(pca_data = all_cases_m,
-#         age_cutoff = 72,
-#         column_name = 'tech',
-#         show_variance = FALSE,
-#         pc_x = 1,
-#         pc_y = 2,
-#         main_title = 'PC 1 and 2 cases')
-# 
-# 
-# # check PCs
-# # all_cases_m_combat$tech <- ifelse(all_cases_m_combat$tech == 'batch_1', '450k', '850k')
-# get_pca(pca_data = all_cases_m_combat,
-#         age_cutoff = 72,
-#         column_name = 'tech',
-#         show_variance = FALSE,
-#         pc_x = 1,
-#         pc_y = 2,
-#         main_title = 'PC 1 and 2')
-# 
-# 
-# # check PCs
-# get_pca(pca_data = all_con_beta, 
-#         age_cutoff = 72,
-#         column_name = 'tech',
-#         show_variance = FALSE,
-#         pc_x = 1,
-#         pc_y = 2,
-#         main_title = 'PC 1 and 2 con beta no combat')
-# 
-# 
-# 
-# # check PCs
-# get_pca(pca_data = all_con_beta_combat, 
-#         age_cutoff = 72,
-#         column_name = 'tech',
-#         show_variance = FALSE,
-#         pc_x = 1,
-#         pc_y = 2,
-#         main_title = 'PC 1 and 2 con beta combat')
-# 
-# # # check PCs
-# get_pca(pca_data = all_con_m,
-#         age_cutoff = 72,
-#         column_name = 'tech',
-#         show_variance = FALSE,
-#         pc_x = 1,
-#         pc_y = 2,
-#         main_title = 'PC 1 and 2 con m no combat')
-# 
-# 
-# 
-# # check PCs
-# get_pca(pca_data = all_con_m_combat,
-#         age_cutoff = 72,
-#         column_name = 'tech',
-#         show_variance = FALSE,
-#         pc_x = 1,
-#         pc_y = 2,
-#         main_title = 'PC 1 and 2 con m combat')
-# 
+get_pca(pca_data = all_con_m,
+        age_cutoff = 72,
+        column_name = 'tech',
+        show_variance = FALSE,
+        pc_x = 1,
+        pc_y = 2,
+        main_title = 'm no cancer no combat')
+
+
+
+# check PCs
+get_pca(pca_data = all_con_m_combat,
+        age_cutoff = 72,
+        column_name = 'tech',
+        show_variance = FALSE,
+        pc_x = 1,
+        pc_y = 2,
+        main_title = 'm no cancer with combat')
+

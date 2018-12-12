@@ -9,8 +9,8 @@ methyl_type = 'beta'
 combat = TRUE
 gender = TRUE
 age_cutoff = 72
-tech = FALSE 
-how_many_seeds = 30
+tech = FALSE
+how_many_seeds = 3
 how_many_folds = 5
 use_offset = TRUE
 remove_age = TRUE
@@ -47,7 +47,7 @@ if(remove_age){
   is_removed <- 'age_removed'
 } else {
   is_removed <- 'no_removed'
-
+  
 }
 
 
@@ -101,7 +101,7 @@ if(methyl_type == 'beta'){
     # recode to homogenize with combat data
     all_cases$tech <- ifelse(all_cases$tech == '450k', 'batch_1', 'batch_2')
     all_con$tech <- ifelse(all_con$tech == '450k', 'batch_1', 'batch_2')
-   
+    
     message('loaded beta values, with no combat')
   }
 } else {
@@ -124,7 +124,7 @@ if(methyl_type == 'beta'){
     # recode to homogenize with combat data
     all_cases$tech <- ifelse(all_cases$tech == '450k', 'batch_1', 'batch_2')
     all_con$tech <- ifelse(all_con$tech == '450k', 'batch_1', 'batch_2')
-   
+    
     
     message('loaded m values, with no combat')
   }
@@ -135,99 +135,47 @@ if(remove_age){
   all_cases <- get_age_removal(all_cases)
   all_con <- get_age_removal(all_con)
   all_con_wt <- get_age_removal(all_con_wt)
-
+  
 }
 
-##########
-# seperate 450 fron 850
-##########
 
-#CASES
-cases_450 <- all_cases[all_cases$tech == 'batch_1',]
-cases_450 <- cases_450[!is.na(cases_450$age_sample_collection),]
-cases_450 <- cases_450[!is.na(cases_450$age_diagnosis),]
-cases_450 <- cases_450[!is.na(cases_450$gender),]
-
-cases_850 <- all_cases[all_cases$tech == 'batch_2',]
-cases_850 <- cases_850[!is.na(cases_850$age_sample_collection),]
-cases_850 <- cases_850[!is.na(cases_850$age_diagnosis),]
-cases_850 <- cases_850[!is.na(cases_850$gender),]
-
-rm(all_cases)
 
 # gender
-cases_450 <- cbind(as.data.frame(class.ind(cases_450$gender)), 
-                   cases_450)
+all_cases <- cbind(as.data.frame(class.ind(all_cases$gender)), 
+                   all_cases)
 
-cases_850 <- cbind(as.data.frame(class.ind(cases_850$gender)), 
-                   cases_850)
+# tech
+all_cases <- cbind(as.data.frame(class.ind(all_cases$tech)), 
+                   all_cases)
+
+all_con <- cbind(as.data.frame(class.ind(all_con$gender)), 
+                   all_con)
+
+all_con <- cbind(as.data.frame(class.ind(all_con$tech)), 
+                 all_con)
+# rempove old tech variable 
+all_cases$gender <- NULL
+all_con$gender <- NULL
 
 # rempove old tech variable 
-cases_450$gender <- cases_850$gender <- NULL
-
-
-# # tech
-# cases_450 <- cbind(as.data.frame(class.ind(cases_450$tech)), 
-#                    cases_450)
-# 
-# cases_850 <- cbind(as.data.frame(class.ind(cases_850$tech)), 
-#                    cases_850)
-
-# rempove old tech variable 
-cases_450$tech <- cases_850$tech <- NULL
-
+all_cases$tech <- NULL
+all_con$tech <- NULL
 
 #########
 # make ages back to months (times by 12)
 #########
 
 # cases
+all_cases$age_diagnosis <- 
+  round(all_cases$age_diagnosis*12, 2)
+all_cases$age_sample_collection <- 
+  round(all_cases$age_sample_collection*12, 2)
 
-# 450
-cases_450$age_diagnosis <- 
-  round(cases_450$age_diagnosis*12, 2)
-cases_450$age_sample_collection <- 
-  round(cases_450$age_sample_collection*12, 2)
-
-# 850
-cases_850$age_diagnosis <- 
-  round(cases_850$age_diagnosis*12, 2)
-cases_850$age_sample_collection <- 
-  round(cases_850$age_sample_collection*12, 2)
-
-
-#CONTROLS
-con_450 <- all_con[all_con$tech == 'batch_1',]
-con_450 <- con_450[!is.na(con_450$age_sample_collection),]
-con_450 <- con_450[!is.na(con_450$gender),]
-
-con_850 <- all_con[all_con$tech == 'batch_2',]
-con_850 <- con_850[!is.na(con_850$age_sample_collection),]
-con_850 <- con_850[!is.na(con_850$gender),]
-
-rm(all_con)
-# gender
-con_450 <- cbind(as.data.frame(class.ind(con_450$gender)), 
-                   con_450)
-
-con_850 <- cbind(as.data.frame(class.ind(con_850$gender)), 
-                   con_850)
-
-# rempove old tech variable 
-con_450$gender <- con_850$gender <- NULL
-
-# # tech
-# con_450 <- cbind(as.data.frame(class.ind(con_450$tech)), 
-#                  con_450)
-# 
-# con_850 <- cbind(as.data.frame(class.ind(con_850$tech)), 
-#                  con_850)
-
-
-
-# rempove old tech variable 
-con_450$tech <- con_850$tech <- NULL
-
+# con
+all_con$age_diagnosis <- 
+  round(all_con$age_diagnosis*12, 2)
+all_con$age_sample_collection <- 
+  round(all_con$age_sample_collection*12, 2)
 
 
 # apply to wt controls
@@ -236,36 +184,20 @@ all_con_wt <- all_con_wt[!is.na(all_con_wt$gender),]
 
 # ge tgender 
 all_con_wt <- cbind(as.data.frame(class.ind(all_con_wt$gender)), 
-                 all_con_wt)
+                    all_con_wt)
 
 # rempove old tech variable 
 all_con_wt$gender <- NULL
 
 # # tech
-# all_con_wt <- cbind(as.data.frame(class.ind(all_con_wt$tech)), 
-#                  all_con_wt)
+all_con_wt <- cbind(as.data.frame(class.ind(all_con_wt$tech)),
+                 all_con_wt)
 all_con_wt$tech <- NULL
 
 # subset to get controls lfs and wild type
 con_mut <- all_con_wt[all_con_wt$p53_germline == 'MUT',]
 con_wt <- all_con_wt[all_con_wt$p53_germline == 'WT',]
 rm(all_con_wt)
-
-#########
-# make ages back to months (times by 12)
-#########
-
-# 450
-con_450$age_diagnosis <- 
-  round(con_450$age_diagnosis*12, 2)
-con_450$age_sample_collection <- 
-  round(con_450$age_sample_collection*12, 2)
-
-# 850
-con_850$age_diagnosis <- 
-  round(con_850$age_diagnosis*12, 2)
-con_850$age_sample_collection <- 
-  round(con_850$age_sample_collection*12, 2)
 
 # 450 wt
 con_mut$age_sample_collection <- 
@@ -286,71 +218,48 @@ bh_feats <- bump_hunter(dat_1 = con_wt,
 
 # save.image('~/Desktop/temp_beta_nocombat.RData')
 # cases
-cases_450 <- join_new_features(cases_450, new_features = bh_feats)
-cases_850 <- join_new_features(cases_850, new_features = bh_feats)
+all_cases <- join_new_features(all_cases, new_features = bh_feats)
 
 # controls
-con_450 <- join_new_features(con_450, new_features = bh_feats)
-con_850 <- join_new_features(con_850, new_features = bh_feats)
+all_con <- join_new_features(all_con, new_features = bh_feats)
 
 # wt
 con_mut <- join_new_features(con_mut, new_features = bh_feats)
 con_wt <- join_new_features(con_wt, new_features = bh_feats)
 
 # store the selected featufres
-lfs_bump_probes <- colnames(cases_450)[grepl('^cg', colnames(cases_450))]
+lfs_bump_probes <- colnames(all_cases)[grepl('^cg', colnames(all_cases))]
 
 
 rm(ratio_set, bh_feats)
 
+# separate 450 from 850
+cases_450 <- all_cases[all_cases$batch_1 == 1,]
+cases_850 <- all_cases[all_cases$batch_1 == 0,]
+con_450 <- all_con[all_con$batch_1 == 1,]
+con_850 <- all_con[all_con$batch_1 == 0,]
+rm(all_cases, all_con, con_mut, con_wt)
 
-# add dummy tech variable for data sets with only one, replace family_name
-names(con_450)[9] <- 'tech'
-names(con_850)[9] <- 'tech'
-names(cases_450)[9] <- 'tech'
-names(cases_850)[9] <- 'tech'
+# combine 450 and 850
+all_450 <- rbind(cases_450, 
+                 con_450)
 
-# fill them with Zero
-con_450$tech <- '450k'
-con_850$tech <- '850k'
-cases_450$tech <- '450k'
-cases_850$tech <- '850k'
-
-# do the same to con_mut and con_wt
-names(con_mut)[9] <- 'tech'
-names(con_wt)[9] <- 'tech'
-
-# fill new variable with right tech indication
-con_mut$tech <- '450k'
-con_wt$tech <- '450k'
-
-# rbind all controls
-controls_all <- rbind(con_450,
-                      con_850,
-                      con_mut,
-                      con_wt)
-
-rm(con_450,
-   con_850,
-   con_mut, 
-   con_wt)
-
+all_850 <- rbind(cases_850,
+                 con_850)
+rm(cases_450, con_450, cases_850, con_850)
 ###########################
 
 # save trainig  set 
-saveRDS(cases_450, paste0('validation_age_predictions/', 'cases_450',which_methyl, '_', which_combat, '_',
+saveRDS(all_450, paste0('validation_age_predictions_surv/', 'all_450_',which_methyl, '_', which_combat, '_',
                           num_seeds, '_', num_folds, '_', is_gen, '_', is_offset,'.rda'))
-# save validation set 
-saveRDS(cases_850, paste0('validation_age_predictions/', 'valid_',which_methyl, '_', which_combat, '_',
-                          num_seeds, '_', num_folds, '_', is_gen,'_', is_offset, '.rda'))
 
 # save validation set 
-saveRDS(controls_all, paste0('validation_age_predictions/', 'controls_',which_methyl, '_', which_combat, '_',
-                          num_seeds, '_', num_folds, '_', is_gen,'_', is_offset, '.rda'))
+saveRDS(all_850, paste0('validation_age_predictions_surv/', 'all_850_',which_methyl, '_', which_combat, '_',
+                             num_seeds, '_', num_folds, '_', is_gen,'_', is_offset, '.rda'))
 
 # save associated lfs bumps
-saveRDS(lfs_bump_probes, paste0('validation_age_predictions/', 'lfs_bumps_', which_methyl, '_', 
-                                which_combat, '_', '.rda'))
+saveRDS(lfs_bump_probes, paste0('validation_age_predictions_surv/', 'lfs_bumps_', which_methyl, '_', 
+                                which_combat, '.rda'))
 ############################
 
 # create range for random sampling for cross validation
@@ -363,26 +272,26 @@ all_test_results <- list()
 # save.image('~/Desktop/temp_valid.RData')
 
 for(random_seed in 1:length(seed_range)) {
- # prepare data sets for modelling
+  # prepare data sets for modelling
   
-  run_model <- function(cases_full,
-                        controls_full,
-                        valid_full,
+  run_model <- function(full_450,
                         k_folds = k_folds,
                         tech = tech,
                         gender = gender,
                         beta_thresh = beta_thresh,
                         methyl_type = methyl_type,
                         age_cutoff = age_cutoff,
-                        offset = use_offset,
                         g_ranges = g_ranges) {
     
     
     
+    # combinedata sets 
+    full_data <- full_450
+
     set.seed(random_seed)
     
     # get vector of random folds
-    fold_vec <- sample(1:k_folds, nrow(cases_full), replace = T)
+    fold_vec <- sample(1:k_folds, nrow(full_data), replace = T)
     
     # test_data_results
     test_data_results <- list()
@@ -395,22 +304,23 @@ for(random_seed in 1:length(seed_range)) {
       test_index <- !train_index
       
       # subset to get training and test data
-      train_cases <- cases_full[train_index, ]
-      test_cases <- cases_full[test_index, ]
+      train_cases <- full_data[train_index, ]
+      test_cases <- full_data[test_index, ]
       
       # get controls 450k mut
-      temp_con <- controls_all[controls_all$tech == '450k' & controls_all$p53_germline == 'MUT',]
+      temp_con <- full_data[full_data$cancer_diagnosis_diagnoses == 'Unaffected',]
       temp_con <- temp_con[!duplicated(temp_con$tm_donor),]
-      
+      temp_cases <- full_data[full_data$cancer_diagnosis_diagnoses != 'Unaffected',]
+      temp_cases <- temp_cases[!duplicated(temp_cases$tm_donor),]
       # use cases training and controls to get bumphunter features
-      bh_feats <- bump_hunter(dat_1 = train_cases, 
+      bh_feats <- bump_hunter(dat_1 = temp_cases, 
                               dat_2 = temp_con , 
                               bump = 'cancer', 
                               boot_num = 5, 
                               beta_thresh = beta_thresh,
                               methyl_type = methyl_type,
                               g_ranges = g_ranges)
-      rm(temp_con)
+      rm(temp_con, temp_cases)
       
       
       # get intersect_names
@@ -423,20 +333,16 @@ for(random_seed in 1:length(seed_range)) {
       # take remove features out of colnames 
       bh_features <- intersect_names[!intersect_names %in% remove_features]
       
-    
-      # function to predict with all test, controls, controls old, and valid
-      mod_result  <- run_enet_all_test(training_dat = train_cases,
-                                       test_dat = test_cases,
-                                       controls_dat = controls_full,
-                                       valid_dat = valid_full,
-                                       age_cutoff = age_cutoff,
-                                       gender = gender,
-                                       tech = tech,
-                                       offset = use_offset,
-                                       bh_features = bh_features)
+      mod_result <- run_enet_surv(training_dat = train_cases,
+                                 test_dat = test_cases,
+                                 age_cutoff = age_cutoff,
+                                 gender = gender,
+                                 tech = tech,
+                                 bh_features = bh_features)
       
       
-    
+      
+      
       mod_result$seed <- random_seed
       mod_result$fold <- i
       test_data_results[[i]] <- mod_result
@@ -446,21 +352,19 @@ for(random_seed in 1:length(seed_range)) {
     
     # combine list of case and control result data frames and return all result objects (two dataframes and 4 lists)
     cv_testing_results <- do.call(rbind, test_data_results)
-
+    
     return(cv_testing_results)
   }
   
   
   # run model with 5 k fold cross validation
-  all_test_results[[random_seed]] <- run_model(cases_full = cases_450,
-                                               controls_full = controls_all,
-                                               valid_full = cases_850,
+  all_test_results[[random_seed]] <- run_model(full_450 = all_450,
                                                k_folds = k_folds,
                                                tech = tech,
                                                gender = gender,
+                                               methyl_type = methyl_type,
                                                beta_thresh = beta_thresh,
                                                age_cutoff = age_cutoff,
-                                               offset = use_offset,
                                                g_ranges = g_ranges)
   
   message('finished working on random seed = ', random_seed)
@@ -471,6 +375,6 @@ for(random_seed in 1:length(seed_range)) {
 final_dat <- do.call(rbind, all_test_results)
 
 # # save data
-saveRDS(final_dat, paste0('validation_age_predictions/', which_methyl, '_', which_combat, '_',
-                          num_seeds, '_', num_folds, '_', is_gen, '.rda'))
+saveRDS(final_dat, paste0('validation_age_predictions_surv/', which_methyl, '_', which_combat, '_',
+                          num_seeds, '_', num_folds, '_', is_gen, '_no_tech_correct.rda'))
 
