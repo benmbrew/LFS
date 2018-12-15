@@ -5,15 +5,15 @@ source('all_functions.R')
 
 # create fixed objects to model and pipeline inputs and saving  
 methyl_type = 'm'
-gender = FALSE
+gender = TRUE
 tech = FALSE 
-how_many_seeds = 5
+how_many_seeds = 20
 how_many_folds = 5
-use_offset = FALSE
+# use_offset = FALSE
 remove_age  = TRUE
 beta_thresh = 0.05
-num_seeds = 50
-k_folds = 5
+age_cutoff = 72
+
 
 # condition on fixed objects to get saving identifiers
 
@@ -21,8 +21,8 @@ if(methyl_type == 'beta'){
   which_methyl <- 'beta'
 } else {
   which_methyl <- 'm'
+  beta_thresh= 0.5
 }
-
 
 if(gender){
   is_gen = 'use_gen'
@@ -30,12 +30,15 @@ if(gender){
   is_gen = 'no_gen'
 }
 
-if(use_offset){
-  is_offset <- 'use_offset'
-} else {
-  is_offset <- 'no_offset'
-}
+# if(use_offset){
+#   is_offset <- 'use_offset'
+# } else {
+#   is_offset <- 'no_offset'
+# }
 
+num_seeds <- paste0('seeds_', how_many_seeds)
+num_folds <- paste0('folds_', how_many_folds)
+k_folds <- how_many_folds
 
 # load normal cases
 all_cases <- readRDS('../../Data/all_cases_beta.rda')
@@ -53,6 +56,7 @@ if(methyl_type == 'beta'){
   valid_transform <- readRDS(paste0('../../Data/model_data/valid_transform_beta.rda'))
   con_transform <- readRDS(paste0('../../Data/model_data/controls_transform_beta.rda'))
   all_con_wt <-  readRDS('../../Data/all_con_beta_wt.rda')
+
   
 } else {
   valid_transform <- readRDS(paste0('../../Data/model_data/valid_transform_m.rda'))
@@ -80,6 +84,9 @@ g_ranges$probe <- rownames(ratio_set)
 # remove ch and duplicatee
 g_ranges <- g_ranges[!duplicated(g_ranges$start),]
 g_ranges <- g_ranges[!grepl('ch', g_ranges$probe),]
+
+names(g_ranges)[1] <- 'chr'
+
 
 # load cases
 cases_450 <- cbind(as.data.frame(class.ind(cases_450$gender)), 
@@ -149,8 +156,8 @@ names(valid_transform)[3] <- 'ids'
 
 
 if (remove_age){
-  clin_names <- names(cases_450)[1:12]
-  feats <- names(cases_450)[13:ncol(cases_450)]
+  clin_names <- names(cases_450)[!grepl('^cg', names(cases_450))]
+  feats <- names(cases_450)[grepl('^cg', names(cases_450))]
   feats <- feats[!age_probes %in% feats]
   cases_450 <- cases_450[, c(clin_names, feats)]
   con_transform <- con_transform[, c(clin_names, feats)]
@@ -158,9 +165,7 @@ if (remove_age){
   con_wt <- con_wt[, c(clin_names, feats)]
   con_mut <- con_mut[, c(clin_names, feats)]
 
-  
 }
-registerDoParallel(1)
 
 # run bumphunter on LFS healthy patients (LFS no cancer) and LFS cancer patients (LFS cancer)
 bh_feats <- bump_hunter(dat_1 = con_wt, 
@@ -203,15 +208,16 @@ con_mut$tech <- '450k'
 con_wt$tech <- '450k'
 
 # save trainig  set 
-saveRDS(cases_450, paste0('transform_data/', 'cases_450',which_methyl, '_',
-                          num_seeds, '_', k_folds, '_', is_gen, '.rda'))
+saveRDS(cases_450, paste0('transform_data/', 'cases_450_',which_methyl, '.rda'))
 # save validation set 
-saveRDS(con_transform, paste0('transform_data/', 'con_transform_',which_methyl, '_',
-                              num_seeds, '_', k_folds, '_', is_gen, '.rda'))
+saveRDS(con_transform, paste0('transform_data/', 'con_transform_',which_methyl, '.rda'))
 
 # save validation set 
-saveRDS(valid_transform, paste0('transform_data/', 'valid_transform_',which_methyl, '_',
-                             num_seeds, '_', k_folds, '_', is_gen, '.rda'))
+saveRDS(valid_transform, paste0('transform_data/', 'valid_transform_',which_methyl,'.rda'))
+# save wt controls 
+saveRDS(con_wt, paste0('transform_data/', 'con_wt_',which_methyl, '.rda'))
+# save mut controls 
+saveRDS(con_mut, paste0('transform_data/', 'con_mut_',which_methyl,'.rda'))
 
 # save associated lfs bumps
 saveRDS(lfs_bump_probes, paste0('transform_data/', 'lfs_bumps_', which_methyl, '_', '.rda'))
@@ -233,6 +239,7 @@ for(random_seed in 1:length(seed_range)) {
   run_model <- function(cases_full,
                         controls_full,
                         valid_full,
+                        age_cutoff = age_cutoff,
                         k_folds = k_folds,
                         tech = tech,
                         gender = gender,
@@ -277,7 +284,7 @@ for(random_seed in 1:length(seed_range)) {
       
       
       # get intersect_names
-      intersect_names <- names(train_cases)[13:ncol(train_cases)]
+      intersect_names <- names(train_cases)[grepl('^cg', names(train_cases))]
       
       # get feature list
       colnames(bh_feats)[1] <- 'chr'
@@ -292,9 +299,9 @@ for(random_seed in 1:length(seed_range)) {
                                        test_dat = test_cases,
                                        controls_dat = con_transform,
                                        valid_dat = valid_transform,
-                                       age_cutoff = 72,
-                                       gender = TRUE,
-                                       tech = FALSE,
+                                       age_cutoff = age_cutoff,
+                                       gender = gender,
+                                       tech = tech,
                                        bh_features = bh_features)
       
       
@@ -317,6 +324,7 @@ for(random_seed in 1:length(seed_range)) {
   all_test_results[[random_seed]] <- run_model(cases_full = cases_450,
                                                controls_full = con_transform,
                                                valid_full = valid_transform,
+                                               age_cutoff = age_cutoff,
                                                k_folds = k_folds,
                                                tech = tech,
                                                gender = gender,
@@ -331,8 +339,6 @@ for(random_seed in 1:length(seed_range)) {
 final_dat <- do.call(rbind, all_test_results)
 
 # # save data
-saveRDS(final_dat, paste0('transform_data/', which_methyl, '_',
+saveRDS(final_dat, paste0('transform_data_cv/', which_methyl, '_',
                           num_seeds, '_', k_folds, '_', is_gen, '.rda'))
-
-
 

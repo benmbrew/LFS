@@ -6,11 +6,11 @@ methyl_type = 'beta'
 combat = TRUE
 gender = TRUE
 age_cutoff = 72
-tech = FALSE
-how_many_seeds = 3
-how_many_folds = 5
-use_offset = TRUE
+tech = TRUE
 remove_age = TRUE
+use_offset = TRUE
+num_seeds = 'seeds_3'
+num_folds = 'folds_5'
 
 # condition on fixed objects to get saving identifiers
 
@@ -46,11 +46,6 @@ if(remove_age){
   is_removed <- 'no_removed'
   
 }
-
-
-num_seeds <- paste0('seeds_', how_many_seeds)
-num_folds <- paste0('folds_', how_many_folds)
-k_folds <- how_many_folds
 
 ##########
 # load genomic methyl set (from controls) - you need genetic locations by probe from this object
@@ -112,56 +107,33 @@ bh_features <- intersect_names[!intersect_names %in% remove_features]
 all_450 <- remove_cancer_feats(all_450, bh_feats = bh_features)
 all_850 <- remove_cancer_feats(all_850, bh_feats = bh_features)
 
+# get intersect_names
+intersect_names <- names(all_450)[grepl('^cg', names(all_450))]
 
-# save image
-# save.image('~/Desktop/temp_valid.RData')
+# get feature list
+colnames(bh_feats)[1] <- 'chr'
+remove_features <- inner_join(bh_feats, g_ranges)$probe
 
-# prepare data sets for modelling
+# take remove features out of colnames 
+bh_features <- intersect_names[!intersect_names %in% remove_features]
 
-run_model <- function(full_450,
-                      full_850,
-                      k_folds,
-                      tech,
-                      gender,
-                      beta_thresh,
-                      methyl_type,
-                      age_cutoff,
-                      train_lambda,
-                      alpha_value,
-                      lambda_value,
-                      g_ranges,
-                      bh_features) {
-  
-  
-  
+# put 450 cases with 850 controls 
+cases_450 <- all_450[all_450$cancer_status == 'cases',]
+con_450 <- all_450[all_450$cancer_status != 'cases',]
 
-  # get intersect_names
-  intersect_names <- names(train_cases)[grepl('^cg', names(train_cases))]
-  
-  # get feature list
-  colnames(bh_feats)[1] <- 'chr'
-  remove_features <- inner_join(bh_feats, g_ranges)$probe
-  
-  # take remove features out of colnames 
-  bh_features <- intersect_names[!intersect_names %in% remove_features]
-  
-  mod_result <- run_enet_surv(training_dat = train_cases,
-                              test_dat = test_cases,
-                              age_cutoff = age_cutoff,
-                              gender = gender,
-                              tech = tech,
-                              bh_features = bh_features)
-  
-  
-  
-  
-  
-  # combine list of case and control result data frames and return all result objects (two dataframes and 4 lists)
-  
-  return(cv_testing_results)
-}
+cases_850 <- all_850[all_850$cancer_status == 'cases',]
+con_850 <- all_850[all_850$cancer_status != 'cases',]
 
+rm(all_450, all_850)
 
+# rejoin data
+all_train <- rbind(cases_450,
+                   con_850)
+
+all_test <- rbind(cases_850,
+                  con_450)
+
+rm(cases_450, con_450, cases_850, con_850)
 ## creat list to store results for alpha
 result_list <- list()
 
@@ -171,20 +143,16 @@ for(i in 1:length(alpha_values)){
   alpha_num <- alpha_values[i]
   
   message('working on alpha = ', alpha_num)
-  result_list[[i]] <- run_model(full_450 = all_450,
-                                full_850 = all_850,
-                                tech = tech,
-                                gender = gender,
-                                beta_thresh = beta_thresh,
-                                methyl_type = methyl_type,
+  result_list[[i]]  <- run_enet_surv(training_dat = all_450,
+                                test_dat = all_850,
                                 age_cutoff = age_cutoff,
-                                train_lambda = FALSE,
+                                gender = gender,
+                                tech = tech,
                                 alpha_value = alpha_num,
-                                lambda_value = 0.15,
-                                g_ranges = g_ranges,
-                                bh_features = lfs_bump_probes)
+                                bh_features = bh_features)
+  
+  
 }
-
 
 temp <- do.call('rbind', result_list)
 
@@ -194,6 +162,6 @@ temp <- do.call('rbind', result_list)
 ##########
 
 # read in cases_450
-saveRDS(temp, paste0('validation_age_predictions/', 'valid_test_untrained',alpha_num,'_' ,which_methyl, '_', which_combat, '_',
-                     num_seeds, '_', num_folds, '_', is_gen, '.rda'))
+saveRDS(temp, paste0('validation_age_predictions_surv/', 'valid_test', which_methyl, '_', 
+                     which_combat, '_', is_gen, '.rda'))
 

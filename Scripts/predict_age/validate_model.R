@@ -26,9 +26,9 @@ source('helper_functions.R')
 # create fixed objects to model and pipeline inputs and saving  
 methyl_type = 'beta'
 combat = TRUE
-gender = TRUE
+gender = FALSE
 tech = FALSE 
-how_many_seeds = 100
+how_many_seeds = 30
 how_many_folds = 5
 
 
@@ -60,18 +60,18 @@ k_folds <- how_many_folds
 
 # read in cases_450
 cases_dat <- readRDS(paste0('validation_age_predictions/', 'cases_450',which_methyl, '_', which_combat, '_',
-                          num_seeds, '_', num_folds, '_', is_gen, '.rda'))
+                          num_seeds, '_', num_folds, '_', is_gen, '_use_offset.rda'))
 # read in validation set 
 valid_dat <- readRDS(paste0('validation_age_predictions/', 'valid_',which_methyl, '_', which_combat, '_',
-                            num_seeds, '_', num_folds, '_', is_gen, '.rda'))
+                            num_seeds, '_', num_folds, '_', is_gen, '_use_offset.rda'))
 
 # save validation set 
 con_dat <- readRDS(paste0('validation_age_predictions/', 'controls_',which_methyl, '_', which_combat, '_',
-                          num_seeds, '_', num_folds, '_', is_gen, '.rda'))
+                          num_seeds, '_', num_folds, '_', is_gen, '_use_offset.rda'))
 
 # save associated lfs bumps
 lfs_bump_probes <- readRDS(paste0('validation_age_predictions/', 'lfs_bumps_', which_methyl, '_', 
-                                  which_combat, '.rda'))
+                                  which_combat, '_.rda'))
 # cases <- cases_dat
 # controls <- controls_dat
 # valid <- valid_dat
@@ -197,6 +197,8 @@ test_model <- function(cases,
   # combine predictions and real labels 
   temp_dat_con <- as.data.frame(cbind(controls_age_pred = test.predictions_con, controls_age_label = controls_y, controls_clin))
   temp_dat_con$alpha <- best_alpha
+  temp_dat_con$non_zero <- temp.non_zero_coeff
+  
   
   
   # Predictions on validation data
@@ -219,6 +221,7 @@ test_model <- function(cases,
   # combine predictions and real labels 
   temp_dat_valid <- as.data.frame(cbind(valid_age_pred = test.predictions_valid, vallid_age_label = valid_y, valid_clin))
   temp_dat_valid$alpha <- best_alpha
+  temp_dat_valid$non_zero <- temp.non_zero_coeff
   
   if(test_controls){
     return(temp_dat_con)
@@ -260,6 +263,6 @@ temp <- do.call('rbind', result_list)
 ##########
 
 # read in cases_450
-saveRDS(temp, paste0('validation_age_predictions/', 'valid_test_untrained',alpha_num,'_' ,which_methyl, '_', which_combat, '_',
+saveRDS(temp, paste0('validation_age_predictions/', 'valid_test_untrained_' ,which_methyl, '_', which_combat, '_',
                             num_seeds, '_', num_folds, '_', is_gen, '.rda'))
 

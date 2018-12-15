@@ -1,12 +1,12 @@
 
 source('helper_functions.R')
 # create fixed objects to model and pipeline inputs and saving  
-methyl_type = 'beta'
+methyl_type = 'm'
 gender = FALSE
 tech = FALSE 
-how_many_seeds = 50
+how_many_seeds = 20
 how_many_folds = 5
-use_offset = TRUE
+# use_offset = TRUE
 remove_age  = TRUE
 beta_thresh = 0.05
 num_seeds = 50
@@ -18,6 +18,8 @@ if(methyl_type == 'beta'){
   which_methyl <- 'beta'
 } else {
   which_methyl <- 'm'
+  beta_thresh = 0.1
+
 }
 
 
@@ -27,16 +29,20 @@ if(gender){
   is_gen = 'no_gen'
 }
 
-if(use_offset){
-  is_offset <- 'use_offset'
-} else {
-  is_offset <- 'no_offset'
-}
+# if(use_offset){
+#   is_offset <- 'use_offset'
+# } else {
+#   is_offset <- 'no_offset'
+# }
 
+
+num_seeds <- paste0('seeds_', how_many_seeds)
+num_folds <- paste0('folds_', how_many_folds)
+k_folds <- how_many_folds
 
 
 # # save data
-final_dat <- readRDS(paste0('transform_data/', which_methyl, '_',
+final_dat <- readRDS(paste0('transform_data_cv/', which_methyl, '_',
                           num_seeds, '_', k_folds, '_', is_gen, '.rda'))
 # subset data
 sub_dat <- final_dat[, c('tm_donor','cancer_diagnosis_diagnoses','preds', 'pred_class', 'real', 'accuracy', 'lambda', 
@@ -100,7 +106,12 @@ plot_acc(dat, acc_column = 'mean_acc', column = 'mean_lambda', bar = FALSE)
 # 3d scatter plot with mean values 
 plot_3d_model_means(dat)
 
-
+# save mean lambda  and mean alpha for highest accuracy
+mean_lambda <- dat$mean_lambda[dat$mean_acc == max(dat$mean_acc)]
+mean_alpha <- dat$mean_alpha[dat$mean_acc == max(dat$mean_acc)]
+model_params <- c(mean_lambda = mean_lambda, mean_alpha = mean_alpha)
+saveRDS(model_params, paste0('transform_data_test/model_params_', which_methyl, '_',
+               num_seeds, '_', k_folds, '_', is_gen, '.rda'))
 ###############
 # get mean predictions for each sample
 ###############
@@ -117,7 +128,7 @@ dat_sample <- final_dat %>% group_by(tm_donor) %>% summarise(sum_positive = sum(
          upper_ci = mean_preds + qt(1 - (0.05 / 2), n - 1)* se_preds)
 
 # get official label
-dat_sample$real_label <- as.factor(ifelse(dat_sample$sum_positive == 100, 'positive', 'negative'))
+dat_sample$real_label <- as.factor(ifelse(dat_sample$sum_positive == 20, 'positive', 'negative'))
 dat_sample$sum_negative <- dat_sample$sum_positive <- NULL
 dat_sample$real_label <- factor(dat_sample$real_label, levels = c('positive', 'negative'))
 
@@ -128,6 +139,14 @@ dat_sample$real_label <- factor(dat_sample$real_label, levels = c('positive', 'n
 # get dataset of predictions and labels for both small and large data
 pred_short <- prediction(dat_sample$mean_preds, dat_sample$real_label)
 pred_long <- prediction(sub_dat$preds, final_dat$real)
+
+# optimal cutoff
+cost.perf = performance(pred_short, "cost", cost.fp = 1, cost.fn = 1)
+optimal_cutoff <- pred_short@cutoffs[[1]][which.min(cost.perf@y.values[[1]])]
+optimal_cutoff <- round(as.numeric(optimal_cutoff), 2)
+optimal_cutoff <- c(optimal_cutoff = optimal_cutoff)
+saveRDS(optimal_cutoff, paste0('transform_data_test/optimal_cutoff_', which_methyl, '_',
+                               num_seeds, '_', k_folds, '_', is_gen, '.rda'))
 
 # get performace objects
 perf_s <- performance(prediction.obj = pred_short, measure = 'tpr', x.measure = 'fpr')
@@ -162,13 +181,6 @@ temp_lc <- performance(pred_short, measure="lift")
 plot(temp_lc)
 
 
-###############
-# get optimal cutoff and confusion matrix info 
-###############
-
-# optimal cutoff
-cost.perf = performance(pred_short, "cost", cost.fp = 1, cost.fn = 1)
-optimal_cutoff <- pred_short@cutoffs[[1]][which.min(cost.perf@y.values[[1]])]
 
 # get confusion matrix function for plotting 
 ConfusionMatrixInfo(data = dat_sample, 

@@ -28,9 +28,9 @@ source('helper_functions.R')
 # create fixed objects to model and pipeline inputs and saving  
 methyl_type = 'beta'
 combat = TRUE
-gender = FALSE
+gender = TRUE
 tech = FALSE 
-how_many_seeds = 100
+how_many_seeds = 30
 how_many_folds = 5
 
 
@@ -59,10 +59,9 @@ if(gender){
 num_seeds <- paste0('seeds_', how_many_seeds)
 num_folds <- paste0('folds_', how_many_folds)
 k_folds <- how_many_folds
-alpha_num = 1
 
 # read in cases_450
-final_dat <- readRDS(paste0('validation_age_predictions/', 'valid_test_untrained',alpha_num,'_' ,which_methyl, '_', which_combat, '_',
+final_dat <- readRDS(paste0('validation_age_predictions/', 'valid_test_untrained_' ,which_methyl, '_', which_combat, '_',
                      num_seeds, '_', num_folds, '_', is_gen, '.rda'))
 
 # subset data

@@ -3,7 +3,7 @@
 # get functions
 source('all_functions.R')
 
-data_type = 'm'
+data_type = 'beta'
 
 if(data_type == 'beta'){
   # read in data
@@ -106,6 +106,7 @@ if(data_type == 'beta'){
   saveRDS(transform_controls, '../../Data/model_data/controls_transform_m.rda')
   
 }
+
 
 
 

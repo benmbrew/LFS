@@ -13,7 +13,42 @@ library(broom)
 library(scales)
 library(gridExtra)
 library(data.table)
+
+get_acc_val <- function(temp_dat, thresh){
+  all_alphas <- (1:10)/10
+  result_list <- list()
+  for(i in 1:length(all_alphas)){
+    this_alpha <- all_alphas[i]
+    sub_dat <- temp_dat[temp_dat$alpha == this_alpha,]
+    sub_dat$pred_label <-as.factor(ifelse(sub_dat$valid_age_pred > thresh, 'positive', 'negative'))
+    sub_dat$pred_label <- factor(sub_dat$pred_label, levels = c('positive', 'negative'))
+    sub_dat$valid_age_label <- factor(sub_dat$valid_age_label, levels = c('positive', 'negative'))
+    sub_dat$acc <- caret::confusionMatrix(sub_dat$pred_label, sub_dat$valid_age_label)$overall[1]
+    result_list[[i]] <- sub_dat
+    print(i)
+  }
+  temp <- do.call('rbind', result_list)
+  return(temp)
+}
  
+get_young_labels <- function(temp_dat, thresh, age){
+  all_alphas <- (1:10)/10
+  result_list <- list()
+  for(i in 1:length(all_alphas)){
+    this_alpha <- all_alphas[i]
+    sub_dat <- temp_dat[temp_dat$alpha == this_alpha,]
+    sub_dat <- sub_dat[sub_dat$age_sample_collection < age,]
+    sub_dat$pred_label <-as.factor(ifelse(sub_dat$controls_age_pred > thresh, 'positive', 'negative'))
+    sub_dat$pred_label <- factor(sub_dat$pred_label, levels = c('positive', 'negative'))
+    sub_dat$controls_age_label <- factor(sub_dat$controls_age_label, levels = c('positive', 'negative'))
+    sub_dat <- sub_dat[, c('tm_donor','alpha','age_sample_collection','controls_age_pred', 'controls_age_label', 'pred_label')]
+    result_list[[i]] <- sub_dat
+    print(i)
+  }
+  temp <- do.call('rbind', result_list)
+  return(temp)
+}
+
 plot_acc <- function(temp_dat, acc_column, column, bar) {
   
   column_name <- column

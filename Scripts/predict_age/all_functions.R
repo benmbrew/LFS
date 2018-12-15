@@ -1,24 +1,24 @@
 
-#########
+########
 # load libraries
-# ##########
-# library(IlluminaHumanMethylation450kmanifest)
-# library(tidyverse)
-# library(preprocessCore)
-# library(bumphunter)
-# library(caret)
-# library(pROC)
-# library(doParallel)
-# library(e1071)
-# library(nnet)
-# library(glmnet)
-# library(PRROC)
-# library(ROCR)
-# library(survival)
-# library(wateRmelon)
-# library(RPMM)
-# library(RColorBrewer)
-# ##################
+##########
+library(IlluminaHumanMethylation450kmanifest)
+library(tidyverse)
+library(preprocessCore)
+library(bumphunter)
+library(caret)
+library(pROC)
+library(doParallel)
+library(e1071)
+library(nnet)
+library(glmnet)
+library(PRROC)
+library(ROCR)
+library(survival)
+library(wateRmelon)
+library(RPMM)
+library(RColorBrewer)
+##################
 
 registerDoParallel(2)
 
@@ -2665,13 +2665,9 @@ run_enet_all_test <- function(training_dat,
                                      , parallel = TRUE
     )
     
-    # get optimal lambda - the tuning parameter for ridge and lasso
-    # THIS IS IMPORTANT BECAUSE WHEN YOU TRAIN THE MODEL ON 100 SEPERATE VALUES OF LAMBDA
-    # AND WHEN YOU TEST THE MODEL IT WILL RETURN PREDCITION FOR ALL THOSE VALUES (1-100). YOU NEED TO 
-    # GRAB THE PREDICTION WITH SAME LAMBDA THAT YOU TRAINED ON. ITS ALL IN THE CODE, BUT JUST WANTED TO 
-    # GIVE YOU REASONS
+
     temp.min_lambda_index = which(elastic_net.cv_model$lambda == elastic_net.cv_model$lambda.min) 
-    
+    lambda_value <- elastic_net.cv_model$lambda.min
     # # number of non zero coefficients at that lambda    
     temp.non_zero_coeff = elastic_net.cv_model$nzero[temp.min_lambda_index] 
     temp.loop_count = temp.loop_count + 1
@@ -2699,6 +2695,7 @@ run_enet_all_test <- function(training_dat,
   temp_test.predictions <- predict(model, 
                                    data.matrix(test_dat),
                                    type = 'response')
+  lambda_value_2 <- model$lambda[model$lambda == lambda_value]
   
   # get predictions with corresponding lambda.
   test.predictions <- temp_test.predictions[, temp.min_lambda_index]
@@ -2715,6 +2712,8 @@ run_enet_all_test <- function(training_dat,
   test_results$alpha <- best_alpha
   test_results$lambda <- elastic_net.cv_model$lambda.min
   test_results$non_zero <- temp.non_zero_coeff
+  test_results$lambda_value <- lambda_value
+  test_results$lambda_value_model <- lambda_value_2
   
   test_results$tot_probes <- ncol(training_dat)
   
@@ -2723,11 +2722,12 @@ run_enet_all_test <- function(training_dat,
 }
 
 # 
-# training_dat = train_cases
-# test_dat = test_cases
+# training_dat = all_train
+# test_dat = all_test
 # age_cutoff = age_cutoff
 # gender = gender
 # tech = tech
+# alpha_value = alpha_num
 # bh_features = bh_features
 run_enet_surv <- function(training_dat,
                          test_dat,
@@ -2788,51 +2788,11 @@ run_enet_surv <- function(training_dat,
   N_CV_REPEATS = 2
   nfolds = 5
   
-  ###### ENET
-  # create vector and list to store best alpha on training data. alpha is the parameter that choses the 
-  # the optimal proportion lambda, the tuning parameter for L1 (ridge) and L2 (lasso)
-  elastic_net.cv_error = vector()
-  elastic_net.cv_model = list()
-  elastic_net.ALPHA <- c(1:9) / 10 # creates possible alpha values for model to choose from
-  
+ 
   # set parameters for training model
   type_family <- 'cox'
   type_measure <- 'deviance'
-  
-  # create error matrix for for opitmal alpha that can run in parraellel if you have bigger data 
-  # or if you have a high number fo N_CV_REPEATS
-  temp.cv_error_matrix <- foreach (temp = 1:N_CV_REPEATS, .combine=rbind, .errorhandling="stop") %do% {      
-    for (alpha in 1:length(elastic_net.ALPHA)) # for i in 1:9 - the model will run 9 times
-    {      
-      elastic_net.cv_model[[alpha]] = cv.glmnet(x = as.matrix(training_dat)
-                                                , surv_outcome
-                                                , alpha = elastic_net.ALPHA[alpha] # first time with 0.1 and so on
-                                                , type.measure = type_measure
-                                                , family = type_family
-                                                , standardize = FALSE 
-                                                , nfolds = nfolds 
-                                                , nlambda = 10
-                                                , parallel = TRUE
-      )
-      elastic_net.cv_error[alpha] = min(elastic_net.cv_model[[alpha]]$cvm)
-    }
-    elastic_net.cv_error # stores 9 errors    
-  }
-  
-  if (N_CV_REPEATS == 1) {
-    temp.cv_error_mean = temp.cv_error_matrix
-  } else {
-    temp.cv_error_mean = apply(temp.cv_error_matrix, 2, mean) # take the mean of the 5 iterations  
-    # as your value for alpha
-  }
-  
-  # stop if you did not recover error for any models 
-  stopifnot(length(temp.cv_error_mean) == length(elastic_net.ALPHA))
-  
-  # get index of best alpha (lowest error) - alpha is values 0.1-0.9
-  temp.best_alpha_index = which(min(temp.cv_error_mean) == temp.cv_error_mean)[length(which(min(temp.cv_error_mean) == temp.cv_error_mean))] 
-  # print(paste("Best ALPHA:", elastic_net.ALPHA[temp.best_alpha_index])) # print the value for alpha
-  best_alpha <- elastic_net.ALPHA[temp.best_alpha_index]
+  best_alpha <- alpha_value
   temp.non_zero_coeff = 0
   temp.loop_count = 0
   # loop runs initially because temp.non_zero coefficient <3 and then stops 
@@ -2841,7 +2801,7 @@ run_enet_surv <- function(training_dat,
   while (temp.non_zero_coeff < 1) { 
     elastic_net.cv_model = cv.glmnet(x = as.matrix(training_dat)
                                      , surv_outcome
-                                     , alpha = elastic_net.ALPHA[temp.best_alpha_index]
+                                     , alpha = best_alpha
                                      , type.measure = type_measure
                                      , family = type_family
                                      , standardize=FALSE
@@ -2870,7 +2830,7 @@ run_enet_surv <- function(training_dat,
   
   model  = glmnet(x = as.matrix(training_dat)
                   , surv_outcome
-                  ,alpha = elastic_net.ALPHA[temp.best_alpha_index]
+                  ,alpha = best_alpha
                   ,standardize=FALSE
                   ,nlambda = 100
                   ,family = type_family)
@@ -2889,7 +2849,6 @@ run_enet_surv <- function(training_dat,
   ###########################################################################################
   return(temp_dat)
 
-  
 }
 
 

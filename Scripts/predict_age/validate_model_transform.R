@@ -1,4 +1,5 @@
 
+# load libraries
 library(plotly)
 library(scatterplot3d)
 library(preprocessCore)
@@ -15,27 +16,24 @@ library(scales)
 library(gridExtra)
 library(data.table)
 library(glmnet)
+
+# register other cpus
 registerDoParallel(2)
 
-source('helper_functions.R')
-
 # source functions script
-# source('all_functions.R')
-
-# create plotting functions
-
+source('all_functions.R')
 
 # create fixed objects to model and pipeline inputs and saving  
-methyl_type = 'beta'
-gender = FALSE
+methyl_type = 'm'
+gender = TRUE
 tech = FALSE 
-how_many_seeds = 50
+how_many_seeds = 20
 how_many_folds = 5
-use_offset = TRUE
+# use_offset = FALSE
 remove_age  = TRUE
 beta_thresh = 0.05
-num_seeds = 50
-k_folds = 5
+age_cutoff = 72
+
 
 # condition on fixed objects to get saving identifiers
 
@@ -43,8 +41,8 @@ if(methyl_type == 'beta'){
   which_methyl <- 'beta'
 } else {
   which_methyl <- 'm'
+  beta_thresh= 0.5
 }
-
 
 if(gender){
   is_gen = 'use_gen'
@@ -52,48 +50,45 @@ if(gender){
   is_gen = 'no_gen'
 }
 
-if(use_offset){
-  is_offset <- 'use_offset'
-} else {
-  is_offset <- 'no_offset'
-}
+# if(use_offset){
+#   is_offset <- 'use_offset'
+# } else {
+#   is_offset <- 'no_offset'
+# }
 
-if(remove_age){
-  age_remove <- 'removed_age'
-} else {
-  age_remove <- 'no_remove_age'
-  
-}
-
-
+num_seeds <- paste0('seeds_', how_many_seeds)
+num_folds <- paste0('folds_', how_many_folds)
+k_folds <- how_many_folds
 
 # read trainig  set 
-cases_450 <- readRDS(paste0('transform_data/', 'cases_450',which_methyl, '_',
-                          num_seeds, '_', k_folds, '_', is_gen, '.rda'))
+cases_450 <- readRDS(paste0('transform_data/', 'cases_450_',which_methyl, '.rda'))
 # read validation set 
-con_transform <- readRDS( paste0('transform_data/', 'con_transform_',which_methyl, '_',
-                              num_seeds, '_', k_folds, '_', is_gen, '.rda'))
+con_transform <- readRDS(paste0('transform_data/', 'con_transform_',which_methyl, '.rda'))
 
 # read validation set 
-valid_transform <- readRDS( paste0('transform_data/', 'valid_transform_',which_methyl, '_',
-                                num_seeds, '_', k_folds, '_', is_gen, '.rda'))
+valid_transform <- readRDS(paste0('transform_data/', 'valid_transform_',which_methyl,'.rda'))
+# read wt controls 
+con_wt <- readRDS(paste0('transform_data/', 'con_wt_',which_methyl, '.rda'))
+# read mut controls 
+con_mut <- readRDS(paste0('transform_data/', 'con_mut_',which_methyl,'.rda'))
+
+# load model_params
+model_params <- readRDS(paste0('transform_data_test/', 'model_params_',which_methyl,'_',
+                               num_seeds, '_',k_folds, '_', is_gen ,'.rda'))
+
+# load optimal_cutoff
+optimal_cutoff <- readRDS(paste0('transform_data_test/', 'optimal_cutoff_',which_methyl,'_',
+                                 num_seeds, '_',k_folds, '_', is_gen ,'.rda'))
 
 # read associated lfs bumps
 lfs_bump_probes <- readRDS(paste0('transform_data/', 'lfs_bumps_', which_methyl, '_', '.rda'))
-# cases <- cases_dat
-# controls <- controls_dat
-# valid <- valid_dat
-# age_cutoff <- 72
-# gender = TRUE
-# tech = FALSE
-# train_lambda = TRUE
-# alpha_value <- 0.8
-# lambda_value <- 0.18
-# bh_features <- lfs_bump_probes
+############################
+HERE: make sure to load in model params and optimal_cutoff and implement them correctl in the model
+# get intersecting features for con_wt
+
 test_model <- function(cases, 
                        controls, 
                        valid, 
-                       test_controls,
                        train_lambda,
                        gender,
                        tech,
@@ -130,9 +125,7 @@ test_model <- function(cases,
   
   # store fixed values
   best_alpha <- alpha_value
-  temp.non_zero_coeff = 0
-  temp.loop_count = 0
-  
+
   # set parameters for training model
   type_family <- 'binomial'
   type_measure <- 'auc'
@@ -141,40 +134,26 @@ test_model <- function(cases,
   # loop runs initially because temp.non_zero coefficient <3 and then stops 
   # usually after one iteration because the nzero variable selected by lambda is greater that 3. if it keeps looping
   # it they are never greater than 1, then the model does not converge. 
-  while (temp.non_zero_coeff < 1) { 
-    elastic_net.cv_model = cv.glmnet(x = as.matrix(cases)
-                                     , y =  cases_y
-                                     , alpha = alpha_value
-                                     , type.measure = type_measure
-                                     , family = type_family
-                                     , standardize=FALSE
-                                     , nlambda = 100
-                                     , nfolds = nfolds
-                                     , parallel = TRUE
-    )
+  elastic_net.cv_model = cv.glmnet(x = as.matrix(cases)
+                                   , y =  cases_y
+                                   , alpha = alpha_value
+                                   , type.measure = type_measure
+                                   , family = type_family
+                                   , standardize=FALSE
+                                   , nlambda = 100
+                                   , nfolds = nfolds
+                                   , parallel = TRUE)
+  
     
-    
-    
+  
     # get outcome variables and clin variables
+    lambda_s <- elastic_net.cv_model$lambda.min
+    lambda_s_train <- lambda_value
     temp.min_lambda_index = which(elastic_net.cv_model$lambda == elastic_net.cv_model$lambda.min) 
-    trained_lambda_index_set = elastic_net.cv_model$lambda[elastic_net.cv_model$lambda < 0.26 & elastic_net.cv_model$lambda > 0.24]
-    trained_lambda_value <- trained_lambda_index_set[1]
-    trained_lambda_index <- which(elastic_net.cv_model$lambda == trained_lambda_value) 
-    
     
     # # number of non zero coefficients at that lambda    
     temp.non_zero_coeff = elastic_net.cv_model$nzero[temp.min_lambda_index] 
-    temp.loop_count = temp.loop_count + 1
-    
-    # set seed for next loop iteration
-    as.numeric(Sys.time())-> t 
-    set.seed((t - floor(t)) * 1e8 -> seed) 
-    if (temp.loop_count > 10) {
-      print("diverged")
-      temp.min_lambda_index = 50 # if it loops more than 5 times, then model did not converge
-      break
-    }
-  }# while loop ends 
+
   # print(temp.non_zero_coeff)  
   
   model  = glmnet(x = as.matrix(cases)
@@ -187,16 +166,20 @@ test_model <- function(cases,
   
   # Predictions on controls data
   
-  # This returns 100 prediction with 1-100 lambdas
-  temp_test.predictions_con <- predict(model, 
-                                       data.matrix(controls),
-                                       type = 'response')
   
-  if(train_lambda){
-    # get predictions with corresponding lambda.
-    test.predictions_con <- temp_test.predictions_con[, trained_lambda_index]
+  
+  if(cv_lambda){
+    # This returns 100 prediction with 1-100 lambdas
+    test.predictions_con <- predict.glmnet(model, 
+                                                data.matrix(controls),
+                                                type = 'response',
+                                                s = lambda_s_train)
     
   } else {
+    # This returns 100 prediction with 1-100 lambdas
+    temp_test.predictions_con <- predict(model, 
+                                           data.matrix(controls),
+                                           type = 'response')
     # get predictions with corresponding lambda.
     test.predictions_con <- temp_test.predictions_con[, temp.min_lambda_index]
     
@@ -205,40 +188,41 @@ test_model <- function(cases,
   # combine predictions and real labels 
   temp_dat_con <- as.data.frame(cbind(controls_age_pred = test.predictions_con, controls_age_label = controls_y, controls_clin))
   temp_dat_con$alpha <- best_alpha
+  temp_dat_con$non_zero <- temp.non_zero_coeff
   
-  
-  # Predictions on validation data
-  
-  # This returns 100 prediction with 1-100 lambdas
-  temp_test.predictions_valid <- predict(model, 
-                                         data.matrix(valid),
-                                         type = 'response')
-  
-  if(train_lambda){
-    # get predictions with corresponding lambda.
-    test.predictions_valid <- temp_test.predictions_valid[, trained_lambda_index]
+  if(cv_lambda){
+    # This returns 100 prediction with 1-100 lambdas
+    test.predictions_valid <- predict.glmnet(model, 
+                                           data.matrix(valid),
+                                           type = 'response',
+                                           s = lambda_s_train)
     
   } else {
+    # This returns 100 prediction with 1-100 lambdas
+    temp_test.predictions_valid <- predict(model, 
+                                         data.matrix(valid),
+                                         type = 'response')
     # get predictions with corresponding lambda.
     test.predictions_valid <- temp_test.predictions_valid[, temp.min_lambda_index]
     
   }
   
   # combine predictions and real labels 
-  temp_dat_valid <- as.data.frame(cbind(valid_age_pred = test.predictions_valid, vallid_age_label = valid_y, valid_clin))
+  temp_dat_valid <- as.data.frame(cbind(valid_age_pred = test.predictions_valid, valid_age_label = valid_y, valid_clin))
   temp_dat_valid$alpha <- best_alpha
+  temp_dat_valid$non_zero <- temp.non_zero_coeff
   
-  if(test_controls){
-    return(temp_dat_con)
-  } else{
-    return(temp_dat_valid)
-  }
+  
+  
+  return(list(temp_dat_con, temp_dat_valid))
   
   
 }
 
 # creat list to store results for alpha
 result_list <- list()
+con_list <- list()
+valid_list <- list()
 
 alpha_values <- (1:10/10)
 
@@ -249,18 +233,22 @@ for(i in 1:length(alpha_values)){
   result_list[[i]] <- test_model(cases = cases_450,
                                  controls = con_transform,
                                  valid = valid_transform,
-                                 test_controls = TRUE,
                                  age_cutoff = 72,
                                  gender = gender,
                                  tech = tech,
                                  train_lambda = FALSE,
                                  alpha_value = alpha_num,
-                                 lambda_value = 0.15,
+                                 lambda_value = s_value,
                                  bh_features = lfs_bump_probes)
+  
+  con_list[[i]] <- result_list[[i]][[1]]
+  valid_list[[i]] <- result_list[[i]][[2]]
+  
 }
 
 
-temp <- do.call('rbind', result_list)
+temp_con <- do.call('rbind', con_list)
+temp_valid <- do.call('rbind', valid_list)
 
 
 ##########
@@ -268,5 +256,6 @@ temp <- do.call('rbind', result_list)
 ##########
 
 # read in cases_450
-saveRDS(temp, paste0('transform_data/', 'con_test_transform',which_methyl, '_', is_gen, '_', num_seeds,'.rda'))
+saveRDS(temp_con, paste0('transform_data_test/', 'con_test_transform',which_methyl, '_', is_gen, '.rda'))
 
+saveRDS(temp_valid, paste0('transform_data_test/', 'valid_test_transform',which_methyl, '_', is_gen, '.rda'))
