@@ -2,20 +2,12 @@
 # load libraries
 library(plotly)
 library(scatterplot3d)
-library(preprocessCore)
-library(car)
-library(rgl)
-library(ROCR)
-library(caret)
-library(pROC)
-library(dplyr)
+library(tidyverse)
 library(grid)
 library(broom)
-library(tidyr)
 library(scales)
 library(gridExtra)
 library(data.table)
-library(glmnet)
 
 # register other cpus
 registerDoParallel(2)
@@ -24,8 +16,8 @@ registerDoParallel(2)
 source('all_functions.R')
 
 # create fixed objects to model and pipeline inputs and saving  
-methyl_type = 'm'
-gender = TRUE
+methyl_type = 'beta'
+gender = FALSE
 tech = FALSE 
 how_many_seeds = 20
 how_many_folds = 5
@@ -33,6 +25,8 @@ how_many_folds = 5
 remove_age  = TRUE
 beta_thresh = 0.05
 age_cutoff = 72
+trained_lambda = FALSE
+model_type = 'rf'
 
 
 # condition on fixed objects to get saving identifiers
@@ -48,6 +42,12 @@ if(gender){
   is_gen = 'use_gen'
 } else {
   is_gen = 'no_gen'
+}
+
+if(trained_lambda){
+  is_lambda <- 'use_cv_lambda'
+} else {
+  is_lambda <- 'no_cv_lambda'
 }
 
 # if(use_offset){
@@ -74,7 +74,7 @@ con_mut <- readRDS(paste0('transform_data/', 'con_mut_',which_methyl,'.rda'))
 
 # load model_params
 model_params <- readRDS(paste0('transform_data_test/', 'model_params_',which_methyl,'_',
-                               num_seeds, '_',k_folds, '_', is_gen ,'.rda'))
+                               num_seeds, '_',k_folds, '_', is_gen ,'_', model_type, '.rda'))
 
 # load optimal_cutoff
 optimal_cutoff <- readRDS(paste0('transform_data_test/', 'optimal_cutoff_',which_methyl,'_',
@@ -82,17 +82,27 @@ optimal_cutoff <- readRDS(paste0('transform_data_test/', 'optimal_cutoff_',which
 
 # read associated lfs bumps
 lfs_bump_probes <- readRDS(paste0('transform_data/', 'lfs_bumps_', which_methyl, '_', '.rda'))
-############################
-HERE: make sure to load in model params and optimal_cutoff and implement them correctl in the model
-# get intersecting features for con_wt
+#################
+
+# combine call controls 
+con_transform <- rbind(con_transform, 
+                       con_mut,
+                       con_wt)
+rm(con_mut, con_wt)
+
+# get s_num and alpha_value
+s_num <- round(model_params[[1]], 3)
+alpha_num <- round(model_params[[2]], 2)
 
 test_model <- function(cases, 
                        controls, 
                        valid, 
-                       train_lambda,
+                       model_type,
+                       trained_lambda,
                        gender,
                        tech,
                        age_cutoff,
+                       cv_lambda,
                        alpha_value, 
                        lambda_value,
                        bh_features) {
@@ -166,13 +176,10 @@ test_model <- function(cases,
   
   # Predictions on controls data
   
-  
-  
   if(cv_lambda){
     # This returns 100 prediction with 1-100 lambdas
     test.predictions_con <- predict.glmnet(model, 
                                                 data.matrix(controls),
-                                                type = 'response',
                                                 s = lambda_s_train)
     
   } else {
@@ -233,12 +240,13 @@ for(i in 1:length(alpha_values)){
   result_list[[i]] <- test_model(cases = cases_450,
                                  controls = con_transform,
                                  valid = valid_transform,
-                                 age_cutoff = 72,
+                                 model_type = model_type,
+                                 age_cutoff = age_cutoff,
                                  gender = gender,
                                  tech = tech,
-                                 train_lambda = FALSE,
+                                 cv_lambda = trained_lambda,
                                  alpha_value = alpha_num,
-                                 lambda_value = s_value,
+                                 lambda_value = s_num,
                                  bh_features = lfs_bump_probes)
   
   con_list[[i]] <- result_list[[i]][[1]]
@@ -256,6 +264,6 @@ temp_valid <- do.call('rbind', valid_list)
 ##########
 
 # read in cases_450
-saveRDS(temp_con, paste0('transform_data_test/', 'con_test_transform',which_methyl, '_', is_gen, '.rda'))
+saveRDS(temp_con, paste0('transform_data_test/', 'con_test_transform',which_methyl, '_', is_gen, '_',is_lambda,'_', model_type,'.rda'))
 
-saveRDS(temp_valid, paste0('transform_data_test/', 'valid_test_transform',which_methyl, '_', is_gen, '.rda'))
+saveRDS(temp_valid, paste0('transform_data_test/', 'valid_test_transform',which_methyl, '_', is_gen,'_',is_lambda, '_', model_type,'.rda'))

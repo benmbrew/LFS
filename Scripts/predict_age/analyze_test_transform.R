@@ -1,16 +1,33 @@
 # source functions script
 source('helper_functions.R')
 
+# load libraries
+library(plotly)
+library(scatterplot3d)
+library(tidyverse)
+library(grid)
+library(broom)
+library(scales)
+library(gridExtra)
+library(data.table)
+library(doParallel)
+
+# register other cpus
+registerDoParallel(2)
+
 # create fixed objects to model and pipeline inputs and saving  
 methyl_type = 'beta'
-data_set  = 'valid'
 gender = FALSE
 tech = FALSE 
-how_many_seeds = 10
+how_many_seeds = 20
 how_many_folds = 5
 # use_offset = FALSE
 remove_age  = TRUE
 beta_thresh = 0.05
+age_cutoff = 72
+trained_lambda = FALSE
+data_set = 'con'
+model_type = 'rf'
 
 
 # condition on fixed objects to get saving identifiers
@@ -19,13 +36,19 @@ if(methyl_type == 'beta'){
   which_methyl <- 'beta'
 } else {
   which_methyl <- 'm'
+  beta_thresh= 0.5
 }
-
 
 if(gender){
   is_gen = 'use_gen'
 } else {
   is_gen = 'no_gen'
+}
+
+if(trained_lambda){
+  is_lambda <- 'use_cv_lambda'
+} else {
+  is_lambda <- 'no_cv_lambda'
 }
 
 # if(use_offset){
@@ -39,16 +62,33 @@ num_folds <- paste0('folds_', how_many_folds)
 k_folds <- how_many_folds
 
 # saveRDS(temp, paste0('transform_data/', 'valid_test_transform',which_methyl, '_', is_gen, '_', num_seeds,'.rda'))
-dat <- readRDS(paste0('transform_data_test/', data_set,'_test_transform',which_methyl, '_', is_gen, '.rda'))
+dat <- readRDS(paste0('transform_data_test/', data_set,'_test_transform',which_methyl, '_', is_gen,'_',is_lambda, '_', model_type,'.rda'))
 
+# load optimal_cutoff
+optimal_cutoff <- readRDS(paste0('transform_data_test/', 'optimal_cutoff_',which_methyl,'_',
+                                 num_seeds, '_',k_folds, '_', is_gen ,'_enet','.rda'))
+
+# load optimal threshj
 if(data_set == 'valid'){
-  # subset data
-  dat <- dat[, c('tm_donor','cancer_diagnosis_diagnoses','valid_age_pred', 'valid_age_label', 'age_sample_collection',
-                  'alpha', 'non_zero')]
   
+  if(model_type == 'rf'){
+    # subset data
+    dat <- dat[, c('tm_donor', 'cancer_diagnosis_diagnoses','valid_age_pred', 'valid_age_label', 'age_sample_collection')]
+    
+    dat$opt_cut <- optimal_cutoff
+    
+  } else {
+    # subset data
+    dat <- dat[, c('tm_donor', 'cancer_diagnosis_diagnoses','valid_age_pred', 'valid_age_label', 'age_sample_collection',
+                   'alpha', 'non_zero')]
+    
+    dat$opt_cut <- optimal_cutoff
+    
+  }
+ 
   # remove duplicates
  
-  temp <- get_acc_val(dat, thresh = 0.5)
+  temp <- get_acc_val(dat, thresh = optimal_cutoff)
   temp <- temp[order(temp$acc, decreasing = TRUE),]
   temp_dedup <- temp[!duplicated(temp$tm_donor),]
   max_alpha = temp_dedup$alpha[which(temp_dedup$acc == max(temp_dedup$acc))]
@@ -162,14 +202,18 @@ if(data_set == 'valid'){
   
  
 } else {
-  # subset data
-  dat <- dat[, c('tm_donor','cancer_diagnosis_diagnoses','controls_age_pred', 'controls_age_label', 'age_sample_collection',
-                  'alpha', 'non_zero')]
+  
+  if(model_type == 'rf'){
+    # subset data
+    dat <- dat[, c('tm_donor','cancer_diagnosis_diagnoses','controls_age_pred', 'controls_age_label', 'age_sample_collection')]
+  } else {
+    # subset data
+    dat <- dat[, c('tm_donor','cancer_diagnosis_diagnoses','controls_age_pred', 'controls_age_label', 'age_sample_collection',
+                   'alpha', 'non_zero')]
+  }
   
   # create a function for controls that gets the young predictions for each alpha level
-  
-  
-  temp <- get_young_labels(dat, thresh = 0.6, age = 72)
+  temp <- get_young_labels(dat, thresh = optimal_cutoff[[1]], age = age_cutoff)
   
   # remove duplicates
   temp <- temp[!duplicated(temp$tm_donor, fromLast = TRUE),]

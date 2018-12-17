@@ -1,7 +1,7 @@
 
 source('helper_functions.R')
 # create fixed objects to model and pipeline inputs and saving  
-methyl_type = 'm'
+methyl_type = 'beta'
 gender = FALSE
 tech = FALSE 
 how_many_seeds = 20
@@ -9,20 +9,20 @@ how_many_folds = 5
 # use_offset = TRUE
 remove_age  = TRUE
 beta_thresh = 0.05
-num_seeds = 50
-k_folds = 5
+model_type = 'rf'
 
 # condition on fixed objects to get saving identifiers
 
+# methylation type condition
 if(methyl_type == 'beta'){
   which_methyl <- 'beta'
 } else {
   which_methyl <- 'm'
   beta_thresh = 0.1
-
+  
 }
 
-
+# gender condition
 if(gender){
   is_gen = 'use_gen'
 } else {
@@ -35,7 +35,6 @@ if(gender){
 #   is_offset <- 'no_offset'
 # }
 
-
 num_seeds <- paste0('seeds_', how_many_seeds)
 num_folds <- paste0('folds_', how_many_folds)
 k_folds <- how_many_folds
@@ -43,11 +42,19 @@ k_folds <- how_many_folds
 
 # # save data
 final_dat <- readRDS(paste0('transform_data_cv/', which_methyl, '_',
-                          num_seeds, '_', k_folds, '_', is_gen, '.rda'))
-# subset data
-sub_dat <- final_dat[, c('tm_donor','cancer_diagnosis_diagnoses','preds', 'pred_class', 'real', 'accuracy', 'lambda', 
-                         'alpha', 'tot_probes', 'fold', 'seed', 'non_zero')]
-
+                            num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'.rda'))
+if(model_type == 'rf'){
+  # subset data
+  sub_dat <- final_dat[, c('tm_donor','cancer_diagnosis_diagnoses','positive', 'negative','pred_class', 'real', 'accuracy', 
+                           'tot_probes', 'fold', 'seed')]
+  
+} else {
+  # subset data
+  sub_dat <- final_dat[, c('tm_donor','cancer_diagnosis_diagnoses','preds', 'pred_class', 'real', 'accuracy', 'lambda', 
+                           'alpha', 'tot_probes', 'fold', 'seed', 'non_zero')]
+  
+  
+}
 # plot alpha against accuracy
 plot_acc(sub_dat, acc_column = 'accuracy', column = 'alpha', bar = FALSE)
 
@@ -55,7 +62,7 @@ plot_acc(sub_dat, acc_column = 'accuracy', column = 'alpha', bar = FALSE)
 plot_acc(sub_dat, acc_column = 'accuracy', column = 'lambda', bar = FALSE)
 
 # plot cancer_diagnosis against accuracy
-sub_cancer <- sub_dat %>% group_by(cancer_diagnosis_diagnoses) %>% summarise(mean_acc = mean(accuracy))
+sub_cancer <- sub_dat %>% group_by(cancer_diagnosis_diagnoses) %>% summarise(mean_acc = mean(accuracy, na.rm = TRUE))
 plot_acc(sub_cancer, acc_column = 'mean_acc', column = 'cancer_diagnosis_diagnoses', bar = TRUE)
 
 # plot tot_probes against accuracy
@@ -111,8 +118,10 @@ mean_lambda <- dat$mean_lambda[dat$mean_acc == max(dat$mean_acc)]
 mean_alpha <- dat$mean_alpha[dat$mean_acc == max(dat$mean_acc)]
 model_params <- c(mean_lambda = mean_lambda, mean_alpha = mean_alpha)
 saveRDS(model_params, paste0('transform_data_test/model_params_', which_methyl, '_',
-               num_seeds, '_', k_folds, '_', is_gen, '.rda'))
-###############
+                             num_seeds, '_', k_folds, '_', is_gen, '_', model_type,'.rda'))
+####
+
+###########
 # get mean predictions for each sample
 ###############
 
@@ -146,7 +155,7 @@ optimal_cutoff <- pred_short@cutoffs[[1]][which.min(cost.perf@y.values[[1]])]
 optimal_cutoff <- round(as.numeric(optimal_cutoff), 2)
 optimal_cutoff <- c(optimal_cutoff = optimal_cutoff)
 saveRDS(optimal_cutoff, paste0('transform_data_test/optimal_cutoff_', which_methyl, '_',
-                               num_seeds, '_', k_folds, '_', is_gen, '.rda'))
+                               num_seeds, '_', k_folds, '_', is_gen, '_', model_type,'.rda'))
 
 # get performace objects
 perf_s <- performance(prediction.obj = pred_short, measure = 'tpr', x.measure = 'fpr')
@@ -240,6 +249,9 @@ ggplot(dat_sample,
 # beta and no gender .45
 # m and gender .49
 # m and no gender .49
+
+
+
 
 
 

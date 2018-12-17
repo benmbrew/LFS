@@ -4,8 +4,8 @@
 source('all_functions.R')
 
 # create fixed objects to model and pipeline inputs and saving  
-methyl_type = 'm'
-gender = TRUE
+methyl_type = 'beta'
+gender = FALSE
 tech = FALSE 
 how_many_seeds = 20
 how_many_folds = 5
@@ -13,6 +13,7 @@ how_many_folds = 5
 remove_age  = TRUE
 beta_thresh = 0.05
 age_cutoff = 72
+model_type = 'rf'
 
 
 # condition on fixed objects to get saving identifiers
@@ -209,18 +210,30 @@ con_wt$tech <- '450k'
 
 # save trainig  set 
 saveRDS(cases_450, paste0('transform_data/', 'cases_450_',which_methyl, '.rda'))
+# cases_450 <- readRDS(paste0('transform_data/', 'cases_450_',which_methyl, '.rda'))
+
 # save validation set 
 saveRDS(con_transform, paste0('transform_data/', 'con_transform_',which_methyl, '.rda'))
+# con_transform <- readRDS( paste0('transform_data/', 'con_transform_',which_methyl, '.rda'))
+
 
 # save validation set 
 saveRDS(valid_transform, paste0('transform_data/', 'valid_transform_',which_methyl,'.rda'))
+# valid_transform <- readRDS(paste0('transform_data/', 'valid_transform_',which_methyl,'.rda'))
+
 # save wt controls 
 saveRDS(con_wt, paste0('transform_data/', 'con_wt_',which_methyl, '.rda'))
+# con_wt <-  readRDS(paste0('transform_data/', 'con_wt_',which_methyl, '.rda'))
+
 # save mut controls 
 saveRDS(con_mut, paste0('transform_data/', 'con_mut_',which_methyl,'.rda'))
+# con_mut <- readRDS( paste0('transform_data/', 'con_mut_',which_methyl,'.rda'))
+
 
 # save associated lfs bumps
 saveRDS(lfs_bump_probes, paste0('transform_data/', 'lfs_bumps_', which_methyl, '_', '.rda'))
+# lfs_bump_probes <- readRDS(paste0('transform_data/', 'lfs_bumps_', which_methyl, '_', '.rda'))
+
 ############################
 
 
@@ -229,7 +242,9 @@ seed_range <- c(1:how_many_seeds)
 
 # create list to store model
 all_test_results <- list()
-
+importance_results <- list()
+rf_pred_results <- list()
+rf_important_results <- list()
 # save image
 # save.image('~/Desktop/temp_valid.RData')
 
@@ -239,6 +254,7 @@ for(random_seed in 1:length(seed_range)) {
   run_model <- function(cases_full,
                         controls_full,
                         valid_full,
+                        model_type = model_type,
                         age_cutoff = age_cutoff,
                         k_folds = k_folds,
                         tech = tech,
@@ -293,18 +309,35 @@ for(random_seed in 1:length(seed_range)) {
       # take remove features out of colnames 
       bh_features <- intersect_names[!intersect_names %in% remove_features]
       
-      # HERE
-      # function to predict with all test, controls, controls old, and valid
-      mod_result  <- run_enet_all_test(training_dat = train_cases,
-                                       test_dat = test_cases,
-                                       controls_dat = con_transform,
-                                       valid_dat = valid_transform,
-                                       age_cutoff = age_cutoff,
-                                       gender = gender,
-                                       tech = tech,
-                                       bh_features = bh_features)
+      if(model_type == 'enet'){
+        # function to predict with all test, controls, controls old, and valid
+        mod_result  <- run_enet_all_test(training_dat = train_cases,
+                                         test_dat = test_cases,
+                                         controls_dat = con_transform,
+                                         valid_dat = valid_transform,
+                                         age_cutoff = age_cutoff,
+                                         gender = gender,
+                                         tech = tech,
+                                         bh_features = bh_features)
+      } else {
+        mod_result  <- run_rf_all_test(training_dat = train_cases,
+                                         test_dat = test_cases,
+                                         controls_dat = con_transform,
+                                         valid_dat = valid_transform,
+                                         age_cutoff = age_cutoff,
+                                         gender = gender,
+                                         tech = tech,
+                                         bh_features = bh_features)
+        
+        importance_rf <- mod_result[[2]]
+        mod_result <- mod_result[[1]]
+      }
       
       
+
+      if(model_type == 'rf'){
+        importance_results[[i]] <- importance_rf
+      }
       
       mod_result$seed <- random_seed
       mod_result$fold <- i
@@ -316,29 +349,72 @@ for(random_seed in 1:length(seed_range)) {
     # combine list of case and control result data frames and return all result objects (two dataframes and 4 lists)
     cv_testing_results <- do.call(rbind, test_data_results)
     
-    return(cv_testing_results)
+    if(model_type == 'rf'){
+      cv_importance_results <- do.call(rbind, importance_results)
+      return(list(cv_testing_results, cv_importance_results))
+    } else {
+      return(cv_testing_results)
+      
+    }
   }
   
+  if(model_type == 'rf'){
+   
+    
+    # run model with 5 k fold cross validation
+    temp_test_results <- run_model(cases_full = cases_450,
+                                                 controls_full = con_transform,
+                                                 valid_full = valid_transform,
+                                                 model_type = model_type,
+                                                 age_cutoff = age_cutoff,
+                                                 k_folds = k_folds,
+                                                 tech = tech,
+                                                 gender = gender,
+                                                 beta_thresh = beta_thresh,
+                                                 g_ranges = g_ranges)
+    rf_pred_results[[random_seed]] <- temp_test_results[[1]]
+    rf_important_results[[random_seed]] <- temp_test_results[[2]]
+    
+    
+    message('finished working on random seed = ', random_seed)
+  } else {
+    
+    # run model with 5 k fold cross validation
+    all_test_results[[random_seed]] <- run_model(cases_full = cases_450,
+                                                 controls_full = con_transform,
+                                                 valid_full = valid_transform,
+                                                 model_type = model_type,
+                                                 age_cutoff = age_cutoff,
+                                                 k_folds = k_folds,
+                                                 tech = tech,
+                                                 gender = gender,
+                                                 beta_thresh = beta_thresh,
+                                                 g_ranges = g_ranges)
+    
+    message('finished working on random seed = ', random_seed)
+  }
   
-  # run model with 5 k fold cross validation
-  all_test_results[[random_seed]] <- run_model(cases_full = cases_450,
-                                               controls_full = con_transform,
-                                               valid_full = valid_transform,
-                                               age_cutoff = age_cutoff,
-                                               k_folds = k_folds,
-                                               tech = tech,
-                                               gender = gender,
-                                               beta_thresh = beta_thresh,
-                                               g_ranges = g_ranges)
-  
-  message('finished working on random seed = ', random_seed)
   
 }
 
 
-final_dat <- do.call(rbind, all_test_results)
+if(model_type == 'rf'){
+  final_dat <- do.call(rbind, rf_pred_results)
+  final_importance <- do.call(rbind, rf_important_results )
+  # # save data
+  saveRDS(final_dat, paste0('transform_data_cv/', which_methyl, '_',
+                            num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'.rda'))
+  # # save data
+  saveRDS(final_importance, paste0('transform_data_cv/', 'importance_',which_methyl, '_',
+                            num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'.rda'))
+  
+  
+} else {
+  final_dat <- do.call(rbind, all_test_results)
+  # # save data
+  saveRDS(final_dat, paste0('transform_data_cv/', which_methyl, '_',
+                            num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'.rda'))
+  
+}
 
-# # save data
-saveRDS(final_dat, paste0('transform_data_cv/', which_methyl, '_',
-                          num_seeds, '_', k_folds, '_', is_gen, '.rda'))
 
