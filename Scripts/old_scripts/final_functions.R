@@ -8,7 +8,120 @@ getSubset <- function(model_data) {
   return(model_data)
 }
 
+process_rg_set <-
+  function(beta, id_map_1, id_map_2, clinical_dat, controls) {
+    
+    # get ids
+    beta <- findIdsCombined(beta, id_map_1 = id_map_1, id_map_2 = id_map_2, controls = controls)
+    
+    if(controls) {
+      # seperate beta 
+      beta_cases <- beta[!grepl('^200', rownames(beta)),]
+      beta_controls <- beta[grepl('^200', rownames(beta)),]
+      
+    } else {
+      # seperate beta 
+      beta_cases <- beta[!grepl('^20', rownames(beta)),]
+      beta_controls <- beta[grepl('^20', rownames(beta)),]
+      
+    }
+    
+    
+    # get id name (only cases)
+    beta_cases <- getIdName(beta_cases)
+    
+    # clean ids
+    beta_cases <- cleanIds(beta_cases)
+    beta_controls <- cleanIds(beta_controls)
+    
+    
+    # remove 'ch' from column names
+    beta_cases <- beta_cases[, !grepl('ch', colnames(beta_cases))]
+    beta_controls <- beta_controls[, !grepl('ch', colnames(beta_controls))]
+    
+    ##########
+    # join data
+    ##########
+    
+    # inner join
+    beta_cases <- dplyr::inner_join(clinical_dat, beta_cases, by = 'ids')
+    beta_controls <- dplyr::inner_join(clinical_dat, beta_controls, by = 'ids')
+    
+    
+    # remove NAs from tm_donor 
+    beta_cases <- beta_cases[!is.na(beta_cases$tm_donor),]
+    beta_controls <- beta_controls[!is.na(beta_controls$tm_donor),]
+    
+    
+    # remove duplicates
+    beta_cases <- beta_cases[!duplicated(beta_cases$tm_donor),]
+    beta_controls <- beta_controls[!duplicated(beta_controls$tm_donor),]
+    
+    
+    ##########
+    # get data in format for saving
+    ##########
+    
+    # get cg_sites
+    cg_sites <- colnames(beta)[grepl('cg', colnames(beta))]
+    
+    
+    # subset data by colmns of interest and cg_sites
+    beta_cases <- beta_cases[, c('ids', 
+                                 'p53_germline', 
+                                 'cancer_diagnosis_diagnoses', 
+                                 'age_diagnosis',
+                                 'age_sample_collection',
+                                 'gender',
+                                 'sentrix_id',
+                                 'family_name',
+                                 'tm_donor',
+                                 cg_sites)]
+    
+    # subset data by colmns of interest and cg_sites
+    beta_controls <- beta_controls[, c('ids', 
+                                       'p53_germline', 
+                                       'cancer_diagnosis_diagnoses', 
+                                       'age_diagnosis',
+                                       'age_sample_collection',
+                                       'gender',
+                                       'sentrix_id',
+                                       'family_name',
+                                       'tm_donor',
+                                       cg_sites)]
+    
+    # combine data
+    beta <- rbind(beta_cases,
+                  beta_controls)
+    
+    # remove duplcated tm donor
+    beta <- beta[!duplicated(beta$tm_donor),]
+    
+    return(beta)
+  }
 
+
+get_diff_dups <- function(temp_data) {
+  # get controls - HERE
+  # get controls that are deduped from both sides
+  
+  data_cases <- temp_data[!grepl('Unaffected', temp_data$cancer_diagnosis_diagnoses),]
+  data_controls <- temp_data[grepl('Unaffected', temp_data$cancer_diagnosis_diagnoses),]
+  # remove duplicates from controls, from both sides 
+  data_controls_from_last <- data_controls[!duplicated(data_controls$tm_donor_, fromLast = TRUE),]
+  data_controls_from_first <- data_controls[!duplicated(data_controls$tm_donor_, fromLast = FALSE),]
+  
+  # combine data
+  temp_data_from_first <- rbind(data_cases,
+                                data_controls_from_first)
+  
+  # combine data
+  temp_data_from_last <- rbind(data_cases,
+                               data_controls_from_last)
+  
+  return(list(temp_data_from_first, temp_data_from_last))
+  
+}
 getResidual <- function(model_data) 
 {
   
@@ -54,6 +167,657 @@ getBal <- function(dat_cases, dat_controls) {
   
   remove_index <- sample(remove_index, 10, replace = F )
   dat <- dat[-remove_index,]
+  
+}
+
+##########
+# get family cancer status and ratio
+##########
+
+get_family_cancer <- function(cases_full, controls_full){
+  #combine data subseted data
+  temp_full <- bind_rows(cases_full[, c('tm_donor', 'cancer_diagnosis_diagnoses', 'family_name')],
+                         controls_full[, c('tm_donor', 'cancer_diagnosis_diagnoses', 'family_name')])
+  # create cancer indicator
+  temp_full$cancer_fac <- ifelse(grepl('Unaffected', temp_full$cancer_diagnosis_diagnoses), 'no_cancer', 'cancer')
+  temp_full$cancer_diagnosis_diagnoses <- NULL
+  
+  temp <- temp_full %>%
+    group_by(family_name) %>%
+    tally() %>% 
+    left_join(temp_full)
+  
+  temp$fam_num_cancer <- NA
+  temp$fam_cancer_ratio <- NA
+  for(fam_name in unique(temp$family_name)){
+    sub_fam <- temp[temp$family_name == fam_name,]
+    if(nrow(sub_fam) > 1) {
+      num_cancer <- length(which(sub_fam$cancer_fac == 'cancer'))
+      num_no <- length(which(sub_fam$cancer_fac == 'no_cancer'))
+      tot_fam_num <- nrow(sub_fam)
+      stopifnot((num_cancer + num_no) == tot_fam_num)
+      
+      # get number of family members with cancer 
+      sub_fam$fam_num_cancer <- ifelse(sub_fam$cancer_fac == 'cancer',
+                                       num_cancer - 1, num_cancer)
+      
+      # condition for if the denominator is zero - that is no non cancers in family - just put number of family members with cancer 
+      # this applies to the situation where there might be a non cancer present, 
+      if(num_no == 0) {
+        sub_fam$fam_cancer_ratio <- num_cancer - 1
+        
+      } else if(num_no == 1){
+        # get ratio of family members that have cancer to those that don't have cancer
+        sub_fam$fam_cancer_ratio <- ifelse(sub_fam$cancer_fac == 'cancer',
+                                           (num_cancer - 1)/num_no, num_cancer)
+      } else {
+        
+        # conidtion if num_cancer is zero
+        if(num_cancer == 0) {
+          # get ratio of family members that have cancer to those that don't have cancer
+          sub_fam$fam_cancer_ratio <- 0
+        } else {
+          # get ratio of family members that have cancer to those that don't have cancer
+          sub_fam$fam_cancer_ratio <- ifelse(sub_fam$cancer_fac == 'cancer',
+                                             (num_cancer - 1)/num_no, num_cancer/(num_no - 1))
+        }
+        
+      }
+      
+    } else {
+      sub_fam$fam_num_cancer <- 0
+      sub_fam$fam_cancer_ratio <- 0
+    }
+    temp[temp$family_name == fam_name,] <- sub_fam
+    
+  }
+  # remove columns not needed in join
+  temp <- temp[, c('tm_donor', 'family_name', 'fam_num_cancer', 'fam_cancer_ratio')]
+  
+  # join temp back with cases and controls 
+  cases_full <- inner_join(temp, cases_full)
+  controls_full <- inner_join(temp, controls_full)
+  
+  return(list(cases_full, controls_full))
+  
+}
+
+
+get_family_cancer_old <- function(cases, controls, valid){
+  #combine data subseted data
+  temp_full <- bind_rows(cases[, c('tm_donor', 'cancer_diagnosis_diagnoses', 'family_name')],
+                         controls[, c('tm_donor', 'cancer_diagnosis_diagnoses', 'family_name')],
+                         valid[,c('tm_donor', 'cancer_diagnosis_diagnoses', 'family_name') ])
+  # create cancer indicator
+  temp_full$cancer_fac <- ifelse(grepl('Unaffected', temp_full$cancer_diagnosis_diagnoses), 'no_cancer', 'cancer')
+  temp_full$cancer_diagnosis_diagnoses <- NULL
+  
+  temp <- temp_full %>%
+    group_by(family_name) %>%
+    tally() %>% 
+    left_join(temp_full)
+  
+  temp$fam_num_cancer <- NA
+  temp$fam_cancer_ratio <- NA
+  for(fam_name in unique(temp$family_name)){
+    sub_fam <- temp[temp$family_name == fam_name,]
+    if(nrow(sub_fam) > 1) {
+      num_cancer <- length(which(sub_fam$cancer_fac == 'cancer'))
+      num_no <- length(which(sub_fam$cancer_fac == 'no_cancer'))
+      tot_fam_num <- nrow(sub_fam)
+      stopifnot((num_cancer + num_no) == tot_fam_num)
+      
+      # get number of family members with cancer 
+      sub_fam$fam_num_cancer <- ifelse(sub_fam$cancer_fac == 'cancer',
+                                       num_cancer - 1, num_cancer)
+      
+      # condition for if the denominator is zero - that is no non cancers in family - just put number of family members with cancer 
+      # this applies to the situation where there might be a non cancer present, 
+      if(num_no == 0) {
+        sub_fam$fam_cancer_ratio <- num_cancer - 1
+        
+      } else if(num_no == 1){
+        # get ratio of family members that have cancer to those that don't have cancer
+        sub_fam$fam_cancer_ratio <- ifelse(sub_fam$cancer_fac == 'cancer',
+                                           (num_cancer - 1)/num_no, num_cancer)
+      } else {
+        
+        # conidtion if num_cancer is zero
+        if(num_cancer == 0) {
+          # get ratio of family members that have cancer to those that don't have cancer
+          sub_fam$fam_cancer_ratio <- 0
+        } else {
+          # get ratio of family members that have cancer to those that don't have cancer
+          sub_fam$fam_cancer_ratio <- ifelse(sub_fam$cancer_fac == 'cancer',
+                                             (num_cancer - 1)/num_no, num_cancer/(num_no - 1))
+        }
+        
+      }
+      
+    } else {
+      sub_fam$fam_num_cancer <- 0
+      sub_fam$fam_cancer_ratio <- 0
+    }
+    temp[temp$family_name == fam_name,] <- sub_fam
+    
+  }
+  # remove columns not needed in join
+  temp <- temp[, c('tm_donor', 'family_name', 'fam_num_cancer', 'fam_cancer_ratio')]
+  
+  # join temp back with cases and controls 
+  cases <- inner_join(temp, cases)
+  controls <- inner_join(temp, controls)
+  valid <- inner_join(temp, valid)
+  
+  return(list(cases, controls, valid))
+  
+}
+
+# functions to be used in model_pipeline script
+# data <- id_map
+cleanIdMap <- function(data) {
+  data <- as.data.frame(data)
+  # new colnames, lowercase
+  colnames(data) <- tolower(colnames(data))
+  # combine sentrix_id and sentrix_position 
+  data$identifier <- paste(data$sentrix_id, data$sentrix_position, sep = '_')
+  data$identifier <- as.factor(data$identifier)
+  return(data)
+}
+
+##########
+# Function that combines methylation matrices with id_map, to get ids for methylation
+##########
+
+findIdsCombined <- function(data_methyl, id_map_1, id_map_2, controls) {
+  
+  
+  data_methyl <- as.data.frame(t(data_methyl))
+  data_methyl$identifier <- rownames(data_methyl)
+  data_methyl$identifier <- as.factor(data_methyl$identifier)
+  # loop to combine identifiers, without merging large table
+  data_methyl$ids <- NA
+  data_methyl$sentrix_id <- NA
+  
+  for (i in data_methyl$identifier) {
+    
+    if(controls) {
+      if (grepl('^200', i)) {
+        data_methyl$ids[data_methyl$identifier == i] <- id_map_2$sample_name[id_map_2$identifier == i]
+        data_methyl$sentrix_id[data_methyl$identifier == i] <- id_map_2$sentrix_id[id_map_2$identifier == i]
+      } else {
+        data_methyl$ids[data_methyl$identifier == i] <- id_map_1$sample_name[id_map_1$identifier == i]
+        data_methyl$sentrix_id[data_methyl$identifier == i] <- id_map_1$sentrix_id[id_map_1$identifier == i]
+        
+      }
+    } else {
+      if (grepl('^20', i)) {
+        data_methyl$ids[data_methyl$identifier == i] <- id_map_2$sample_name[id_map_2$identifier == i]
+        data_methyl$sentrix_id[data_methyl$identifier == i] <- id_map_2$sentrix_id[id_map_2$identifier == i]
+      } else {
+        data_methyl$ids[data_methyl$identifier == i] <- id_map_1$sample_name[id_map_1$identifier == i]
+        data_methyl$sentrix_id[data_methyl$identifier == i] <- id_map_1$sentrix_id[id_map_1$identifier == i]
+        
+      }
+    }
+    
+    print(i)
+    
+  }
+  
+  return(data_methyl)
+}
+
+##########
+# function to remove columns that have any NAs
+##########
+removeNA <- function(data_frame, probe_start) {
+  
+  # get full probe (all non missing columns) data set
+  temp_data <- 
+    data_frame[, probe_start:ncol(data_frame)][sapply(data_frame[, probe_start:ncol(data_frame)], 
+                                                      function(x) all(!is.na(x)))]
+  
+  # combine probes with clin
+  full_data <- as.data.frame(cbind(data_frame[, 1:(probe_start-1)], temp_data))
+  
+  # check that it worked
+  stopifnot(all(!is.na(full_data[, probe_start:ncol(full_data)])))
+  
+  return(full_data)
+  
+}
+
+##########
+# function to remove columns that have any NAs
+##########
+
+removeInf <- function(data_frame, probe_start) {
+  
+  # get full probe (all non missing columns) data set
+  temp_data <- 
+    data_frame[, probe_start:ncol(data_frame)][, sapply(data_frame[, probe_start:ncol(data_frame)], 
+                                                        function(x) all(!is.infinite((x))))]
+  
+  # combine probes with clin
+  full_data <- as.data.frame(cbind(data_frame[, 1:(probe_start -1)], temp_data))
+  
+  # check that it worked
+  # stopifnot(all(!is.na(full_data[, probe_start:ncol(full_data)])))
+  
+  return(full_data)
+  
+}
+##########
+# get mutant
+##########
+getModData <- function(data) 
+{
+  # subset data by not na in age of diagnosis and mut
+  data <- data[!is.na(data$age_diagnosis),]
+  data <- data[data$p53_germline == 'MUT',]
+  return(data)
+}
+
+testKS <- function(x, y)
+{
+  y <- y[!is.na(y)]
+  x <- x[!is.na(x)]
+  
+  # Do x and y come from the same distribution?
+  ks.test(jitter(x), jitter(y), alternative = 'two.sided')
+  
+}
+# add age as dummy variable 
+get_age_dummy <- function(temp_dat, the_age){
+  
+  temp_dat$age_dum_ <- ifelse(temp_dat$age_sample_collection > the_age, 1, 0)
+  temp_dat$age_dum_young <- ifelse(temp_dat$age_sample_collection <= the_age, 1, 0)
+  
+  return(temp_dat)
+  
+}
+
+get_age_cat <- function(temp_dat){
+  temp_dat$age_var <- ntile(temp_dat$age_sample_collection, 5)
+  return(temp_dat)
+}
+
+
+##########
+# remove outliers  4257 cases, 3391, 3392 controls
+##########
+
+removeOutlier <- function(data, 
+                          cases, 
+                          controls, 
+                          val) {
+  
+  if (cases) {
+    data <- data[data$tm_donor != '3955',]
+    
+  }
+  #controls outlier
+  if (controls) {
+    
+    data <- data[data$tm_donor != '3847',]
+    data <- data[data$ids != '3484',]
+  }
+  
+  if(val){
+    data <- data[data$ids != '3540',]
+    
+  }
+  
+  
+  return(data)
+}
+
+
+
+
+# dat = train_cases, 
+# wild_type = wt_data,
+# boot_num = 5, 
+# thresh = beta_thresh,
+# g_ranges = g_ranges
+bump_hunter_lfs <- function(dat,
+                            wild_type,
+                            boot_num,
+                            thresh,
+                            g_ranges) {
+  
+  
+  
+  
+  # get mutual cgs
+  dat_names <- colnames(dat)[grepl('^cg', colnames(dat))]
+  wt_names <- colnames(wild_type)[grepl('^cg', colnames(wild_type))]
+  wt_intersect <- intersect(wt_names, dat_names)
+  
+  # stor clinical data
+  clin_dat_names <- colnames(dat)[!grepl('^cg', colnames(dat))]
+  clin_wt_names <- colnames(wild_type)[!grepl('^cg', colnames(wild_type))]
+  
+  # get data
+  dat <- dat[, c(clin_dat_names, wt_intersect)]
+  wild_type <- wild_type[, c(clin_wt_names, wt_intersect)]
+  
+  # drop columns so they can match
+  dat$fam_cancer_ratio <- dat$fam_num_cancer <- NULL
+  
+  # combine data
+  dat <- rbind(dat,
+               wild_type)
+  
+  # remove NAs 
+  dat <- dat[!is.na(dat$p53_germline),]
+  
+  # get indicator (bump) vector
+  dat$type <- dat$p53_germline
+  indicator_vector <- as.factor(dat$type)
+  designMatrix <- cbind(rep(1, nrow(dat)), indicator_vector)
+  designMatrix <- as.matrix(designMatrix)
+  
+  
+  # get probe data 
+  dat <- dat[, grepl('^cg', colnames(dat))]
+  
+  # transpose methylation to join with cg_locations to get genetic location vector.
+  dat <- as.data.frame(t(dat), stringsAsFactors = F)
+  
+  # make probe a column in methyl
+  dat$probe <- rownames(dat)
+  rownames(dat) <- NULL
+  
+  # get probe column in granges 
+  g_ranges$probe <- rownames(g_ranges)
+  
+  # inner join methyl and cg_locations by probe
+  methyl_cg <- dplyr::inner_join(dat, g_ranges, by = 'probe')
+  
+  # get chr and pos vector 
+  chr <- methyl_cg$seqnames
+  pos <- methyl_cg$start
+  
+  # create beta matrix
+  beta <- methyl_cg[, 1:(ncol(methyl_cg) - 6)]
+  
+  # make beta numeric 
+  for (i in 1:ncol(beta)) {
+    beta[,i] <- as.numeric(beta[,i])
+    print(i)
+  } 
+  
+  beta <- as.matrix(beta)
+  
+  ##########
+  # Run bumphunter
+  ##########
+  
+  # check dimensions 
+  stopifnot(dim(beta)[2] == dim(designMatrix)[1])
+  stopifnot(dim(beta)[1] == length(chr))
+  stopifnot(dim(beta)[1] == length(pos))
+  
+  # set paramenters 
+  DELTA_BETA_THRESH = thresh # DNAm difference threshold
+  NUM_BOOTSTRAPS = boot_num  # number of randomizations
+  
+  # create tab list
+  tab <- list()
+  bump_hunter_results <- list()
+  for (i in 1:length(DELTA_BETA_THRESH)) {
+    tab[[i]] <- bumphunter(beta, 
+                           designMatrix, 
+                           chr = chr, 
+                           pos = pos,
+                           nullMethod = "bootstrap",
+                           cutoff = DELTA_BETA_THRESH,
+                           B = NUM_BOOTSTRAPS,
+                           type = "M")
+    
+    bump_hunter_results[[i]] <- tab[[i]]$table
+    bump_hunter_results[[i]]$run <- DELTA_BETA_THRESH[i]
+  }
+  
+  bh_results <- do.call(rbind, bump_hunter_results)
+  
+  return(bh_results)
+  
+}
+
+
+# dat = train_cases
+# wild_type = wt_data
+# boot_num = 5
+# thresh = beta_thresh
+# g_ranges = g_ranges
+
+bump_hunter_surv <- function(dat,
+                             wild_type,
+                             boot_num,
+                             thresh,
+                             g_ranges) {
+  
+  # get mutual cgs
+  dat_names <- colnames(dat)[grepl('^cg', colnames(dat))]
+  wt_names <- colnames(wild_type)[grepl('^cg', colnames(wild_type))]
+  wt_intersect <- intersect(wt_names, dat_names)
+  
+  # stor clinical data
+  clin_dat_names <- colnames(dat)[!grepl('^cg', colnames(dat))]
+  clin_wt_names <- colnames(wild_type)[!grepl('^cg', colnames(wild_type))]
+  
+  # get data
+  dat <- dat[, c(clin_dat_names, wt_intersect)]
+  wild_type <- wild_type[, c(clin_wt_names, wt_intersect)]
+  
+  # drop columns so they can match
+  dat$fam_cancer_ratio <- dat$fam_num_cancer <- NULL
+  
+  # combine data
+  dat <- rbind(dat,
+               wild_type)
+  
+  # remove NAs 
+  dat <- dat[!is.na(dat$p53_germline),]
+  
+  # get indicator (bump) vector
+  dat$type <- dat$p53_germline
+  indicator_vector <- as.factor(dat$type)
+  designMatrix <- cbind(rep(1, nrow(dat)), indicator_vector)
+  designMatrix <- as.matrix(designMatrix)
+  
+  
+  # get probe data 
+  dat <- dat[, grepl('^cg', colnames(dat))]
+  
+  # transpose methylation to join with cg_locations to get genetic location vector.
+  dat <- as.data.frame(t(dat), stringsAsFactors = F)
+  
+  # make probe a column in methyl
+  dat$probe <- rownames(dat)
+  rownames(dat) <- NULL
+  
+  # get probe column in granges 
+  g_ranges$probe <- rownames(g_ranges)
+  
+  # inner join methyl and cg_locations by probe
+  methyl_cg <- dplyr::inner_join(dat, g_ranges, by = 'probe')
+  
+  # get chr and pos vector 
+  chr <- methyl_cg$seqnames
+  pos <- methyl_cg$start
+  
+  # create beta matrix
+  beta <- methyl_cg[, 1:(ncol(methyl_cg) - 6)]
+  
+  # make beta numeric 
+  for (i in 1:ncol(beta)) {
+    beta[,i] <- as.numeric(beta[,i])
+    print(i)
+  } 
+  
+  beta <- as.matrix(beta)
+  
+  ##########
+  # Run bumphunter
+  ##########
+  
+  # check dimensions 
+  stopifnot(dim(beta)[2] == dim(designMatrix)[1])
+  stopifnot(dim(beta)[1] == length(chr))
+  stopifnot(dim(beta)[1] == length(pos))
+  
+  # set paramenters 
+  DELTA_BETA_THRESH = thresh # DNAm difference threshold
+  NUM_BOOTSTRAPS = boot_num  # number of randomizations
+  
+  # create tab list
+  tab <- list()
+  bump_hunter_results <- list()
+  for (i in 1:length(DELTA_BETA_THRESH)) {
+    tab[[i]] <- bumphunter(beta, 
+                           designMatrix, 
+                           chr = chr, 
+                           pos = pos,
+                           nullMethod = "bootstrap",
+                           cutoff = DELTA_BETA_THRESH,
+                           B = NUM_BOOTSTRAPS,
+                           type = "M")
+    
+    bump_hunter_results[[i]] <- tab[[i]]$table
+    bump_hunter_results[[i]]$run <- DELTA_BETA_THRESH[i]
+  }
+  
+  bh_results <- do.call(rbind, bump_hunter_results)
+  
+  return(bh_results)
+  
+}
+
+# training_dat = train_cases
+# controls_dat = controls_full
+# valid = valid_full
+# test_dat = test_cases
+# age_cutoff = 72
+# gender = T
+# tech = T
+# fam_num = T
+# fam_ratio = T
+# bh_features = remaining_features
+
+run_rf <- function(training_dat,
+                   controls_dat,
+                   test_dat,
+                   age_cutoff,
+                   age_dum,
+                   gender, 
+                   tech,
+                   fam_num,
+                   fam_ratio,
+                   bh_features) {
+  
+  
+  
+  # get intersection of bh features and real data
+  bh_features <- as.character(unlist(bh_features))
+  
+  intersected_feats <- intersect(bh_features, colnames(training_dat))
+  
+  if(gender) {
+    intersected_feats <- c('M', intersected_feats)
+    intersected_feats <- c('F', intersected_feats)
+  }
+  if (tech) {
+    intersected_feats <- c('a', intersected_feats)
+    intersected_feats <- c('b', intersected_feats)
+  }
+  if (fam_num){
+    intersected_feats <- c('fam_num_cancer', intersected_feats)
+  }
+  if (fam_ratio){
+    intersected_feats <- c('fam_cancer_ratio', intersected_feats)
+  }
+  
+  
+  if (age_dum){
+    intersected_feats <- c('first', 'second', 'third',intersected_feats)
+  }
+  
+  # intersected_feats_rand <- intersect(rand_feats, colnames(training_dat))
+  # # get y
+  train_y <- ifelse(training_dat$age_diagnosis < age_cutoff, 'yes', 'no')
+  test_y <-  ifelse(test_dat$age_diagnosis < age_cutoff, 'yes', 'no')
+  controls_y <-  ifelse(controls_dat$age_sample_collection < age_cutoff, 'yes', 'no')
+  
+  # get clinical data
+  test_clin <- test_dat[, !grepl('^cg', colnames(test_dat))]
+  controls_clin <- controls_dat[, !grepl('^cg', colnames(controls_dat))]
+  
+  # get model data
+  training_dat <- training_dat[, intersected_feats]
+  test_dat <- test_dat[, intersected_feats]
+  controls_dat <- controls_dat[, intersected_feats]
+  
+  # determines how you train the model.
+  NFOLDS <- 5
+  fitControl <- trainControl( 
+    method = "repeatedcv",  # could train on boostrap resample, here use repeated cross validation.
+    number = min(10, NFOLDS),
+    classProbs = TRUE,
+    repeats = 5,
+    allowParallel = TRUE,
+    summaryFunction = twoClassSummary
+    
+  )
+  
+  # mtry: Number of variables randomly sampled as candidates at each split.
+  # ntree: Number of trees to grow.
+  
+  mtry <- sqrt(ncol(training_dat[,colnames(training_dat)]))
+  tunegrid <- expand.grid(.mtry=mtry)
+  
+  data_size <- ncol(training_dat)
+  model <- train(x = training_dat
+                 , y = train_y
+                 , metric = 'ROC'
+                 , method = "rf"
+                 , trControl = fitControl
+                 , tuneGrid = tunegrid
+                 , importance = T
+                 , verbose = FALSE)
+  
+  temp <- varImp(model)[[1]]
+  importance <- cbind(rownames(temp), temp$X1)
+  
+  # Predictions on test data
+  
+  # This returns 100 prediction with 1-100 lambdas
+  test.predictions <- predict(model, 
+                              data.matrix(test_dat),
+                              type = 'prob')
+  
+  
+  # combine predictions and real labels 
+  temp_dat <- as.data.frame(cbind(test_pred = test.predictions, test_label = test_y, test_clin))
+  
+  
+  # Predictions on controls data
+  
+  # This returns 100 prediction with 1-100 lambdas
+  test.predictions_con <- predict(model, 
+                                  data.matrix(controls_dat),
+                                  type = 'prob')
+  
+  # combine predictions and real labels 
+  temp_dat_con <- as.data.frame(cbind(controls_age_pred = test.predictions_con, controls_age_label = controls_y, controls_clin))
+  
+  
+  return(list(temp_dat, temp_dat_con,  model, importance, data_size))
+  
+  
   
 }
 
@@ -204,6 +968,533 @@ extractResults <- function (result_list,
   
 }
 
+
+# get age dummy category 
+get_age_cat_dummy <- function(temp_dat) {
+  
+  temp_dat$temp_age_var <- ntile(temp_dat$age_sample_collection, 5)
+  temp_dat <- cbind(as.data.frame(class.ind(temp_dat$temp_age_var)), temp_dat)
+  colnames(temp_dat)[1:5] <- c('first', 'second', 'third', 'fourth', 'fifth')
+  temp_dat$temp_age_var <- NULL
+  return(temp_dat)
+}
+#
+# training_dat = train_cases
+# controls_dat = controls_full
+# test_dat = test_cases
+# age_cutoff = 72
+# gender = FALSE
+# tech = TRUE
+# bh_features
+#
+# 
+# run_enet_450_850 <- function(training_dat,
+#                              controls_dat,
+#                              test_dat,
+#                              age_cutoff,
+#                              gender, 
+#                              tech,
+#                              bh_features) {
+#   
+#   
+#   
+#   # get intersection of bh features and real data
+#   bh_features <- as.character(unlist(bh_features))
+#   
+#   intersected_feats <- intersect(bh_features, colnames(training_dat))
+#   
+#   if(gender) {
+#     intersected_feats <- c('Female', 'Male', intersected_feats)
+#   }
+#   if (tech) {
+#     intersected_feats <- c('batch_1', 'batch_2', intersected_feats)
+#   }
+#   
+#   # intersected_feats_rand <- intersect(rand_feats, colnames(training_dat))
+#   # # get y
+#   train_y <- as.factor(ifelse(training_dat$age_diagnosis < age_cutoff, 'positive', 'negative'))
+#   test_y <-  as.factor(ifelse(test_dat$age_diagnosis < age_cutoff, 'positive', 'negative'))
+#   controls_y <-  as.factor(ifelse(controls_dat$age_sample_collection < age_cutoff, 'positive', 'negative'))
+#   
+#   # get clinical data
+#   test_clin <- test_dat[, !grepl('^cg', colnames(test_dat))]
+#   controls_clin <- controls_dat[, !grepl('^cg', colnames(controls_dat))]
+#   
+#   # get model data
+#   training_dat <- training_dat[, intersected_feats]
+#   test_dat <- test_dat[, intersected_feats]
+#   controls_dat <- controls_dat[, intersected_feats]
+#   
+#   # start elastic net tuning
+#   N_CV_REPEATS = 2
+#   nfolds = 3
+#   
+#   ###### ENET
+#   # create vector and list to store best alpha on training data. alpha is the parameter that choses the 
+#   # the optimal proportion lambda, the tuning parameter for L1 (ridge) and L2 (lasso)
+#   elastic_net.cv_error = vector()
+#   elastic_net.cv_model = list()
+#   elastic_net.ALPHA <- c(1:9) / 10 # creates possible alpha values for model to choose from
+#   
+#   # set parameters for training model
+#   type_family <- 'binomial'
+#   type_measure <- 'auc'
+#   
+#   # create error matrix for for opitmal alpha that can run in parraellel if you have bigger data 
+#   # or if you have a high number fo N_CV_REPEATS
+#   temp.cv_error_matrix <- foreach (temp = 1:N_CV_REPEATS, .combine=rbind, .errorhandling="stop") %do% {      
+#     for (alpha in 1:length(elastic_net.ALPHA)) # for i in 1:9 - the model will run 9 times
+#     {      
+#       elastic_net.cv_model[[alpha]] = cv.glmnet(x = as.matrix(training_dat)
+#                                                 , y =  train_y
+#                                                 , alpha = elastic_net.ALPHA[alpha] # first time with 0.1 and so on
+#                                                 , type.measure = type_measure
+#                                                 , family = type_family
+#                                                 , standardize = FALSE 
+#                                                 , nfolds = nfolds 
+#                                                 , nlambda = 10
+#                                                 , parallel = TRUE
+#       )
+#       elastic_net.cv_error[alpha] = min(elastic_net.cv_model[[alpha]]$cvm)
+#     }
+#     elastic_net.cv_error # stores 9 errors    
+#   }
+#   
+#   if (N_CV_REPEATS == 1) {
+#     temp.cv_error_mean = temp.cv_error_matrix
+#   } else {
+#     temp.cv_error_mean = apply(temp.cv_error_matrix, 2, mean) # take the mean of the 5 iterations  
+#     # as your value for alpha
+#   }
+#   
+#   # stop if you did not recover error for any models 
+#   stopifnot(length(temp.cv_error_mean) == length(elastic_net.ALPHA))
+#   
+#   # get index of best alpha (lowest error) - alpha is values 0.1-0.9
+#   temp.best_alpha_index = which(min(temp.cv_error_mean) == temp.cv_error_mean)[length(which(min(temp.cv_error_mean) == temp.cv_error_mean))] 
+#   # print(paste("Best ALPHA:", elastic_net.ALPHA[temp.best_alpha_index])) # print the value for alpha
+#   best_alpha <- elastic_net.ALPHA[temp.best_alpha_index]
+#   temp.non_zero_coeff_min = 0
+#   temp.loop_count = 0
+#   # loop runs initially because temp.non_zero coefficient <3 and then stops 
+#   # usually after one iteration because the nzero variable selected by lambda is greater that 3. if it keeps looping
+#   # it they are never greater than 1, then the model does not converge. 
+#   while (temp.non_zero_coeff_min < 1) { 
+#     elastic_net.cv_model = cv.glmnet(x = as.matrix(training_dat)
+#                                      , y =  train_y
+#                                      , alpha = elastic_net.ALPHA[temp.best_alpha_index]
+#                                      , type.measure = type_measure
+#                                      , family = type_family
+#                                      , standardize=FALSE
+#                                      , nlambda = 100
+#                                      , nfolds = nfolds
+#                                      , parallel = TRUE
+#     )
+#     
+#     # get optimal lambda - the tuning parameter for ridge and lasso
+#     # THIS IS IMPORTANT BECAUSE WHEN YOU TRAIN THE MODEL ON 100 SEPERATE VALUES OF LAMBDA
+#     # AND WHEN YOU TEST THE MODEL IT WILL RETURN PREDCITION FOR ALL THOSE VALUES (1-100). YOU NEED TO 
+#     # GRAB THE PREDICTION WITH SAME LAMBDA THAT YOU TRAINED ON. ITS ALL IN THE CODE, BUT JUST WANTED TO 
+#     # GIVE YOU REASONS
+#     temp.min_lambda_index = which(elastic_net.cv_model$lambda == elastic_net.cv_model$lambda.min)
+#     temp.1se_lambda_index = which(elastic_net.cv_model$lambda == elastic_net.cv_model$lambda.1se) 
+#     
+#     
+#     # # number of non zero coefficients at that lambda    
+#     temp.non_zero_coeff_min = elastic_net.cv_model$nzero[temp.min_lambda_index] 
+#     temp.non_zero_coeff_1se = elastic_net.cv_model$nzero[temp.1se_lambda_index] 
+#     
+#     temp.loop_count = temp.loop_count + 1
+#     
+#     # set seed for next loop iteration
+#     as.numeric(Sys.time())-> t 
+#     set.seed((t - floor(t)) * 1e8 -> seed) 
+#     if (temp.loop_count > 10) {
+#       print("diverged")
+#       temp.min_lambda_index = 50 # if it loops more than 5 times, then model did not converge
+#       break
+#     }
+#   }# while loop ends 
+#   # print(temp.non_zero_coeff)  
+#   
+#   model  = glmnet(x = as.matrix(training_dat)
+#                   , y =  train_y
+#                   ,alpha = elastic_net.ALPHA[temp.best_alpha_index]
+#                   ,standardize=FALSE
+#                   ,nlambda = 100
+#                   ,family = type_family)
+#   
+#   # Predictions on test data
+#   
+#   # This returns 100 prediction with 1-100 lambdas
+#   temp_test.predictions <- predict(model, 
+#                                    data.matrix(test_dat),
+#                                    type = 'response')
+#   
+#   
+#   # get predictions with corresponding lambda.
+#   test.predictions <- temp_test.predictions[, temp.min_lambda_index]
+#   
+#   
+#   # combine predictions and real labels 
+#   temp_dat <- as.data.frame(cbind(test_pred = test.predictions, test_label = test_y, test_clin))
+#   
+#   
+#   # Predictions on controls data
+#   
+#   # This returns 100 prediction with 1-100 lambdas
+#   temp_test.predictions_con <- predict(model, 
+#                                        data.matrix(controls_dat),
+#                                        type = 'response')
+#   
+#   # get predictions with corresponding lambda.
+#   test.predictions_con <- temp_test.predictions_con[, temp.min_lambda_index]
+#   
+#   # combine predictions and real labels 
+#   temp_dat_con <- as.data.frame(cbind(controls_age_pred = test.predictions_con, controls_age_label = controls_y, controls_clin))
+#   
+#   
+#   return(list(temp_dat, temp_dat_con, model, temp.non_zero_coeff_min,
+#               temp.non_zero_coeff_1se, best_alpha))
+#   
+# }
+
+# run_enet_all <- function(training_dat,
+#                         controls_dat,
+#                         valid_dat,
+#                         age_cutoff,
+#                         gender,
+#                         tech,
+#                         bh_features) {
+#   
+#   
+#   # get intersection of bh features and real data
+#   bh_features <- as.character(unlist(bh_features))
+#   
+#   intersected_feats <- intersect(bh_features, colnames(training_dat))
+#   
+#   if(gender) {
+#     intersected_feats <- c('Female', 'Male', intersected_feats)
+#   }
+#   if (tech) {
+#     intersected_feats <- c('batch_1', 'batch_2', intersected_feats)
+#   }
+#   
+#   # intersected_feats_rand <- intersect(rand_feats, colnames(training_dat))
+#   # # get y
+#   train_y <- as.factor(ifelse(training_dat$age_diagnosis < age_cutoff, 'positive', 'negative'))
+#   valid_y <-  as.factor(ifelse(valid_dat$age_diagnosis < age_cutoff, 'positive', 'negative'))
+#   controls_y <-  as.factor(ifelse(controls_dat$age_sample_collection < age_cutoff, 'positive', 'negative'))
+#   
+#   # get clinical data
+#   valid_clin <- test_dat[, !grepl('^cg', colnames(test_dat))]
+#   controls_clin <- controls_dat[, !grepl('^cg', colnames(controls_dat))]
+#   
+#   # get model data
+#   training_dat <- training_dat[, intersected_feats]
+#   controls_dat <- controls_dat[, intersected_feats]
+#   valid_dat <- valid_dat[, intersected_feats]
+#   
+# 
+#   # get bumphunter features
+#   training_dat <- training_dat[, intersected_feats]
+#   controls_dat <- controls_dat[, intersected_feats]
+#   valid_dat <- valid_dat[, intersected_feats]
+#   
+#   
+#   # start elastic net tuning
+#   N_CV_REPEATS = 2
+#   nfolds = 3
+#   
+#   ###### ENET
+#   # create vector and list to store best alpha on training data. alpha is the parameter that choses the 
+#   # the optimal proportion lambda, the tuning parameter for L1 (ridge) and L2 (lasso)
+#   elastic_net.cv_error = vector()
+#   elastic_net.cv_model = list()
+#   elastic_net.ALPHA <- c(1:9) / 10 # creates possible alpha values for model to choose from
+#   
+#   # set parameters for training model
+#   type_family <- 'binomial'
+#   type_measure <- 'auc'
+#   
+#   # create error matrix for for opitmal alpha that can run in parraellel if you have bigger data 
+#   # or if you have a high number fo N_CV_REPEATS
+#   temp.cv_error_matrix <- foreach (temp = 1:N_CV_REPEATS, .combine=rbind, .errorhandling="stop") %do% {      
+#     for (alpha in 1:length(elastic_net.ALPHA)) # for i in 1:9 - the model will run 9 times
+#     {      
+#       elastic_net.cv_model[[alpha]] = cv.glmnet(x = as.matrix(training_dat)
+#                                                 , y =  train_y
+#                                                 , alpha = elastic_net.ALPHA[alpha] # first time with 0.1 and so on
+#                                                 , type.measure = type_measure
+#                                                 , family = type_family
+#                                                 , standardize = FALSE 
+#                                                 , nfolds = nfolds 
+#                                                 , nlambda = 10
+#                                                 , parallel = TRUE
+#       )
+#       elastic_net.cv_error[alpha] = min(elastic_net.cv_model[[alpha]]$cvm)
+#     }
+#     elastic_net.cv_error # stores 9 errors    
+#   }
+#   
+#   if (N_CV_REPEATS == 1) {
+#     temp.cv_error_mean = temp.cv_error_matrix
+#   } else {
+#     temp.cv_error_mean = apply(temp.cv_error_matrix, 2, mean) # take the mean of the 5 iterations  
+#     # as your value for alpha
+#   }
+#   
+#   # stop if you did not recover error for any models 
+#   stopifnot(length(temp.cv_error_mean) == length(elastic_net.ALPHA))
+#   
+#   # get index of best alpha (lowest error) - alpha is values 0.1-0.9
+#   temp.best_alpha_index = which(min(temp.cv_error_mean) == temp.cv_error_mean)[length(which(min(temp.cv_error_mean) == temp.cv_error_mean))] 
+#   # print(paste("Best ALPHA:", elastic_net.ALPHA[temp.best_alpha_index])) # print the value for alpha
+#   best_alpha <- elastic_net.ALPHA[temp.best_alpha_index]
+#   temp.non_zero_coeff = 0
+#   temp.loop_count = 0
+#   # loop runs initially because temp.non_zero coefficient <3 and then stops 
+#   # usually after one iteration because the nzero variable selected by lambda is greater that 3. if it keeps looping
+#   # it they are never greater than 1, then the model does not converge. 
+#   while (temp.non_zero_coeff < 1) { 
+#     elastic_net.cv_model = cv.glmnet(x = as.matrix(training_dat)
+#                                      , y =  train_y
+#                                      , alpha = elastic_net.ALPHA[temp.best_alpha_index]
+#                                      , type.measure = type_measure
+#                                      , family = type_family
+#                                      , standardize=FALSE
+#                                      , nlambda = 100
+#                                      , nfolds = nfolds
+#                                      , parallel = TRUE
+#     )
+#     
+#     # get optimal lambda - the tuning parameter for ridge and lasso
+#     # THIS IS IMPORTANT BECAUSE WHEN YOU TRAIN THE MODEL ON 100 SEPERATE VALUES OF LAMBDA
+#     # AND WHEN YOU TEST THE MODEL IT WILL RETURN PREDCITION FOR ALL THOSE VALUES (1-100). YOU NEED TO 
+#     # GRAB THE PREDICTION WITH SAME LAMBDA THAT YOU TRAINED ON. ITS ALL IN THE CODE, BUT JUST WANTED TO 
+#     # GIVE YOU REASONS
+#     temp.min_lambda_index = which(elastic_net.cv_model$lambda == elastic_net.cv_model$lambda.min) 
+#     
+#     # # number of non zero coefficients at that lambda    
+#     temp.non_zero_coeff = elastic_net.cv_model$nzero[temp.min_lambda_index] 
+#     temp.loop_count = temp.loop_count + 1
+#     
+#     # set seed for next loop iteration
+#     as.numeric(Sys.time())-> t 
+#     set.seed((t - floor(t)) * 1e8 -> seed) 
+#     if (temp.loop_count > 10) {
+#       print("diverged")
+#       temp.min_lambda_index = 50 # if it loops more than 5 times, then model did not converge
+#       break
+#     }
+#   }# while loop ends 
+#   # print(temp.non_zero_coeff)  
+#   
+#   model  = glmnet(x = as.matrix(training_dat)
+#                   , y =  train_y
+#                   ,alpha = elastic_net.ALPHA[temp.best_alpha_index]
+#                   ,standardize=FALSE
+#                   ,nlambda = 100
+#                   ,family = type_family)
+#   
+#   # Predictions on test data
+# 
+#   # Predictions on controls data
+#   
+#   # This returns 100 prediction with 1-100 lambdas
+#   temp_test.predictions_con <- predict(model, 
+#                                        data.matrix(controls_dat),
+#                                        type = 'response')
+#   
+#   # get predictions with corresponding lambda.
+#   test.predictions_con <- temp_test.predictions_con[, temp.min_lambda_index]
+#   
+#   # combine predictions and real labels 
+#   temp_dat_con <- as.data.frame(cbind(controls_age_pred = test.predictions_con, controls_age_label = controls_y, controls_clin))
+#   
+#   # Predictions on controls data
+#   
+#   # This returns 100 prediction with 1-100 lambdas
+#   temp_test.predictions_valid <- predict(model, 
+#                                          data.matrix(valid_dat),
+#                                          type = 'response')
+#   
+#   # get predictions with corresponding lambda.
+#   test.predictions_valid <- temp_test.predictions_valid[, temp.min_lambda_index]
+#   
+#   # combine predictions and real labels 
+#   temp_dat_valid <- as.data.frame(cbind(valid_age_pred = test.predictions_valid, valid_age_label = valid_y, valid_clin))
+#   
+#   ###########################################################################################
+#   return(list(temp_dat, temp_dat_con, temp_dat_valid, model, elastic_net.cv_model$lambda.min, best_alpha))
+#   
+# }
+# 
+
+
+
+
+# cases_dat = cases_full
+# controls_dat = controls_full
+# age_cutoff = 72
+# gender = gender
+# tech = tech
+# bh_features = remaining_features
+
+run_enet_test <- function(cases_dat,
+                          controls_dat,
+                          age_cutoff,
+                          gender,
+                          tech,
+                          bh_features) {
+  
+  # get intersection of bh features and real data
+  bh_features <- as.character(unlist(bh_features))
+  
+  intersected_feats <- intersect(bh_features, colnames(training_dat))
+  
+  if(gender) {
+    intersected_feats <- c('Female', 'Male', intersected_feats)
+  }
+  if (tech) {
+    intersected_feats <- c('batch_1', 'batch_2', intersected_feats)
+  }
+  
+  # intersected_feats_rand <- intersect(rand_feats, colnames(training_dat))
+  # # get y
+  cases_y <- ifelse(cases_dat$age_diagnosis < age_cutoff, 'positive', 'negative')
+  # controls
+  controls_y <-  ifelse(controls_dat$age_sample_collection < 'positive', 'negative')
+  
+  
+  # get clinical data
+  cg_start <- which(grepl('^cg', colnames(cases_dat)))[1]
+  cases_clin <- cases_dat[, 1:(cg_start - 1)]
+  controls_clin <- controls_dat[, 1:(cg_start - 1)]
+  
+  
+  # get bumphunter features
+  cases_dat <- cases_dat[, intersected_feats]
+  controls_dat <- controls_dat[, intersected_feats]
+  
+  # start elastic net tuning
+  N_CV_REPEATS = 5
+  nfolds = 5
+  
+  ###### ENET
+  # create vector and list to store best alpha on training data. alpha is the parameter that choses the 
+  # the optimal proportion lambda, the tuning parameter for L1 (ridge) and L2 (lasso)
+  elastic_net.cv_error = vector()
+  elastic_net.cv_model = list()
+  elastic_net.ALPHA <- c(1:9) / 10 # creates possible alpha values for model to choose from
+  
+  # set parameters for training model
+  type_family <- 'binomial'
+  type_measure <- 'auc'
+  
+  # create error matrix for for opitmal alpha that can run in parraellel if you have bigger data 
+  # or if you have a high number fo N_CV_REPEATS
+  temp.cv_error_matrix <- foreach (temp = 1:N_CV_REPEATS, .combine=rbind, .errorhandling="stop") %do% {      
+    for (alpha in 1:length(elastic_net.ALPHA)) # for i in 1:9 - the model will run 9 times
+    {      
+      elastic_net.cv_model[[alpha]] = cv.glmnet(x = as.matrix(cases_dat)
+                                                , y =  cases_y
+                                                , alpha = elastic_net.ALPHA[alpha] 
+                                                , type.measure = type_measure
+                                                , family = type_family
+                                                , standardize = FALSE 
+                                                , nfolds = nfolds 
+                                                , nlambda = 10
+                                                , parallel = TRUE
+      )
+      elastic_net.cv_error[alpha] = min(elastic_net.cv_model[[alpha]]$cvm)
+    }
+    elastic_net.cv_error # stores 9 errors    
+  }
+  
+  if (N_CV_REPEATS == 1) {
+    temp.cv_error_mean = temp.cv_error_matrix
+  } else {
+    temp.cv_error_mean = apply(temp.cv_error_matrix, 2, mean) # take the mean of the 5 iterations  
+    # as your value for alpha
+  }
+  
+  # stop if you did not recover error for any models 
+  stopifnot(length(temp.cv_error_mean) == length(elastic_net.ALPHA))
+  
+  # get index of best alpha (lowest error) - alpha is values 0.1-0.9
+  temp.best_alpha_index = which(min(temp.cv_error_mean) == temp.cv_error_mean)[length(which(min(temp.cv_error_mean) == temp.cv_error_mean))] 
+  # print(paste("Best ALPHA:", elastic_net.ALPHA[temp.best_alpha_index])) # print the value for alpha
+  best_alpha <- elastic_net.ALPHA[temp.best_alpha_index]
+  temp.non_zero_coeff_min = 0
+  temp.loop_count = 0
+  # loop runs initially because temp.non_zero coefficient <3 and then stops 
+  # usually after one iteration because the nzero variable selected by lambda is greater that 3. if it keeps looping
+  # it they are never greater than 1, then the model does not converge. 
+  while (temp.non_zero_coeff_min < 1) { 
+    elastic_net.cv_model = cv.glmnet(x = as.matrix(cases_dat)
+                                     , y =  cases_y
+                                     , alpha =0.1 #elastic_net.ALPHA[temp.best_alpha_index]
+                                     , type.measure = type_measure
+                                     , family = type_family
+                                     , standardize=FALSE
+                                     , nlambda = 100
+                                     , nfolds = nfolds
+                                     , parallel = TRUE
+    )
+    
+    # get optimal lambda - the tuning parameter for ridge and lasso
+    # THIS IS IMPORTANT BECAUSE WHEN YOU TRAIN THE MODEL ON 100 SEPERATE VALUES OF LAMBDA
+    # AND WHEN YOU TEST THE MODEL IT WILL RETURN PREDCITION FOR ALL THOSE VALUES (1-100). YOU NEED TO 
+    # GRAB THE PREDICTION WITH SAME LAMBDA THAT YOU TRAINED ON. ITS ALL IN THE CODE, BUT JUST WANTED TO 
+    # GIVE YOU REASONS
+    temp.min_lambda_index = which(elastic_net.cv_model$lambda == elastic_net.cv_model$lambda.min)
+    temp.1se_lambda_index = which(elastic_net.cv_model$lambda == elastic_net.cv_model$lambda.1se) 
+    
+    
+    # # number of non zero coefficients at that lambda    
+    temp.non_zero_coeff_min = elastic_net.cv_model$nzero[temp.min_lambda_index] 
+    temp.non_zero_coeff_1se = elastic_net.cv_model$nzero[temp.1se_lambda_index] 
+    
+    temp.loop_count = temp.loop_count + 1
+    
+    
+    # set seed for next loop iteration
+    as.numeric(Sys.time())-> t 
+    set.seed((t - floor(t)) * 1e8 -> seed) 
+    if (temp.loop_count > 10) {
+      print("diverged")
+      temp.min_lambda_index = 50 # if it loops more than 5 times, then model did not converge
+      break
+    }
+  }# while loop ends 
+  # print(temp.non_zero_coeff)  
+  
+  model  = glmnet(x = as.matrix(cases_dat)
+                  , y =  cases_y
+                  ,alpha = elastic_net.ALPHA[temp.best_alpha_index]
+                  ,standardize=FALSE
+                  ,nlambda = 100
+                  ,family = type_family)
+  
+  
+  
+  # This returns 100 prediction with 1-100 lambdas
+  temp_test.predictions_con <- predict(model, 
+                                       data.matrix(controls_dat),
+                                       type = 'response')
+  
+  # get predictions with corresponding lambda.
+  test.predictions_con <- temp_test.predictions_con[, temp.min_lambda_index]
+  
+  # combine predictions and real labels 
+  temp_dat_con <- as.data.frame(cbind(controls_age_pred = test.predictions_con, controls_age_label = controls_y, controls_clin))
+  
+  
+  ###########################################################################################
+  return(list(model, temp_dat_con, temp.non_zero_coeff_min, temp.non_zero_coeff_1se, best_alpha))
+  
+}
 
 ##########
 # impute and scale for raw data

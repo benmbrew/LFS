@@ -13,6 +13,108 @@ library(broom)
 library(scales)
 library(gridExtra)
 library(data.table)
+plot_pred <- function(dat, type, plot_type,strategy, log, other_title){
+  if(type == 'val'){
+    pred_short <- prediction(dat$valid_age_pred, dat$pred_label)
+    # optimal cutoff
+    cost.perf = performance(pred_short, "cost", cost.fp = 1, cost.fn = 1)
+    optimal_cutoff <- pred_short@cutoffs[[1]][which.min(cost.perf@y.values[[1]])]
+    
+  }
+  if(strategy == 'strategy_1'){
+    if(log){
+      g_title = 'log_'
+      
+    } else {
+      g_title = 'no log_'
+    }
+  } else if(strategy == 'strategy_2'){
+    g_title = 'transform_'
+  } else if(strategy == 'strategy_3'){
+    g_title = 'pc_'
+  } else {
+    g_title = 'transform_pc'
+  }
+  if(plot_type == 'age_pred'){
+    if(type == 'con'){
+      g_title = paste0(g_title,'null_set')
+      g <- ggplot(dat, aes(age_sample_collection, controls_age_pred)) +
+        geom_point(size = 1, col = 'black') + 
+        labs(x = 'Age in months',
+             y = 'Predictions',
+             title = g_title)
+      
+    } else {
+      g_title = paste0(g_title,'validation_set')
+      g <- ggplot(dat, aes(age_sample_collection, valid_age_pred)) +
+        geom_point(size = 1, col = 'black') + 
+        labs(x = 'Age in months',
+             y = 'Predictions',
+             title = g_title)
+    }
+  } else if(plot_type == 'ROC'){
+    
+    if(type == 'con'){
+      other_title = paste0(g_title, 'null')
+      # get dataset of predictions and labels for both small and large data
+      pred_short <- prediction(dat$controls_age_pred, dat$controls_age_label)
+      # pred_long <- prediction($preds, final_dat$real)
+      
+      # get performace objects
+      perf_s <- performance(prediction.obj = pred_short, measure = 'tpr', x.measure = 'fpr')
+      # perf_l <- performance(prediction.obj = pred_long, measure = 'tpr', x.measure = 'fpr')
+      
+      # plot mean preds
+      plot(perf_s)
+      abline(a = 0, b =1)
+      
+    } else {
+      other_title = paste0(g_title, 'validation_set')
+      
+      # get dataset of predictions and labels for both small and large data
+      pred_short <- prediction(dat$valid_age_pred, dat$valid_age_label)
+      # pred_long <- prediction($preds, final_dat$real)
+      
+      # get performace objects
+      perf_s <- performance(prediction.obj = pred_short, measure = 'tpr', x.measure = 'fpr')
+      # perf_l <- performance(prediction.obj = pred_long, measure = 'tpr', x.measure = 'fpr')
+      
+      # plot mean preds
+      plot(perf_s)
+      abline(a = 0, b =1)
+      
+    }
+  } else {
+    if(type == 'con'){
+      other_title = paste0(g_title, 'null')
+      
+      pred_short <- prediction(dat$controls_age_pred, dat$controls_age_label)
+      cost.perf = performance(pred_short, "cost", cost.fp = 1, cost.fn = 1)
+      optimal_cutoff <- pred_short@cutoffs[[1]][which.min(cost.perf@y.values[[1]])]
+      
+      # get confusion matrix function for plotting 
+      g <- ConfusionMatrixInfo(data = dat, 
+                               predict = 'controls_age_pred', 
+                               actual = 'controls_age_label', 
+                               cutoff = .57,
+                               get_plot = TRUE,
+                               other_title = other_title)
+    } else {
+      other_title = paste0(g_title, 'validation_set')
+      
+     
+      # get confusion matrix function for plotting 
+      g <-ConfusionMatrixInfo(data = dat, 
+                              predict = 'valid_age_pred', 
+                              actual = 'pred_label', 
+                              cutoff = .57,
+                              get_plot = TRUE,
+                              other_title = other_title)
+      
+    }
+  }
+  return(g)
+}
 
 get_acc_val <- function(temp_dat, thresh){
   all_alphas <- (1:10)/10
@@ -180,7 +282,7 @@ AccuracyCutoffInfo <- function( test, predict, actual )
 
 
 
-ConfusionMatrixInfo <- function( data, predict, actual, cutoff, get_plot)
+ConfusionMatrixInfo <- function( data, predict, actual, cutoff, get_plot, other_title)
 {	
   # extract the column ;
   # relevel making 1 appears on the more commonly seen position in 
@@ -203,7 +305,7 @@ ConfusionMatrixInfo <- function( data, predict, actual, cutoff, get_plot)
     scale_y_continuous( limits = c( 0, 1 ) ) + 
     scale_color_discrete( breaks = c( "TP", "FN", "FP", "TN" ) ) + # ordering of the legend 
     guides( col = guide_legend( nrow = 2 ) ) + # adjust the legend to have two rows  
-    ggtitle( sprintf( "Confusion Matrix with Cutoff at %.2f", cutoff ) )
+    ggtitle( sprintf( other_title,"_Cutoff at %.2f", cutoff ) )
   
   if(get_plot) {
     return(plot)
@@ -237,7 +339,7 @@ ConfusionMatrixInfo <- function( data, predict, actual, cutoff, get_plot)
 # actual = 'real_label' 
 # cost.fp = cost_fp
 # cost.fn = cost_fn
-ROCInfo <- function( data, predict, actual, cost.fp, cost.fn )
+ROCInfo <- function( data, predict, actual, cost.fp, cost.fn, other_title )
 {
   # calculate the values using the ROCR library
   # true positive, false postive 
@@ -289,7 +391,7 @@ ROCInfo <- function( data, predict, actual, cost.fp, cost.fn )
   
   options(scipen = '999')
   # the main title for the two arranged plot
-  sub_title <- sprintf( "Cutoff at %.2f - Total Cost = %a, AUC = %.3f", 
+  sub_title <- sprintf(other_title,  "Cutoff at %.2f - Total Cost = %a, AUC = %.3f", 
                         best_cutoff, best_cost, auc )
   
   # arranged into a side by side plot

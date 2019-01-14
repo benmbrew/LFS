@@ -1,44 +1,47 @@
-# this scrip will predict on data that was linear transformed and age regressed out.
-
-# source functions script
+# prepare pc data
 source('all_functions.R')
 
-# create fixed objects to model and pipeline inputs and saving  
+# remove WT 
+remove_wild_type <- function(m_or_beta_values){
+  m_or_beta_values <- m_or_beta_values[m_or_beta_values$p53_germline == 'MUT',]
+  return(m_or_beta_values)
+}
+
+
+# set fixed variables
 data_type = 'beta'
 combat = TRUE
+remove_leading_pcs = 'first'
 
+
+# set saving objects
 if(combat){
   used_combat <- 'used_combat'
 } else {
   used_combat <- 'no_combat'
 }
+
+# condition on fixed objects to get saving identifiers
 if(data_type == 'beta'){
-  beta_thresh = 0.0001
+  which_methyl <- 'beta'
+  beta_thresh = 0.03
+  
 } else {
-  beta_thresh = 0.001
+  which_methyl <- 'm'
+  beta_thresh= 0.3
 }
 
-
-# read in all data
-cases_450 <- readRDS(paste0('residual_data_cv/', 'cases_450_',data_type, '_',used_combat,'.rda'))
-con_850 <- readRDS(paste0('residual_data_cv/', 'con_850_',data_type,'_',used_combat, '.rda'))
-cases_850 <- readRDS(paste0('residual_data_cv/', 'cases_850_',data_type,'_',used_combat,'.rda'))
-con_wt <-  readRDS(paste0('residual_data_cv/', 'con_wt_',data_type,'_',used_combat, '.rda'))
-lfs_bump_probes <- readRDS(paste0('transform_data_cv/', 'lfs_bumps_', data_type,'_.rda'))
-
-# subset by lfs_bump_probes
-cases_clin <- names(cases_450)[!grepl('^cg', names(cases_450))]
-cases_450 <- cases_450[c(cases_clin, lfs_bump_probes)]
-
-cases_clin_450 <- names(cases_850)[!grepl('^cg', names(cases_850))]
-cases_850 <- cases_850[c(cases_clin, lfs_bump_probes)]
-
-con_clin_850 <- names(con_850)[!grepl('^cg', names(con_850))]
-con_850 <- cases_450[c(cases_clin, lfs_bump_probes)]
-
-con_wt <- con_wt[c(con_clin_850, lfs_bump_probes)]
-
-
+# read in data
+cases_450 <- readRDS(paste0('pc_data_cv/cases_450', remove_leading_pcs,'_', data_type,'_', 
+                            used_combat, '.rda'))
+cases_850 <- readRDS(paste0('pc_data_cv/cases_850',  remove_leading_pcs, '_',data_type,  '_', 
+                            used_combat, '.rda'))
+con_mut <- readRDS(paste0('pc_data_cv/con_mut',remove_leading_pcs,'_',data_type,  '_', 
+                          used_combat, '.rda'))
+con_850 <- readRDS(paste0('pc_data_cv/con_850', remove_leading_pcs, '_', data_type, '_', 
+                          used_combat, '.rda'))
+con_wt <- readRDS(paste0('pc_data_cv/con_wt',  remove_leading_pcs, '_',data_type,  '_', 
+                         used_combat, '.rda'))
 ##########
 # load genomic methyl set (from controls) - you need genetic locations by probe from this object
 ##########
@@ -122,34 +125,33 @@ for(random_seed in 1:length(seed_range)) {
       temp_con <- controls_full[controls_full$tech == '850k' & controls_full$p53_germline == 'MUT',]
       temp_con <- temp_con[!duplicated(temp_con$tm_donor),]
       
-      # # use cases training and controls to get bumphunter features
-      # bh_feats <- bump_hunter(dat_1 = train_cases, 
-      #                         dat_2 = temp_con , 
-      #                         bump = 'cancer', 
-      #                         boot_num = 5, 
-      #                         beta_thresh = beta_thresh,
-      #                         methyl_type = methyl_type,
-      #                         g_ranges = g_ranges)
-      # rm(temp_con)
-      # 
-      # 
-      # # get intersect_names
-      # intersect_names <- names(train_cases)[grepl('^cg', names(train_cases))]
-      # 
-      # # get feature list
-      # colnames(bh_feats)[1] <- 'chr'
-      # remove_features <- inner_join(bh_feats, g_ranges)$probe
-      # 
-      # # take remove features out of colnames 
-      # bh_features <- intersect_names[!intersect_names %in% remove_features]
-      bh_features <- names(train_cases)[grepl('^cg', names(train_cases))]
+      # use cases training and controls to get bumphunter features
+      bh_feats <- bump_hunter(dat_1 = train_cases, 
+                              dat_2 = temp_con , 
+                              bump = 'cancer', 
+                              boot_num = 5, 
+                              beta_thresh = beta_thresh,
+                              methyl_type = methyl_type,
+                              g_ranges = g_ranges)
+      rm(temp_con)
+      
+      
+      # get intersect_names
+      intersect_names <- names(train_cases)[grepl('^cg', names(train_cases))]
+      
+      # get feature list
+      colnames(bh_feats)[1] <- 'chr'
+      remove_features <- inner_join(bh_feats, g_ranges)$probe
+      
+      # take remove features out of colnames 
+      bh_features <- intersect_names[!intersect_names %in% remove_features]
       
       if(model_type == 'enet'){
         # function to predict with all test, controls, controls old, and valid
         mod_result  <- run_enet_all_test(training_dat = train_cases,
                                          test_dat = test_cases,
-                                         controls_dat = con_850,
-                                         valid_dat = cases_850,
+                                         controls_dat = con_transform,
+                                         valid_dat = valid_transform,
                                          age_cutoff = age_cutoff,
                                          gender = gender,
                                          tech = tech,
@@ -157,8 +159,8 @@ for(random_seed in 1:length(seed_range)) {
       } else {
         mod_result  <- run_rf_all_test(training_dat = train_cases,
                                        test_dat = test_cases,
-                                       controls_dat = con_850,
-                                       valid_dat = cases_850,
+                                       controls_dat = con_transform,
+                                       valid_dat = valid_transform,
                                        age_cutoff = age_cutoff,
                                        gender = gender,
                                        tech = tech,
@@ -199,7 +201,7 @@ for(random_seed in 1:length(seed_range)) {
     # run model with 5 k fold cross validation
     temp_test_results <- run_model(cases_full = cases_450,
                                    controls_full = con_850,
-                                   valid_full = cases_850,
+                                   valid_full = valid_850,
                                    model_type = model_type,
                                    age_cutoff = age_cutoff,
                                    k_folds = k_folds,
@@ -217,7 +219,7 @@ for(random_seed in 1:length(seed_range)) {
     # run model with 5 k fold cross validation
     all_test_results[[random_seed]] <- run_model(cases_full = cases_450,
                                                  controls_full = con_850,
-                                                 valid_full = cases_850,
+                                                 valid_full = valid_850,
                                                  model_type = model_type,
                                                  age_cutoff = age_cutoff,
                                                  k_folds = k_folds,
@@ -230,7 +232,6 @@ for(random_seed in 1:length(seed_range)) {
   }
   
   
-  
 }
 
 
@@ -238,19 +239,21 @@ if(model_type == 'rf'){
   final_dat <- do.call(rbind, rf_pred_results)
   final_importance <- do.call(rbind, rf_important_results )
   # # save data
-  saveRDS(final_dat, paste0('residual_data_cv/results/', data_type, '_',
-                            num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff, '_',used_combat,'.rda'))
+  saveRDS(final_dat, paste0('pc_data_cv/results/', data_type, '_', remove_leading_pcs,'_' ,
+                            num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'.rda'))
   # # save data
-  saveRDS(final_importance, paste0('residual_data_cv/results/', 'importance_',data_type, '_',
-                                   num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff, '_',used_combat,'.rda'))
+  saveRDS(final_importance, paste0('pc_data_cv/results/', 'importance_',data_type, '_',remove_leading_pcs,'_' ,
+                                   num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'.rda'))
   
   
 } else {
   final_dat <- do.call(rbind, all_test_results)
   
   # # save data
-  saveRDS(final_dat, paste0('residual_data_cv/results/', data_type, '_',
-                            num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_',used_combat,'.rda'))
+  saveRDS(final_dat, paste0('pc_data_cv/results', data_type, '_',remove_leading_pcs,'_' ,
+                            num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'.rda'))
   
 }
+
+
 

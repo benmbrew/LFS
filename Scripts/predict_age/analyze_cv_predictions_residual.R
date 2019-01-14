@@ -1,39 +1,21 @@
-# This scrip will analyze cross validation error and find optimal cut off for classification
-# https://ethen8181.github.io/machine-learning/unbalanced/unbalanced.html
-# https://hopstat.wordpress.com/2014/12/19/a-small-introduction-to-the-rocr-package/
-# https://pat-s.github.io/mlr/articles/tutorial/devel/roc_analysis.html
-library(plotly)
-library(scatterplot3d)
-library(car)
-library(rgl)
-library(ROCR)
-library(caret)
-library(pROC)
-library(dplyr)
-library(grid)
-library(broom)
-library(tidyr)
-library(scales)
-library(gridExtra)
-library(data.table)
-
 source('helper_functions.R')
-
+#
 # create fixed objects to model and pipeline inputs and saving  
 data_type = 'beta'
 combat = TRUE
-used_log = FALSE
-base_num = 'no_log'
-beta_thresh = 0.03
 
-# set saving objects
 if(combat){
   used_combat <- 'used_combat'
 } else {
   used_combat <- 'no_combat'
 }
+if(data_type == 'beta'){
+  beta_thresh = 0.0001
+} else {
+  beta_thresh = 0.001
+}
 
-# create objects to indicate method and model details when saving
+#create objects to indicate method and model details when saving
 gender = FALSE
 tech = FALSE
 how_many_seeds = 20
@@ -47,24 +29,14 @@ if(gender){
   is_gen = 'no_gen'
 }
 
-
-if(used_log){
-  is_log <- 'used_log'
-} else {
-  is_log <- 'no_log'
-}
-
 num_seeds <- paste0('seeds_', how_many_seeds)
 num_folds <- paste0('folds_', how_many_folds)
 k_folds <- how_many_folds
 
+# save data
+final_dat <- readRDS(paste0('residual_data_cv/results/', data_type, '_',
+                          num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_',used_combat,'.rda'))
 
-# read in data
-# read in data
-
-
-final_dat <- readRDS( paste0('data_cv/results/', data_type, '_',is_log,'_',
-                            num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'.rda'))
 
 # subset data
 sub_dat <- final_dat[, c('tm_donor','cancer_diagnosis_diagnoses','preds', 'pred_class', 'real', 'accuracy', 'lambda', 
@@ -129,10 +101,10 @@ plot_acc(dat, acc_column = 'mean_acc', column = 'mean_lambda', bar = FALSE)
 plot_3d_model_means(dat)
 
 # save mean lambda  and mean alpha for highest accuracy
-mean_lambda <- dat$mean_lambda[dat$mean_acc == max(dat$mean_acc)]
-mean_alpha <- dat$mean_alpha[dat$mean_acc == max(dat$mean_acc)]
+mean_lambda <- mean(dat$mean_lambda[dat$mean_acc == max(dat$mean_acc)])
+mean_alpha <- mean(dat$mean_alpha[dat$mean_acc == max(dat$mean_acc)])
 model_params <- c(mean_lambda = mean_lambda, mean_alpha = mean_alpha)
-saveRDS(model_params, paste0('data_cv/results/model_params_', data_type, '_', base_num,'_',
+saveRDS(model_params, paste0('residual_data_cv/results/model_params_', data_type, '_',
                              num_seeds, '_', k_folds, '_', is_gen, '_', model_type,'.rda'))
 ####
 
@@ -204,8 +176,8 @@ plot(temp_lc)
 # optimal cutoff
 cost.perf = performance(pred_short, "cost", cost.fp = 1, cost.fn = 1)
 optimal_cutoff <- pred_short@cutoffs[[1]][which.min(cost.perf@y.values[[1]])]
-saveRDS(optimal_cutoff, paste0('data_cv/results/optimal_cutoff_', data_type, '_', base_num,'_',
-                             num_seeds, '_', k_folds, '_', is_gen, '_', model_type,'.rda'))
+saveRDS(optimal_cutoff, paste0('residual_data_cv/results/optimal_cutoff_', data_type, '_',
+                               num_seeds, '_', k_folds, '_', is_gen, '_', model_type,'.rda'))
 # get confusion matrix function for plotting 
 ConfusionMatrixInfo(data = dat_sample, 
                     predict = 'mean_preds', 
@@ -264,5 +236,6 @@ ggplot(dat_sample,
 # beta and no gender .45
 # m and gender .49
 # m and no gender .49
+
 
 

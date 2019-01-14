@@ -5,13 +5,14 @@ path_to_controls <- '../../Data/methyl_data/controls'
 path_to_valid <- '../../Data/methyl_data/validation'
 
 # set preprocessing method
-method <- 'noob'
+method <- 'quan'
 methyl_type <- 'beta'
 
 # get functions
 source('all_functions.R')
+
 # read in 450k data to get variable names to grab intersection
-cases <- readRDS('../../Data/cases_450.rda')
+cases <- readRDS(paste0('../../Data/', method,'/cases_450_beta.rda'))
 features_450 <- colnames(cases)[12:ncol(cases)]
 rm(cases)
 ##########
@@ -21,10 +22,9 @@ rm(cases)
 # controls
 rgControls <- read.metharray.exp(path_to_controls, recursive = T)
 
-
+# valid
 rgValid <- read.metharray.exp(path_to_valid, recursive = T)
 
-# save.image('~/Desktop/temp_850.RData')
 ##########
 # load genomic methyl set (from controls) - you need genetic locations by probe from this object
 # ##########
@@ -105,7 +105,7 @@ gene_probes <- as.character(gene_probes$focal_CpGs[!duplicated(gene_probes$focal
 
 # controls
 rg_controls <- subset_rg_set(rg_set = rgControls,
-                            keep_gender = FALSE,
+                            keep_gender = TRUE,
                             keep_controls = TRUE,
                             keep_snps = FALSE,
                             get_island = NULL,
@@ -115,7 +115,7 @@ rg_controls <- subset_rg_set(rg_set = rgControls,
 
 # validation
 rg_val <- subset_rg_set(rg_set = rgValid,
-                             keep_gender = FALSE,
+                             keep_gender = TRUE,
                              keep_controls = TRUE,
                              keep_snps = FALSE,
                              get_island = NULL,
@@ -124,6 +124,10 @@ rg_val <- subset_rg_set(rg_set = rgValid,
                              gene_probes = gene_probes)
 
 
+load('~/Desktop/temp_850.RData')
+method = 'illumina'
+
+rm(rgControls, rgValid)
 
 # preprocess controls and valid
 data_controls <-  preprocessMethod(rg_controls, preprocess = method, methyl_type = 'beta')
@@ -146,6 +150,6 @@ data_valid <- process_rg_set_single(beta_data = data_valid,
                                        id_map = id_map_val, 
                                        clin = clin)
 # save data
-saveRDS(data_controls, '../../Data/controls_850_beta.rda')
-saveRDS(data_valid, '../../Data/cases_850_beta.rda')
+saveRDS(data_controls, paste0('../../Data/', method,'/controls_850_beta.rda'))
+saveRDS(data_valid, paste0('../../Data/', method,'/cases_850_beta.rda'))
 

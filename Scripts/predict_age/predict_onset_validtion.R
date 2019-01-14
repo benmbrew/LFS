@@ -1,35 +1,80 @@
-# this script will be used to reproduce the original held out validation set for true accuracy. 
-# can also test on controls her
-
 # source functions script
 source('all_functions.R')
 
 # create fixed objects to model and pipeline inputs and saving  
-methyl_type = 'beta'
+data_type = 'beta'
 combat = TRUE
-gender = TRUE
-age_cutoff = 72
-tech = FALSE 
-how_many_seeds = 30
-how_many_folds = 5
-use_offset = TRUE
-remove_age = TRUE
+used_log = FALSE
+base_num = 'base_1'
+beta_thresh = 0.03
 
-# condition on fixed objects to get saving identifiers
-
-if(methyl_type == 'beta'){
-  which_methyl <- 'beta'
-} else {
-  which_methyl <- 'm'
-}
-
+# set saving objects
 if(combat){
-  which_combat <- 'use_combat'
-  beta_thresh = 0.01
+  used_combat <- 'used_combat'
 } else {
-  which_combat <- 'no_combat'
-  beta_thresh = 0.5
+  used_combat <- 'no_combat'
 }
+
+if(used_log){
+  
+  # load log data
+  cases_450 <-readRDS(paste0('data_cv/', 'cases_450_', base_num,'_', data_type, '_', used_combat,'.rda'))
+  cases_850 <-readRDS(paste0('data_cv/', 'cases_850_', base_num,'_', data_type, '_', used_combat,'.rda'))
+  con_850 <-readRDS(paste0('data_cv/', 'cases_850_', base_num,'_', data_type, '_', used_combat,'.rda'))
+  con_wt <-readRDS(paste0('data_cv/', 'con_wt_', base_num,'_', data_type, '_', used_combat,'.rda'))
+  con_mut <-readRDS(paste0('data_cv/', 'con_mut_', base_num,'_', data_type, '_', used_combat,'.rda'))
+  if(combat){
+    intersect_names <- Reduce(intersect, list(names(cases_450),
+                                              names(cases_850),
+                                              names(con_850),
+                                              names(con_mut),
+                                              names(con_wt)))
+    cases_450 <- cases_450[, intersect_names]
+    cases_850 <- cases_850[, intersect_names]
+    con_850 <- con_850[, intersect_names]
+    con_mut <- con_mut[, intersect_names]
+    con_wt <- con_wt[, intersect_names]
+    
+  }
+} else {
+  base_num <- 'no_log'
+  # read in all data
+  cases_450 <- readRDS(paste0('data_cv/', 'cases_450_no_log_',data_type, '_', used_combat,'.rda'))
+  con_850 <- readRDS( paste0('data_cv/', 'con_850_no_log_',data_type,'_', used_combat, '.rda'))
+  cases_850 <- readRDS(paste0('data_cv/', 'cases_850_no_log_',data_type,'_', used_combat,'.rda'))
+  con_wt <-  readRDS(paste0('data_cv/', 'con_wt_no_log_',data_type, '_', used_combat,'.rda'))
+  con_mut <- readRDS( paste0('data_cv/', 'con_mut_no_log_',data_type,'_', used_combat,'.rda'))
+  lfs_bump_probes <- readRDS(paste0('data_cv/', 'lfs_bump_probes', data_type, '_', used_combat, '.rda'))
+  
+}
+
+
+if(used_log){
+  is_log <- 'used_log'
+} else {
+  is_log <- 'no_log'
+}
+##########
+# load genomic methyl set (from controls) - you need genetic locations by probe from this object
+##########
+g_ranges <- readRDS('../../Data/g_ranges.rda')
+
+# get probes from rownames
+g_ranges$probe <- rownames(g_ranges)
+
+# remove ch and duplicatee
+g_ranges <- g_ranges[!duplicated(g_ranges$start),]
+g_ranges <- g_ranges[!grepl('ch', g_ranges$probe),]
+
+names(g_ranges)[1] <- 'chr'
+
+# create objects to indicate method and model details when saving
+gender = FALSE
+tech = FALSE
+how_many_seeds = 20
+how_many_folds = 5
+age_cutoff = 72
+model_type = 'enet'
 
 if(gender){
   is_gen = 'use_gen'
@@ -37,344 +82,34 @@ if(gender){
   is_gen = 'no_gen'
 }
 
-if(use_offset){
-  is_offset <- 'use_offset'
-} else {
-  is_offset <- 'no_offset'
-}
-
-if(remove_age){
-  is_removed <- 'age_removed'
-} else {
-  is_removed <- 'no_removed'
-
-}
-
-
 num_seeds <- paste0('seeds_', how_many_seeds)
 num_folds <- paste0('folds_', how_many_folds)
 k_folds <- how_many_folds
-
-##########
-# read in age probes
-##########
-age_probes <- readRDS('../../Data/age_probes.rda')
-
-##########
-# load genomic methyl set (from controls) - you need genetic locations by probe from this object
-##########
-ratio_set <- readRDS('../../Data/g_ranges.rda')
-
-# get g_ranges
-g_ranges <- ratio_set
-
-# get probes from rownames
-g_ranges$probe <- rownames(ratio_set)
-
-# remove ch and duplicatee
-g_ranges <- g_ranges[!duplicated(g_ranges$start),]
-g_ranges <- g_ranges[!grepl('ch', g_ranges$probe),]
-names(g_ranges)[1] <- 'chr'
-
-#########
-
-# read in all data
-if(methyl_type == 'beta'){
-  # beta controls wt 
-  # con_450_wt <- readRDS('../../Data/con_wt_450_beta.rda')
-  # con_450_wt$tech <- 'batch_1'
-  
-  if(combat){
-    all_cases <- readRDS('../../Data/all_cases_beta_combat.rda')
-    all_con <- readRDS('../../Data/all_con_beta_combat.rda')
-    all_con_wt <-  readRDS('../../Data/all_con_beta_wt_combat.rda')
-    
-    message('loaded beta values, with combat correction')
-    
-  } else {
-    
-    all_cases <- readRDS('../../Data/all_cases_beta.rda')
-    all_con <- readRDS('../../Data/all_con_beta.rda')
-    all_con_wt <-  readRDS('../../Data/all_con_beta_wt.rda')
-    
-    
-    # recode to homogenize with combat data
-    all_cases$tech <- ifelse(all_cases$tech == '450k', 'batch_1', 'batch_2')
-    all_con$tech <- ifelse(all_con$tech == '450k', 'batch_1', 'batch_2')
-   
-    message('loaded beta values, with no combat')
-  }
-} else {
-  
-  # read in wild type controls (healthy non LFS patients, to be compared with healthy (controls) LFS patients)
-  # con_450_wt <- readRDS('../../Data/con_wt_450_m.rda')
-  # con_450_wt$tech <- 'batch_1'
-  if(combat){
-    all_cases <- readRDS('../../Data/all_cases_m_combat.rda')
-    all_con <- readRDS('../../Data/all_con_m_combat.rda')
-    all_con_wt <-  readRDS('../../Data/all_con_beta_wt_combat.rda')
-    
-    message('loaded m values, with combat correction')
-    
-  } else {
-    all_cases <- readRDS('../../Data/all_cases_m.rda')
-    all_con <- readRDS('../../Data/all_con_m.rda')
-    all_con_wt <-  readRDS('../../Data/all_con_beta_wt.rda')
-    
-    # recode to homogenize with combat data
-    all_cases$tech <- ifelse(all_cases$tech == '450k', 'batch_1', 'batch_2')
-    all_con$tech <- ifelse(all_con$tech == '450k', 'batch_1', 'batch_2')
-   
-    
-    message('loaded m values, with no combat')
-  }
-}
-
-
-if(remove_age){
-  all_cases <- get_age_removal(all_cases)
-  all_con <- get_age_removal(all_con)
-  all_con_wt <- get_age_removal(all_con_wt)
-
-}
-
-##########
-# seperate 450 fron 850
-##########
-
-#CASES
-cases_450 <- all_cases[all_cases$tech == 'batch_1',]
-cases_450 <- cases_450[!is.na(cases_450$age_sample_collection),]
-cases_450 <- cases_450[!is.na(cases_450$age_diagnosis),]
-cases_450 <- cases_450[!is.na(cases_450$gender),]
-
-cases_850 <- all_cases[all_cases$tech == 'batch_2',]
-cases_850 <- cases_850[!is.na(cases_850$age_sample_collection),]
-cases_850 <- cases_850[!is.na(cases_850$age_diagnosis),]
-cases_850 <- cases_850[!is.na(cases_850$gender),]
-
-rm(all_cases)
-
-# gender
-cases_450 <- cbind(as.data.frame(class.ind(cases_450$gender)), 
-                   cases_450)
-
-cases_850 <- cbind(as.data.frame(class.ind(cases_850$gender)), 
-                   cases_850)
-
-# rempove old tech variable 
-cases_450$gender <- cases_850$gender <- NULL
-
-
-# # tech
-# cases_450 <- cbind(as.data.frame(class.ind(cases_450$tech)), 
-#                    cases_450)
-# 
-# cases_850 <- cbind(as.data.frame(class.ind(cases_850$tech)), 
-#                    cases_850)
-
-# rempove old tech variable 
-cases_450$tech <- cases_850$tech <- NULL
-
-
-#########
-# make ages back to months (times by 12)
-#########
-
-# cases
-
-# 450
-cases_450$age_diagnosis <- 
-  round(cases_450$age_diagnosis*12, 2)
-cases_450$age_sample_collection <- 
-  round(cases_450$age_sample_collection*12, 2)
-
-# 850
-cases_850$age_diagnosis <- 
-  round(cases_850$age_diagnosis*12, 2)
-cases_850$age_sample_collection <- 
-  round(cases_850$age_sample_collection*12, 2)
-
-
-#CONTROLS
-con_450 <- all_con[all_con$tech == 'batch_1',]
-con_450 <- con_450[!is.na(con_450$age_sample_collection),]
-con_450 <- con_450[!is.na(con_450$gender),]
-
-con_850 <- all_con[all_con$tech == 'batch_2',]
-con_850 <- con_850[!is.na(con_850$age_sample_collection),]
-con_850 <- con_850[!is.na(con_850$gender),]
-
-rm(all_con)
-# gender
-con_450 <- cbind(as.data.frame(class.ind(con_450$gender)), 
-                   con_450)
-
-con_850 <- cbind(as.data.frame(class.ind(con_850$gender)), 
-                   con_850)
-
-# rempove old tech variable 
-con_450$gender <- con_850$gender <- NULL
-
-# # tech
-# con_450 <- cbind(as.data.frame(class.ind(con_450$tech)), 
-#                  con_450)
-# 
-# con_850 <- cbind(as.data.frame(class.ind(con_850$tech)), 
-#                  con_850)
-
-
-
-# rempove old tech variable 
-con_450$tech <- con_850$tech <- NULL
-
-
-
-# apply to wt controls
-all_con_wt <- all_con_wt[!is.na(all_con_wt$age_sample_collection),]
-all_con_wt <- all_con_wt[!is.na(all_con_wt$gender),]
-
-# ge tgender 
-all_con_wt <- cbind(as.data.frame(class.ind(all_con_wt$gender)), 
-                 all_con_wt)
-
-# rempove old tech variable 
-all_con_wt$gender <- NULL
-
-# # tech
-# all_con_wt <- cbind(as.data.frame(class.ind(all_con_wt$tech)), 
-#                  all_con_wt)
-all_con_wt$tech <- NULL
-
-# subset to get controls lfs and wild type
-con_mut <- all_con_wt[all_con_wt$p53_germline == 'MUT',]
-con_wt <- all_con_wt[all_con_wt$p53_germline == 'WT',]
-rm(all_con_wt)
-
-#########
-# make ages back to months (times by 12)
-#########
-
-# 450
-con_450$age_diagnosis <- 
-  round(con_450$age_diagnosis*12, 2)
-con_450$age_sample_collection <- 
-  round(con_450$age_sample_collection*12, 2)
-
-# 850
-con_850$age_diagnosis <- 
-  round(con_850$age_diagnosis*12, 2)
-con_850$age_sample_collection <- 
-  round(con_850$age_sample_collection*12, 2)
-
-# 450 wt
-con_mut$age_sample_collection <- 
-  round(con_mut$age_sample_collection*12, 2)
-
-con_wt$age_sample_collection <- 
-  round(con_wt$age_sample_collection*12, 2)
-
-
-# run bumphunter on LFS healthy patients (LFS no cancer) and LFS cancer patients (LFS cancer)
-bh_feats <- bump_hunter(dat_1 = con_wt, 
-                        dat_2 = con_mut, 
-                        bump = 'lfs', 
-                        boot_num = 5, 
-                        beta_thresh = beta_thresh,
-                        methyl_type = methyl_type,
-                        g_ranges = g_ranges)
-
-# save.image('~/Desktop/temp_beta_nocombat.RData')
-# cases
-cases_450 <- join_new_features(cases_450, new_features = bh_feats)
-cases_850 <- join_new_features(cases_850, new_features = bh_feats)
-
-# controls
-con_450 <- join_new_features(con_450, new_features = bh_feats)
-con_850 <- join_new_features(con_850, new_features = bh_feats)
-
-# wt
-con_mut <- join_new_features(con_mut, new_features = bh_feats)
-con_wt <- join_new_features(con_wt, new_features = bh_feats)
-
-# store the selected featufres
-lfs_bump_probes <- colnames(cases_450)[grepl('^cg', colnames(cases_450))]
-
-
-rm(ratio_set, bh_feats)
-
-
-# add dummy tech variable for data sets with only one, replace family_name
-names(con_450)[9] <- 'tech'
-names(con_850)[9] <- 'tech'
-names(cases_450)[9] <- 'tech'
-names(cases_850)[9] <- 'tech'
-
-# fill them with Zero
-con_450$tech <- '450k'
-con_850$tech <- '850k'
-cases_450$tech <- '450k'
-cases_850$tech <- '850k'
-
-# do the same to con_mut and con_wt
-names(con_mut)[9] <- 'tech'
-names(con_wt)[9] <- 'tech'
-
-# fill new variable with right tech indication
-con_mut$tech <- '450k'
-con_wt$tech <- '450k'
-
-# rbind all controls
-controls_all <- rbind(con_450,
-                      con_850,
-                      con_mut,
-                      con_wt)
-
-rm(con_450,
-   con_850,
-   con_mut, 
-   con_wt)
-
-###########################
-
-# save trainig  set 
-saveRDS(cases_450, paste0('validation_age_predictions/', 'cases_450',which_methyl, '_', which_combat, '_',
-                          num_seeds, '_', num_folds, '_', is_gen, '_', is_offset,'.rda'))
-# save validation set 
-saveRDS(cases_850, paste0('validation_age_predictions/', 'valid_',which_methyl, '_', which_combat, '_',
-                          num_seeds, '_', num_folds, '_', is_gen,'_', is_offset, '.rda'))
-
-# save validation set 
-saveRDS(controls_all, paste0('validation_age_predictions/', 'controls_',which_methyl, '_', which_combat, '_',
-                          num_seeds, '_', num_folds, '_', is_gen,'_', is_offset, '.rda'))
-
-# save associated lfs bumps
-saveRDS(lfs_bump_probes, paste0('validation_age_predictions/', 'lfs_bumps_', which_methyl, '_', 
-                                which_combat, '_', '.rda'))
-############################
 
 # create range for random sampling for cross validation
 seed_range <- c(1:how_many_seeds)
 
 # create list to store model
 all_test_results <- list()
-
+importance_results <- list()
+rf_pred_results <- list()
+rf_important_results <- list()
 # save image
 # save.image('~/Desktop/temp_valid.RData')
 
 for(random_seed in 1:length(seed_range)) {
- # prepare data sets for modelling
+  # prepare data sets for modelling
   
   run_model <- function(cases_full,
                         controls_full,
                         valid_full,
+                        model_type = model_type,
+                        age_cutoff = age_cutoff,
                         k_folds = k_folds,
                         tech = tech,
                         gender = gender,
                         beta_thresh = beta_thresh,
                         methyl_type = methyl_type,
-                        age_cutoff = age_cutoff,
-                        offset = use_offset,
                         g_ranges = g_ranges) {
     
     
@@ -399,7 +134,7 @@ for(random_seed in 1:length(seed_range)) {
       test_cases <- cases_full[test_index, ]
       
       # get controls 450k mut
-      temp_con <- controls_all[controls_all$tech == '450k' & controls_all$p53_germline == 'MUT',]
+      temp_con <- controls_full[controls_full$tech == '850k' & controls_full$p53_germline == 'MUT',]
       temp_con <- temp_con[!duplicated(temp_con$tm_donor),]
       
       # use cases training and controls to get bumphunter features
@@ -423,20 +158,36 @@ for(random_seed in 1:length(seed_range)) {
       # take remove features out of colnames 
       bh_features <- intersect_names[!intersect_names %in% remove_features]
       
-    
-      # function to predict with all test, controls, controls old, and valid
-      mod_result  <- run_enet_all_test(training_dat = train_cases,
+      if(model_type == 'enet'){
+        # function to predict with all test, controls, controls old, and valid
+        mod_result  <- run_enet_all_test(training_dat = train_cases,
+                                         test_dat = test_cases,
+                                         controls_dat = con_850,
+                                         valid_dat = cases_850,
+                                         age_cutoff = age_cutoff,
+                                         gender = gender,
+                                         tech = tech,
+                                         bh_features = bh_features)
+      } else {
+        mod_result  <- run_rf_all_test(training_dat = train_cases,
                                        test_dat = test_cases,
-                                       controls_dat = controls_full,
-                                       valid_dat = valid_full,
+                                       controls_dat = con_850,
+                                       valid_dat = cases_850,
                                        age_cutoff = age_cutoff,
                                        gender = gender,
                                        tech = tech,
-                                       offset = use_offset,
                                        bh_features = bh_features)
+        
+        importance_rf <- mod_result[[2]]
+        mod_result <- mod_result[[1]]
+      }
       
       
-    
+      
+      if(model_type == 'rf'){
+        importance_results[[i]] <- importance_rf
+      }
+      
       mod_result$seed <- random_seed
       mod_result$fold <- i
       test_data_results[[i]] <- mod_result
@@ -446,31 +197,74 @@ for(random_seed in 1:length(seed_range)) {
     
     # combine list of case and control result data frames and return all result objects (two dataframes and 4 lists)
     cv_testing_results <- do.call(rbind, test_data_results)
-
-    return(cv_testing_results)
+    
+    if(model_type == 'rf'){
+      cv_importance_results <- do.call(rbind, importance_results)
+      return(list(cv_testing_results, cv_importance_results))
+    } else {
+      return(cv_testing_results)
+      
+    }
   }
   
+  if(model_type == 'rf'){
+    
+    
+    # run model with 5 k fold cross validation
+    temp_test_results <- run_model(cases_full = cases_450,
+                                   controls_full = con_850,
+                                   valid_full = valid_850,
+                                   model_type = model_type,
+                                   age_cutoff = age_cutoff,
+                                   k_folds = k_folds,
+                                   tech = tech,
+                                   gender = gender,
+                                   beta_thresh = beta_thresh,
+                                   g_ranges = g_ranges)
+    rf_pred_results[[random_seed]] <- temp_test_results[[1]]
+    rf_important_results[[random_seed]] <- temp_test_results[[2]]
+    
+    
+    message('finished working on random seed = ', random_seed)
+  } else {
+    
+    # run model with 5 k fold cross validation
+    all_test_results[[random_seed]] <- run_model(cases_full = cases_450,
+                                                 controls_full = con_850,
+                                                 valid_full = cases_850,
+                                                 model_type = model_type,
+                                                 age_cutoff = age_cutoff,
+                                                 k_folds = k_folds,
+                                                 tech = tech,
+                                                 gender = gender,
+                                                 beta_thresh = beta_thresh,
+                                                 g_ranges = g_ranges)
+    
+    message('finished working on random seed = ', random_seed)
+  }
   
-  # run model with 5 k fold cross validation
-  all_test_results[[random_seed]] <- run_model(cases_full = cases_450,
-                                               controls_full = controls_all,
-                                               valid_full = cases_850,
-                                               k_folds = k_folds,
-                                               tech = tech,
-                                               gender = gender,
-                                               beta_thresh = beta_thresh,
-                                               age_cutoff = age_cutoff,
-                                               offset = use_offset,
-                                               g_ranges = g_ranges)
-  
-  message('finished working on random seed = ', random_seed)
   
 }
 
 
-final_dat <- do.call(rbind, all_test_results)
+if(model_type == 'rf'){
+  final_dat <- do.call(rbind, rf_pred_results)
+  final_importance <- do.call(rbind, rf_important_results )
+  # # save data
+  saveRDS(final_dat, paste0('data_cv/results/', data_type, '_',
+                            num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'.rda'))
+  # # save data
+  saveRDS(final_importance, paste0('data_cv/results/', 'importance_',data_type, '_',
+                                   num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'.rda'))
+  
+} else {
+  final_dat <- do.call(rbind, all_test_results)
+  
+  # # save data
+  saveRDS(final_dat, paste0('data_cv/results/', data_type, '_',is_log,'_',
+                            num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'.rda'))
+  
+}
 
-# # save data
-saveRDS(final_dat, paste0('validation_age_predictions/', which_methyl, '_', which_combat, '_',
-                          num_seeds, '_', num_folds, '_', is_gen, '.rda'))
+
 

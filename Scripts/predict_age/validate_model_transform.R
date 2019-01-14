@@ -1,42 +1,38 @@
 
-# load libraries
-library(plotly)
-library(scatterplot3d)
-library(tidyverse)
-library(grid)
-library(broom)
-library(scales)
-library(gridExtra)
-library(data.table)
 
-# register other cpus
-registerDoParallel(2)
 
 # source functions script
 source('all_functions.R')
 
-# create fixed objects to model and pipeline inputs and saving  
+# remove WT 
+remove_wild_type <- function(m_or_beta_values){
+  m_or_beta_values <- m_or_beta_values[m_or_beta_values$p53_germline == 'MUT',]
+  return(m_or_beta_values)
+}
+
+
+# set fixed variables
+size = 'full'
+model_type = 'enet'
+gender = TRUE
+method = 'noob'
 methyl_type = 'beta'
-gender = FALSE
-tech = FALSE 
-how_many_seeds = 20
-how_many_folds = 5
-# use_offset = FALSE
-remove_age  = TRUE
-beta_thresh = 0.05
+beta_thresh = 0.01
+optimal_cutoff = 0.5
+
+# create objects to indicate method and model details when saving
 age_cutoff = 72
 trained_lambda = FALSE
-model_type = 'rf'
+tech = FALSE
 
 
-# condition on fixed objects to get saving identifiers
 
-if(methyl_type == 'beta'){
-  which_methyl <- 'beta'
+if(trained_lambda){
+  is_lambda <- 'lambda_test'
 } else {
-  which_methyl <- 'm'
-  beta_thresh= 0.5
+  is_lambda <- 'lambda_train'
 }
+
 
 if(gender){
   is_gen = 'use_gen'
@@ -44,45 +40,104 @@ if(gender){
   is_gen = 'no_gen'
 }
 
-if(trained_lambda){
-  is_lambda <- 'use_cv_lambda'
+
+
+
+if(size =='used_bh'){
+  cases_450 <- readRDS(paste0('../../Data/', method,'/cases_450_small.rda'))
+  con_transform <- readRDS(paste0('../../Data/', method,'/con_transform_small.rda'))
+  valid_transform <- readRDS(paste0('../../Data/', method,'/valid_transform_small.rda'))
+  con_wt <- readRDS(paste0('../../Data/', method,'/con_wt_small.rda'))
+  con_mut <- readRDS(paste0('../../Data/', method,'/con_mut_small.rda'))
+  
 } else {
-  is_lambda <- 'no_cv_lambda'
+  
+  cases_450 <- readRDS(paste0('../../Data/', method,'/cases_450.rda'))
+  con_transform <- readRDS(paste0('../../Data/', method,'/con_transform.rda'))
+  valid_transform <- readRDS(paste0('../../Data/', method,'/valid_transform.rda'))
+  con_wt <- readRDS(paste0('../../Data/', method,'/con_wt.rda'))
+  con_mut <- readRDS(paste0('../../Data/', method,'/con_mut.rda'))
+  
+  # add dummy tech variable for data sets with only one, replace family_name
+  names(cases_450)[9] <- 'tech'
+  names(con_transform)[9] <- 'tech'
+  names(valid_transform)[9] <- 'tech'
+  
+  # fill them with Zero
+  cases_450$tech <- '450k'
+  con_transform$tech <- '850k'
+  valid_transform$tech <- '850k'
+  
+  # do the same to con_mut and con_wt
+  names(con_mut)[9] <- 'tech'
+  names(con_wt)[9] <- 'tech'
+  
+  # fill new variable with right tech indication
+  con_mut$tech <- '450k'
+  con_wt$tech <- '450k'
+  
+  # randomly sample from all cgs
+  clin_names <- names(cases_450)[1:10]
+  r_cgs <- sample(names(cases_450)[11:ncol(cases_450)], 3000)
+  cases_450 <- cases_450[c(clin_names, r_cgs)]
+  valid_transform <- valid_transform[c(clin_names, r_cgs)]
+  con_transform <- con_transform[c(clin_names, r_cgs)]
+  con_mut <- con_mut[c(clin_names, r_cgs)]
+  con_wt <- con_wt[c(clin_names, r_cgs)]
+  
+  
 }
 
-# if(use_offset){
-#   is_offset <- 'use_offset'
-# } else {
-#   is_offset <- 'no_offset'
+
+
+
+##########
+# load genomic methyl set (from controls) - you need genetic locations by probe from this object
+##########
+g_ranges <- readRDS('../../Data/g_ranges.rda')
+
+# get probes from rownames
+g_ranges$probe <- rownames(g_ranges)
+
+# remove ch and duplicatee
+g_ranges <- g_ranges[!duplicated(g_ranges$start),]
+g_ranges <- g_ranges[!grepl('ch', g_ranges$probe),]
+
+names(g_ranges)[1] <- 'chr'
+
+# # load lambda
+# model_params <- readRDS(paste0('transform_data_test/model_params_', data_type,  '_',
+#                                num_seeds, '_', k_folds, '_', is_gen, '_', model_type, '_72.rda'))
+# 
+# mean_lambda <- model_params[1]
+
+
+
+
+
+# if(model_type == 'enet'){
+#   # load model_params
+#   model_params <- readRDS(paste0('transform_data_cv/', 'model_params_',data_type,'_',
+#                                  num_seeds, '_',k_folds, '_', is_gen ,'_', model_type, '.rda'))
+#   
 # }
 
-num_seeds <- paste0('seeds_', how_many_seeds)
-num_folds <- paste0('folds_', how_many_folds)
-k_folds <- how_many_folds
+# # load optimal_cutoff
+# optimal_cutoff <- readRDS(paste0('transform_data_test/', 'optimal_cutoff_',data_type,'_',
+#                                  num_seeds, '_',k_folds, '_', is_gen ,'_',model_type,'.rda'))
 
-# read trainig  set 
-cases_450 <- readRDS(paste0('transform_data/', 'cases_450_',which_methyl, '.rda'))
-# read validation set 
-con_transform <- readRDS(paste0('transform_data/', 'con_transform_',which_methyl, '.rda'))
+# # read associated lfs bumps
+# lfs_bump_probes <- readRDS(paste0('transform_data_cv/', 'lfs_bumps_', data_type, '_.rda'))
+# #################
 
-# read validation set 
-valid_transform <- readRDS(paste0('transform_data/', 'valid_transform_',which_methyl,'.rda'))
-# read wt controls 
-con_wt <- readRDS(paste0('transform_data/', 'con_wt_',which_methyl, '.rda'))
-# read mut controls 
-con_mut <- readRDS(paste0('transform_data/', 'con_mut_',which_methyl,'.rda'))
-
-# load model_params
-model_params <- readRDS(paste0('transform_data_test/', 'model_params_',which_methyl,'_',
-                               num_seeds, '_',k_folds, '_', is_gen ,'_', model_type, '.rda'))
-
-# load optimal_cutoff
-optimal_cutoff <- readRDS(paste0('transform_data_test/', 'optimal_cutoff_',which_methyl,'_',
-                                 num_seeds, '_',k_folds, '_', is_gen ,'.rda'))
-
-# read associated lfs bumps
-lfs_bump_probes <- readRDS(paste0('transform_data/', 'lfs_bumps_', which_methyl, '_', '.rda'))
-#################
+# remove cancer signature
+bh_feats <- bump_hunter(dat_1 = cases_450, 
+                        dat_2 = con_mut , 
+                        bump = 'cancer', 
+                        boot_num = 5, 
+                        beta_thresh = beta_thresh,
+                        methyl_type = methyl_type,
+                        g_ranges = g_ranges)
 
 # combine call controls 
 con_transform <- rbind(con_transform, 
@@ -90,180 +145,92 @@ con_transform <- rbind(con_transform,
                        con_wt)
 rm(con_mut, con_wt)
 
+# get intersect_names
+intersect_names <- names(cases_450)[grepl('^cg', names(cases_450))]
+
+# get feature list
+colnames(bh_feats)[1] <- 'chr'
+remove_features <- inner_join(bh_feats, g_ranges)$probe
+
+# take remove features out of colnames 
+bh_features <- intersect_names[!intersect_names %in% remove_features]
+
+# subset all data by bh_features
+cases_450 <- remove_cancer_feats(cases_450, bh_feats = bh_features)
+con_transform <- remove_cancer_feats(con_transform, bh_feats = bh_features)
+valid_transform <- remove_cancer_feats(valid_transform, bh_feats = bh_features)
+
+
 # get s_num and alpha_value
-s_num <- round(model_params[[1]], 3)
-alpha_num <- round(model_params[[2]], 2)
-
-test_model <- function(cases, 
-                       controls, 
-                       valid, 
-                       model_type,
-                       trained_lambda,
-                       gender,
-                       tech,
-                       age_cutoff,
-                       cv_lambda,
-                       alpha_value, 
-                       lambda_value,
-                       bh_features) {
+if(model_type == 'enet'){
+  # s_num = mean_lambda
+  s_num = 0.157
+  # s_num <- round(model_params[[1]], 3)
+  # alpha_num <- round(model_params[[2]], 2)
+  # 
+  # creat list to store results for alpha
+  result_list <- list()
+  con_list <- list()
+  valid_list <- list()
   
-  # get intersection of bh features and real data
-  bh_features <- as.character(unlist(bh_features))
+  alpha_values <- (1:10/10)
   
-  intersected_feats <- intersect(bh_features, colnames(cases))
-  
-  if(gender) {
-    intersected_feats <- c('Female', 'Male', intersected_feats)
-  }
-  if (tech) {
-    intersected_feats <- c('450k', '850k', intersected_feats)
-  }
-  
-  
-  
-  # get outcomes
-  cases_y <- as.factor(ifelse(cases$age_diagnosis < age_cutoff, 'positive', 'negative'))
-  valid_y <- as.factor(ifelse(valid$age_diagnosis < age_cutoff, 'positive', 'negative')) 
-  controls_y <-  as.factor(ifelse(controls$age_sample_collection < age_cutoff, 'positive', 'negative'))
-  controls_clin <- controls[, !grepl('^cg', colnames(controls))]
-  valid_clin <- valid[, !grepl('^cg', names(valid))]
-  
-  # get model data
-  cases <- cases[, intersected_feats]
-  controls <- controls[, intersected_feats]
-  valid <- valid[, intersected_feats]
-  
-  # store fixed values
-  best_alpha <- alpha_value
-
-  # set parameters for training model
-  type_family <- 'binomial'
-  type_measure <- 'auc'
-  nfolds = 5
-  
-  # loop runs initially because temp.non_zero coefficient <3 and then stops 
-  # usually after one iteration because the nzero variable selected by lambda is greater that 3. if it keeps looping
-  # it they are never greater than 1, then the model does not converge. 
-  elastic_net.cv_model = cv.glmnet(x = as.matrix(cases)
-                                   , y =  cases_y
-                                   , alpha = alpha_value
-                                   , type.measure = type_measure
-                                   , family = type_family
-                                   , standardize=FALSE
-                                   , nlambda = 100
-                                   , nfolds = nfolds
-                                   , parallel = TRUE)
-  
+  for(i in 1:length(alpha_values)){
+    alpha_num <- alpha_values[i]
     
-  
-    # get outcome variables and clin variables
-    lambda_s <- elastic_net.cv_model$lambda.min
-    lambda_s_train <- lambda_value
-    temp.min_lambda_index = which(elastic_net.cv_model$lambda == elastic_net.cv_model$lambda.min) 
+    message('working on alpha = ', alpha_num)
+    result_list[[i]] <- test_model_enet(cases = cases_450,
+                                   controls = con_transform,
+                                   valid = valid_transform,
+                                   age_cutoff = age_cutoff,
+                                   gender = gender,
+                                   tech = tech,
+                                   cv_lambda = trained_lambda,
+                                   alpha_value = alpha_num,
+                                   lambda_value = s_num,
+                                   bh_features = bh_features)
     
-    # # number of non zero coefficients at that lambda    
-    temp.non_zero_coeff = elastic_net.cv_model$nzero[temp.min_lambda_index] 
-
-  # print(temp.non_zero_coeff)  
-  
-  model  = glmnet(x = as.matrix(cases)
-                  , y =  cases_y
-                  ,alpha = best_alpha
-                  ,standardize=FALSE
-                  ,nlambda = 100
-                  ,family = type_family)
-  
-  
-  # Predictions on controls data
-  
-  if(cv_lambda){
-    # This returns 100 prediction with 1-100 lambdas
-    test.predictions_con <- predict.glmnet(model, 
-                                                data.matrix(controls),
-                                                s = lambda_s_train)
-    
-  } else {
-    # This returns 100 prediction with 1-100 lambdas
-    temp_test.predictions_con <- predict(model, 
-                                           data.matrix(controls),
-                                           type = 'response')
-    # get predictions with corresponding lambda.
-    test.predictions_con <- temp_test.predictions_con[, temp.min_lambda_index]
+    con_list[[i]] <- result_list[[i]][[1]]
+    valid_list[[i]] <- result_list[[i]][[2]]
     
   }
   
-  # combine predictions and real labels 
-  temp_dat_con <- as.data.frame(cbind(controls_age_pred = test.predictions_con, controls_age_label = controls_y, controls_clin))
-  temp_dat_con$alpha <- best_alpha
-  temp_dat_con$non_zero <- temp.non_zero_coeff
   
-  if(cv_lambda){
-    # This returns 100 prediction with 1-100 lambdas
-    test.predictions_valid <- predict.glmnet(model, 
-                                           data.matrix(valid),
-                                           type = 'response',
-                                           s = lambda_s_train)
+  
+  temp_con <- do.call('rbind', con_list)
+  temp_valid <- do.call('rbind', valid_list)
+  
+  # read in cases_450
+  saveRDS(temp_con, paste0('transform_data_test/', 'con_test_transform_',method,'_',size,'_',is_gen, '_', model_type,'.rda'))
+  
+  saveRDS(temp_valid, paste0('transform_data_test/', 'valid_test_transform_',method,'_',size,'_',is_gen, '_', model_type,'.rda'))
+  
+  
+} else {
+  
+  
+  result_list <- test_model_rf(cases = cases_450,
+                               controls = con_transform,
+                               valid = valid_transform,
+                               age_cutoff = age_cutoff,
+                               gender = gender,
+                               tech = tech,
+                               bh_features = bh_features)
+  
+    temp_valid <- result_list[[1]]
+    temp_con <- result_list[[2]]
+    temp_importance  <- result_list[[3]]
     
-  } else {
-    # This returns 100 prediction with 1-100 lambdas
-    temp_test.predictions_valid <- predict(model, 
-                                         data.matrix(valid),
-                                         type = 'response')
-    # get predictions with corresponding lambda.
-    test.predictions_valid <- temp_test.predictions_valid[, temp.min_lambda_index]
     
-  }
-  
-  # combine predictions and real labels 
-  temp_dat_valid <- as.data.frame(cbind(valid_age_pred = test.predictions_valid, valid_age_label = valid_y, valid_clin))
-  temp_dat_valid$alpha <- best_alpha
-  temp_dat_valid$non_zero <- temp.non_zero_coeff
-  
-  
-  
-  return(list(temp_dat_con, temp_dat_valid))
-  
-  
+    saveRDS(temp_con, paste0('transform_data_test/', 'con_test_transform',method,'_',size,'_',is_gen, '_', model_type,'.rda'))
+    
+    saveRDS(temp_valid, paste0('transform_data_test/', 'valid_test_transform',method,'_',size,'_',is_gen, '_', model_type,'.rda'))
+    
+    saveRDS(temp_importance, paste0('transform_data_test/', 'importance_transform',method,'_',size,'_',is_gen, '_', model_type,'.rda'))
+    
 }
 
-# creat list to store results for alpha
-result_list <- list()
-con_list <- list()
-valid_list <- list()
-
-alpha_values <- (1:10/10)
-
-for(i in 1:length(alpha_values)){
-  alpha_num <- alpha_values[i]
   
-  message('working on alpha = ', alpha_num)
-  result_list[[i]] <- test_model(cases = cases_450,
-                                 controls = con_transform,
-                                 valid = valid_transform,
-                                 model_type = model_type,
-                                 age_cutoff = age_cutoff,
-                                 gender = gender,
-                                 tech = tech,
-                                 cv_lambda = trained_lambda,
-                                 alpha_value = alpha_num,
-                                 lambda_value = s_num,
-                                 bh_features = lfs_bump_probes)
   
-  con_list[[i]] <- result_list[[i]][[1]]
-  valid_list[[i]] <- result_list[[i]][[2]]
   
-}
 
-
-temp_con <- do.call('rbind', con_list)
-temp_valid <- do.call('rbind', valid_list)
-
-
-##########
-# validation set
-##########
-
-# read in cases_450
-saveRDS(temp_con, paste0('transform_data_test/', 'con_test_transform',which_methyl, '_', is_gen, '_',is_lambda,'_', model_type,'.rda'))
-
-saveRDS(temp_valid, paste0('transform_data_test/', 'valid_test_transform',which_methyl, '_', is_gen,'_',is_lambda, '_', model_type,'.rda'))

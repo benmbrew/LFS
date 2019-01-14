@@ -1,24 +1,19 @@
-# This scrip will analyze cross validation error and find optimal cut off for classification
-# https://ethen8181.github.io/machine-learning/unbalanced/unbalanced.html
-# https://hopstat.wordpress.com/2014/12/19/a-small-introduction-to-the-rocr-package/
-# https://pat-s.github.io/mlr/articles/tutorial/devel/roc_analysis.html
+# source functions script
+source('helper_functions.R')
+
+# load libraries
 library(plotly)
 library(scatterplot3d)
-library(car)
-library(rgl)
-library(ROCR)
-library(caret)
-library(pROC)
-library(dplyr)
+library(tidyverse)
 library(grid)
 library(broom)
-library(tidyr)
 library(scales)
 library(gridExtra)
 library(data.table)
-library(dplyr)
+library(doParallel)
 
-source('helper_functions.R')
+# register other cpus
+registerDoParallel(2)
 
 
 # set fixed variables
@@ -26,7 +21,7 @@ size = 'full'
 model_type = 'rf'
 gender = FALSE
 method = 'noob'
-combat = 'normal'
+combat = 'combat_sen'
 which_methyl = 'beta'
 beta_thresh = 0.01
 optimal_cutoff = 0.5
@@ -35,7 +30,6 @@ optimal_cutoff = 0.5
 age_cutoff = 72
 trained_lambda = FALSE
 tech = FALSE
-
 
 
 if(trained_lambda){
@@ -53,16 +47,16 @@ if(gender){
 
 if(model_type == 'enet'){
   # read in cases_450
-  temp_con <-readRDS(paste0('data_test/', 'con_test_',method,'_',size,'_',is_gen, '_', is_lambda, '_',combat,'_', model_type,'.rda'))
+  temp_con <-readRDS(paste0('pc_data_test/', 'con_test',method,'_',size,'_',is_gen,'_',combat,'_', model_type,'.rda'))
   
-  temp_valid <- readRDS(paste0('data_test/', 'valid_test_',method,'_',size,'_',is_gen,'_', is_lambda, '_',combat, '_', model_type,'.rda'))
+  temp_valid <- readRDS(paste0('pc_data_test/', 'valid_test',method,'_',size,'_',is_gen, '_',combat, '_', model_type,'.rda'))
   
 } else {
-  temp_con <- readRDS(paste0('data_test/', 'con_test_', method,'_',size,'_',is_gen, '_',combat,'_', model_type,'.rda'))
+  temp_con <- readRDS(paste0('pc_data_test/', 'con_test_pc', method,'_',size,'_',is_gen,'_',combat,'_', model_type,'.rda'))
   
-  temp_valid <- readRDS(paste0('data_test/', 'valid_test_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'.rda'))
+  temp_valid <- readRDS(paste0('pc_data_test/', 'valid_test_pc',method,'_',size,'_',is_gen,'_',combat,'_', model_type,'.rda'))
   
-  temp_importance <- readRDS(paste0('data_test/', 'importance_', method,'_',size,'_',is_gen,'_',combat,'_', model_type,'.rda'))
+  temp_importance <- readRDS(paste0('pc_data_test/', 'importance_pc',method,'_',size,'_',is_gen,'_',combat,'_', model_type,'.rda'))
   
 }
 
@@ -79,16 +73,16 @@ if(model_type == 'enet'){
   
 }
 
-write.csv(temp_group, paste0('~/Desktop/lfs_plots_jan_2019/test/','con_test_', method,'_',size,'_',is_gen, '_', is_lambda, '_',combat,'_', model_type,'.csv'))
+write.csv(temp_group, paste0('~/Desktop/lfs_plots_jan_2019/test_pc/','con_test_', method,'_',size,'_',is_gen, '_', is_lambda, '_',combat,'_', model_type,'.csv'))
 
 if(model_type == 'enet'){
   # remove duplicates
   temp <- get_acc_val(temp_valid, thresh = 0.5)
   temp <- temp[order(temp$acc, decreasing = TRUE),]
-  write.csv(temp_group, paste0('~/Desktop/lfs_plots_jan_2019/test/','val_test_', method,'_',size,'_',is_gen, '_', is_lambda, '_',combat,'_', model_type,'.csv'))
+  write.csv(temp_group, paste0('~/Desktop/lfs_plots_jan_2019/test_pc/','val_test_', method,'_',size,'_',is_gen, '_', is_lambda, '_',combat,'_', model_type,'.csv'))
   
 } else {
-  write.csv(temp_valid, paste0('~/Desktop/lfs_plots_jan_2019/test/','val_test_', method,'_',size,'_',is_gen, '_', is_lambda, '_',combat,'_', model_type,'.csv'))
+  write.csv(temp_valid, paste0('~/Desktop/lfs_plots_jan_2019/test_pc/','val_test_', method,'_',size,'_',is_gen, '_', is_lambda, '_',combat,'_', model_type,'.csv'))
   
 }
 

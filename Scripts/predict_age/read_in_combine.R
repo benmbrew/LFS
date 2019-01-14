@@ -6,46 +6,35 @@
 path_to_cases_tor <- '../../Data/methyl_data/cases_toronto'
 path_to_cases_mon <- '../../Data/methyl_data/cases_montreal'
 path_to_controls <- '../../Data/methyl_data/controls'
-path_to_valid <- '../../Data/methyl_data/validation'
+
+
+# get functions
+source('all_functions.R')
+
+load('~/Desktop/temp_450.RData')
+load('~/Desktop/temp_850.RData')
+
+rm(rgControls, rgValid)
 
 # set preprocessing method
 method <- 'noob'
 methyl_type <- 'beta'
 
-# get functions
-source('all_functions.R')
-
-##########
-# read in meth array - Data/methyl_data/cases_toronto, cases_montreal, controls, validation
-##########
-
-# cases 
-rgCasesT <- read.metharray.exp(path_to_cases_tor, recursive = T)
-rgCasesM <- read.metharray.exp(path_to_cases_mon, recursive = T)
-
-# combine cases arrays 
-rgCases <- combineArrays(rgCasesT, rgCasesM)
-rm(rgCasesT, rgCasesM)
-
-# controls
-rgControls <- read.metharray.exp(path_to_controls, recursive = T)
-
-rgValid <- read.metharray.exp(path_to_valid, recursive = T)
 
 ##########
 # load genomic methyl set (from controls) - you need genetic locations by probe from this object
 ##########
-ratio_set <- readRDS('../../Data/model_data/raw_ratio_set.rda')
+ratio_set <- readRDS('../../Data/g_ranges.rda')
 
-# get granges object
-g_ranges <- as.data.frame(getLocations(ratio_set))
-
-# get probes from rownames
-g_ranges$probe <- rownames(g_ranges)
-
-# remove ch and duplicatee
-g_ranges <- g_ranges[!duplicated(g_ranges$start),]
-g_ranges <- g_ranges[!grepl('ch', g_ranges$probe),]
+# # get granges object
+# g_ranges <- as.data.frame(getLocations(ratio_set))
+# 
+# # get probes from rownames
+# g_ranges$probe <- rownames(g_ranges)
+# 
+# # remove ch and duplicatee
+# g_ranges <- g_ranges[!duplicated(g_ranges$start),]
+# g_ranges <- g_ranges[!grepl('ch', g_ranges$probe),]
 
 ##########
 # read in clinical data
@@ -104,18 +93,7 @@ colnames(id_map_val)[5] <- 'Sample_Plate'
 # clean idmap
 id_map_val <- cleanIdMap(id_map_val)
 
-##########
-# remove outliers (previously determined) from rgset before normalization
-##########
-rgControls <- remove_outliers(rgSet = rgControls,
-                              id_map = id_map_con,
-                              method = 'doesnt_matter',
-                              type = 'controls')
 
-rgValid <- remove_outliers(rgSet = rgValid,
-                           id_map = id_map_val,
-                           method = 'doesnt_matter',
-                           type = 'valid')
 
 # load in gene cpgs
 gene_probes <- read_csv('../../Data/all_gene_cpg_loc.csv')
@@ -126,64 +104,53 @@ gene_probes <- gene_probes[grepl(gene_region, gene_probes$focal_gene_regions),]
 
 gene_probes <- as.character(gene_probes$focal_CpGs[!duplicated(gene_probes$focal_CpGs)])
 
-# dont control for gender in model if using funnorm
-# control for gender if you use raw or noob
-if (method == 'funnorm') {
-  keep_gender <- T
-  keep_controls <- T
-  keep_snps <- T
-} else if (method == 'noob') {
-  keep_gender <- T
-  keep_controls <- T
-  keep_snps <- T
-} else {
-  keep_gender <- 
-    keep_controls <-
-    keep_snps <- F
-}
-
-# preprocess controls and valid
-data_cases <-  preprocessMethod(rgCasesM, preprocess = method, methyl_type = methyl_type)
-data_controls <- preprocessMethod(rg_controls, preprocess = method, methyl_type = methyl_type)
-data_valid <- preprocessMethod(rg_valid, preprocess = method, methyl_type = methyl_type)
-
-
-# cases
+#cases
 rg_cases <- subset_rg_set(rg_set = rgCases,
-                          keep_gender = keep_gender,
-                          keep_controls = keep_controls,
-                          keep_snps = keep_snps,
+                          keep_gender = TRUE,
+                          keep_controls = TRUE,
+                          keep_snps = FALSE,
                           get_island = NULL,
                           get_chr = NULL,
                           get_type = NULL,
                           gene_probes = gene_probes)
-
-# controls
-rg_controls <- subset_rg_set(rg_set = rgControls,
-                             keep_gender = keep_gender,
-                             keep_controls = keep_controls,
-                             keep_snps = keep_snps,
-                             get_island = NULL,
-                             get_chr = NULL,
-                             get_type = NULL,
-                             gene_probes = gene_probes)
-
-# valid
-rg_valid <- subset_rg_set(rg_set = rgValid,
-                          keep_gender = keep_gender,
-                          keep_controls = keep_controls,
-                          keep_snps = keep_snps,
-                          get_island = NULL,
-                          get_chr = NULL,
-                          get_type = NULL,
-                          gene_probes = gene_probes)
+rm(rgCases)
 
 
 
 
-# HERE
 
-colnames(clin)[30] <- 'blah'
+
+
+# combine 450 to 850 controls (casting to 850k technology)
+rg_cases_450_to_850 <- convertArray(rg_cases,
+                          outType = c("IlluminaHumanMethylationEPIC"),
+                          verbose = TRUE)
+
+rg_controls_850_to_450 <- convertArray(rg_controls,
+                                    outType = c("IlluminaHumanMethylation450k"),
+                                    verbose = TRUE)
+
+rg_valid_850_to_450 <- convertArray(rg_val,
+                                       outType = c("IlluminaHumanMethylation450k"),
+                                       verbose = TRUE)
+
+# get overlapping probes
+# get overlapping probes 
+int_names <- intersect(rg_controls@NAMES, rg_cases@NAMES)
+
+rg_cases <- rg_cases[rownames(rg_cases) %in% int_names,]
+rg_controls <- rg_controls[rownames(rg_controls) %in% int_names,]
+rg_val <- rg_val[rownames(rg_val) %in% int_names,]
+
+
+# combine cases and controls
+rg_cases_controls <- combineArrays(rg_cases, rg_controls)
+rg_cases_controls_converted <- combineArrays(rg_cases_450_to_850, rg_controls)
+
+
+# normalize 
+
+
 # get controls
 data_cases1 <- process_rg_set_single(beta_data = data_cases, 
                                      id_map = id_map_cases, 
@@ -193,8 +160,4 @@ data_controls_mod <- process_rg_set_single(beta_data = data_controls,
                                            id_map = id_map_con, 
                                            clin = clin)
 
-# get valid
-data_valid_mod <- process_rg_set_single(beta_data = data_valid, 
-                                        id_map = id_map_val, 
-                                        clin = clin)
 
