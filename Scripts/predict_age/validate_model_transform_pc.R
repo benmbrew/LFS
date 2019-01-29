@@ -1,23 +1,38 @@
+
+
+
 # source functions script
 source('all_functions.R')
 
-# create fixed objects to model and pipeline inputs and saving  
-data_type = 'beta'
-
-if(data_type == 'beta'){
-  beta_thresh = 0.05
-} else {
-  beta_thresh = 0.5
+# remove WT 
+remove_wild_type <- function(m_or_beta_values){
+  m_or_beta_values <- m_or_beta_values[m_or_beta_values$p53_germline == 'MUT',]
+  return(m_or_beta_values)
 }
-remove_leading_pcs = 'first'
+
+
+# set fixed variables
+size = 'full'
+model_type = 'rf'
+gender = FALSE
+method = 'noob'
+methyl_type = 'beta'
+beta_thresh = 0.01
+optimal_cutoff = 0.5
 
 # create objects to indicate method and model details when saving
-gender = FALSE
-tech = FALSE
-how_many_seeds = 20
-how_many_folds = 5
 age_cutoff = 72
-model_type = 'enet'
+trained_lambda = FALSE
+tech = FALSE
+
+
+
+if(trained_lambda){
+  is_lambda <- 'lambda_test'
+} else {
+  is_lambda <- 'lambda_train'
+}
+
 
 if(gender){
   is_gen = 'use_gen'
@@ -25,22 +40,54 @@ if(gender){
   is_gen = 'no_gen'
 }
 
-num_seeds <- paste0('seeds_', how_many_seeds)
-num_folds <- paste0('folds_', how_many_folds)
-k_folds <- how_many_folds
 
-# load model params
-# load lambda
-model_params <- readRDS(paste0('transform_pc_data_cv/results/model_params_', data_type, '_', remove_leading_pcs,'_',
-                               num_seeds, '_', k_folds, '_', is_gen, '_', model_type,'.rda'))
+if(size =='used_bh'){
+  cases_450 <- readRDS(paste0('../../Data/', method,'/cases_450_small_transform_pc.rda'))
+  con_transform <- readRDS(paste0('../../Data/', method,'/con_transform_small_transform_pc.rda'))
+  valid_transform <- readRDS(paste0('../../Data/', method,'/valid_transform_small_transform_pc.rda'))
+  con_wt <- readRDS(paste0('../../Data/', method,'/con_wt_small_transform_pc.rda'))
+  con_mut <- readRDS(paste0('../../Data/', method,'/con_mut_small_transform_pc.rda'))
+  
+} else {
+  
+  cases_450 <- readRDS(paste0('../../Data/', method,'/cases_450_transform_pc.rda'))
+  con_transform <- readRDS(paste0('../../Data/', method,'/con_transform_pc.rda'))
+  valid_transform <- readRDS(paste0('../../Data/', method,'/valid_transform_pc.rda'))
+  con_wt <- readRDS(paste0('../../Data/', method,'/con_wt_transform_pc.rda'))
+  con_mut <- readRDS(paste0('../../Data/', method,'/con_mut_transform_pc.rda'))
+  
+  # add dummy tech variable for data sets with only one, replace family_name
+  names(cases_450)[9] <- 'tech'
+  names(con_transform)[9] <- 'tech'
+  names(valid_transform)[9] <- 'tech'
+  
+  # fill them with Zero
+  cases_450$tech <- '450k'
+  con_transform$tech <- '850k'
+  valid_transform$tech <- '850k'
+  
+  # do the same to con_mut and con_wt
+  names(con_mut)[9] <- 'tech'
+  names(con_wt)[9] <- 'tech'
+  
+  # fill new variable with right tech indication
+  con_mut$tech <- '450k'
+  con_wt$tech <- '450k'
+  
+  # randomly sample from all cgs
+  clin_names <- names(cases_450)[1:10]
+  r_cgs <- sample(names(cases_450)[11:ncol(cases_450)], 3000)
+  cases_450 <- cases_450[c(clin_names, r_cgs)]
+  valid_transform <- valid_transform[c(clin_names, r_cgs)]
+  con_transform <- con_transform[c(clin_names, r_cgs)]
+  con_mut <- con_mut[c(clin_names, r_cgs)]
+  con_wt <- con_wt[c(clin_names, r_cgs)]
+  
+  
+}
 
-mean_lambda <- model_params[1]
 
-# read in all data
-cases_450 <- readRDS(paste0('transform_pc_data/', 'cases_450_pc_', remove_leading_pcs,'_',data_type,'.rda'))
-con_850 <- readRDS( paste0('transform_pc_data/', 'con_850_pc_',remove_leading_pcs,'_',data_type, '.rda'))
-cases_850 <- readRDS(paste0('transform_pc_data/', 'cases_850_pc_',remove_leading_pcs,'_',data_type,'.rda'))
-con_wt <-  readRDS(paste0('transform_pc_data/', 'con_wt_pc_',remove_leading_pcs,'_',data_type, '.rda'))
+
 
 ##########
 # load genomic methyl set (from controls) - you need genetic locations by probe from this object
@@ -56,6 +103,31 @@ g_ranges <- g_ranges[!grepl('ch', g_ranges$probe),]
 
 names(g_ranges)[1] <- 'chr'
 
+# # load lambda
+# model_params <- readRDS(paste0('transform_data_test/model_params_', data_type,  '_',
+#                                num_seeds, '_', k_folds, '_', is_gen, '_', model_type, '_72.rda'))
+# 
+# mean_lambda <- model_params[1]
+
+
+
+
+
+# if(model_type == 'enet'){
+#   # load model_params
+#   model_params <- readRDS(paste0('transform_data_cv/', 'model_params_',data_type,'_',
+#                                  num_seeds, '_',k_folds, '_', is_gen ,'_', model_type, '.rda'))
+#   
+# }
+
+# # load optimal_cutoff
+# optimal_cutoff <- readRDS(paste0('transform_data_test/', 'optimal_cutoff_',data_type,'_',
+#                                  num_seeds, '_',k_folds, '_', is_gen ,'_',model_type,'.rda'))
+
+# # read associated lfs bumps
+# lfs_bump_probes <- readRDS(paste0('transform_data_cv/', 'lfs_bumps_', data_type, '_.rda'))
+# #################
+
 # remove cancer signature
 bh_feats <- bump_hunter(dat_1 = cases_450, 
                         dat_2 = con_mut , 
@@ -66,9 +138,9 @@ bh_feats <- bump_hunter(dat_1 = cases_450,
                         g_ranges = g_ranges)
 
 # combine call controls 
-con_850 <- rbind(con_850, 
-                 con_mut,
-                 con_wt)
+con_transform <- rbind(con_transform, 
+                       con_mut,
+                       con_wt)
 rm(con_mut, con_wt)
 
 # get intersect_names
@@ -83,41 +155,17 @@ bh_features <- intersect_names[!intersect_names %in% remove_features]
 
 # subset all data by bh_features
 cases_450 <- remove_cancer_feats(cases_450, bh_feats = bh_features)
-con_850 <- remove_cancer_feats(con_850, bh_feats = bh_features)
-cases_850 <- remove_cancer_feats(cases_850, bh_feats = bh_features)
+con_transform <- remove_cancer_feats(con_transform, bh_feats = bh_features)
+valid_transform <- remove_cancer_feats(valid_transform, bh_feats = bh_features)
 
-# create objects to indicate method and model details when saving
-gender = FALSE
-tech = FALSE
-how_many_seeds = 20
-how_many_folds = 5
-age_cutoff = 72
-model_type = 'enet'
-trained_lambda = TRUE
-
-if(trained_lambda == TRUE){
-  is_lambda <- 'no_cv_lambda'
-} else {
-  is_lambda <- 'used_cv_lambda'
-}
-
-
-if(gender){
-  is_gen = 'use_gen'
-} else {
-  is_gen = 'no_gen'
-}
-
-num_seeds <- paste0('seeds_', how_many_seeds)
-num_folds <- paste0('folds_', how_many_folds)
-k_folds <- how_many_folds
-
-optimal_cutoff = 0.5
 
 # get s_num and alpha_value
 if(model_type == 'enet'){
-  s_num = mean_lambda
-  s_num = .128
+  # s_num = mean_lambda
+  s_num = 0.157
+  # s_num <- round(model_params[[1]], 3)
+  # alpha_num <- round(model_params[[2]], 2)
+  # 
   # creat list to store results for alpha
   result_list <- list()
   con_list <- list()
@@ -130,8 +178,8 @@ if(model_type == 'enet'){
     
     message('working on alpha = ', alpha_num)
     result_list[[i]] <- test_model_enet(cases = cases_450,
-                                        controls = con_850,
-                                        valid = cases_850,
+                                        controls = con_transform,
+                                        valid = valid_transform,
                                         age_cutoff = age_cutoff,
                                         gender = gender,
                                         tech = tech,
@@ -151,17 +199,17 @@ if(model_type == 'enet'){
   temp_valid <- do.call('rbind', valid_list)
   
   # read in cases_450
-  saveRDS(temp_con, paste0('transform_pc_data_test/', 'con_test',data_type, '_', is_gen, '_', remove_leading_pcs, '_',is_lambda,'_', model_type,'.rda'))
+  saveRDS(temp_con, paste0('transform_data_test/', 'con_test_transform_pc',method,'_',size,'_',is_gen, '_', model_type,'.rda'))
   
-  saveRDS(temp_valid, paste0('transform_pc_data_test/', 'valid_test',data_type, '_', is_gen,'_', remove_leading_pcs,'_',is_lambda, '_', model_type,'.rda'))
+  saveRDS(temp_valid, paste0('transform_data_test/', 'valid_test_transform_pc',method,'_',size,'_',is_gen, '_', model_type,'.rda'))
   
   
 } else {
   
   
   result_list <- test_model_rf(cases = cases_450,
-                               controls = con_850,
-                               valid = cases_850,
+                               controls = con_transform,
+                               valid = valid_transform,
                                age_cutoff = age_cutoff,
                                gender = gender,
                                tech = tech,
@@ -171,11 +219,16 @@ if(model_type == 'enet'){
   temp_con <- result_list[[2]]
   temp_importance  <- result_list[[3]]
   
-  saveRDS(temp_con, paste0('data_test/', 'con_test',data_type, '_', is_gen, '_',base_num,'_',used_combat,'_', model_type,'.rda'))
   
-  saveRDS(temp_valid, paste0('data_test/', 'valid_test',data_type, '_', is_gen, '_',base_num,'_',used_combat,'_', model_type,'.rda'))
+  saveRDS(temp_con, paste0('transform_data_test/', 'con_test_transform_pc',method,'_',size,'_',is_gen, '_', model_type,'.rda'))
   
-  saveRDS(temp_importance, paste0('data_test/', 'importance',data_type, '_', is_gen, '_',base_num,'_',used_combat,'_', model_type,'.rda'))
+  saveRDS(temp_valid, paste0('transform_data_test/', 'valid_test_transform_pc',method,'_',size,'_',is_gen, '_', model_type,'.rda'))
+  
+  saveRDS(temp_importance, paste0('transform_data_test/', 'importance_transform_pc',method,'_',size,'_',is_gen, '_', model_type,'.rda'))
   
 }
+
+
+
+
 

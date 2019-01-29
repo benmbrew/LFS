@@ -4,7 +4,9 @@
 source('all_functions.R')
 
 # create fixed objects to model and pipeline inputs and saving  
-method = 'quan'
+method = 'swan'
+which_methyl <- 'beta'
+beta_thresh = 0.05
 
 # read both data sets 
 all_cases <- readRDS(paste0('../../Data/', method,'/all_cases_beta.rda'))
@@ -28,15 +30,7 @@ con_mut <- all_con_wt[all_con_wt$p53_germline == 'MUT',]
 rm(all_con_wt)
 
 
-# condition on fixed objects to get saving identifiers
-# if(data_type == 'beta'){
-  which_methyl <- 'beta'
-  beta_thresh = 0.05
-#   
-# } else {
-#   which_methyl <- 'm'
-#   beta_thresh= 0.5
-# }
+
 
 ##########
 # read in age probes
@@ -94,6 +88,18 @@ con_transform$age_diagnosis <-
   round(con_transform$age_diagnosis*12, 2)
 con_transform$age_sample_collection <- 
   round(con_transform$age_sample_collection*12, 2)
+
+# controls
+con_mut$age_diagnosis <- 
+  round(con_mut$age_diagnosis*12, 2)
+con_mut$age_sample_collection <- 
+  round(con_mut$age_sample_collection*12, 2)
+
+# controls
+con_wt$age_diagnosis <- 
+  round(con_wt$age_diagnosis*12, 2)
+con_wt$age_sample_collection <- 
+  round(con_wt$age_sample_collection*12, 2)
 
 # valie
 valid_transform$age_diagnosis <- 

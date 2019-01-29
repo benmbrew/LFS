@@ -8,11 +8,12 @@ remove_wild_type <- function(m_or_beta_values){
 
 
 # set fixed variables
-size = 'used_bh'
-model_type = 'enet'
+size = 'full'
+model_type = 'rf'
 gender = TRUE
 method = 'noob'
-combat = 'normal'
+combat = 'combat_1'
+control_age = TRUE
 which_methyl = 'beta'
 beta_thresh = 0.01
 optimal_cutoff = 0.5
@@ -28,6 +29,12 @@ if(trained_lambda){
   is_lambda <- 'lambda_test'
 } else {
   is_lambda <- 'lambda_train'
+}
+
+if(control_age){
+  age_control <- 'age_control'
+} else {
+  age_control <- 'no_age_control'
 }
 
 
@@ -71,7 +78,7 @@ if(size =='used_bh'){
   # fill new variable with right tech indication
   con_mut$tech <- '450k'
   con_wt$tech <- '450k'
-  
+  # 
   # # randomly sample from all cgs
   # clin_names <- names(cases_450)[1:11]
   # r_cgs <- sample(names(cases_450)[12:ncol(cases_450)], 3000)
@@ -82,7 +89,7 @@ if(size =='used_bh'){
   # con_wt <- con_wt[c(clin_names, r_cgs)]
   # 
   
-
+  
 }
 
 
@@ -119,8 +126,7 @@ bh_feats <- bump_hunter(dat_1 = cases_450,
 con_all <- rbind(con_850, 
                  con_mut,
                  con_wt)
-rm(con_mut, con_all)
-rm(con_wt)
+rm(con_mut, con_wt, con_850)
 
 # get intersect_names
 intersect_names <- names(cases_450)[grepl('^cg', names(cases_450))]
@@ -136,6 +142,17 @@ bh_features <- intersect_names[!intersect_names %in% remove_features]
 cases_450 <- remove_cancer_feats(cases_450, bh_feats = bh_features)
 con_all <- remove_cancer_feats(con_all, bh_feats = bh_features)
 cases_850 <- remove_cancer_feats(cases_850, bh_feats = bh_features)
+
+# get age factor to control for age.
+get_age_fac <- function(temp_dat){
+  temp_dat$age_fac <- ifelse(temp_dat$age_sample_collection >= 140, 'age_1', 'age_2')
+  return(temp_dat)
+}
+
+cases_450 <- get_age_fac(cases_450)
+cases_850 <- get_age_fac(cases_850)
+con_all <- get_age_fac(con_all)
+
 
 # age
 cases_450 <- cbind(as.data.frame(class.ind(cases_450$age_fac)), 
@@ -174,11 +191,12 @@ if(model_type == 'enet'){
     
     message('working on alpha = ', alpha_num)
     result_list[[i]] <- test_model_enet(cases = cases_450,
-                                        controls = con_850,
+                                        controls = con_all,
                                         valid = cases_850,
                                         age_cutoff = age_cutoff,
                                         gender = gender,
                                         tech = tech,
+                                        control_age = control_age,
                                         cv_lambda = trained_lambda,
                                         alpha_value = alpha_num,
                                         lambda_value = s_num,
@@ -195,31 +213,32 @@ if(model_type == 'enet'){
   temp_valid <- do.call('rbind', valid_list)
   
   # read in cases_450
-  saveRDS(temp_con, paste0('data_test/', 'con_test_',method,'_',size,'_',is_gen, '_', is_lambda, '_',combat,'_', model_type,'.rda'))
-
-  saveRDS(temp_valid, paste0('data_test/', 'valid_test_',method,'_',size,'_',is_gen,'_', is_lambda, '_',combat, '_', model_type,'.rda'))
+  saveRDS(temp_con, paste0('data_test_train_control/', 'con_test_age',method,'_',size,'_',is_gen, '_', is_lambda, '_',combat,'_', model_type,'.rda'))
+  
+  saveRDS(temp_valid, paste0('data_test_train_control/', 'valid_test_age',method,'_',size,'_',is_gen,'_', is_lambda, '_',combat, '_', model_type,'.rda'))
   
   
 } else {
   
   
   result_list <- test_model_rf(cases = cases_450,
-                               controls = con_850,
+                               controls = con_all,
                                valid = cases_850,
                                age_cutoff = age_cutoff,
                                gender = gender,
                                tech = tech,
+                               control_age = control_age,
                                bh_features = bh_features)
   
   temp_valid <- result_list[[1]]
   temp_con <- result_list[[2]]
   temp_importance  <- result_list[[3]]
   
-  saveRDS(temp_con, paste0('data_test/', 'con_test_', method,'_',size,'_',is_gen, '_',combat,'_', model_type,'.rda'))
+  saveRDS(temp_con, paste0('data_test_train_control/', 'con_test_control_age', method,'_',size,'_',is_gen, '_',combat,'_', model_type,'.rda'))
   
-  saveRDS(temp_valid, paste0('data_test/', 'valid_test_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'.rda'))
+  saveRDS(temp_valid, paste0('data_test_train_control/', 'valid_test_control_age',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'.rda'))
   
-  saveRDS(temp_importance, paste0('data_test/', 'importance_', method,'_',size,'_',is_gen,'_',combat,'_', model_type,'.rda'))
+  saveRDS(temp_importance, paste0('data_test_train_control/', 'importance_control_age', method,'_',size,'_',is_gen,'_',combat,'_', model_type,'.rda'))
   
 }
 

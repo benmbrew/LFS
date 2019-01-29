@@ -12,12 +12,12 @@ remove_wild_type <- function(m_or_beta_values){
 
 # next do swan with standardize and not
 # set fixed variables
-size = 'used_bh'
-model_type = 'rf'
-gender = FALSE
+size = 'full'
+model_type = 'lasso'
+gender = TRUE
 method = 'noob'
 combat = 'normal'
-standardize = TRUE
+standardize = FALSE
 which_methyl = 'beta'
 beta_thresh = 0.05
 optimal_cutoff = 0.5
@@ -45,7 +45,7 @@ if(gender){
 } else {
   is_gen = 'no_gen'
 }
-how_many_seeds = 20
+how_many_seeds = 50
 how_many_folds = 5
 
 
@@ -60,29 +60,32 @@ seed_range <- c(1:how_many_seeds)
 all_test_results <- list()
 importance_results <- list()
 rf_pred_results <- list()
-rf_pred_results_con <- list()
-rf_pred_results_valid <- list()
 rf_important_results <- list()
 
 
 if(size =='used_bh'){
-  cases_450 <-  readRDS(paste0('../../Data/', method,'/cases_450_small_cv', combat,'.rda'))
-  cases_850 <- readRDS(paste0('../../Data/', method,'/cases_850_small_cv', combat,'.rda'))
-  con_mut <- readRDS(paste0('../../Data/', method,'/con_mut_small_cv', combat,'.rda'))
-  con_850 <- readRDS( paste0('../../Data/', method,'/con_850_small_cv', combat,'.rda'))
-  con_wt <- readRDS(paste0('../../Data/', method,'/con_wt_small_cv', combat,'.rda'))
+  cases_450 <-  readRDS(paste0('../../Data/', method,'/cases_450_small_cv_age_combat_', combat,'.rda'))
+  cases_850 <- readRDS(paste0('../../Data/', method,'/cases_850_small_cv_age_combat_', combat,'.rda'))
+  con_mut <- readRDS(paste0('../../Data/', method,'/con_mut_small_cv_age_combat_', combat,'.rda'))
+  con_850 <- readRDS( paste0('../../Data/', method,'/con_850_small_cv_age_combat_', combat,'.rda'))
+  con_wt <- readRDS(paste0('../../Data/', method,'/con_wt_small_cv_age_combat_', combat,'.rda'))
   
 } else {
-  cases_450 <-  readRDS(paste0('../../Data/', method,'/cases_450_cv', combat,'.rda'))
-  cases_850 <- readRDS(paste0('../../Data/', method,'/cases_850_cv', combat,'.rda'))
-  con_mut <- readRDS(paste0('../../Data/', method,'/con_mut_cv', combat,'.rda'))
-  con_850 <- readRDS( paste0('../../Data/', method,'/con_850_cv', combat,'.rda'))
-  con_wt <- readRDS(paste0('../../Data/', method,'/con_wt_cv', combat,'.rda'))
-  
-  
+  cases_450 <-  readRDS(paste0('../../Data/', method,'/cases_450_cv_age_combat_', combat,'.rda'))
+  cases_850 <- readRDS(paste0('../../Data/', method,'/cases_850_cv_age_combat_', combat,'.rda'))
+  con_mut <- readRDS(paste0('../../Data/', method,'/con_mut_cv_age_combat_', combat,'.rda'))
+  con_850 <- readRDS( paste0('../../Data/', method,'/con_850_cv_age_combat_', combat,'.rda'))
+  con_wt <- readRDS(paste0('../../Data/', method,'/con_wt_cv_age_combat_', combat,'.rda'))
+  # 
+  # if(model_type == 'enet'){
+  #   num_probes = 10000
+  # } else {
+  #   num_probes = 5000
+  # }
+  # 
   # # randomly sample from all cgs
   # clin_names <- names(cases_450)[1:12]
-  # r_cgs <- sample(names(cases_450)[13:ncol(cases_450)], 5000)
+  # r_cgs <- sample(names(cases_450)[13:ncol(cases_450)], num_probes)
   # cases_450 <- cases_450[c(clin_names, r_cgs)]
   # con_wt <- con_wt[c(clin_names, r_cgs)]
   # con_mut <- con_mut[c(clin_names, r_cgs)]
@@ -143,9 +146,6 @@ for(random_seed in 1:length(seed_range)) {
     
     # test_data_results
     test_data_results <- list()
-    con_data_results <- list()
-    valid_data_results <- list()
-    
     
     # combine 
     for(i in 1:k_folds) {
@@ -183,22 +183,17 @@ for(random_seed in 1:length(seed_range)) {
       # take remove features out of colnames 
       bh_features <- intersect_names[!intersect_names %in% remove_features]
       
-      if(model_type == 'enet'){
+      if(model_type == 'lasso'){
         # function to predict with all test, controls, controls old, and valid
-        
-        run_enet_test(training_dat = train_cases,
-                      test_dat = test_cases,
-                      controls_dat = controls_full,
-                      valid_dat = cases_850,
-                      age_cutoff = age_cutoff,
-                      alpha_num = alpha_val,
-                      gender = gender,
-                      tech = tech,
-                      bh_features = bh_features,
-                      standardize = standardize)
-        
-        temp_results[[i]] <- mod_results[[i]][[1]]
-        temp_results_con[[i]] <- mod_results[[i]][[2]]
+        mod_result  <- run_lasso_all_test(training_dat = train_cases,
+                                         test_dat = test_cases,
+                                         controls_dat = controls_full,
+                                         valid_dat = cases_850,
+                                         age_cutoff = age_cutoff,
+                                         gender = gender,
+                                         tech = tech,
+                                         bh_features = bh_features,
+                                         standardize = standardize)
       } else {
         mod_result  <- run_rf_all_test(training_dat = train_cases,
                                        test_dat = test_cases,
@@ -209,18 +204,8 @@ for(random_seed in 1:length(seed_range)) {
                                        tech = tech,
                                        bh_features = bh_features)
         
-        mod_results[[i]]  <- run_rf_test(training_dat = train_cases,
-                                         test_dat = test_cases,
-                                         controls_dat = controls_full,
-                                         valid_dat = cases_850,
-                                         age_cutoff = age_cutoff,
-                                         gender = gender,
-                                         tech = tech,
-                                         bh_features = bh_features)
-        
-        importance_rf[[i]] <- mod_results[[i]][[2]]
-        temp_results[[i]] <- mod_results[[i]][[1]]
-        temp_results_con[[i]] <- mod_results[[i]][[3]]
+        importance_rf <- mod_result[[2]]
+        mod_result <- mod_result[[1]]
       }
       
       
@@ -229,29 +214,19 @@ for(random_seed in 1:length(seed_range)) {
         importance_results[[i]] <- importance_rf
       }
       
-      test_result$seed <- random_seed
-      test_result$fold <- i
-      con_result$seed <- random_seed
-      con_result$fold <- i
-      valid_result$seed <- random_seed
-      valid_result$fold <- i
-      test_data_results[[i]] <- test_result
-      con_data_results[[i]] <- con_result
-      valid_data_results[[i]] <- valid_result
-      
+      mod_result$seed <- random_seed
+      mod_result$fold <- i
+      test_data_results[[i]] <- mod_result
       print(i)
     }
     
     
     # combine list of case and control result data frames and return all result objects (two dataframes and 4 lists)
-    
+    cv_testing_results <- do.call(rbind, test_data_results)
     
     if(model_type == 'rf'){
-      cv_testing_results <- do.call(rbind, test_data_results)
-      cv_testing_results_con <- do.call(rbind, con_data_results)
-      cv_testing_results_val <- do.call(rbind, valid_data_results)
       cv_importance_results <- do.call(rbind, importance_results)
-      return(list(cv_testing_results, cv_importance_results, cv_testing_results_con, cv_testing_results_val))
+      return(list(cv_testing_results, cv_importance_results))
     } else {
       return(cv_testing_results)
       
@@ -274,8 +249,6 @@ for(random_seed in 1:length(seed_range)) {
                                    g_ranges = g_ranges,
                                    standardize = standardize)
     rf_pred_results[[random_seed]] <- temp_test_results[[1]]
-    rf_pred_results_con[[random_seed]] <- temp_test_results[[3]]
-    rf_pred_results_valid[[random_seed]] <- temp_test_results[[4]]
     rf_important_results[[random_seed]] <- temp_test_results[[2]]
     
     
@@ -304,21 +277,12 @@ for(random_seed in 1:length(seed_range)) {
 
 if(model_type == 'rf'){
   final_dat <- do.call(rbind, rf_pred_results)
-  final_dat_con <- do.call(rbind, rf_pred_results_con)
-  final_dat_val <- do.call(rbind, rf_pred_results_valid)
-  
   final_importance <- do.call(rbind, rf_important_results )
   # # save data
-  saveRDS(final_dat, paste0('pc_data_cv/new_results/', combat,'_' , method, '_',size, '_',
+  saveRDS(final_dat, paste0('age_combat_data_cv/results/', combat,'_' , method, '_',size, '_',
                             num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'.rda'))
-  saveRDS(final_dat_con, paste0('pc_data_cv/new_results/', 'con_', combat,'_' , method, '_',size, '_',
-                            num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'.rda'))
-  
-  saveRDS(final_dat_val, paste0('pc_data_cv/new_results/', 'valid_', combat,'_' , method, '_',size, '_',
-                                num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'.rda'))
-  
   # # save data
-  saveRDS(final_importance, paste0('pc_data_cv/new_results/', 'importance_', combat,'_' ,method, '_',size, '_',
+  saveRDS(final_importance, paste0('age_combat_data_cv/results/', 'importance_', combat,'_' ,method, '_',size, '_',
                                    num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'.rda'))
   
   
@@ -326,7 +290,7 @@ if(model_type == 'rf'){
   final_dat <- do.call(rbind, all_test_results)
   
   # # save data
-  saveRDS(final_dat, paste0('pc_data_cv/new_results/',combat,'_' ,method, '_', size, '_',
+  saveRDS(final_dat, paste0('age_combat_data_cv/results/',combat,'_' ,method, '_', size, '_',
                             num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_', standardize_data,'.rda'))
   
 }

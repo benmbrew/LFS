@@ -1,5 +1,3 @@
-# source functions script
-source('helper_functions.R')
 
 # load libraries
 library(plotly)
@@ -11,25 +9,31 @@ library(scales)
 library(gridExtra)
 library(data.table)
 library(doParallel)
-
+library(pROC)
 # register other cpus
 registerDoParallel(2)
+# Build a ROC object and compute the AUC
 
-size = 'full'
-model_type = 'enet'
+# set fixed variables
+size = 'used_bh'
+model_type = 'rf'
+# standardize = FALSE
+gender = FALSE
 method = 'quan'
-gender = TRUE
-
-methyl_type = 'beta'
-beta_thresh = 0.01
+combat = 'combat_1'
+which_methyl = 'beta'
+beta_thresh = 0.05
 optimal_cutoff = 0.5
+remove_leading_pcs = 'first'
+tech = FALSE
+
 
 # create objects to indicate method and model details when saving
 age_cutoff = 72
 trained_lambda = FALSE
 tech = FALSE
 
-
+source('helper_functions.R')
 
 if(trained_lambda){
   is_lambda <- 'lambda_test'
@@ -44,26 +48,24 @@ if(gender){
   is_gen = 'no_gen'
 }
 
-# read in cases_450
 if(model_type == 'enet'){
-  temp_con <- readRDS(paste0('transform_data_test/', 'con_test_transform_',method,'_',size,'_',is_gen, '_', model_type,'.rda'))
+  # read in cases_450
+  temp_con <- readRDS(paste0('age_combat_data_test/', 'con_test_pc_2',method,'_',size,'_',is_gen,'_',combat,'_', model_type,'.rda'))
   
-  temp_valid <- readRDS(paste0('transform_data_test/', 'valid_test_transform_',method,'_',size,'_',is_gen, '_', model_type,'.rda'))
-  temp_valid <- temp_valid[, c('tm_donor','p53_germline','valid_age_label',  'age_diagnosis', 'age_sample_collection', 'valid_age_pred','non_zero', 'alpha')]
-  temp_con <- temp_con[, c('tm_donor','p53_germline','controls_age_label',  'age_sample_collection', 'controls_age_pred','non_zero', 'alpha', 'sentrix_id')]
+  temp_valid <- readRDS(paste0('age_combat_data_test/', 'valid_test_pc_2',method,'_',size,'_',is_gen, '_',combat, '_', model_type,'.rda'))
   
-  temp_con$tech <- ifelse(grepl('^576', temp_con$sentrix_id), '450k', '850k')
-  temp_con$sentrix_id <- NULL
+  
+  temp_valid <- temp_valid[, c('tm_donor','p53_germline','valid_age_label',  'age_diagnosis', 'age_sample_collection', 'valid_age_pred','non_zero', 'alpha', 'tech')]
+  temp_con <- temp_con[, c('tm_donor','p53_germline','controls_age_label',  'age_sample_collection', 'controls_age_pred','non_zero', 'alpha', 'tech')]
+  
 } else {
+  temp_con <- readRDS(paste0('age_combat_data_test/', 'con_test_pc_2', method,'_',size,'_',is_gen,'_',combat,'_', model_type,'.rda'))
   
-  temp_con <- readRDS(paste0('transform_data_test/', 'con_test_transform',method,'_',size,'_',is_gen, '_', model_type,'.rda'))
+  temp_valid <- readRDS(paste0('age_combat_data_test/', 'valid_test_pc_2',method,'_',size,'_',is_gen,'_',combat,'_', model_type,'.rda'))
   
-  temp_valid <- readRDS(paste0('transform_data_test/', 'valid_test_transform',method,'_',size,'_',is_gen, '_', model_type,'.rda'))
-  
-  temp_importance <- readRDS(paste0('transform_data_test/', 'importance_transform',method,'_',size,'_',is_gen,'_',model_type,'.rda'))
-  temp_valid <- temp_valid[, c('tm_donor','p53_germline','positive','real' ,'age_diagnosis', 'age_sample_collection')]
-  temp_con <- temp_con[, c('tm_donor','p53_germline','positive', 'real', 'age_sample_collection')]
-  
+  temp_importance <- readRDS(paste0('age_combat_data_test/', 'importance_pc_2',method,'_',size,'_',is_gen,'_',combat,'_', model_type,'.rda'))
+  temp_valid <- temp_valid[, c('tm_donor','p53_germline','positive','real' ,'age_diagnosis', 'age_sample_collection', 'tech')]
+  temp_con <- temp_con[, c('tm_donor','p53_germline','positive', 'real', 'age_sample_collection', 'tech')]
   
 }
 
@@ -74,7 +76,7 @@ if(model_type == 'enet'){
   temp_group <- temp_con %>% group_by(tm_donor, alpha) %>% 
     filter(p53_germline == 'MUT') %>%
     mutate(mean_pred = mean(controls_age_pred, na.rm = TRUE))
-
+  
   temp_450 <- temp_group[temp_group$tech == '450k',]
   temp_850 <- temp_group[temp_group$tech == '850k',]
   
@@ -92,8 +94,12 @@ if(model_type == 'enet'){
     filter(p53_germline == 'MUT') %>%
     mutate(mean_pred = mean(positive, na.rm = TRUE))
   
-  temp_group$real_label <- as.factor(ifelse(temp_group$age_sample_collection > 72, 'negative', 'positive'))
-
+  temp_450 <- temp_group[temp_group$tech == '450k',]
+  temp_850 <- temp_group[temp_group$tech == '850k',]
+  temp_450$real_label <- as.factor(ifelse(temp_450$age_sample_collection > 72, 'negative', 'positive'))
+  temp_850$real_label <- as.factor(ifelse(temp_850$age_sample_collection > 72, 'negative', 'positive'))
+  temp_450$real_label <- factor(temp_450$real_label, levels = c('positive', 'negative'))
+  temp_850$real_label <- factor(temp_850$real_label, levels = c('positive', 'negative'))
   
 }
 
@@ -107,10 +113,11 @@ if(model_type == 'enet'){
   
 } else {
   # write.csv(temp_valid, paste0('~/Desktop/lfs_plots_jan_2019/test_pc/','val_test_', method,'_',size,'_',is_gen, '_', is_lambda, '_',combat,'_', model_type,'.csv'))
-  size = 'full'
-  model_type = 'ef'
-  gender =TRUE
-  method = 'swan'
+  # size = 'used_bh'
+  # model_type = 'rf'
+  # gender = FALSE
+  # method = 'swan'
+  # combat = 'normal'
   # optimal cutoff
   pred_val <- prediction(temp_valid$positive, temp_valid$real)
   
@@ -125,8 +132,24 @@ if(model_type == 'enet'){
                       cutoff = .55,
                       get_plot = TRUE)
   
-  ConfusionMatrixInfo(data = temp_group,
-                      other_title = 'null set - x axis positive if age of collection is less than 72 months',
+  ConfusionMatrixInfo(data = temp_850,
+                      other_title = 'null set 850 - x axis positive if age of collection is less than 72 months',
+                      predict = 'mean_pred',
+                      actual = 'real_label',
+                      cutoff = .55,
+                      get_plot = TRUE)
+  
+  
+  ConfusionMatrixInfo(data = temp_450,
+                      other_title = 'null set 450 - x axis positive if age of collection is less than 72 months',
+                      predict = 'mean_pred',
+                      actual = 'real_label',
+                      cutoff = .55,
+                      get_plot = TRUE)
+  
+  temp_all <- rbind(temp_450, temp_850)
+  ConfusionMatrixInfo(data = temp_all,
+                      other_title = 'null set 450 - x axis positive if age of collection is less than 72 months',
                       predict = 'mean_pred',
                       actual = 'real_label',
                       cutoff = .55,
@@ -137,7 +160,7 @@ if(model_type == 'enet'){
 
 
 # plots
-alpha = 0.1
+alpha = 0.5
 
 # subset data by 0.2
 temp <- temp[temp$alpha == alpha,]
@@ -152,8 +175,11 @@ perf_s <- performance(prediction.obj = pred_val, measure = 'tpr', x.measure = 'f
 # perf_l <- performance(prediction.obj = pred_long, measure = 'tpr', x.measure = 'fpr')
 
 # plot mean preds
+dev.off()
 plot(perf_s)
 abline(a = 0, b =1)
+roc(temp$valid_age_label, temp$valid_age_pred)
+legend(x = 0.9, y = 0.2, legend = .86)
 
 
 
@@ -178,28 +204,39 @@ plot(cutoffs$cut, cutoffs$tnr,type="l",col="blue",xaxt="n",yaxt="n",xlab="",ylab
 
 ###############
 # get optimal cutoff and confusion matrix info
-size = 'used_bh'
-model_type = 'rf'
-gender = FALSE
-method = 'swan'
-combat = 'normal'
+
 # optimal cutoff
 cost.perf = performance(pred_val, "cost", cost.fp = 1, cost.fn = 1)
 optimal_cutoff <- pred_val@cutoffs[[1]][which.min(cost.perf@y.values[[1]])]
 
 # get confusion matrix function for plotting
 ConfusionMatrixInfo(data = temp,
-                    other_title = 'validation set - x axis positive if age of onset is less than 72 months',
+                    other_title = 'validation set',
                     predict = 'valid_age_pred',
                     actual = 'valid_age_label',
-                    cutoff = .62,
+                    cutoff = .53,
                     get_plot = TRUE)
 
 ConfusionMatrixInfo(data = temp_850,
-                    other_title = 'null set - x axis positive if age of collection is less than 72 months',
+                    other_title = 'cross_validation_null set',
                     predict = 'mean_pred',
                     actual = 'controls_age_label',
-                    cutoff = .62,
+                    cutoff = optimal_cutoff,
+                    get_plot = TRUE)
+
+# get confusion matrix function for plotting
+ConfusionMatrixInfo(data = temp,
+                    other_title = 'cross validation validation set',
+                    predict = 'valid_age_pred',
+                    actual = 'valid_age_label',
+                    cutoff = .53,
+                    get_plot = TRUE)
+
+ConfusionMatrixInfo(data = temp_850,
+                    other_title = 'cross_validation_null set',
+                    predict = 'mean_pred',
+                    actual = 'controls_age_label',
+                    cutoff = .53,
                     get_plot = TRUE)
 
 
@@ -209,9 +246,10 @@ dat_sample$real_label <- as.character(dat_sample$real_label)
 # get cost function by specifying cost before
 cost_fp <- 1
 cost_fn <- 1
-roc_info <- ROCInfo(data = dat_sample,
-                    predict = 'mean_preds',
-                    actual = 'real_label',
+roc_info <- ROCInfo(data = temp,
+                    predict = 'valid_age_pred',
+                    actual = 'valid_age_label',
+                    other_title = 'validation set',
                     cost.fp = cost_fp,
                     cost.fn = cost_fn)
 
@@ -238,8 +276,8 @@ ggplot(dat_sample, aes(mean_preds)) +
        y = 'Density')
 
 # plot age as a function of prediction
-ggplot(dat_sample,
-       aes(age, mean_preds)) +
+ggplot(temp,
+       aes(age_sample_collection, valid_age_pred)) +
   geom_point() +
   labs(title = 'Age in months vs risk score',
        x = 'Age (months)',

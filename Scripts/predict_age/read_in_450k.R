@@ -53,6 +53,9 @@ clin$ids <-  gsub('A|B|_|-', '', clin$blood_dna_malkin_lab)
 # remove "ids" column because it will be created later.
 clin$ids <- NULL
 
+
+temp <- clin[grepl('4749|4324|3714', clin$tm_donor),]
+
 ##########
 # cases 
 ##########

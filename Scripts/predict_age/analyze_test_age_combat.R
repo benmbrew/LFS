@@ -1,6 +1,5 @@
-# source functions script
-source('helper_functions.R')
 
+source('helper_functions.R')
 # load libraries
 library(plotly)
 library(scatterplot3d)
@@ -16,34 +15,27 @@ library(pROC)
 registerDoParallel(2)
 # Build a ROC object and compute the AUC
 
-# remove WT 
-remove_wild_type <- function(m_or_beta_values){
-  m_or_beta_values <- m_or_beta_values[m_or_beta_values$p53_germline == 'MUT',]
-  return(m_or_beta_values)
-}
-
-# strategy 
-# all methods, both models, both sizes
-# combat only normal, combat_1
-
-# next do swan with standardize and not
-# set fixed variables
 # set fixed variables
 size = 'used_bh'
 model_type = 'rf'
 standardize = FALSE
 gender = FALSE
-method = 'swan'
-combat = 'combat_sen'
-train_alpha = FALSE
-train_lambda = FALSE
-train_cutoff = FALSE
+method = 'noob'
+combat = 'combat_1'
+train_lambda = TRUE
+train_cutoff = TRUE
 mean_lambda = FALSE
 which_methyl = 'beta'
-beta_thresh = 0.05
-alpha_num = 0.7
+beta_thresh = 0.01
+alpha_val = 0.7
+lambda_val = 0.01
 age_cutoff = 72
 tech = FALSE
+
+
+# standardized =FALSE
+
+# create objects to indicate method and model details when saving
 
 if(standardize){
   standardize_data <- 'standardized'
@@ -57,19 +49,20 @@ if(train_lambda){
   is_lambda <- 'lambda_train'
 }
 
-if(train_alpha){
-  is_alpha <- 'alpha_test'
+if(mean_lambda){
+  is_mean_lambda <- 'used_mean_lambda'
 } else {
-  is_alpha <- 'alpha_train'
+  is_mean_lambda <- 'no_mean_lambda'
+  
 }
-
 
 if(gender){
   is_gen = 'use_gen'
 } else {
   is_gen = 'no_gen'
 }
-how_many_seeds = 50
+
+how_many_seeds = 10
 how_many_folds = 5
 
 
@@ -84,77 +77,68 @@ seed_range <- c(1:how_many_seeds)
 if(model_type == 'enet'){
   if(train_lambda){
     
-    lambda_val <- 0.05
+    lambda_val <- 'lambda_on_test'
     
   } else if (mean_lambda) {
-    lambda_val <-  readRDS(paste0('pc_data_cv/mean_lambda',combat,'_' , method, '_', size, '_',
-                                  num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_',alpha_num,'_',beta_thresh,'.rda'))
-    
+    lambda_val <-  readRDS(paste0('final_age_combat_cv/mean_lambda',combat,'_' , method, '_', size, '_',
+                                  num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_',alpha_val,'_',beta_thresh,'.rda'))
   } else {
-    lambda_val <-  readRDS(paste0('pc_data_cv/optimal_lambda',combat,'_' , method, '_', size, '_',
-                                  num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_',alpha_num,'_',beta_thresh,'.rda'))
+    lambda_val <-  readRDS(paste0('final_age_combat_cv/optimal_lambda',combat,'_' , method, '_', size, '_',
+                                  num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_',alpha_val,'_',beta_thresh,'.rda'))
   }
-  
-  s_num = lambda_val
-  
 } 
 
 if(model_type == 'enet'){
   
   if(train_cutoff){
-    optimal_thresh <- readRDS(paste0('pc_data_cv/optimal_cutoff_', combat,'_' , method, '_', size, '_',
-                                     num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_',alpha_num,'_',beta_thresh,'.rda'))
-    
-    # readRDS(paste0('pc_data_cv/mean_cutoff_', combat,'_' , method, '_', size, '_',
-    #                num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_',alpha_num,'_',beta_thresh,'.rda'))
-    # 
+    optimal_thresh <- readRDS(paste0('final_age_combat_cv/optimal_cutoff_', combat,'_' , method, '_', size, '_',
+                                     num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_',alpha_val,'_',beta_thresh,'.rda'))
     
   } else {
     optimal_thresh = 0.5
   }
   
-  if(train_alpha){
-    optimal_alpha <- readRDS(paste0('pc_data_cv/optimal_alpha',combat,'_' , method, '_', size, '_',
-                                    num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_',alpha_num,'_',beta_thresh,'.rda'))
-    
-  } else {
-    optimal_alpha = alpha_num
-  }
-  
 } else {
   
-  
-  optimal_thresh = 0.5
-  
-  
-  
+  if(train_cutoff){
+    optimal_thresh <- readRDS(paste0('final_age_combat_cv/optimal_cutoff_', combat,'_' , method, '_', size, '_',
+                                     num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_',beta_thresh,'.rda'))
+    
+  } else {
+    optimal_thresh = 0.5
+  }
   
 }
+
+s_num <- lambda_val
+alpha_num <- alpha_val
 
 
 if(model_type == 'enet'){
   # read in cases_450
-  temp_con <- readRDS(paste0('pc_data_test/', 'con_test_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_', is_lambda,'_',standardize_data,'_',alpha_num,'_',s_num,'_', is_alpha,'_','.rda'))
-  
-  temp_valid <- readRDS(paste0('pc_data_test/', 'valid_test_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_', is_lambda,'_',standardize_data,'_',alpha_num,'_',s_num,'_', is_alpha,'_','.rda'))
-  
-  temp_mod <- readRDS(paste0('pc_data_test/', 'model_test_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_', is_lambda,'_',standardize_data,'_',alpha_num,'_',s_num,'_', is_alpha,'_','.rda'))
+  # read in cases_450
+  temp_con <- readRDS(paste0('final_age_combat_test/', 'con_test_', method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_', is_lambda,'_',standardize_data,'_',alpha_num,'_',s_num,'_', optimal_thresh,'.rda'))
+  temp_valid <- readRDS(paste0('final_age_combat_test/', 'valid_test_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_', is_lambda,'_',standardize_data,'_',alpha_num,'_',s_num,'_', optimal_thresh,'.rda'))
+  temp_model <- reaadRDS(paste0('final_age_combat_test/', 'model_test_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_', is_lambda,'_',standardize_data,'_',alpha_num,'_',s_num,'_', optimal_thresh,'.rda'))
+
   
   temp_valid <- temp_valid[, c('tm_donor','p53_germline','valid_age_label',  'age_diagnosis', 'age_sample_collection', 'valid_age_pred','non_zero', 'alpha', 'tech')]
   temp_con <- temp_con[, c('tm_donor','p53_germline','controls_age_label',  'age_sample_collection', 'controls_age_pred','non_zero', 'alpha', 'tech')]
   
 } else {
-  temp_con <- readRDS(paste0('pc_data_test/', 'con_test_', method,'_',size,'_',is_gen,'_',combat,'_', model_type,'_',optimal_thresh,'.rda'))
+  temp_con <- readRDS(paste0('final_age_combat_test/', 'con_test_',method,'_',size,'_',is_gen,'_',combat,'_', model_type,'_',optimal_thresh,'.rda'))
   
-  temp_valid <- readRDS(paste0('pc_data_test/', 'valid_test_',method,'_',size,'_',is_gen,'_',combat,'_', model_type,'_',optimal_thresh,'.rda'))
+  temp_valid <- readRDS(paste0('final_age_combat_test/', 'valid_test_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_',optimal_thresh,'.rda'))
   
-  temp_importance <- readRDS(paste0('pc_data_test/', 'importance_',method,'_',size,'_',is_gen,'_',combat,'_', model_type,'_',optimal_thresh,'.rda'))
+  temp_importance <- readRDS(paste0('final_age_combat_test/', 'importance_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_',optimal_thresh,'.rda'))
+  temp_model <- readRDS( paste0('final_age_combat_test/', 'model_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_',optimal_thresh,'.rda'))
+  
   temp_valid <- temp_valid[, c('tm_donor','p53_germline','positive','real' ,'age_diagnosis', 'age_sample_collection', 'tech')]
   temp_con <- temp_con[, c('tm_donor','p53_germline','positive', 'real', 'age_sample_collection', 'tech')]
   
 }
 
-
+optimal_thresh = 0.5
 
 
 # CONTROLS
@@ -168,97 +152,26 @@ if(model_type == 'enet'){
   temp_450 <- temp_group[temp_group$tech == '450k',]
   temp_850 <- temp_group[temp_group$tech == '850k',]
   
-  temp_450$controls_age_label <- factor(temp_450$controls_age_label, levels = c('positive', 'negative'))
-  temp_850$controls_age_label <- factor(temp_850$controls_age_label, levels = c('positive', 'negative'))
+  
+  temp_alpha <- temp_con %>% group_by(alpha) %>% 
+    filter(p53_germline == 'MUT') %>%
+    summarise(mean_pred_under = mean(controls_age_pred[age_sample_collection < 72], na.rm = TRUE),
+              mean_pred_over = mean(controls_age_pred[age_sample_collection > 72], na.rm = TRUE),
+              mean_pred_450 = mean(controls_age_pred[tech == '450k'], na.rm = TRUE),
+              mean_pred_850 = mean(controls_age_pred[tech == '850k'], na.rm = TRUE))
   
   
-  temp_valid$real <- as.factor(ifelse(temp_valid$age_diagnosis <= 72, 'positive', 'negative'))
-  temp_valid$real <- factor(temp_valid$real, levels = c('positive', 'negative'))
-  temp_valid$pred_class <- as.factor(ifelse(temp_valid$valid_age_pred > optimal_thresh, 'positive', 'negative'))
+} else  if (model_type == 'rf'){
+  temp_group <- temp_con %>% group_by(tm_donor) %>% 
+    filter(p53_germline == 'MUT') %>%
+    mutate(mean_pred = mean(positive, na.rm = TRUE))
   
-  temp_valid$pred_class<- factor(temp_valid$pred_class, c('positive', 'negative'))
-  temp_valid$acc <- caret::confusionMatrix(table(temp_valid$pred_class, temp_valid$real))$overall[[1]]
-  acc <- round(unique(temp_valid$acc), 3)
-  # get confusion matrix function for plotting 
-  ConfusionMatrixInfo(data = temp_valid, 
-                      predict = 'valid_age_pred', 
-                      actual = 'real', 
-                      cutoff = optimal_thresh,
-                      other_title = paste0('valid','_',acc ,'_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_', is_lambda,'_',standardize_data,'_',alpha_num,'_',round(s_num, 4),'_', is_alpha),
-                      get_plot = TRUE)
-  
-  # get confusion matrix function for plotting 
-  ConfusionMatrixInfo(data = temp_450, 
-                      predict = 'mean_pred', 
-                      actual = 'controls_age_label', 
-                      cutoff = optimal_thresh,
-                      other_title = paste0('null 450','_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_', is_lambda,'_',standardize_data,'_',alpha_num,'_',round(s_num, 4),'_', is_alpha),
-                      get_plot = TRUE)
-  
-  # get confusion matrix function for plotting 
-  ConfusionMatrixInfo(data = temp_850, 
-                      predict = 'mean_pred', 
-                      actual = 'controls_age_label', 
-                      cutoff = optimal_thresh,
-                      other_title = paste0('null 850','_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_', is_lambda,'_',standardize_data,'_',alpha_num,'_',round(s_num, 4),'_', is_alpha),
-                      get_plot = TRUE)
-  
-  # get dataset of predictions and labels for both small and large data
-  pred_short <- prediction(temp_valid$valid_age_pred, temp_valid$real)
-  # pred_long <- prediction(sub_dat$preds, temp_valid$real)
-  
-  # get performace objects
-  perf_s <- performance(prediction.obj = pred_short, measure = 'tpr', x.measure = 'fpr')
-  # perf_l <- performance(prediction.obj = pred_long, measure = 'tpr', x.measure = 'fpr')
-  
-  # plot mean preds
-  plot(perf_s)
-  abline(a = 0, b =1)
-  temp <- round(roc(temp_valid$real, temp_valid$valid_age_pred)[[9]], 2)
-  legend(x = 0.8, y = 0.2, legend = paste0('AUC = ', temp[[1]]))
-  
-  # plot age as a function of prediction
-  ggplot(temp_valid, 
-         aes(age_sample_collection, valid_age_pred)) + 
-    geom_point() +
-    labs(title = 'Age in months vs risk score',
-         x = 'Age (months)',
-         y = 'Mean risk score') +
-    geom_smooth(method = 'loess')
-  
-  
-} 
-
-
-if (model_type == 'rf'){
-  
-  # optimal_thresh = 0.5
-  
-  # temp_group <- temp_con %>% group_by(tm_donor) %>% 
-  #   filter(p53_germline == 'MUT') %>%
-  #   mutate(mean_pred = mean(positive, na.rm = TRUE))
-  temp_850 <- temp_con[temp_con$tech == '850k',]
-  any(temp_850$p53_germline == 'WT')
-  if(any(temp_850$p53_germline == 'WT')){
-    
-    temp_450_wt <- temp_850[temp_850$p53_germline == 'WT',]
-    temp_850 <- temp_850[temp_850$p53_germline == 'MUT',]
-    temp_450 <- temp_con[temp_con$tech == '450k',]
-    
-    
-  } else {
-    temp_450 <- temp_con[temp_con$tech == '450k',]
-    
-    temp_450_wt <- temp_450[temp_450$p53_germline == 'WT',]
-    temp_450 <- temp_450[temp_450$p53_germline == 'MUT',]
-    
-  }
+  temp_450 <- temp_group[temp_group$tech == '450k',]
+  temp_850 <- temp_group[temp_group$tech == '850k',]
   temp_450$real_label <- as.factor(ifelse(temp_450$age_sample_collection > 72, 'negative', 'positive'))
-  temp_450_wt$real_label <- as.factor(ifelse(temp_450_wt$age_sample_collection > 72, 'negative', 'positive'))
   temp_850$real_label <- as.factor(ifelse(temp_850$age_sample_collection > 72, 'negative', 'positive'))
   temp_450$real_label <- factor(temp_450$real_label, levels = c('positive', 'negative'))
   temp_850$real_label <- factor(temp_850$real_label, levels = c('positive', 'negative'))
-  temp_450_wt$real_label <- factor(temp_450_wt$real_label, levels = c('positive', 'negative'))
   
   temp_valid$pred_class <- as.factor(ifelse(temp_valid$positive > optimal_thresh, 'positive', 'negative'))
   temp_valid$pred_class <- factor(temp_valid$pred_class, levels = c('positive', 'negative'))
@@ -282,15 +195,6 @@ if (model_type == 'rf'){
                       actual = 'real_label',
                       cutoff = optimal_thresh,
                       get_plot = TRUE)
-  
-  ConfusionMatrixInfo(data = temp_450_wt,
-                      other_title = paste0('null 450 wt','_',combat,'_' , method, '_', size, '_',
-                                           num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_',beta_thresh, '_',optimal_thresh),
-                      predict = 'positive',
-                      actual = 'real_label',
-                      cutoff = optimal_thresh,
-                      get_plot = TRUE)
-  
   
   
   ConfusionMatrixInfo(data = temp_850,

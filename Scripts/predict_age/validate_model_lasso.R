@@ -9,10 +9,10 @@ remove_wild_type <- function(m_or_beta_values){
 
 # set fixed variables
 size = 'used_bh'
-model_type = 'enet'
-gender = TRUE
-method = 'noob'
-combat = 'normal'
+model_type = ''
+gender = FALSE
+method = 'quan'
+combat = 'combat_1'
 which_methyl = 'beta'
 beta_thresh = 0.01
 optimal_cutoff = 0.5
@@ -72,17 +72,17 @@ if(size =='used_bh'){
   con_mut$tech <- '450k'
   con_wt$tech <- '450k'
   
-  # # randomly sample from all cgs
-  # clin_names <- names(cases_450)[1:11]
-  # r_cgs <- sample(names(cases_450)[12:ncol(cases_450)], 3000)
-  # cases_450 <- cases_450[c(clin_names, r_cgs)]
-  # cases_850 <- cases_850[c(clin_names, r_cgs)]
-  # con_850 <- con_850[c(clin_names, r_cgs)]
-  # con_mut <- con_mut[c(clin_names, r_cgs)]
-  # con_wt <- con_wt[c(clin_names, r_cgs)]
-  # 
+  # randomly sample from all cgs
+  clin_names <- names(cases_450)[1:11]
+  r_cgs <- sample(names(cases_450)[12:ncol(cases_450)], 3000)
+  cases_450 <- cases_450[c(clin_names, r_cgs)]
+  cases_850 <- cases_850[c(clin_names, r_cgs)]
+  con_850 <- con_850[c(clin_names, r_cgs)]
+  con_mut <- con_mut[c(clin_names, r_cgs)]
+  con_wt <- con_wt[c(clin_names, r_cgs)]
   
-
+  
+  
 }
 
 
@@ -116,11 +116,10 @@ bh_feats <- bump_hunter(dat_1 = cases_450,
                         g_ranges = g_ranges)
 
 # combine call controls 
-con_all <- rbind(con_850, 
+con_850 <- rbind(con_850, 
                  con_mut,
                  con_wt)
-rm(con_mut, con_all)
-rm(con_wt)
+rm(con_mut, con_wt)
 
 # get intersect_names
 intersect_names <- names(cases_450)[grepl('^cg', names(cases_450))]
@@ -134,29 +133,10 @@ bh_features <- intersect_names[!intersect_names %in% remove_features]
 
 # subset all data by bh_features
 cases_450 <- remove_cancer_feats(cases_450, bh_feats = bh_features)
-con_all <- remove_cancer_feats(con_all, bh_feats = bh_features)
+con_850 <- remove_cancer_feats(con_850, bh_feats = bh_features)
 cases_850 <- remove_cancer_feats(cases_850, bh_feats = bh_features)
 
-# age
-cases_450 <- cbind(as.data.frame(class.ind(cases_450$age_fac)), 
-                   cases_450)
 
-# rempove old agevariable 
-cases_450$age_fac <- NULL
-
-# age
-cases_850 <- cbind(as.data.frame(class.ind(cases_850$age_fac)), 
-                   cases_850)
-
-# rempove old agevariable 
-cases_850$age_fac <- NULL
-
-# age
-con_all <- cbind(as.data.frame(class.ind(con_all$age_fac)), 
-                 con_all)
-
-# rempove old agevariable 
-con_all$age_fac <- NULL
 
 # get s_num and alpha_value
 if(model_type == 'enet'){
@@ -167,7 +147,7 @@ if(model_type == 'enet'){
   con_list <- list()
   valid_list <- list()
   
-  alpha_values <- (1:10/10)
+  alpha_values <- 1
   
   for(i in 1:length(alpha_values)){
     alpha_num <- alpha_values[i]
@@ -196,7 +176,7 @@ if(model_type == 'enet'){
   
   # read in cases_450
   saveRDS(temp_con, paste0('data_test/', 'con_test_',method,'_',size,'_',is_gen, '_', is_lambda, '_',combat,'_', model_type,'.rda'))
-
+  
   saveRDS(temp_valid, paste0('data_test/', 'valid_test_',method,'_',size,'_',is_gen,'_', is_lambda, '_',combat, '_', model_type,'.rda'))
   
   

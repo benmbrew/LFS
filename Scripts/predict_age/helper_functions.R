@@ -133,6 +133,24 @@ get_acc_val <- function(temp_dat, thresh){
   return(temp)
 }
  
+
+get_acc_val <- function(temp_dat, thresh){
+  all_alphas <- unique(temp_dat$alpha)
+  result_list <- list()
+  for(i in 1:length(all_alphas)){
+    this_alpha <- all_alphas[i]
+    sub_dat <- temp_dat[temp_dat$alpha == this_alpha,]
+    sub_dat$pred_label <-as.factor(ifelse(sub_dat$preds > thresh, 'positive', 'negative'))
+    sub_dat$pred_label <- factor(sub_dat$pred_label, levels = c('positive', 'negative'))
+    sub_dat$real <- factor(sub_dat$real, levels = c('positive', 'negative'))
+    sub_dat$acc <- caret::confusionMatrix(sub_dat$pred_label, sub_dat$real)$overall[1]
+    result_list[[i]] <- sub_dat
+    print(i)
+  }
+  temp <- do.call('rbind', result_list)
+  return(temp)
+}
+
 get_young_labels <- function(temp_dat, thresh, age){
   all_alphas <- (1:10)/10
   result_list <- list()

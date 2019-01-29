@@ -14,24 +14,20 @@ remove_wild_type <- function(m_or_beta_values){
 # set fixed variables
 size = 'used_bh'
 model_type = 'rf'
+control_age = FALSE
 gender = FALSE
-method = 'noob'
-combat = 'normal'
-standardize = TRUE
+method = 'swan'
+combat = 'combat_sen'
 which_methyl = 'beta'
-beta_thresh = 0.05
-optimal_cutoff = 0.5
+beta_thresh = 0.01
+alpha_val= 0.1
 tech = FALSE
+standardize = FALSE
 
 # create objects to indicate method and model details when saving
 age_cutoff = 72
 trained_lambda = FALSE
 
-if(standardize){
-  standardize_data <- 'standardized'
-} else {
-  standardize_data <- 'not_standardized'
-}
 
 if(trained_lambda){
   is_lambda <- 'lambda_test'
@@ -45,7 +41,7 @@ if(gender){
 } else {
   is_gen = 'no_gen'
 }
-how_many_seeds = 20
+how_many_seeds = 10
 how_many_folds = 5
 
 
@@ -59,10 +55,10 @@ seed_range <- c(1:how_many_seeds)
 # create list to store model
 all_test_results <- list()
 importance_results <- list()
-rf_pred_results <- list()
-rf_pred_results_con <- list()
-rf_pred_results_valid <- list()
-rf_important_results <- list()
+pred_results <- list()
+pred_results_con <- list()
+
+important_results <- list()
 
 
 if(size =='used_bh'){
@@ -78,17 +74,6 @@ if(size =='used_bh'){
   con_mut <- readRDS(paste0('../../Data/', method,'/con_mut_cv', combat,'.rda'))
   con_850 <- readRDS( paste0('../../Data/', method,'/con_850_cv', combat,'.rda'))
   con_wt <- readRDS(paste0('../../Data/', method,'/con_wt_cv', combat,'.rda'))
-  
-  
-  # # randomly sample from all cgs
-  # clin_names <- names(cases_450)[1:12]
-  # r_cgs <- sample(names(cases_450)[13:ncol(cases_450)], 5000)
-  # cases_450 <- cases_450[c(clin_names, r_cgs)]
-  # con_wt <- con_wt[c(clin_names, r_cgs)]
-  # con_mut <- con_mut[c(clin_names, r_cgs)]
-  # con_850 <- con_850[c(clin_names, r_cgs)]
-  # cases_850 <- cases_850[c(clin_names, r_cgs)]
-  # 
 }
 
 # combine controls
@@ -115,9 +100,9 @@ names(g_ranges)[1] <- 'chr'
 
 # save image
 # save.image('~/Desktop/temp_valid.RData')
-# cases_full <- cases_450
-# controls_full <- controls_full
-# valid_full <- cases_850
+cases_full = cases_450
+controls_full = controls_full
+valid_full = cases_850
 for(random_seed in 1:length(seed_range)) {
   # prepare data sets for modelling
   
@@ -132,7 +117,7 @@ for(random_seed in 1:length(seed_range)) {
                         beta_thresh = beta_thresh,
                         methyl_type = methyl_type,
                         g_ranges = g_ranges,
-                        standardize = standardize) {
+                        alpha_val = alpha_val) {
     
     
     
@@ -141,10 +126,14 @@ for(random_seed in 1:length(seed_range)) {
     # get vector of random folds
     fold_vec <- sample(1:k_folds, nrow(cases_full), replace = T)
     
+    # get nrow for tot probes in rf
+    tot_probes <- ncol(cases_full)
     # test_data_results
     test_data_results <- list()
-    con_data_results <- list()
-    valid_data_results <- list()
+    mod_results <- list()
+    importance_rf <- list()
+    temp_results <- list()
+    temp_results_con <- list()
     
     
     # combine 
@@ -183,31 +172,23 @@ for(random_seed in 1:length(seed_range)) {
       # take remove features out of colnames 
       bh_features <- intersect_names[!intersect_names %in% remove_features]
       
+      
       if(model_type == 'enet'){
         # function to predict with all test, controls, controls old, and valid
-        
-        run_enet_test(training_dat = train_cases,
-                      test_dat = test_cases,
-                      controls_dat = controls_full,
-                      valid_dat = cases_850,
-                      age_cutoff = age_cutoff,
-                      alpha_num = alpha_val,
-                      gender = gender,
-                      tech = tech,
-                      bh_features = bh_features,
-                      standardize = standardize)
-        
+        mod_results[[i]]  <- run_enet_test(training_dat = train_cases,
+                                           test_dat = test_cases,
+                                           controls_dat = controls_full,
+                                           valid_dat = cases_850,
+                                           age_cutoff = age_cutoff,
+                                           alpha_num = alpha_val,
+                                           gender = gender,
+                                           tech = tech,
+                                           bh_features = bh_features,
+                                           standardize = standardize)
         temp_results[[i]] <- mod_results[[i]][[1]]
         temp_results_con[[i]] <- mod_results[[i]][[2]]
       } else {
-        mod_result  <- run_rf_all_test(training_dat = train_cases,
-                                       test_dat = test_cases,
-                                       controls_dat = controls_full,
-                                       valid_dat = cases_850,
-                                       age_cutoff = age_cutoff,
-                                       gender = gender,
-                                       tech = tech,
-                                       bh_features = bh_features)
+        
         
         mod_results[[i]]  <- run_rf_test(training_dat = train_cases,
                                          test_dat = test_cases,
@@ -221,41 +202,96 @@ for(random_seed in 1:length(seed_range)) {
         importance_rf[[i]] <- mod_results[[i]][[2]]
         temp_results[[i]] <- mod_results[[i]][[1]]
         temp_results_con[[i]] <- mod_results[[i]][[3]]
+        
       }
       
       
       
-      if(model_type == 'rf'){
-        importance_results[[i]] <- importance_rf
-      }
       
-      test_result$seed <- random_seed
-      test_result$fold <- i
-      con_result$seed <- random_seed
-      con_result$fold <- i
-      valid_result$seed <- random_seed
-      valid_result$fold <- i
-      test_data_results[[i]] <- test_result
-      con_data_results[[i]] <- con_result
-      valid_data_results[[i]] <- valid_result
-      
-      print(i)
     }
-    
-    
-    # combine list of case and control result data frames and return all result objects (two dataframes and 4 lists)
+    library(DescTools)
     
     
     if(model_type == 'rf'){
-      cv_testing_results <- do.call(rbind, test_data_results)
-      cv_testing_results_con <- do.call(rbind, con_data_results)
-      cv_testing_results_val <- do.call(rbind, valid_data_results)
-      cv_importance_results <- do.call(rbind, importance_results)
-      return(list(cv_testing_results, cv_importance_results, cv_testing_results_con, cv_testing_results_val))
+      test_results <- do.call(rbind, temp_results)
+      test_results_con <- do.call(rbind, temp_results_con)
+      
+      final_imp <- do.call(rbind, importance_rf)
+      final_imp$seed <- random_seed
+      test_results$seed <- random_seed
+      test_results_con$seed <- random_seed
+      
+      roc_curve = roc(real ~ positive , data = test_results)
+      
+      # coords(roc=roc_curve, x = "local maximas", ret='threshold')
+      thresh <- as.data.frame(t(coords(roc=roc_curve, x = "all")))
+      thresh <- thresh[order(thresh$threshold, decreasing = FALSE),]
+      optimal_thresh <- thresh$threshold[which(thresh$sensitivity == Closest(thresh$sensitivity, thresh$specificity))][1]
+      
+      test_results$pred_class <- as.factor(ifelse(test_results$positive > 0.5, 'positive', 'negative'))
+      
+      # relevel both factore
+      test_results$pred_class <- factor(test_results$pred_class, c('positive', 'negative'))
+      test_results$real <- factor(test_results$real, c('positive', 'negative'))
+      
+      test_results$accuracy <- caret::confusionMatrix(table(test_results$pred_class, test_results$real))$overall[1]
+      
+      
+      
+      test_results$pred_class_opt <- as.factor(ifelse(test_results$positive > optimal_thresh, 'positive', 'negative'))
+      
+      # relevel both factore
+      test_results$pred_class_opt <- factor(test_results$pred_class_opt, c('positive', 'negative'))
+      test_results$real <- factor(test_results$real, c('positive', 'negative'))
+      
+      test_results$accuracy_opt <- caret::confusionMatrix(table(test_results$pred_class_opt, test_results$real))$overall[1]
+      test_results$tot_probes <- tot_probes
     } else {
-      return(cv_testing_results)
+      # collaspe model_resutl
+      test_results <- do.call(rbind, temp_results)
+      test_results_con <- do.call(rbind, temp_results_con)
+      
+      test_results$seed <- random_seed
+      test_results_con$seed <- random_seed
+      
+      
+      
+      roc_curve = roc(real ~ preds , data = test_results)
+      
+      # coords(roc=roc_curve, x = "local maximas", ret='threshold')
+      thresh <- as.data.frame(t(coords(roc=roc_curve, x = "all")))
+      thresh <- thresh[order(thresh$threshold, decreasing = FALSE),]
+      optimal_thresh <- thresh$threshold[which(thresh$sensitivity == Closest(thresh$sensitivity, thresh$specificity))][1]
+      
+      test_results$pred_class <- as.factor(ifelse(test_results$preds > .5, 'positive', 'negative'))
+      
+      # relevel both factore
+      test_results$pred_class <- factor(test_results$pred_class, c('positive', 'negative'))
+      test_results$real <- factor(test_results$real, c('positive', 'negative'))
+      test_results$accuracy <- caret::confusionMatrix(table(test_results$pred_class, test_results$real))$overall[1]
+      
+      test_results$pred_class_opt <- as.factor(ifelse(test_results$preds > optimal_thresh, 'positive', 'negative'))
+      
+      # relevel both factore
+      test_results$pred_class_opt <- factor(test_results$pred_class_opt, c('positive', 'negative'))
+      test_results$accuracy_opt <- caret::confusionMatrix(table(test_results$pred_class_opt, test_results$real))$overall[1]
+      
+      
+      test_results_con$pred_class <- as.factor(ifelse(test_results_con$preds > optimal_thresh, 'positive', 'negative'))
+      
+      # relevel both factore
+      test_results_con$pred_class <- factor(test_results_con$pred_class, c('positive', 'negative'))
+      
+      test_results_con$optimal_thresh = optimal_thresh
       
     }
+    
+    if(model_type == 'rf'){
+      return(list(test_results, final_imp, test_results_con))
+    } else{
+      return(list(test_results, test_results_con))
+    }
+    
   }
   
   if(model_type == 'rf'){
@@ -272,28 +308,31 @@ for(random_seed in 1:length(seed_range)) {
                                    gender = gender,
                                    beta_thresh = beta_thresh,
                                    g_ranges = g_ranges,
-                                   standardize = standardize)
-    rf_pred_results[[random_seed]] <- temp_test_results[[1]]
-    rf_pred_results_con[[random_seed]] <- temp_test_results[[3]]
-    rf_pred_results_valid[[random_seed]] <- temp_test_results[[4]]
-    rf_important_results[[random_seed]] <- temp_test_results[[2]]
+                                   alpha_val = alpha_val)
+    pred_results[[random_seed]] <- temp_test_results[[1]]
+    important_results[[random_seed]] <- temp_test_results[[2]]
+    pred_results_con[[random_seed]] <- temp_test_results[[3]]
+    
     
     
     message('finished working on random seed = ', random_seed)
   } else {
     
     # run model with 5 k fold cross validation
-    all_test_results[[random_seed]] <- run_model(cases_full = cases_450,
-                                                 controls_full = controls_full,
-                                                 valid_full = cases_850,
-                                                 model_type = model_type,
-                                                 age_cutoff = age_cutoff,
-                                                 k_folds = k_folds,
-                                                 tech = tech,
-                                                 gender = gender,
-                                                 beta_thresh = beta_thresh,
-                                                 g_ranges = g_ranges,
-                                                 standardize = standardize)
+    temp_test_results  <- run_model(cases_full = cases_450,
+                                    controls_full = controls_full,
+                                    valid_full = cases_850,
+                                    model_type = model_type,
+                                    age_cutoff = age_cutoff,
+                                    k_folds = k_folds,
+                                    tech = tech,
+                                    gender = gender,
+                                    beta_thresh = beta_thresh,
+                                    g_ranges = g_ranges,
+                                    alpha_val = alpha_val)
+    
+    pred_results[[random_seed]] <- temp_test_results[[1]]
+    pred_results_con[[random_seed]] <- temp_test_results[[2]]
     
     message('finished working on random seed = ', random_seed)
   }
@@ -303,31 +342,32 @@ for(random_seed in 1:length(seed_range)) {
 
 
 if(model_type == 'rf'){
-  final_dat <- do.call(rbind, rf_pred_results)
-  final_dat_con <- do.call(rbind, rf_pred_results_con)
-  final_dat_val <- do.call(rbind, rf_pred_results_valid)
+  final_dat <- do.call(rbind, pred_results)
+  final_dat_con <- do.call(rbind, pred_results_con)
   
-  final_importance <- do.call(rbind, rf_important_results )
+  final_importance <- do.call(rbind, important_results)
   # # save data
-  saveRDS(final_dat, paste0('pc_data_cv/new_results/', combat,'_' , method, '_',size, '_',
+  # # save data
+  saveRDS(final_dat, paste0('pc_data_cv/newer_results/', combat,'_' , method, '_',size, '_',
                             num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'.rda'))
-  saveRDS(final_dat_con, paste0('pc_data_cv/new_results/', 'con_', combat,'_' , method, '_',size, '_',
-                            num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'.rda'))
-  
-  saveRDS(final_dat_val, paste0('pc_data_cv/new_results/', 'valid_', combat,'_' , method, '_',size, '_',
+  saveRDS(final_dat_con, paste0('pc_data_cv/newer_results/', 'con_', combat,'_' , method, '_',size, '_',
                                 num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'.rda'))
   
   # # save data
-  saveRDS(final_importance, paste0('pc_data_cv/new_results/', 'importance_', combat,'_' ,method, '_',size, '_',
+  saveRDS(final_importance, paste0('pc_data_cv/newer_results/', 'importance_', combat,'_' ,method, '_',size, '_',
                                    num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'.rda'))
   
   
 } else {
-  final_dat <- do.call(rbind, all_test_results)
+  final_dat <- do.call(rbind, pred_results)
+  final_dat_con <- do.call(rbind, pred_results_con)
+  
   
   # # save data
-  saveRDS(final_dat, paste0('pc_data_cv/new_results/',combat,'_' ,method, '_', size, '_',
-                            num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_', standardize_data,'.rda'))
+  saveRDS(final_dat, paste0('pc_data_cv/newer_results/',combat,'_' ,method, '_', size, '_',
+                            num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_', alpha_val,'_',beta_thresh,'.rda'))
+  saveRDS(final_dat_con, paste0('pc_data_cv/newer_results/','con_450_', combat,'_' ,method, '_', size, '_',
+                                num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_', alpha_val,'_',beta_thresh,'.rda'))
   
 }
 

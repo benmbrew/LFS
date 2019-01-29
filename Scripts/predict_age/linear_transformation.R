@@ -2,6 +2,12 @@
 
 # get functions
 source('all_functions.R')
+# remove WT 
+remove_wild_type <- function(m_or_beta_values){
+  m_or_beta_values <- m_or_beta_values[m_or_beta_values$p53_germline == 'MUT',]
+  return(m_or_beta_values)
+}
+
 
 # set data type
 method = 'swan'
@@ -76,7 +82,7 @@ transform_beta_m_values <- function(cases_450 , cases_850, con_450, con_850){
   transform_valid <- linearTransform(shared_cases_450, 
                                      shared_cases_850, 
                                      cases_valid)
-  transform_controls <- linearTransform(shared_cases_con_450, 
+  transform_controls <- linearTransform(shared_cases_450, 
                                         shared_con_850, 
                                         con_valid)
   

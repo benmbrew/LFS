@@ -9,18 +9,17 @@ remove_wild_type <- function(m_or_beta_values){
 
 # set fixed variables
 method = 'swan'
-combat = 'combat_sen'
-remove_leading_pcs = 'first'
+combat = 'normal'
 
 # condition on fixed objects to get saving identifiers
 which_methyl = 'beta'
 beta_thresh = 0.05
 
-cases_450 <- readRDS(paste0('../../Data/', method,'/cases_450_', combat,'.rda'))
-cases_850 <- readRDS(paste0('../../Data/', method,'/cases_850_', combat,'.rda'))
-con_850 <- readRDS(paste0('../../Data/', method,'/con_850_', combat,'.rda'))
-con_mut <- readRDS(paste0('../../Data/', method,'/con_450_', combat,'.rda'))
-con_wt <- readRDS(paste0('../../Data/', method,'/con_wt_', combat,'.rda'))
+cases_450 <- readRDS(paste0('../../Data/', method,'/cases_450_age_combat_', combat,'.rda'))
+cases_850 <- readRDS(paste0('../../Data/', method,'/cases_850_age_combat_', combat,'.rda'))
+con_850 <- readRDS(paste0('../../Data/', method,'/con_850_age_combat_', combat,'.rda'))
+con_mut <- readRDS(paste0('../../Data/', method,'/con_450_age_combat_', combat,'.rda'))
+con_wt <- readRDS(paste0('../../Data/', method,'/con_wt_age_combat_', combat,'.rda'))
 
 ##########
 # read in age probes
@@ -54,14 +53,14 @@ cases_450$gender <- NULL
 
 # gender
 con_850 <- cbind(as.data.frame(class.ind(con_850$gender)), 
-                       con_850)
+                 con_850)
 
 # rempove old tech variable 
 con_850$gender <- NULL
 
 # gender
 cases_850 <- cbind(as.data.frame(class.ind(cases_850$gender)), 
-                         cases_850)
+                   cases_850)
 
 # rempove old tech variable 
 cases_850$gender <- NULL
@@ -135,15 +134,15 @@ names(con_wt)[9] <- 'tech'
 con_mut$tech <- '450k'
 con_wt$tech <- '450k'
 
-saveRDS(cases_450_small, paste0('../../Data/', method,'/cases_450_small_cv', combat,'.rda'))
-saveRDS(cases_850_small, paste0('../../Data/', method,'/cases_850_small_cv', combat,'.rda'))
-saveRDS(con_mut_small, paste0('../../Data/', method,'/con_mut_small_cv', combat,'.rda'))
-saveRDS(con_850_small, paste0('../../Data/', method,'/con_850_small_cv', combat,'.rda'))
-saveRDS(con_wt_small, paste0('../../Data/', method,'/con_wt_small_cv', combat,'.rda'))
+saveRDS(cases_450_small, paste0('../../Data/', method,'/cases_450_small_cv_age_combat_', combat,'.rda'))
+saveRDS(cases_850_small, paste0('../../Data/', method,'/cases_850_small_cv_age_combat_', combat,'.rda'))
+saveRDS(con_mut_small, paste0('../../Data/', method,'/con_mut_small_cv_age_combat_', combat,'.rda'))
+saveRDS(con_850_small, paste0('../../Data/', method,'/con_850_small_cv_age_combat_', combat,'.rda'))
+saveRDS(con_wt_small, paste0('../../Data/', method,'/con_wt_small_cv_age_combat_', combat,'.rda'))
 
-saveRDS(cases_450, paste0('../../Data/', method,'/cases_450_cv', combat,'.rda'))
-saveRDS(cases_850, paste0('../../Data/', method,'/cases_850_cv', combat,'.rda'))
-saveRDS(con_mut, paste0('../../Data/', method,'/con_mut_cv', combat,'.rda'))
-saveRDS(con_850, paste0('../../Data/', method,'/con_850_cv', combat,'.rda'))
-saveRDS(con_wt, paste0('../../Data/', method,'/con_wt_cv', combat,'.rda'))
+saveRDS(cases_450, paste0('../../Data/', method,'/cases_450_cv_age_combat_', combat,'.rda'))
+saveRDS(cases_850, paste0('../../Data/', method,'/cases_850_cv_age_combat_', combat,'.rda'))
+saveRDS(con_mut, paste0('../../Data/', method,'/con_mut_cv_age_combat_', combat,'.rda'))
+saveRDS(con_850, paste0('../../Data/', method,'/con_850_cv_age_combat_', combat,'.rda'))
+saveRDS(con_wt, paste0('../../Data/', method,'/con_wt_cv_age_combat_', combat,'.rda'))
 

@@ -12,14 +12,15 @@ library(pROC)
 library(doParallel)
 library(e1071)
 library(nnet)
-library(glmnet)
-library(PRROC)
-library(ROCR)
-library(survival)
-library(wateRmelon)
-library(sva)
-library(randomForest)
-library(RPMM)
+# library(glmnet)
+# library(PRROC)
+# library(ROCR)
+# library(survival)
+# library(wateRmelon)
+# library(sva)
+# library(randomForest)
+# library(RPMM)
+# library(c060)
 library(RColorBrewer)
 ##################
 
@@ -359,6 +360,34 @@ subset_rg_set <- function(rg_set,
 # combat function
 run_combat <- function(temp_data, type) {
   temp_data <- as.data.frame(temp_data)
+  
+  if(type == 'age'){
+    # create age fac for plotting
+    temp_data$age_fac <- ifelse(temp_data$age_sample_collection > 0 &
+                                 temp_data$age_sample_collection <= 36, 'first_age', 
+                                ifelse(temp_data$age_sample_collection > 36 &
+                                         temp_data$age_sample_collection <= 348, 'second_age','third_age'))
+    # get batch
+    batch_indicator <- as.character(temp_data$age_fac)
+    batch_indicator <- as.factor(batch_indicator)
+  }
+  
+  if(type == 'age2'){
+    # create age fac for plotting
+    temp_data$age_fac <- ifelse(temp_data$age_sample_collection > 0 &
+                                  temp_data$age_sample_collection <= 12, 'first_age', 
+                                ifelse(temp_data$age_sample_collection > 12 &
+                                         temp_data$age_sample_collection <= 36, 'second_age',
+                                       ifelse(temp_data$age_sample_collection > 36 &
+                                                temp_data$age_sample_collection <= 140, 'fourth_age',
+                                              ifelse(temp_data$age_sample_collection > 140 &
+                                                       temp_data$age_sample_collection <= 211, 'fifth_age',
+                                                     ifelse(temp_data$age_sample_collection > 211 &
+                                                              temp_data$age_sample_collection <= 348, 'sixth_age', 'seventh_age')))))
+    # get batch
+    batch_indicator <- as.character(temp_data$age_fac)
+    batch_indicator <- as.factor(batch_indicator)
+  }
   
   if(type == 'tech'){
     # get tech variable variable back to categories 
@@ -924,7 +953,8 @@ run_enet_all_test <- function(training_dat,
                               age_cutoff,
                               gender,
                               tech,
-                              bh_features) {
+                              bh_features,
+                              standardize) {
   
   # get intersection of bh features and real data
   bh_features <- as.character(unlist(bh_features))
@@ -986,7 +1016,7 @@ run_enet_all_test <- function(training_dat,
                                                 , alpha = elastic_net.ALPHA[alpha] # first time with 0.1 and so on
                                                 , type.measure = type_measure
                                                 , family = type_family
-                                                , standardize = FALSE 
+                                                , standardize = standardize
                                                 , nfolds = nfolds 
                                                 , nlambda = 10
                                                 , parallel = TRUE
@@ -1023,7 +1053,7 @@ run_enet_all_test <- function(training_dat,
                                      , alpha = elastic_net.ALPHA[temp.best_alpha_index]
                                      , type.measure = type_measure
                                      , family = type_family
-                                     , standardize=FALSE
+                                     , standardize=standardize
                                      , nlambda = 100
                                      , nfolds = nfolds
                                      , parallel = TRUE
@@ -1050,7 +1080,7 @@ run_enet_all_test <- function(training_dat,
   model  = glmnet(x = as.matrix(training_dat)
                   , y =  train_y
                   ,alpha = elastic_net.ALPHA[temp.best_alpha_index]
-                  ,standardize=FALSE
+                  ,standardize= standardize
                   ,nlambda = 100
                   ,family = type_family)
   
@@ -1059,7 +1089,9 @@ run_enet_all_test <- function(training_dat,
   temp_test.predictions <- predict(model, 
                                    data.matrix(test_dat),
                                    type = 'response')
-  lambda_value_2 <- model$lambda[model$lambda == lambda_value]
+  library(DescTools)
+  new_lambda <- Closest(model$lambda, lambda_value)
+  lambda_value_2 <- model$lambda[model$lambda == new_lambda]
   
   # get predictions with corresponding lambda.
   test.predictions <- temp_test.predictions[, temp.min_lambda_index]
@@ -1074,6 +1106,280 @@ run_enet_all_test <- function(training_dat,
   
   test_results$accuracy <- caret::confusionMatrix(table(test_results$pred_class, test_results$real))$overall[1]
   test_results$alpha <- best_alpha
+  test_results$lambda <- elastic_net.cv_model$lambda.min
+  test_results$non_zero <- temp.non_zero_coeff
+  test_results$lambda_value <- lambda_value
+  test_results$lambda_value_model <- lambda_value_2
+  
+  test_results$tot_probes <- ncol(training_dat)
+  
+  return(test_results)
+  
+}
+
+run_enet_test <- function(training_dat,
+                              test_dat,
+                              controls_dat,
+                              valid_dat,
+                              age_cutoff,
+                              alpha_num,
+                              gender,
+                              tech,
+                              bh_features,
+                              standardize) {
+  # get intersection of bh features and real data
+  bh_features <- as.character(unlist(bh_features))
+  
+  intersected_feats <- intersect(bh_features, colnames(training_dat))
+  
+  if(gender) {
+    intersected_feats <- c('Female', 'Male', intersected_feats)
+  }
+  if (tech) {
+    intersected_feats <- c('450k', '850k', intersected_feats)
+  }
+  
+  # intersected_feats_rand <- intersect(rand_feats, colnames(training_dat))
+  # # get y
+  train_y <- as.factor(ifelse(training_dat$age_diagnosis < age_cutoff, 'positive', 'negative'))
+  test_y <-  as.factor(ifelse(test_dat$age_diagnosis < age_cutoff, 'positive', 'negative'))
+  train_y <- factor(train_y, levels = c('positive', 'negative'))
+  test_y <- factor(test_y, levels = c('positive', 'negative'))
+  
+  sub_con <- controls_dat[controls_dat$tech == '450k',]
+  con_y <- as.factor(ifelse(sub_con$age_sample_collection < age_cutoff, 'positive', 'negative'))
+  con_y <- factor(con_y, levels = c('positive', 'negative'))
+  
+  # get clinical data
+  test_clin <- test_dat[, !grepl('^cg', colnames(test_dat))]
+  con_clin <-sub_con[, !grepl('^cg', colnames(sub_con))]
+  
+  
+  # if(use_offset){
+  #   offsetted_train <- as.numeric(training_dat$age_sample_collection)
+  #   offsetted_test <- as.numeric(test_dat$age_sample_collection)
+  #   
+  # } else {
+  #   offsetted <- NULL
+  # }
+  
+  # get model data
+  training_dat <- training_dat[, intersected_feats]
+  test_dat <- test_dat[, intersected_feats]
+  sub_con <- sub_con[, intersected_feats]
+  
+  
+  # start elastic net tuning
+  N_CV_REPEATS = 2
+  nfolds = 5
+  
+  
+  # print(paste("Best ALPHA:", elastic_net.ALPHA[temp.best_alpha_index])) # print the value for alpha
+  best_alpha <- alpha_num
+  temp.non_zero_coeff = 0
+  temp.loop_count = 0
+  type_measure = 'auc'
+  type_family = 'binomial'
+  # loop runs initially because temp.non_zero coefficient <3 and then stops 
+  # usually after one iteration because the nzero variable selected by lambda is greater that 3. if it keeps looping
+  # it they are never greater than 1, then the model does not converge. 
+  while (temp.non_zero_coeff < 1) { 
+    elastic_net.cv_model = cv.glmnet(x = as.matrix(training_dat)
+                                     , y =  train_y
+                                     , alpha = best_alpha
+                                     , type.measure = type_measure
+                                     , family = type_family
+                                     , standardize=standardize
+                                     , nlambda = 100
+                                     , nfolds = nfolds
+                                     , parallel = TRUE
+    )
+    
+    
+    temp.min_lambda_index = which(elastic_net.cv_model$lambda == elastic_net.cv_model$lambda.min) 
+    lambda_value <- elastic_net.cv_model$lambda.min
+    # # number of non zero coefficients at that lambda    
+    temp.non_zero_coeff = elastic_net.cv_model$nzero[temp.min_lambda_index] 
+    temp.loop_count = temp.loop_count + 1
+    
+    # set seed for next loop iteration
+    as.numeric(Sys.time())-> t 
+    set.seed((t - floor(t)) * 1e8 -> seed) 
+    if (temp.loop_count > 10) {
+      print("diverged")
+      temp.min_lambda_index = 50 # if it loops more than 5 times, then model did not converge
+      break
+    }
+  }# while loop ends 
+  # print(temp.non_zero_coeff)  
+  
+  model  = glmnet(x = as.matrix(training_dat)
+                  , y =  train_y
+                  ,alpha = alpha_num
+                  ,standardize= standardize
+                  ,nlambda = 100
+                  ,family = type_family)
+  
+  
+  # This returns 100 prediction with 1-100 lambdas
+  temp_test.predictions <- predict(model, 
+                                   data.matrix(test_dat),
+                                   type = 'response')
+  
+  # get predictions with corresponding lambda.
+  test.predictions <- temp_test.predictions[, temp.min_lambda_index]
+  
+  # combine predictions and real labels 
+  test_results <- as.data.frame(cbind(preds = test.predictions, real = test_y, test_clin))
+  
+  
+  
+  # controls
+  # This returns 100 prediction with 1-100 lambdas
+  temp_con.predictions <- predict(model, 
+                                   data.matrix(sub_con),
+                                   type = 'response')
+  
+  # get predictions with corresponding lambda.
+  con.predictions <- temp_con.predictions[, temp.min_lambda_index]
+  
+  # combine predictions and real labels 
+  test_results_con <- as.data.frame(cbind(preds = con.predictions, real = con_y, con_clin))
+  
+  # get optimal threshold
+  # creat real label
+  
+  
+  
+  test_results$alpha <- best_alpha
+  test_results$lambda <- elastic_net.cv_model$lambda.min
+  test_results$non_zero <- temp.non_zero_coeff
+  test_results$lambda_value <- lambda_value
+
+  test_results$tot_probes <- ncol(training_dat)
+  
+  test_results_con$alpha <- best_alpha
+  test_results_con$lambda <- elastic_net.cv_model$lambda.min
+  test_results_con$non_zero <- temp.non_zero_coeff
+  test_results_con$lambda_value <- lambda_value
+  
+  test_results_con$tot_probes <- ncol(training_dat)
+  
+  return(list(test_results, test_results_con))
+  
+}
+
+
+run_lasso_all_test <- function(training_dat,
+                              test_dat,
+                              controls_dat,
+                              valid_dat,
+                              age_cutoff,
+                              gender,
+                              tech,
+                              bh_features,
+                              standardize) {
+  
+  # get intersection of bh features and real data
+  bh_features <- as.character(unlist(bh_features))
+  
+  intersected_feats <- intersect(bh_features, colnames(training_dat))
+  
+  if(gender) {
+    intersected_feats <- c('Female', 'Male', intersected_feats)
+  }
+  if (tech) {
+    intersected_feats <- c('batch_1', 'batch_2', intersected_feats)
+  }
+  
+  # intersected_feats_rand <- intersect(rand_feats, colnames(training_dat))
+  # # get y
+  train_y <- as.factor(ifelse(training_dat$age_diagnosis < age_cutoff, 'positive', 'negative'))
+  test_y <-  as.factor(ifelse(test_dat$age_diagnosis < age_cutoff, 'positive', 'negative'))
+  
+  nfolds = 5
+  # get clinical data
+  test_clin <- test_dat[, !grepl('^cg', colnames(test_dat))]
+  
+  # if(use_offset){
+  #   offsetted_train <- as.numeric(training_dat$age_sample_collection)
+  #   offsetted_test <- as.numeric(test_dat$age_sample_collection)
+  #   
+  # } else {
+  #   offsetted <- NULL
+  # }
+  # set parameters for training model
+  type_family <- 'binomial'
+  type_measure <- 'auc'
+  
+  # get model data
+  training_dat <- training_dat[, intersected_feats]
+  test_dat <- test_dat[, intersected_feats]
+  
+  
+  temp.non_zero_coeff = 0
+  temp.loop_count = 0
+  # loop runs initially because temp.non_zero coefficient <3 and then stops 
+  # usually after one iteration because the nzero variable selected by lambda is greater that 3. if it keeps looping
+  # it they are never greater than 1, then the model does not converge. 
+  while (temp.non_zero_coeff < 1) { 
+    elastic_net.cv_model = cv.glmnet(x = as.matrix(training_dat)
+                                     , y =  train_y
+                                     , alpha = 1
+                                     , type.measure = type_measure
+                                     , family = type_family
+                                     , standardize=standardize
+                                     , nlambda = 100
+                                     , nfolds = nfolds
+                                     , parallel = TRUE
+    )
+    
+    
+    temp.min_lambda_index = which(elastic_net.cv_model$lambda == elastic_net.cv_model$lambda.min) 
+    lambda_value <- elastic_net.cv_model$lambda.min
+    # # number of non zero coefficients at that lambda    
+    temp.non_zero_coeff = elastic_net.cv_model$nzero[temp.min_lambda_index] 
+    temp.loop_count = temp.loop_count + 1
+    
+    # set seed for next loop iteration
+    as.numeric(Sys.time())-> t 
+    set.seed((t - floor(t)) * 1e8 -> seed) 
+    if (temp.loop_count > 10) {
+      print("diverged")
+      temp.min_lambda_index = 50 # if it loops more than 5 times, then model did not converge
+      break
+    }
+  }# while loop ends 
+  # print(temp.non_zero_coeff)  
+  
+  model  = glmnet(x = as.matrix(training_dat)
+                  , y =  train_y
+                  ,alpha = 1
+                  ,standardize= standardize
+                  ,nlambda = 100
+                  ,family = type_family)
+  
+  
+  # This returns 100 prediction with 1-100 lambdas
+  temp_test.predictions <- predict(model, 
+                                   data.matrix(test_dat),
+                                   type = 'response')
+  library(DescTools)
+  new_lambda <- Closest(model$lambda, lambda_value)
+  lambda_value_2 <- model$lambda[model$lambda == new_lambda]
+  
+  # get predictions with corresponding lambda.
+  test.predictions <- temp_test.predictions[, temp.min_lambda_index]
+  
+  # combine predictions and real labels 
+  test_results <- as.data.frame(cbind(preds = test.predictions, real = test_y, test_clin))
+  test_results$pred_class <- as.factor(ifelse(test_results$preds > .5, 'positive', 'negative'))
+  
+  # relevel both factore
+  test_results$pred_class <- factor(test_results$pred_class, c('positive', 'negative'))
+  test_results$real <- factor(test_results$real, c('positive', 'negative'))
+  
+  test_results$accuracy <- caret::confusionMatrix(table(test_results$pred_class, test_results$real))$overall[1]
   test_results$lambda <- elastic_net.cv_model$lambda.min
   test_results$non_zero <- temp.non_zero_coeff
   test_results$lambda_value <- lambda_value
@@ -1149,8 +1455,8 @@ linearTransform <- function (temp_450,
 
 # training_dat = train_cases
 # test_dat = test_cases
-# controls_dat = con_transform
-# valid_dat = valid_transform
+# controls_dat = controls_full
+# valid_dat = cases_850
 # age_cutoff = age_cutoff
 # gender = gender
 # tech = tech
@@ -1181,12 +1487,16 @@ run_rf_all_test <- function(training_dat,
   
   # intersected_feats_rand <- intersect(rand_feats, colnames(training_dat))
   # # get y
-  train_y <- as.factor(ifelse(training_dat$age_diagnosis < age_cutoff, 'positive', 'negative'))
-  test_y <-  as.factor(ifelse(test_dat$age_diagnosis < age_cutoff, 'positive', 'negative'))
+  train_y <- factor(as.factor(ifelse(training_dat$age_diagnosis < age_cutoff, 'positive', 'negative')), levels = c('positive', 'negative'))
+  test_y <- factor( as.factor(ifelse(test_dat$age_diagnosis < age_cutoff, 'positive', 'negative')), levels = c('positive', 'negative'))
+  con_y <-  factor(as.factor(ifelse(controls_dat$age_sample_collection < age_cutoff, 'positive', 'negative')), levels = c('positive', 'negative'))
+  valid_y <- factor( as.factor(ifelse(valid_dat$age_diagnosis < age_cutoff, 'positive', 'negative')), levels = c('positive', 'negative'))
   
   
   # get clinical data
   test_clin <- test_dat[, !grepl('^cg', colnames(test_dat))]
+  con_clin <- controls_dat[, !grepl('^cg', colnames(controls_dat))]
+  valid_clin <- valid_dat[, !grepl('^cg', colnames(valid_dat))]
   
   # if(use_offset){
   #   offsetted_train <- as.numeric(training_dat$age_sample_collection)
@@ -1199,6 +1509,9 @@ run_rf_all_test <- function(training_dat,
   # get model data
   training_dat <- training_dat[, intersected_feats]
   test_dat <- test_dat[, intersected_feats]
+  controls_dat<- controls_dat[, intersected_feats]
+  valid_dat <- valid_dat[, intersected_feats]
+  
   
   # determines how you train the model.
   NFOLDS <- 5
@@ -1238,42 +1551,69 @@ run_rf_all_test <- function(training_dat,
   test.predictions <- predict(model, 
                                    data.matrix(test_dat),
                                    type = 'prob')
+  con.predictions <- predict(model, 
+                             data.matrix(controls_dat),
+                             type = 'prob')
+  
+  valid.predictions <- predict(model, 
+                             data.matrix(valid_dat),
+                             type = 'prob')
   
 
 
   
   # combine predictions and real labels 
-  test_results <- as.data.frame(cbind(test.predictions, real = test_y, test_clin))
+  test_results <- as.data.frame(cbind(test.predictions,real = test_y, test_clin))
+  
   test_results$pred_class <- as.factor(ifelse(test_results$positive > .5, 'positive', 'negative'))
+  test_results$pred_class_con <- as.factor(ifelse(test_results$positive > .5, 'positive', 'negative'))
+  test_results$pred_class_val<- as.factor(ifelse(test_results$positive > .5, 'positive', 'negative'))
   
   # relevel both factore
   test_results$pred_class <- factor(test_results$pred_class, c('positive', 'negative'))
   test_results$real <- factor(test_results$real, c('positive', 'negative'))
   
-  test_results$accuracy <- caret::confusionMatrix(table(test_results$pred_class, test_results$real))$overall[1]
   test_results$tot_probes <- ncol(training_dat)
   
+  # controls
+  test_results_con <- as.data.frame(cbind(con.predictions, real_con_y = con_y, con_clin))
+  test_results_con$pred_class <- as.factor(ifelse(test_results_con$positive > .5, 'positive', 'negative'))
+
+  # relevel both factore
+  test_results_con$pred_class <- factor(test_results_con$pred_class, c('positive', 'negative'))
+  test_results_con$real <- factor(test_results_con$real, c('positive', 'negative'))
   
-  return(list(test_results, importance))
+  test_results_con$tot_probes <- ncol(controls_dat)
+  
+  
+  # valid
+  test_results_val <- as.data.frame(cbind(valid.predictions, real_valid_y = valid_y, valid_clin))
+  
+  test_results_val$pred_class <- as.factor(ifelse(test_results_val$positive > .5, 'positive', 'negative'))
+  
+  # relevel both factore
+  test_results_val$pred_class <- factor(test_results_val$pred_class, c('positive', 'negative'))
+  test_results_val$real <- factor(test_results_val$real, c('positive', 'negative'))
+  
+  test_results_val$tot_probes <- ncol(valid_dat)
+  
+  
+  
+  return(list(test_results, importance, test_results_con, test_results_val))
   
 
 }
 
 
-# 
-# training_dat = all_train
-# test_dat = all_test
-# age_cutoff = age_cutoff
-# gender = gender
-# tech = tech
-# alpha_value = alpha_num
-# bh_features = bh_features
-run_enet_surv <- function(training_dat,
-                         test_dat,
-                         age_cutoff,
-                         gender, 
-                         tech,
-                         bh_features) {
+
+run_rf_test <- function(training_dat,
+                            test_dat,
+                            controls_dat,
+                            valid_dat,
+                            age_cutoff,
+                            gender,
+                            tech,
+                            bh_features) {
   
   
   
@@ -1286,9 +1626,138 @@ run_enet_surv <- function(training_dat,
     intersected_feats <- c('Female', 'Male', intersected_feats)
   }
   if (tech) {
+    intersected_feats <- c('450k', '850k', intersected_feats)
+  }
+  
+  # intersected_feats_rand <- intersect(rand_feats, colnames(training_dat))
+  # # get y
+  train_y <- as.factor(ifelse(training_dat$age_diagnosis < age_cutoff, 'positive', 'negative'))
+  test_y <-  as.factor(ifelse(test_dat$age_diagnosis < age_cutoff, 'positive', 'negative'))
+  train_y <- factor(train_y, levels = c('positive', 'negative'))
+  test_y <- factor(test_y, levels = c('positive', 'negative'))
+  
+  sub_con <- controls_dat[controls_dat$tech == '450k',]
+  con_y <- as.factor(ifelse(sub_con$age_sample_collection < age_cutoff, 'positive', 'negative'))
+  con_y <- factor(con_y, levels = c('positive', 'negative'))
+  
+  # get clinical data
+  test_clin <- test_dat[, !grepl('^cg', colnames(test_dat))]
+  con_clin <-sub_con[, !grepl('^cg', colnames(sub_con))]
+  
+  
+  # if(use_offset){
+  #   offsetted_train <- as.numeric(training_dat$age_sample_collection)
+  #   offsetted_test <- as.numeric(test_dat$age_sample_collection)
+  #   
+  # } else {
+  #   offsetted <- NULL
+  # }
+  
+  # get model data
+  training_dat <- training_dat[, intersected_feats]
+  test_dat <- test_dat[, intersected_feats]
+  sub_con <- sub_con[, intersected_feats]
+  
+  # determines how you train the model.
+  NFOLDS <- 5
+  fitControl <- trainControl( 
+    method = "repeatedcv",  # could train on boostrap resample, here use repeated cross validation.
+    number = min(10, NFOLDS),
+    classProbs = TRUE,
+    repeats = 1,
+    allowParallel = TRUE,
+    summaryFunction = twoClassSummary
+    
+  )
+  
+  # mtry: Number of variables randomly sampled as candidates at each split.
+  # ntree: Number of trees to grow.
+  
+  mtry <- sqrt(ncol(training_dat[,colnames(training_dat)]))
+  tunegrid <- expand.grid(.mtry=mtry)
+  
+  model <- train(x = training_dat
+                 , y = train_y
+                 , metric = 'ROC'
+                 , method = "rf"
+                 , trControl = fitControl
+                 , tuneGrid = tunegrid
+                 , importance = T
+                 , verbose = FALSE)
+  
+  temp <- varImp(model)[[1]]
+  importance <- cbind(rownames(temp), temp$positive)
+  importance <- as.data.frame(importance)
+  importance$V2 <- round(as.numeric(as.character(importance$V2)), 2)
+  names(importance) <- c('probe', 'score')
+  
+  # Predictions on test data
+  # This returns 100 prediction with 1-100 lambdas
+  test.predictions <- predict(model, 
+                              data.matrix(test_dat),
+                              type = 'prob')
+  
+  
+  
+  
+  # combine predictions and real labels 
+  test_results <- as.data.frame(cbind(test.predictions, real = test_y, test_clin))
+  
+  # controls
+  con.predictions <- predict(model, 
+                              data.matrix(sub_con),
+                              type = 'prob')
+  
+  
+  
+  
+  # combine predictions and real labels 
+  con_results <- as.data.frame(cbind(con.predictions, real = con_y, con_clin))
+  
+  
+  
+  return(list(test_results, importance, con_results))
+  
+  
+}
+
+
+
+# training_dat = all_450
+# test_dat = all_850
+# age_cutoff = age_cutoff
+# gender = gender
+# tech = tech
+# control_age = control_age
+# alpha_value = alpha_num
+# bh_features = bh_features
+run_enet_surv <- function(training_dat,
+                         test_dat,
+                         fit_type,
+                         age_cutoff,
+                         gender, 
+                         tech,
+                         alpha_value,
+                         control_age,
+                         bh_features) {
+  
+  
+  library(peperr)
+  # get intersection of bh features and real data
+  bh_features <- as.character(unlist(bh_features))
+  
+  intersected_feats <- intersect(bh_features, colnames(training_dat))
+  
+  if(gender) {
+    intersected_feats <- c('Female', 'Male', intersected_feats)
+  }
+  if (tech) {
     intersected_feats <- c('batch_1', 'batch_2', intersected_feats)
   }
   
+  if(control_age){
+    intersected_feats <- c('age_1', 'age_2', intersected_feats)
+  }
   
   # get survival time as days to onset and days to sample collection in one column for training dat
   time_to_event <- training_dat$age_diagnosis
@@ -1298,7 +1767,7 @@ run_enet_surv <- function(training_dat,
   time_to_event[missing_ind] <- time_to_collection[missing_ind]
   
   # get cancer status 
-  cancer_status <- ifelse(training_dat$cancer_diagnosis_diagnoses != 'Unaffected', TRUE, FALSE)
+  cancer_status <- ifelse(training_dat$cancer_diagnosis_diagnoses != 'Unaffected', 1, 0)
   
   # for test dat
   time_to_event_test <- test_dat$age_diagnosis
@@ -1308,10 +1777,18 @@ run_enet_surv <- function(training_dat,
   time_to_event_test[missing_ind_test] <- time_to_collection_test[missing_ind_test]
   
   # get cancer status 
-  cancer_status_test <- ifelse(test_dat$cancer_diagnosis_diagnoses != 'Unaffected', TRUE, FALSE)
+  cancer_status_test <- ifelse(test_dat$cancer_diagnosis_diagnoses != 'Unaffected', 1, 0)
+  
+  # # refactor
+  
+  # cancer_status <- factor(cancer_status, levels = c('positive', 'negative'))
+  # cancer_status_test <- factor(cancer_status_test, levels = c('positive', 'negative'))
+  # 
   
   # get clinical data
   test_clin <- test_dat[, !grepl('^cg', colnames(test_dat))]
+  
+  
 
   # get model data
   training_dat <- training_dat[, intersected_feats]
@@ -1322,73 +1799,107 @@ run_enet_surv <- function(training_dat,
   # get survival object
   surv_outcome_test <- Surv(time_to_event_test,cancer_status_test, type = 'right')
   
-  # fit coxph
-  # start elastic net tuning
-  N_CV_REPEATS = 2
-  nfolds = 5
+  
+  
+  if(fit_type == 'coxph'){
+    training_dat <- as.data.frame(cbind(surv_outcome = surv_outcome, training_dat))
+    # fit coxph
+    library(survival)
+    model <- coxph(surv_outcome ~., data = training_dat)
+    test.predictions <- predict(model, newdata = test_dat, type = 'lp')
+    
+  }
+  
+  if(fit_type == 'rf'){
+    library(rpart)
+    
+    training_dat <- as.data.frame(cbind(surv_outcome = surv_outcome, training_dat))
+    # fit coxph
+    model <- rpart(surv_outcome ~., data = training_dat)
+    test.predictions <- predict(model, newdata = test_dat)
+    
+  }
+  
+  if(fit_type == 'enet'){
+    # fit coxph
+    # start elastic net tuning
+    N_CV_REPEATS = 2
+    nfolds = 5
+    
+    
+    # set parameters for training model
+    type_family <- 'cox'
+    type_measure <- 'deviance'
+    best_alpha <- alpha_value
+    temp.non_zero_coeff = 0
+    temp.loop_count = 0
+    # loop runs initially because temp.non_zero coefficient <3 and then stops 
+    # usually after one iteration because the nzero variable selected by lambda is greater that 3. if it keeps looping
+    # it they are never greater than 1, then the model does not converge. 
+    while (temp.non_zero_coeff < 1) { 
+      elastic_net.cv_model = cv.glmnet(x = as.matrix(training_dat)
+                                       , surv_outcome
+                                       , alpha = best_alpha
+                                       , type.measure = type_measure
+                                       , family = type_family
+                                       , standardize=FALSE
+                                       , nlambda = 100
+                                       , nfolds = nfolds
+                                       , parallel = TRUE
+      )
+      
+      # lambda 
+      temp.min_lambda_index = which(elastic_net.cv_model$lambda == elastic_net.cv_model$lambda.min) 
+      
+      # # number of non zero coefficients at that lambda    
+      temp.non_zero_coeff = elastic_net.cv_model$nzero[temp.min_lambda_index] 
+      temp.loop_count = temp.loop_count + 1
+      
+      # set seed for next loop iteration
+      as.numeric(Sys.time())-> t 
+      set.seed((t - floor(t)) * 1e8 -> seed) 
+      if (temp.loop_count > 10) {
+        print("diverged")
+        temp.min_lambda_index = 50 # if it loops more than 5 times, then model did not converge
+        break
+      }
+    }# while loop ends 
+    # print(temp.non_zero_coeff)  
+    
+    model  = glmnet(x = as.matrix(training_dat)
+                    , surv_outcome
+                    ,alpha = best_alpha
+                    ,standardize=FALSE
+                    ,nlambda = 100
+                    ,family = type_family)
+    
+    
+    # This returns 100 prediction with 1-100 lambdas
+    temp_test.predictions <- predict.coxnet(model, 
+                                            data.matrix(test_dat))
+    
+    
+    # get predictions with corresponding lambda.
+    test.predictions <- temp_test.predictions[, temp.min_lambda_index]
+    
+    
+  }
   
  
-  # set parameters for training model
-  type_family <- 'cox'
-  type_measure <- 'deviance'
-  best_alpha <- alpha_value
-  temp.non_zero_coeff = 0
-  temp.loop_count = 0
-  # loop runs initially because temp.non_zero coefficient <3 and then stops 
-  # usually after one iteration because the nzero variable selected by lambda is greater that 3. if it keeps looping
-  # it they are never greater than 1, then the model does not converge. 
-  while (temp.non_zero_coeff < 1) { 
-    elastic_net.cv_model = cv.glmnet(x = as.matrix(training_dat)
-                                     , surv_outcome
-                                     , alpha = best_alpha
-                                     , type.measure = type_measure
-                                     , family = type_family
-                                     , standardize=FALSE
-                                     , nlambda = 100
-                                     , nfolds = nfolds
-                                     , parallel = TRUE
-    )
     
-    # lambda 
-    temp.min_lambda_index = which(elastic_net.cv_model$lambda == elastic_net.cv_model$lambda.min) 
     
-    # # number of non zero coefficients at that lambda    
-    temp.non_zero_coeff = elastic_net.cv_model$nzero[temp.min_lambda_index] 
-    temp.loop_count = temp.loop_count + 1
-    
-    # set seed for next loop iteration
-    as.numeric(Sys.time())-> t 
-    set.seed((t - floor(t)) * 1e8 -> seed) 
-    if (temp.loop_count > 10) {
-      print("diverged")
-      temp.min_lambda_index = 50 # if it loops more than 5 times, then model did not converge
-      break
-    }
-  }# while loop ends 
-  # print(temp.non_zero_coeff)  
-  
-  model  = glmnet(x = as.matrix(training_dat)
-                  , surv_outcome
-                  ,alpha = best_alpha
-                  ,standardize=FALSE
-                  ,nlambda = 100
-                  ,family = type_family)
+    # combine predictions and real labels 
+    temp_dat <- as.data.frame(cbind(test_pred = test.predictions,  test_clin))
+    temp_dat$alpha = alpha_value
   
   
-  # This returns 100 prediction with 1-100 lambdas
-  temp_test.predictions <- predict.coxnet(model, 
-                                          data.matrix(test_dat))
-  
-  # get predictions with corresponding lambda.
-  test.predictions <- temp_test.predictions[, temp.min_lambda_index]
-  
-  # combine predictions and real labels 
-  temp_dat <- as.data.frame(cbind(test_pred = test.predictions,  test_clin))
   
   ###########################################################################################
-  return(temp_dat)
+  return(list(temp_dat, model))
 
 }
+
+
 
 test_model_enet <- function(cases, 
                             controls, 
@@ -1396,8 +1907,9 @@ test_model_enet <- function(cases,
                             trained_lambda,
                             gender,
                             tech,
+                            control_age,
                             age_cutoff,
-                            cv_lambda,
+                            test_lambda,
                             alpha_value, 
                             lambda_value,
                             bh_features) {
@@ -1413,7 +1925,9 @@ test_model_enet <- function(cases,
   if (tech) {
     intersected_feats <- c('450k', '850k', intersected_feats)
   }
-  
+  if(control_age){
+    intersected_feats <- c('age_1', 'age_2', intersected_feats)
+  }
   
   
   # get outcomes
@@ -1470,7 +1984,7 @@ test_model_enet <- function(cases,
   
   # Predictions on controls data
   
-  if(cv_lambda){
+  if(!test_lambda){
     # This returns 100 prediction with 1-100 lambdas
     # This returns 100 prediction with 1-100 lambdas
     temp_test.predictions_con <- predict(model, 
@@ -1495,7 +2009,7 @@ test_model_enet <- function(cases,
   temp_dat_con$alpha <- best_alpha
   temp_dat_con$non_zero <- temp.non_zero_coeff
   
-  if(cv_lambda){
+  if(!test_lambda){
     # This returns 100 prediction with 1-100 lambdas
     # This returns 100 prediction with 1-100 lambdas
     temp_test.predictions_valid <- predict(model, 
@@ -1522,7 +2036,7 @@ test_model_enet <- function(cases,
   
   
   
-  return(list(temp_dat_con, temp_dat_valid))
+  return(list(temp_dat_con, temp_dat_valid, model))
   
   
 }
@@ -1535,6 +2049,8 @@ test_model_rf <- function(cases,
                           valid, 
                           gender,
                           tech,
+                          control_age,
+                          optimal_cutoff,
                           age_cutoff,
                           bh_features) {
   
@@ -1550,6 +2066,9 @@ test_model_rf <- function(cases,
   }
   if (tech) {
     intersected_feats <- c('batch_1', 'batch_2', intersected_feats)
+  }
+  if(control_age){
+    intersected_feats <- c('age_1', 'age_2', intersected_feats)
   }
   
   # intersected_feats_rand <- intersect(rand_feats, colnames(training_dat))
@@ -1645,7 +2164,7 @@ test_model_rf <- function(cases,
   test_results_valid$accuracy <- caret::confusionMatrix(table(test_results_valid$pred_class, test_results_valid$real))$overall[1]
   test_results_valid$tot_probes <- ncol(cases)
   
-  return(list(test_results_valid, test_results_con,importance))
+  return(list(test_results_valid, test_results_con,importance, model))
   
 }
 

@@ -76,14 +76,14 @@ if(size =='used_bh'){
   con_mut$tech <- '450k'
   con_wt$tech <- '450k'
   
-  # randomly sample from all cgs
-  clin_names <- names(cases_450)[1:10]
-  r_cgs <- sample(names(cases_450)[11:ncol(cases_450)], 3000)
-  cases_450 <- cases_450[c(clin_names, r_cgs)]
-  valid_transform <- valid_transform[c(clin_names, r_cgs)]
-  con_transform <- con_transform[c(clin_names, r_cgs)]
-  con_mut <- con_mut[c(clin_names, r_cgs)]
-  con_wt <- con_wt[c(clin_names, r_cgs)]
+  # # randomly sample from all cgs
+  # clin_names <- names(cases_450)[1:10]
+  # r_cgs <- sample(names(cases_450)[11:ncol(cases_450)], 3000)
+  # cases_450 <- cases_450[c(clin_names, r_cgs)]
+  # valid_transform <- valid_transform[c(clin_names, r_cgs)]
+  # con_transform <- con_transform[c(clin_names, r_cgs)]
+  # con_mut <- con_mut[c(clin_names, r_cgs)]
+  # con_wt <- con_wt[c(clin_names, r_cgs)]
   
   
 }
