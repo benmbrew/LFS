@@ -15,9 +15,9 @@ model_type = 'rf'
 null_450= TRUE
 null_450_all = FALSE
 use_p53 = FALSE
-gender = TRUE
-use_cancer = TRUE
-method = 'quan'
+gender = FALSE
+use_cancer = FALSE
+method = 'noob'
 include_under_6 = FALSE
 combat = 'combat_1'
 alpha_val = 0.1
@@ -178,8 +178,8 @@ if(model_type == 'enet'){
   optimal_thresh = 0.5
   
   
-
-
+  
+  
 }
 
 
@@ -245,7 +245,7 @@ if(use_cancer){
 }
 # load cases
 cases_450 <- as.data.frame(cbind(WT = 0, as.data.frame(class.ind(cases_450$p53_germline)), 
-                   cases_450))
+                                 cases_450))
 
 
 # load cases
@@ -256,7 +256,7 @@ cases_850 <- as.data.frame(cbind(WT = 0, as.data.frame(class.ind(cases_850$p53_g
 
 # load cases
 con_all <- cbind(as.data.frame(class.ind(con_all$p53_germline)), 
-                                 con_all)
+                 con_all)
 
 
 
@@ -384,12 +384,12 @@ if (model_type == 'rf'){
   # get confusion matrix function for plotting
   library(data.table)
   ConfusionMatrixInfo(data = temp_valid,
-                      other_title = '',
+                      other_title = paste0('valid', '_',acc,'_',combat,'_' , method, '_', size, '_',
+                                           num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_',beta_thresh,'_',optimal_thresh ),
                       predict = 'positive',
                       actual = 'real',
                       cutoff = optimal_thresh,
-                      get_plot = TRUE,
-                      data_type = 'valid')
+                      get_plot = TRUE)
   
   ConfusionMatrixInfo(data = temp_con,
                       other_title = paste0('null all','_',combat,'_' , method, '_', size, '_',
@@ -397,28 +397,27 @@ if (model_type == 'rf'){
                       predict = 'positive',
                       actual = 'real',
                       cutoff = optimal_thresh,
-                      get_plot = TRUE,
-                      data_type = 'null')
+                      get_plot = TRUE)
   
   if(use_null_450 == 'used_null_450_all'){
     temp_con_wt <- temp_con[temp_con$WT == 1,]
     temp_con_mut <- temp_con[temp_con$MUT == 1,]
     
     ConfusionMatrixInfo(data = temp_con_wt,
-                        other_title = '',
+                        other_title = paste0('null wt','_',combat,'_' , method, '_', size, '_',
+                                             num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_',beta_thresh, '_',optimal_thresh),
                         predict = 'positive',
                         actual = 'real',
                         cutoff = optimal_thresh,
-                        get_plot = TRUE,
-                        data_type = 'null')
+                        get_plot = TRUE)
     
     ConfusionMatrixInfo(data = temp_con_mut,
-                        other_title = '',
+                        other_title = paste0('null mut','_',combat,'_' , method, '_', size, '_',
+                                             num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_',beta_thresh, '_',optimal_thresh),
                         predict = 'positive',
                         actual = 'real',
                         cutoff = optimal_thresh,
-                        get_plot = TRUE,
-                        data_type = 'null')
+                        get_plot = TRUE)
   }
   
   # ConfusionMatrixInfo(data = temp_450_wt,
@@ -483,7 +482,7 @@ if(model_type == 'enet'){
   temp_con$pred_class <- as.factor(ifelse(temp_con$controls_age_pred > optimal_thresh, 'positive', 'negative'))
   temp_con$pred_class <- factor(temp_con$pred_class, levels = c('positive', 'negative'))
   
- 
+  
   
   temp_valid$real <- as.factor(ifelse(temp_valid$age_diagnosis <= 72, 'positive', 'negative'))
   temp_valid$real <- factor(temp_valid$real, levels = c('positive', 'negative'))

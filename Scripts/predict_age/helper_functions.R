@@ -13,6 +13,8 @@ library(broom)
 library(scales)
 library(gridExtra)
 library(data.table)
+
+
 plot_pred <- function(dat, type, plot_type,strategy, log, other_title){
   if(type == 'val'){
     pred_short <- prediction(dat$valid_age_pred, dat$pred_label)

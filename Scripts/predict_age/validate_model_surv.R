@@ -13,12 +13,12 @@ remove_wild_type <- function(m_or_beta_values){
 model_type = 'surv'
 size = 'used_bh'
 fit_type = 'rf'
-outcome_type = '6_years'
+outcome_type = 'age'
 control_age = FALSE # need to rerun control age = FALSE and then redo with coxph
 age_combat = TRUE
 gender = TRUE
-method = 'quan'
-combat = 'combat_1'
+method = 'noob'
+combat = 'combat_gen'
 which_methyl = 'beta'
 beta_thresh = 0.01
 optimal_cutoff = 0.5
@@ -174,6 +174,13 @@ all_850 <- cbind(as.data.frame(class.ind(all_850$age_fac)),
 all_850$age_fac <- NULL
 
 
+# create variable for under 6 age of onset 
+all_450$age_var <- ifelse(all_450$age_diagnosis < 72 & all_450$cancer_diagnosis_diagnoses != 'Unaffected',
+                          1, 0)
+
+all_850$age_var <- ifelse(all_850$age_diagnosis < 72 & all_850$cancer_diagnosis_diagnoses != 'Unaffected',
+                          1, 0)
+
 ## creat list to store results for alpha
 
 result_list <- list()
@@ -188,6 +195,7 @@ for(i in 1:length(alpha_values)){
                                      test_dat = all_850,
                                      age_cutoff = age_cutoff,
                                      fit_type = fit_type,
+                                     outcome_type = outcome_type,
                                      gender = gender,
                                      tech = tech,
                                      control_age = control_age,
@@ -208,38 +216,39 @@ temp <- do.call('rbind', result_list)
 ##########
 # set fixed variables
 # set fixed variables
-model_type = 'surv'
-size = 'used_bh'
-fit_type = 'rf'
-control_age = TRUE
-age_combat = TRUE
-gender = TRUE
-method = 'funnorm'
-combat = 'combat_sen'
-if(control_age){
-  age_control <- 'control_age'
-} else {
-  age_control <- 'no_control_age'
-  
-}
-
-if(age_combat){
-  combat_age <- 'combat_age'
-} else {
-  combat_age <- 'pc_age'
-}
-
-if(gender){
-  is_gen = 'use_gen'
-} else {
-  is_gen = 'no_gen'
-}
-
+# model_type = 'surv'
+# size = 'used_bh'
+# fit_type = 'rf'
+# control_age = TRUE
+# age_combat = TRUE
+# gender = TRUE
+# method = 'funnorm'
+# combat = 'combat_sen'
+# if(control_age){
+#   age_control <- 'control_age'
+# } else {
+#   age_control <- 'no_control_age'
+#   
+# }
+# 
+# if(age_combat){
+#   combat_age <- 'combat_age'
+# } else {
+#   combat_age <- 'pc_age'
+# }
+# 
+# if(gender){
+#   is_gen = 'use_gen'
+# } else {
+#   is_gen = 'no_gen'
+# }
+# 
 
 # options(scipen = 000)
 
 # read in cases_450
-temp <- readRDS(paste0('surv_data_test/', 'surv_test_', method,'_',size,'_',is_gen, '_',combat,'_', model_type, '_', age_control,'_',combat_age,'_',fit_type,'.rda'))
+# temp <- readRDS(paste0('surv_data_test/', 'surv_test_', method,'_',size,'_',is_gen, '_',combat,'_', model_type, '_', age_control,'_',combat_age,'_',fit_type,'.rda'))
+saveRDS(temp, paste0('surv_data_test/', 'surv_test_', method,'_',size,'_',is_gen, '_',combat,'_', model_type, '_', age_control,'_',combat_age,'_',fit_type,'_',outcome_type, '.rda'))
 
 # ggplot(temp, aes( alpha,test_pred, fill = cancer_status)) +
 #   geom_bar(stat = 'identity', position = 'dodge')

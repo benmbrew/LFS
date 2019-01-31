@@ -11,6 +11,8 @@ size = 'used_bh'
 model_type = 'rf'
 standardize = FALSE
 gender = TRUE
+null_450= FALSE
+null_450_all = TRUE
 method = 'quan'
 combat = 'combat_sen'
 train_lambda = TRUE
@@ -27,6 +29,14 @@ tech = FALSE
 
 # create objects to indicate method and model details when saving
 
+if(null_450 & !null_450_all){
+  use_null_450 <- 'used_null_450_mut'
+} else  if(!null_450 & null_450_all){
+  use_null_450 <- 'used_null_450_all'
+} else {
+  use_null_450 <- 'no_null_450'
+  
+}
 if(standardize){
   standardize_data <- 'standardized'
 } else {
@@ -76,51 +86,9 @@ if(size =='used_bh'){
   con_mut <- readRDS(paste0('../../Data/', method,'/con_mut_cv_age_combat_', combat,'.rda'))
   con_850 <- readRDS( paste0('../../Data/', method,'/con_850_cv_age_combat_', combat,'.rda'))
   con_wt <- readRDS(paste0('../../Data/', method,'/con_wt_cv_age_combat_', combat,'.rda'))
-  
-  # if(model_type == 'enet'){
-  #   num_probes = 10000
-  # } else {
-  #   num_probes = 5000
-  # }
-  # 
-  # # randomly sample from all cgs
-  # clin_names <- names(cases_450)[1:12]
-  # r_cgs <- sample(names(cases_450)[13:ncol(cases_450)], num_probes)
-  # cases_450 <- cases_450[c(clin_names, r_cgs)]
-  # con_wt <- con_wt[c(clin_names, r_cgs)]
-  # con_mut <- con_mut[c(clin_names, r_cgs)]
-  # con_850 <- con_850[c(clin_names, r_cgs)]
-  # cases_850 <- cases_850[c(clin_names, r_cgs)]
+ 
   # 
 }
-
-if(size =='used_bh'){
-  cases_450 <-  readRDS(paste0('../../Data/', method,'/cases_450_small_cv', combat,'.rda'))
-  cases_850 <- readRDS(paste0('../../Data/', method,'/cases_850_small_cv', combat,'.rda'))
-  con_mut <- readRDS(paste0('../../Data/', method,'/con_mut_small_cv', combat,'.rda'))
-  con_850 <- readRDS( paste0('../../Data/', method,'/con_850_small_cv', combat,'.rda'))
-  con_wt <- readRDS(paste0('../../Data/', method,'/con_wt_small_cv', combat,'.rda'))
-  
-} else {
-  cases_450 <-  readRDS(paste0('../../Data/', method,'/cases_450_cv', combat,'.rda'))
-  cases_850 <- readRDS(paste0('../../Data/', method,'/cases_850_cv', combat,'.rda'))
-  con_mut <- readRDS(paste0('../../Data/', method,'/con_mut_cv', combat,'.rda'))
-  con_850 <- readRDS( paste0('../../Data/', method,'/con_850_cv', combat,'.rda'))
-  con_wt <- readRDS(paste0('../../Data/', method,'/con_wt_cv', combat,'.rda'))
-  
-  # 
-  # # randomly sample from all cgs
-  # clin_names <- names(cases_450)[1:12]
-  # r_cgs <- sample(names(cases_450)[13:ncol(cases_450)], 5000)
-  # cases_450 <- cases_450[c(clin_names, r_cgs)]
-  # con_wt <- con_wt[c(clin_names, r_cgs)]
-  # con_mut <- con_mut[c(clin_names, r_cgs)]
-  # con_850 <- con_850[c(clin_names, r_cgs)]
-  # cases_850 <- cases_850[c(clin_names, r_cgs)]
-  # 
-}
-
-
 
 if(model_type == 'enet'){
   if(train_lambda){
@@ -185,11 +153,12 @@ bh_feats <- bump_hunter(dat_1 = cases_450,
                         g_ranges = g_ranges)
 
 # combine call controls 
-con_850 <- rbind(con_850, 
+con_all <- rbind(con_850, 
                  con_mut,
                  con_wt)
 rm(con_mut)
 rm(con_wt)
+rm(con_850)
 
 # get intersect_names
 intersect_names <- names(cases_450)[grepl('^cg', names(cases_450))]
@@ -203,10 +172,13 @@ bh_features <- intersect_names[!intersect_names %in% remove_features]
 
 # subset all data by bh_features
 cases_450 <- remove_cancer_feats(cases_450, bh_feats = bh_features)
-con_850 <- remove_cancer_feats(con_850, bh_feats = bh_features)
+con_all <- remove_cancer_feats(con_all, bh_feats = bh_features)
 cases_850 <- remove_cancer_feats(cases_850, bh_feats = bh_features)
 
 
+lambda_val = 0.5
+alpha_val = 0.1
+optimal_thresh = 0.5
 
 # get s_num and alpha_value
 if(model_type == 'enet'){
@@ -224,6 +196,7 @@ if(model_type == 'enet'){
   result_list <- test_model_enet(cases = cases_450,
                                  controls = con_850,
                                  valid = cases_850,
+                                 null_450 = use_null_450,
                                  age_cutoff = age_cutoff,
                                  gender = gender,
                                  tech = tech,
@@ -242,10 +215,10 @@ if(model_type == 'enet'){
   
   
   # read in cases_450
-  saveRDS(con_dat, paste0('final_age_combat_test/', 'con_test_', method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_', is_lambda,'_',standardize_data,'_',alpha_num,'_',s_num,'_', optimal_thresh,'.rda'))
+  saveRDS(con_dat, paste0('final_age_combat_test/', 'con_test_', method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_', is_lambda,'_',standardize_data,'_',alpha_num,'_',s_num,'_', optimal_thresh,'_',use_null_450,'.rda'))
   
-  saveRDS(valid_dat, paste0('final_age_combat_test/', 'valid_test_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_', is_lambda,'_',standardize_data,'_',alpha_num,'_',s_num,'_', optimal_thresh,'.rda'))
-  saveRDS(mod_dat, paste0('final_age_combat_test/', 'model_test_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_', is_lambda,'_',standardize_data,'_',alpha_num,'_',s_num,'_', optimal_thresh,'.rda'))
+  saveRDS(valid_dat, paste0('final_age_combat_test/', 'valid_test_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_', is_lambda,'_',standardize_data,'_',alpha_num,'_',s_num,'_', optimal_thresh,'_',use_null_450,'.rda'))
+  saveRDS(mod_dat, paste0('final_age_combat_test/', 'model_test_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_', is_lambda,'_',standardize_data,'_',alpha_num,'_',s_num,'_', optimal_thresh,'_',use_null_450,'.rda'))
   
  
   
@@ -255,6 +228,7 @@ if(model_type == 'enet'){
   result_list <- test_model_rf(cases = cases_450,
                                controls = con_850,
                                valid = cases_850,
+                               null_450 = use_null_450,
                                age_cutoff = age_cutoff,
                                gender = gender,
                                tech = tech,
@@ -268,12 +242,12 @@ if(model_type == 'enet'){
   temp_model <- result_list[[4]]
   
   
-  saveRDS(temp_con, paste0('final_age_combat_test/', 'con_test_',method,'_',size,'_',is_gen,'_',combat,'_', model_type,'_',optimal_thresh,'.rda'))
+  saveRDS(temp_con, paste0('final_age_combat_test/', 'con_test_',method,'_',size,'_',is_gen,'_',combat,'_', model_type,'_',optimal_thresh,'_',use_null_450,'.rda'))
   
-  saveRDS(temp_valid, paste0('final_age_combat_test/', 'valid_test_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_',optimal_thresh,'.rda'))
+  saveRDS(temp_valid, paste0('final_age_combat_test/', 'valid_test_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_',optimal_thresh,'_',use_null_450,'.rda'))
   
-  saveRDS(temp_importance, paste0('final_age_combat_test/', 'importance_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_',optimal_thresh,'.rda'))
-  saveRDS(temp_model, paste0('final_age_combat_test/', 'model_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_',optimal_thresh,'.rda'))
+  saveRDS(temp_importance, paste0('final_age_combat_test/', 'importance_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_',optimal_thresh,'_',use_null_450,'.rda'))
+  saveRDS(temp_model, paste0('final_age_combat_test/', 'model_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_',optimal_thresh,'_',use_null_450,'.rda'))
   
 }
 

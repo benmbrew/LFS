@@ -9,7 +9,10 @@ remove_wild_type <- function(m_or_beta_values){
 
 # set fixed variables
 size = 'used_bh'
-model_type = 'enet'
+model_type = 'rf'
+null_450= FALSE
+null_450_all = TRUE
+train_lambda = FALSE
 gender = TRUE
 method = 'noob'
 combat = 'normal'
@@ -23,6 +26,14 @@ trained_lambda = FALSE
 tech = FALSE
 
 
+if(null_450 & !null_450_all){
+  use_null_450 <- 'used_null_450_mut'
+} else  if(!null_450 & null_450_all){
+  use_null_450 <- 'used_null_450_all'
+} else {
+  use_null_450 <- 'no_null_450'
+  
+}
 
 if(trained_lambda){
   is_lambda <- 'lambda_test'
@@ -119,7 +130,7 @@ bh_feats <- bump_hunter(dat_1 = cases_450,
 con_all <- rbind(con_850, 
                  con_mut,
                  con_wt)
-rm(con_mut, con_all)
+rm(con_mut, con_850)
 rm(con_wt)
 
 # get intersect_names
@@ -137,27 +148,7 @@ cases_450 <- remove_cancer_feats(cases_450, bh_feats = bh_features)
 con_all <- remove_cancer_feats(con_all, bh_feats = bh_features)
 cases_850 <- remove_cancer_feats(cases_850, bh_feats = bh_features)
 
-# age
-cases_450 <- cbind(as.data.frame(class.ind(cases_450$age_fac)), 
-                   cases_450)
-
-# rempove old agevariable 
-cases_450$age_fac <- NULL
-
-# age
-cases_850 <- cbind(as.data.frame(class.ind(cases_850$age_fac)), 
-                   cases_850)
-
-# rempove old agevariable 
-cases_850$age_fac <- NULL
-
-# age
-con_all <- cbind(as.data.frame(class.ind(con_all$age_fac)), 
-                 con_all)
-
-# rempove old agevariable 
-con_all$age_fac <- NULL
-
+optimal_thresh = 0.5
 # get s_num and alpha_value
 if(model_type == 'enet'){
   # s_num = mean_lambda
@@ -174,14 +165,16 @@ if(model_type == 'enet'){
     
     message('working on alpha = ', alpha_num)
     result_list[[i]] <- test_model_enet(cases = cases_450,
-                                        controls = con_850,
+                                        controls = con_all,
                                         valid = cases_850,
+                                        null_450 = use_null_450,
                                         age_cutoff = age_cutoff,
                                         gender = gender,
                                         tech = tech,
-                                        cv_lambda = trained_lambda,
+                                        test_lambda = train_lambda,
                                         alpha_value = alpha_num,
                                         lambda_value = s_num,
+                                        control_age = FALSE,
                                         bh_features = bh_features)
     
     con_list[[i]] <- result_list[[i]][[1]]
@@ -195,31 +188,34 @@ if(model_type == 'enet'){
   temp_valid <- do.call('rbind', valid_list)
   
   # read in cases_450
-  saveRDS(temp_con, paste0('data_test/', 'con_test_',method,'_',size,'_',is_gen, '_', is_lambda, '_',combat,'_', model_type,'.rda'))
+  saveRDS(temp_con, paste0('data_test/', 'con_test_',method,'_',size,'_',is_gen, '_', is_lambda, '_',combat,'_', model_type,'_',use_null_450,'.rda'))
 
-  saveRDS(temp_valid, paste0('data_test/', 'valid_test_',method,'_',size,'_',is_gen,'_', is_lambda, '_',combat, '_', model_type,'.rda'))
+  saveRDS(temp_valid, paste0('data_test/', 'valid_test_',method,'_',size,'_',is_gen,'_', is_lambda, '_',combat, '_', model_type,'_',use_null_450,'.rda'))
   
   
 } else {
   
   
   result_list <- test_model_rf(cases = cases_450,
-                               controls = con_850,
+                               controls = con_all,
                                valid = cases_850,
+                               null_450 = use_null_450,
                                age_cutoff = age_cutoff,
                                gender = gender,
                                tech = tech,
+                               control_age = FALSE,
+                               optimal_cutoff = optimal_thresh,
                                bh_features = bh_features)
   
   temp_valid <- result_list[[1]]
   temp_con <- result_list[[2]]
   temp_importance  <- result_list[[3]]
   
-  saveRDS(temp_con, paste0('data_test/', 'con_test_', method,'_',size,'_',is_gen, '_',combat,'_', model_type,'.rda'))
+  saveRDS(temp_con, paste0('data_test/', 'con_test_', method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_',use_null_450,'.rda'))
   
-  saveRDS(temp_valid, paste0('data_test/', 'valid_test_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'.rda'))
+  saveRDS(temp_valid, paste0('data_test/', 'valid_test_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_',use_null_450,'.rda'))
   
-  saveRDS(temp_importance, paste0('data_test/', 'importance_', method,'_',size,'_',is_gen,'_',combat,'_', model_type,'.rda'))
+  saveRDS(temp_importance, paste0('data_test/', 'importance_', method,'_',size,'_',is_gen,'_',combat,'_', model_type,'_',use_null_450,'.rda'))
   
 }
 
