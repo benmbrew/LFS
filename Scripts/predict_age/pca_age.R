@@ -15,7 +15,7 @@ remove_wild_type <- function(m_or_beta_values){
 
 # set fixed variables
 method = 'noob'
-combat = 'normal'
+combat = 'combat_1_new'
 remove_leading_pcs = 'first'
 
 # save beta data
@@ -27,7 +27,275 @@ if(combat == 'normal'){
   all_con_wt <- readRDS(paste0('../../Data/', method,'/all_con_beta_wt.rda'))
   
 }
+if(combat == 'combat_1_new'){
+  cases_450_combat <- readRDS(paste0('../../Data/', method,'/cases_450_combat.rda'))
+  con_450_combat <- readRDS(paste0('../../Data/', method,'/con_450_combat.rda'))
+  all_cases <- readRDS(paste0('../../Data/', method,'/all_cases_beta_combat.rda'))
+  all_con <- readRDS(paste0('../../Data/', method,'/all_con_beta_combat.rda'))
+  all_con_wt <- readRDS(paste0('../../Data/', method,'/all_con_beta_wt.rda'))
+  
+  # remove 850 from 450
+  cases_450 <- cases_450_combat[cases_450_combat$tech != 'batch_2',]
+  con_450 <- con_450_combat[con_450_combat$tech != 'batch_2',]
+  rm(cases_450_combat, con_450_combat)
+  
+  # get cases_850 and con_850, and con_wt
+  cases_850 <- all_cases[all_cases$tech == 'batch_2',]
+  con_850 <- all_con[all_con$tech == 'batch_2',]
+  rm(all_cases, all_con)
+  con_wt <- all_con_wt
+  con_wt <- con_wt[con_wt$p53_germline == 'WT',]
+  rm(all_con_wt)
+  
+  cases_450$tech <- ifelse(cases_450$tech == 'batch_1', '450k', '850k')
+  con_450$tech <- ifelse(con_450$tech == 'batch_1', '450k', '850k')
+  cases_850$tech <- ifelse(cases_850$tech == 'batch_1', '450k', '850k')
+  con_850$tech <- ifelse(con_850$tech == 'batch_1', '450k', '850k')
+  
+  # clean data
+  cases_450 <- cases_450[!is.na(cases_450$age_diagnosis),]
+  cases_450 <- cases_450[!is.na(cases_450$age_sample_collection),]
+  
+  cases_850 <- cases_850[!is.na(cases_850$age_diagnosis),]
+  cases_850 <- cases_850[!is.na(cases_850$age_sample_collection),]
+  
+  con_850 <- con_850[!is.na(con_850$age_sample_collection),]
+  con_450 <- con_450[!is.na(con_450$age_sample_collection),]
+  
+  cases_450$age_diagnosis <- 
+    round(cases_450$age_diagnosis*12, 2)
+  cases_450$age_sample_collection <- 
+    round(cases_450$age_sample_collection*12, 2)
+  
+  # controls
+  con_850$age_diagnosis <- 
+    round(con_850$age_diagnosis*12, 2)
+  con_850$age_sample_collection <- 
+    round(con_850$age_sample_collection*12, 2)
+  
+  # valie
+  cases_850$age_diagnosis <- 
+    round(cases_850$age_diagnosis*12, 2)
+  cases_850$age_sample_collection <- 
+    round(cases_850$age_sample_collection*12, 2)
+  
+  # conmut and conmw
+  con_450$age_sample_collection <- 
+    round(con_450$age_sample_collection*12, 2)
+  con_wt$age_sample_collection <- 
+    round(con_wt$age_sample_collection*12, 2)
+  
+  # apply to wt controls
+  con_wt <- con_wt[!is.na(con_wt$age_sample_collection),]
+  con_wt <- con_wt[!is.na(con_wt$gender),]
+  con_450 <- con_450[!is.na(con_450$age_sample_collection),]
+  con_450 <- con_450[!is.na(con_450$gender),]
+  
+  
+  # first create a function to check how the variation in age
+  # is accounted for by the PCs
+  
+  plot_pc <- function(temp_dat, 
+                      column_name, 
+                      show_variance,
+                      pc_x, 
+                      pc_y, 
+                      main_title){
+    
+    # create age fac for plotting
+    temp_dat$age_fac <- ifelse(temp_dat$age_sample_collection > 0 &
+                                 temp_dat$age_sample_collection <= 72, 'first_age',
+                               ifelse(temp_dat$age_sample_collection > 72 &
+                                        temp_dat$age_sample_collection <= 216, 'second_age', 'third_age'))
+    
+    # run pca plot and return                             
+    get_pca(pca_data = temp_dat, 
+            column_name = column_name, 
+            show_variance = show_variance, 
+            pc_x = pc_x, 
+            pc_y = pc_y, 
+            main_title = main_title)
+    
+  }
+  # pdf(paste0('~/Desktop/before_pc', '_', method, '_', combat, '.pdf'))
+  # 
+  # # plot dataset PCs colored by age for PC 1, 2, 3
+  plot_pc(temp_dat = cases_450,
+          column_name = 'age_fac',
+          show_variance = TRUE,
+          pc_x = 1,
+          pc_y = 2,
+          main_title = 'cases_450 before pc')
 
+  plot_pc(temp_dat = cases_850,
+          column_name = 'age_fac',
+          show_variance = TRUE,
+          pc_x = 1,
+          pc_y = 2,
+          main_title = 'cases_850 before pc')
+
+  plot_pc(temp_dat = con_450,
+          column_name = 'age_fac',
+          show_variance = TRUE,
+          pc_x = 1,
+          pc_y = 2,
+          main_title = 'con_450 before pc')
+
+  plot_pc(temp_dat = con_wt,
+          column_name = 'age_fac',
+          show_variance = TRUE,
+          pc_x = 1,
+          pc_y = 2,
+          main_title = 'con_wt before pc')
+
+  plot_pc(temp_dat = con_850,
+          column_name = 'age_fac',
+          show_variance = TRUE,
+          pc_x = 1,
+          pc_y = 2,
+          main_title = 'con_850 before pc')
+
+  plot_pc(temp_dat = cases_450,
+          column_name = 'age_fac',
+          show_variance = FALSE,
+          pc_x = 1,
+          pc_y = 2,
+          main_title = 'cases_450 before pc')
+
+  plot_pc(temp_dat = cases_850,
+          column_name = 'age_fac',
+          show_variance = FALSE,
+          pc_x = 1,
+          pc_y = 2,
+          main_title = 'cases_850 before pc')
+
+  plot_pc(temp_dat = con_450,
+          column_name = 'age_fac',
+          show_variance = FALSE,
+          pc_x = 1,
+          pc_y = 2,
+          main_title = 'con_450 before pc')
+
+  plot_pc(temp_dat = con_850,
+          column_name = 'age_fac',
+          show_variance = FALSE,
+          pc_x = 1,
+          pc_y = 2,
+          main_title = 'con_850 before pc')
+
+  plot_pc(temp_dat = con_wt,
+          column_name = 'age_fac',
+          show_variance = FALSE,
+          pc_x = 1,
+          pc_y = 2,
+          main_title = 'con_wt before pc')
+
+
+
+  # creat function that takes a data set and computes the PCs and removes 
+  # the one associated with age
+  
+  remove_pc_age <- function(temp_dat, remove_leading_pcs){
+    clin_dat <- temp_dat[,!grepl('^cg', names(temp_dat))]
+    feat_matrix <- temp_dat[,grepl('^cg', names(temp_dat))]
+    mu = colMeans(feat_matrix)
+    
+    Xpca <- prcomp(feat_matrix)
+    
+    if(remove_leading_pcs == 'first'){
+      pc_start <- 2
+    } else if(remove_leading_pcs == 'first_two'){
+      pc_start <- 3
+    } else {
+      pc_start <- 6
+    }
+    
+    nComp = nrow(temp_dat)
+    Xhat = Xpca$x[,pc_start:nComp] %*% t(Xpca$rotation[,pc_start:nComp])
+    Xhat = scale(Xhat, center = -mu, scale = FALSE)
+    
+    final_dat <- as.data.frame(cbind(clin_dat, Xhat))
+    
+    return(final_dat)
+  }
+  
+
+  cases_450 <- remove_pc_age(cases_450, remove_leading_pcs = remove_leading_pcs)
+  cases_850 <- remove_pc_age(cases_850, remove_leading_pcs = remove_leading_pcs)
+  con_450 <- remove_pc_age(con_450, remove_leading_pcs = remove_leading_pcs)
+  con_850 <- remove_pc_age(con_850, remove_leading_pcs = remove_leading_pcs)
+  con_wt <- remove_pc_age(con_wt, remove_leading_pcs = remove_leading_pcs)
+  # 
+  # pdf(paste0('~/Desktop/after_pc', '_', method, '_',combat, '.pdf'))
+  # 
+  # 
+  # plot dataset PCs colored by age for PC 1, 2, 3
+  plot_pc(temp_dat = cases_450,
+          column_name = 'age_fac',
+          show_variance = TRUE,
+          pc_x = 1,
+          pc_y = 2,
+          main_title =  paste0('cases_850', '_removed_', remove_leading_pcs))
+
+  plot_pc(temp_dat = cases_850,
+          column_name = 'age_fac',
+          show_variance = TRUE,
+          pc_x = 1,
+          pc_y = 2,
+          main_title =  paste0('cases_850', '_removed_', remove_leading_pcs))
+
+  plot_pc(temp_dat = con_450,
+          column_name = 'age_fac',
+          show_variance = TRUE,
+          pc_x = 1,
+          pc_y = 2,
+          main_title =  paste0('con_450', '_removed_', remove_leading_pcs))
+
+  plot_pc(temp_dat = con_850,
+          column_name = 'age_fac',
+          show_variance = TRUE,
+          pc_x = 1,
+          pc_y = 2,
+          main_title =  paste0('con_850', '_removed_', remove_leading_pcs))
+
+  plot_pc(temp_dat = cases_450,
+          column_name = 'age_fac',
+          show_variance = FALSE,
+          pc_x = 1,
+          pc_y = 2,
+          main_title =  paste0('cases_450', '_removed_', remove_leading_pcs))
+
+  plot_pc(temp_dat = cases_850,
+          column_name = 'age_fac',
+          show_variance = FALSE,
+          pc_x = 1,
+          pc_y = 2,
+          main_title =  paste0('cases_850', '_removed_', remove_leading_pcs))
+
+  plot_pc(temp_dat = con_450,
+          column_name = 'age_fac',
+          show_variance = FALSE,
+          pc_x = 1,
+          pc_y = 2,
+          main_title =  paste0('con_450', '_removed_', remove_leading_pcs))
+
+  plot_pc(temp_dat = con_850,
+          column_name = 'age_fac',
+          show_variance = FALSE,
+          pc_x = 1,
+          pc_y = 2,
+          main_title = paste0('con_850', '_removed_', remove_leading_pcs))
+
+
+  saveRDS(cases_450, paste0('../../Data/', method,'/cases_450_', combat,'.rda'))
+  saveRDS(cases_850, paste0('../../Data/', method,'/cases_850_', combat,'.rda'))
+  saveRDS(con_450, paste0('../../Data/', method,'/con_450_', combat,'.rda'))
+  saveRDS(con_850, paste0('../../Data/', method,'/con_850_', combat,'.rda'))
+  saveRDS(con_wt, paste0('../../Data/', method,'/con_wt_', combat,'.rda'))
+  
+  
+  
+}
 if(combat == 'combat_1'){
   all_cases <- readRDS(paste0('../../Data/', method,'/all_cases_beta_combat.rda'))
   all_con <- readRDS(paste0('../../Data/', method,'/all_con_beta_combat.rda'))

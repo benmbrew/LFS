@@ -8,8 +8,8 @@ remove_wild_type <- function(m_or_beta_values){
 
 
 # set fixed variables
-method = 'swan'
-combat = 'combat_sen'
+method = 'noob'
+combat = 'combat_1_new'
 remove_leading_pcs = 'first'
 
 # condition on fixed objects to get saving identifiers
@@ -99,7 +99,7 @@ con_mut <- con_mut[, c(clin_names, feats)]
 bh_feats <- bump_hunter(dat_1 = con_wt, 
                         dat_2 = con_mut, 
                         bump = 'lfs', 
-                        boot_num = 5, 
+                        boot_num = 50, 
                         beta_thresh = beta_thresh,
                         methyl_type = methyl_type,
                         g_ranges = g_ranges)

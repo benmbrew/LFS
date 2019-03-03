@@ -1,5 +1,5 @@
 
-########
+##########
 # load libraries
 ##########
 library(IlluminaHumanMethylation450kmanifest)
@@ -2182,23 +2182,37 @@ test_model_rf <- function(cases,
   
   if(null_450 == 'used_null_450_all'){
     null_450_all <- controls[controls$tech == '450k',]
-    null_450_all$age <- null_450_all$age_sample_collection
+    null_450_all$age <- 'negative'
     if(!use_6){
       null_450_all <- null_450_all[null_450_all$age > 72, ]
+      cases$age <- cases$age_diagnosis
+      controls <- controls[controls$tech == '850k',] 
+      cases$age <- as.factor(ifelse(cases$age < age_cutoff, 'positive', 'negative'))
+      cases <- rbind(cases,
+                     null_450_all)
+      
+      cases <- cases[!duplicated(cases$tm_donor),]
+      cases_y <- factor(cases$age, levels = c('positive', 'negative'))
+      con_y <- as.factor(ifelse(controls$age_sample_collection< age_cutoff, 'positive', 'negative'))
+      valid_y <-as.factor(ifelse(valid$age_diagnosis < age_cutoff, 'positive', 'negative'))
+      cases_y <- factor(cases_y, levels = c('positive', 'negative'))
+      con_y <- factor(con_y, levels = c('positive', 'negative'))
+      valid_y <- factor(valid_y, levels = c('positive', 'negative'))
        
+    } else {
+      cases$age <-  as.factor(ifelse(cases$age < age_cutoff, 'positive', 'negative'))
+      controls <- controls[controls$tech == '850k',] 
+      cases <- rbind(cases,
+                     null_450_all)
+      
+      cases <- cases[!duplicated(cases$tm_donor),]
+      con_y <- as.factor(ifelse(controls$age_sample_collection< age_cutoff, 'positive', 'negative'))
+      valid_y <-as.factor(ifelse(valid$age_diagnosis < age_cutoff, 'positive', 'negative'))
+      cases_y <- factor(cases_y, levels = c('positive', 'negative'))
+      con_y <- factor(con_y, levels = c('positive', 'negative'))
+      valid_y <- factor(valid_y, levels = c('positive', 'negative'))
     }
-    cases$age <- cases$age_diagnosis
-    controls <- controls[controls$tech == '850k',] 
-    cases <- rbind(cases,
-                   null_450_all)
-    cases_y <- as.factor(ifelse(cases$age < age_cutoff, 'positive', 'negative'))
     
-    cases <- cases[!duplicated(cases$tm_donor),]
-    con_y <- as.factor(ifelse(controls$age_sample_collection< age_cutoff, 'positive', 'negative'))
-    valid_y <-as.factor(ifelse(valid$age_diagnosis < age_cutoff, 'positive', 'negative'))
-    cases_y <- factor(cases_y, levels = c('positive', 'negative'))
-    con_y <- factor(con_y, levels = c('positive', 'negative'))
-    valid_y <- factor(valid_y, levels = c('positive', 'negative'))
     
     
     
@@ -2206,25 +2220,39 @@ test_model_rf <- function(cases,
     controls_wt <- controls[controls$p53_germline == 'WT',]
     null_450_all <- controls[controls$tech == '450k',]
     null_450_all <- null_450_all[null_450_all$p53_germline == 'MUT',]
-    null_450_all$age <- null_450_all$age_sample_collection
+    null_450_all$age <- 'negative'
+    
     if(!use_6){
       null_450_all <- null_450_all[null_450_all$age > 72, ]
+      cases$age <- cases$age_diagnosis
+      controls <- controls[controls$tech == '850k',] 
+      cases$age <- as.factor(ifelse(cases$age < age_cutoff, 'positive', 'negative'))
+      cases <- rbind(cases,
+                     null_450_all)
       
-    }    
-    cases$age <- cases$age_diagnosis
-    controls <- controls[controls$tech == '850k',]
-    controls <- rbind(controls, controls_wt)
-    cases <- rbind(cases,
-                   null_450_all)
-    cases_y <- as.factor(ifelse(cases$age < age_cutoff, 'positive', 'negative'))
-    cases <- cases[!duplicated(cases$tm_donor),]
-    con_y <- as.factor(ifelse(controls$age_sample_collection< age_cutoff, 'positive', 'negative'))
-    valid_y <-as.factor(ifelse(valid$age_diagnosis < age_cutoff, 'positive', 'negative'))
-    cases_y <- factor(cases_y, levels = c('positive', 'negative'))
-    con_y <- factor(con_y, levels = c('positive', 'negative'))
-    valid_y <- factor(valid_y, levels = c('positive', 'negative'))
+      cases <- cases[!duplicated(cases$tm_donor),]
+      cases_y <- factor(cases$age, levels = c('positive', 'negative'))
+      con_y <- as.factor(ifelse(controls$age_sample_collection< age_cutoff, 'positive', 'negative'))
+      valid_y <-as.factor(ifelse(valid$age_diagnosis < age_cutoff, 'positive', 'negative'))
+      cases_y <- factor(cases_y, levels = c('positive', 'negative'))
+      con_y <- factor(con_y, levels = c('positive', 'negative'))
+      valid_y <- factor(valid_y, levels = c('positive', 'negative'))
+      
+    } else {
+      cases$age <- cases$age_diagnosis
+      controls <- controls[controls$tech == '850k',] 
+      cases <- rbind(cases,
+                     null_450_all)
+      cases_y <- as.factor(ifelse(cases$age < age_cutoff, 'positive', 'negative'))
+      
+      cases <- cases[!duplicated(cases$tm_donor),]
+      con_y <- as.factor(ifelse(controls$age_sample_collection< age_cutoff, 'positive', 'negative'))
+      valid_y <-as.factor(ifelse(valid$age_diagnosis < age_cutoff, 'positive', 'negative'))
+      cases_y <- factor(cases_y, levels = c('positive', 'negative'))
+      con_y <- factor(con_y, levels = c('positive', 'negative'))
+      valid_y <- factor(valid_y, levels = c('positive', 'negative'))
+    }
     
-   
     
   } else {
     # intersected_feats_rand <- intersect(rand_feats, colnames(training_dat))
@@ -2259,14 +2287,14 @@ test_model_rf <- function(cases,
   valid <- valid[, intersected_feats]
   
   
-  
+  set.seed(1)
   # determines how you train the model.
   NFOLDS <- 5
   fitControl <- trainControl( 
     method = "repeatedcv",  # could train on boostrap resample, here use repeated cross validation.
     number = min(10, NFOLDS),
     classProbs = TRUE,
-    repeats = 1,
+    repeats = 0,
     allowParallel = TRUE,
     summaryFunction = twoClassSummary
     
@@ -2636,7 +2664,7 @@ ConfusionMatrixInfo <- function( data, predict, actual, cutoff, get_plot, other_
     age <- data$age_sample_collection
     
   } else {
-    age <- data$age
+    age <- data$age_diagnosis
     
   }
   result <- data.table( actual = actual, predict = predict, age = age)
@@ -2646,10 +2674,22 @@ ConfusionMatrixInfo <- function( data, predict, actual, cutoff, get_plot, other_
                             ifelse( predict >= cutoff & actual == 'negative', "FP", 
                                     ifelse( predict <  cutoff & actual == 'positive', "FN", "TN" ) ) ) %>% as.factor() ]
   
+  result <- as.data.frame(result)
+  if(data_type == 'null'){
+    result$actual <- as.factor(ifelse(result$actual == 'positive', 'Under age of 6', 'Over age of 6'))
+    result$acual <- factor(result$actual, levels = c('Under age of 6', 'Over age of 6'))
+    x_lab = 'Real age of sample collection'
+  } else {
+    result$actual <- as.factor(ifelse(result$actual == 'positive', 'Onset before 6', 'Onset after 6'))
+    result$acual <- factor(result$actual, levels = c('Onset before 6', 'Onset after 6'))
+    x_lab = 'Real age of onset'
+    
+  }
+  result$actual<- with(result, reorder(actual, acual, function(x) length(x)))  
+  library(ggthemes)
   library(ggrepel)
   # jittering : can spread the points along the x axis 
-  result <- as.data.frame(result)
-  result$age <- round(result$age/12, 2)
+  result$age <- round(result$age/12)
   plot <- ggplot( result, aes( actual, predict, color = type ) ) + 
     geom_point(size = 0, show.legend = FALSE) +
     scale_color_manual(name = 'Result',
@@ -2657,12 +2697,13 @@ ConfusionMatrixInfo <- function( data, predict, actual, cutoff, get_plot, other_
                        breaks = c( "TP", "FN", "FP", "TN" ))+
     geom_violin( fill = "white", color = NA ) +
     geom_hline( yintercept = cutoff, color = 'black', alpha = 0.6, linetype = 2 ) + 
-    geom_text(aes(label = age),alpha = 0.7, fontface = "bold",position=position_jitter(width = 0.49, height = 0), show.legend = FALSE)+
+    geom_text(aes(label = age),alpha = 0.7, cex = 5,position=position_jitter(width = 0.4, height = 0), show.legend = FALSE)+
     geom_vline(xintercept = 1.5, linetype = 2) +
     scale_y_continuous( limits = c( 0, 1 ) ) + 
     guides( col = guide_legend( nrow = 2 ) ) + # adjust the legend to have two rows  
     ggtitle( sprintf( other_title,"_Cutoff at %.2f", cutoff ) ) +
-    theme(text = element_text(size=14))
+    theme(text = element_text(size=14)) + 
+    xlab(x_lab) + ylab('Predicted probability of onset') + theme_base(base_size = 18)
   
   
   
@@ -2764,3 +2805,4 @@ ROCInfo <- function( data, predict, actual, cost.fp, cost.fn, other_title )
                 sensitivity = best_tpr, 
                 specificity = 1 - best_fpr ) )
 }
+

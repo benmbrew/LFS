@@ -2,7 +2,7 @@
 # get functions
 source('all_functions.R')
 
-method = 'swan'
+method = 'noob'
 ##### -------- beta
 
 # read in 850k
@@ -235,8 +235,8 @@ con_450 <- con_450[!grepl('3847', con_450$tm_donor),]
 # con_450_m <- con_450_m[!grepl('3847', con_450_m$tm_donor),]
 
 # get overlapping names
-cg_names <- names(cases_850)[12:ncol(cases_850)]
-clin_names <- names(cases_850)[1:11]
+cg_names <- names(cases_850)[!grepl('^cg', names(cases_850))]
+clin_names <- names(cases_850)[grepl('^cg', names(cases_850))]
 
 
 # now subset cases_450, cases_wt_450, con_450, con_wt_450
@@ -265,14 +265,34 @@ all_con_beta_wt <- rbind(con_wt_450,
 
 # all_con_m_wt <- rbind(con_wt_450_m,
 #                       con_850_m)
-
-rm(cases_450, cases_450_m, cases_850, cases_850_m,
-   con_450, con_450_m, con_850, con_850_m,
-   cases_wt_450, cases_wt_450_m, con_wt_450, con_wt_450_m)
+# 
+# rm(cases_450, cases_450_m, cases_850, cases_850_m,
+#    con_450, con_450_m, con_850, con_850_m,
+#    cases_wt_450, cases_wt_450_m, con_wt_450, con_wt_450_m)
 
 ###----------------------------------------------------------------------------------
 # run combat to fix techology - just run batch correction on cases 450k using cases 850k, if its truly
 # removing the tech bach effec due to arrya differnece, than 450k should be homogenized to 850k controls, so # we can test the data
+
+# joine cases with shared_valid_bets
+cases_450 <- rbind(cases_450,
+                   shared_valid_beta)
+
+
+# joine controls with shared_controls_beta
+con_450 <- rbind(con_450,
+                 shared_controls_beta)
+
+
+
+# run combat 
+
+cases_450_combat <- run_combat(cases_450, type = 'tech')
+con_450_combat <- run_combat(con_450, type = 'tech')
+saveRDS(cases_450_combat, paste0('../../Data/', method,'/cases_450_combat.rda'))
+saveRDS(con_450_combat, paste0('../../Data/', method,'/con_450_combat.rda'))
+
+
 
 # run combat on cases (beta and m) to obtain a batch corrected 450k cases.
 all_cases_beta_combat <- run_combat(all_cases_beta, type = 'tech')

@@ -1,0 +1,58 @@
+Script started on 2018-12-16 18:40:54-0500
+]0;ben@nancy3: ~/Documents/LFS[01;32mben@nancy3[00m:[01;34m~/Documents/LFS[00m$ ls
+after_6.csv   full_clin.csv       README.md                temp_after_6.csv
+brew_lfs.pdf  LFS.Rproj           [0m[01;34mReferences[0m               typescript
+[01;34mCode[0m          paper_controls.csv  [01;34mScripts[0m
+[01;34mData[0m          [01;34mPlots[0m               share_clinical_data.csv
+]0;ben@nancy3: ~/Documents/LFS[01;32mben@nancy3[00m:[01;34m~/Documents/LFS[00m$ sc[K[Kcd sc[K[KSc[K[Kscre[Kit[Kps[K[K[K[K[K[KScripts/
+]0;ben@nancy3: ~/Documents/LFS/Scripts[01;32mben@nancy3[00m:[01;34m~/Documents/LFS/Scripts[00m$ ;ls
+bash: syntax error near unexpected token `;'
+]0;ben@nancy3: ~/Documents/LFS/Scripts[01;32mben@nancy3[00m:[01;34m~/Documents/LFS/Scripts[00m$ ls
+[0m[01;34mback_check[0m  [01;34mclean_data[0m  [01;34mold_scripts[0m  [01;34mpredict_sample_age_controls[0m
+[01;34mbumphunter[0m  [01;34mexplore[0m     [01;34mpredict_age[0m  [01;34mtwins[0m
+]0;ben@nancy3: ~/Documents/LFS/Scripts[01;32mben@nancy3[00m:[01;34m~/Documents/LFS/Scripts[00m$ cd predict_age/[K[K[K[K[K[K[K[K[K[K[K[K[K[K[K.x
+.x: command not found
+]0;ben@nancy3: ~/Documents/LFS/Scripts[01;32mben@nancy3[00m:[01;34m~/Documents/LFS/Scripts[00m$ \\\\\[K[K[K[K[Kl;[K[Kls
+[0m[01;34mback_check[0m  [01;34mclean_data[0m  [01;34mold_scripts[0m  [01;34mpredict_sample_age_controls[0m
+[01;34mbumphunter[0m  [01;34mexplore[0m     [01;34mpredict_age[0m  [01;34mtwins[0m
+]0;ben@nancy3: ~/Documents/LFS/Scripts[01;32mben@nancy3[00m:[01;34m~/Documents/LFS/Scripts[00m$ las
+
+Command 'las' not found, did you mean:
+
+  command 'as' from deb binutils
+  command 'laps' from deb epix
+  command 'lrs' from deb lrslib
+  command 'ls' from deb coreutils
+  command 'als' from deb atool
+  command 'last' from deb util-linux
+  command 'cas' from deb amule-utils
+  command 'les' from deb atm-tools
+  command 'lvs' from deb lvm2
+
+Try: sudo apt install <deb name>
+
+]0;ben@nancy3: ~/Documents/LFS/Scripts[01;32mben@nancy3[00m:[01;34m~/Documents/LFS/Scripts[00m$ ls
+[0m[01;34mback_check[0m  [01;34mclean_data[0m  [01;34mold_scripts[0m  [01;34mpredict_sample_age_controls[0m
+[01;34mbumphunter[0m  [01;34mexplore[0m     [01;34mpredict_age[0m  [01;34mtwins[0m
+]0;ben@nancy3: ~/Documents/LFS/Scripts[01;32mben@nancy3[00m:[01;34m~/Documents/LFS/Scripts[00m$ cd 
+]0;ben@nancy3: ~[01;32mben@nancy3[00m:[01;34m~[00m$ ls
+[0m[01;34mDesktop[0m    [01;34mDownloads[0m         [01;34mMusic[0m     [01;34mPublic[0m  [01;34msnap[0m       [01;34mVideos[0m
+[01;34mDocuments[0m  examples.desktop  [01;34mPictures[0m  [01;34mR[0m       [01;34mTemplates[0m
+]0;ben@nancy3: ~[01;32mben@nancy3[00m:[01;34m~[00m$ cd 
+]0;ben@nancy3: ~[01;32mben@nancy3[00m:[01;34m~[00m$ cd(
+bash: syntax error near unexpected token `newline'
+]0;ben@nancy3: ~[01;32mben@nancy3[00m:[01;34m~[00m$ cd()
+> 
+> ^C
+]0;ben@nancy3: ~[01;32mben@nancy3[00m:[01;34m~[00m$ ls
+[0m[01;34mDesktop[0m    [01;34mDownloads[0m         [01;34mMusic[0m     [01;34mPublic[0m  [01;34msnap[0m       [01;34mVideos[0m
+[01;34mDocuments[0m  examples.desktop  [01;34mPictures[0m  [01;34mR[0m       [01;34mTemplates[0m
+]0;ben@nancy3: ~[01;32mben@nancy3[00m:[01;34m~[00m$ cd Dpc[K[Kocuments/
+]0;ben@nancy3: ~/Documents[01;32mben@nancy3[00m:[01;34m~/Documents[00m$ ls
+ [0m[01;34mbenmbrew.github.io[0m                [01;34mnba_project[0m
+ [01;34mben_projects[0m                      [01;34mnfl_df_project[0m
+ [01;34mCV[0m                                [01;34mold_phone_pics[0m
+ [01;34mdashboard_template[0m                [01;34mopiod_data[0m
+ [01;34mdaterange[0m                         [01;34mOSDUHS[0m
+ [01;34mgoldenberg-lab.github.io[0m          [01;34mpolice_shootings[0m
+ [01;34mgoogle_material_design_template[0m   [0

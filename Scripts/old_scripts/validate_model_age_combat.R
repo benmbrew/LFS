@@ -1,5 +1,10 @@
 source('all_functions.R')
 
+# remove WT 
+remove_wild_type <- function(m_or_beta_values){
+  m_or_beta_values <- m_or_beta_values[m_or_beta_values$p53_germline == 'MUT',]
+  return(m_or_beta_values)
+}
 
 
 # next do swan with standardize and not
@@ -22,7 +27,7 @@ train_cutoff = TRUE
 mean_lambda = FALSE
 which_methyl = 'beta'
 beta_thresh = 0.1
-age_cutoff =  72
+age_cutoff = 72
 tech = FALSE
 standardize = FALSE
 boot_num = 50
@@ -100,33 +105,22 @@ importance_results <- list()
 rf_pred_results <- list()
 rf_important_results <- list()
 
-
 if(size =='used_bh'){
-  cases_450 <-  readRDS(paste0('../../Data/', method,'/cases_450_small_cv', combat,'.rda'))
-  cases_850 <- readRDS(paste0('../../Data/', method,'/cases_850_small_cv', combat,'.rda'))
-  con_mut <- readRDS(paste0('../../Data/', method,'/con_mut_small_cv', combat,'.rda'))
-  con_850 <- readRDS( paste0('../../Data/', method,'/con_850_small_cv', combat,'.rda'))
-  con_wt <- readRDS(paste0('../../Data/', method,'/con_wt_small_cv', combat,'.rda'))
+  cases_450 <-  readRDS(paste0('../../Data/', method,'/cases_450_small_cv_age_combat_', combat,'.rda'))
+  cases_850 <- readRDS(paste0('../../Data/', method,'/cases_850_small_cv_age_combat_', combat,'.rda'))
+  con_mut <- readRDS(paste0('../../Data/', method,'/con_mut_small_cv_age_combat_', combat,'.rda'))
+  con_850 <- readRDS( paste0('../../Data/', method,'/con_850_small_cv_age_combat_', combat,'.rda'))
+  con_wt <- readRDS(paste0('../../Data/', method,'/con_wt_small_cv_age_combat_', combat,'.rda'))
   
 } else {
-  cases_450 <-  readRDS(paste0('../../Data/', method,'/cases_450_cv', combat,'.rda'))
-  cases_850 <- readRDS(paste0('../../Data/', method,'/cases_850_cv', combat,'.rda'))
-  con_mut <- readRDS(paste0('../../Data/', method,'/con_mut_cv', combat,'.rda'))
-  con_850 <- readRDS( paste0('../../Data/', method,'/con_850_cv', combat,'.rda'))
-  con_wt <- readRDS(paste0('../../Data/', method,'/con_wt_cv', combat,'.rda'))
-  
-  
-  # # randomly sample from all cgs
-  # clin_names <- names(cases_450)[1:12]
-  # r_cgs <- sample(names(cases_450)[13:ncol(cases_450)], 5000)
-  # cases_450 <- cases_450[c(clin_names, r_cgs)]
-  # con_wt <- con_wt[c(clin_names, r_cgs)]
-  # con_mut <- con_mut[c(clin_names, r_cgs)]
-  # con_850 <- con_850[c(clin_names, r_cgs)]
-  # cases_850 <- cases_850[c(clin_names, r_cgs)]
+  cases_450 <-  readRDS(paste0('../../Data/', method,'/cases_450_cv_age_combat_', combat,'.rda'))
+  cases_850 <- readRDS(paste0('../../Data/', method,'/cases_850_cv_age_combat_', combat,'.rda'))
+  con_mut <- readRDS(paste0('../../Data/', method,'/con_mut_cv_age_combat_', combat,'.rda'))
+  con_850 <- readRDS( paste0('../../Data/', method,'/con_850_cv_age_combat_', combat,'.rda'))
+  con_wt <- readRDS(paste0('../../Data/', method,'/con_wt_cv_age_combat_', combat,'.rda'))
+ 
   # 
 }
-
 optimal_thesh = 0.5
 lambda_val = 0.05
 
@@ -172,7 +166,10 @@ if(model_type == 'enet'){
   
   
   optimal_thresh = 0.5
-
+  
+  
+  
+  
 }
 
 
@@ -238,7 +235,7 @@ if(use_cancer){
 }
 # load cases
 cases_450 <- as.data.frame(cbind(WT = 0, as.data.frame(class.ind(cases_450$p53_germline)), 
-                   cases_450))
+                                 cases_450))
 
 
 # load cases
@@ -249,7 +246,7 @@ cases_850 <- as.data.frame(cbind(WT = 0, as.data.frame(class.ind(cases_850$p53_g
 
 # load cases
 con_all <- cbind(as.data.frame(class.ind(con_all$p53_germline)), 
-                                 con_all)
+                 con_all)
 
 
 
@@ -291,10 +288,10 @@ if(model_type == 'enet'){
   
   
   # read in cases_450
-  saveRDS(con_dat, paste0('pc_data_test/', 'con_test_', method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_', is_lambda,'_',standardize_data,'_',alpha_num,'_',s_num,'_', is_alpha,'_',optimal_thresh,'_',use_null_450,'_',removed_cancer,'_',use_p53,'_', used_under_6,'.rda'))
+  saveRDS(con_dat, paste0('final_age_combat_test/', 'con_test_', method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_', is_lambda,'_',standardize_data,'_',alpha_num,'_',s_num,'_', is_alpha,'_',optimal_thresh,'_',use_null_450,'_',removed_cancer,'_',use_p53,'_', used_under_6,'.rda'))
   
-  saveRDS(valid_dat, paste0('pc_data_test/', 'valid_test_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_', is_lambda,'_',standardize_data,'_',alpha_num,'_',s_num,'_', is_alpha,'_',optimal_thresh,'_',use_null_450,'_',removed_cancer,'_',use_p53,'_', used_under_6,'.rda'))
-  saveRDS(mod_dat, paste0('pc_data_test/', 'model_test_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_', is_lambda,'_',standardize_data,'_',alpha_num,'_',s_num,'_',is_alpha,'_' ,optimal_thresh,'_',use_null_450,'_',removed_cancer,'_',use_p53,'_', used_under_6,'.rda'))
+  saveRDS(valid_dat, paste0('final_age_combat_test/', 'valid_test_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_', is_lambda,'_',standardize_data,'_',alpha_num,'_',s_num,'_', is_alpha,'_',optimal_thresh,'_',use_null_450,'_',removed_cancer,'_',use_p53,'_', used_under_6,'.rda'))
+  saveRDS(mod_dat, paste0('final_age_combat_test/', 'model_test_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_', is_lambda,'_',standardize_data,'_',alpha_num,'_',s_num,'_',is_alpha,'_' ,optimal_thresh,'_',use_null_450,'_',removed_cancer,'_',use_p53,'_', used_under_6,'.rda'))
   
   
   
@@ -320,12 +317,12 @@ if(model_type == 'enet'){
   temp_model <- result_list[[4]]
   
   
-  saveRDS(temp_con, paste0('pc_data_test/', 'con_test_',method,'_',size,'_',is_gen,'_',combat,'_', model_type,'_',optimal_thresh,'_',use_null_450,'_',removed_cancer,'_',removed_cancer,'_',use_p53,'_', used_under_6,'.rda'))
+  saveRDS(temp_con, paste0('final_age_combat_test/', 'con_test_',method,'_',size,'_',is_gen,'_',combat,'_', model_type,'_',optimal_thresh,'_',use_null_450,'_',removed_cancer,'_',removed_cancer,'_',use_p53,'_', used_under_6,'.rda'))
   
-  saveRDS(temp_valid, paste0('pc_data_test/', 'valid_test_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_',optimal_thresh,'_',use_null_450,'_',removed_cancer,'_', used_under_6,'.rda'))
+  saveRDS(temp_valid, paste0('final_age_combat_test/', 'valid_test_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_',optimal_thresh,'_',use_null_450,'_',removed_cancer,'_', used_under_6,'.rda'))
   
-  saveRDS(temp_importance, paste0('pc_data_test/', 'importance_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_',optimal_thresh,'_',use_null_450,'_',removed_cancer,'_',use_p53,'_', used_under_6,'.rda'))
-  saveRDS(temp_model, paste0('pc_data_test/', 'model_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_',optimal_thresh,'_',use_null_450,'_',removed_cancer, '_',use_p53,'_', used_under_6,'.rda'))
+  saveRDS(temp_importance, paste0('final_age_combat_test/', 'importance_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_',optimal_thresh,'_',use_null_450,'_',removed_cancer,'_',use_p53,'_', used_under_6,'.rda'))
+  saveRDS(temp_model, paste0('final_age_combat_test/', 'model_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_',optimal_thresh,'_',use_null_450,'_',removed_cancer, '_',use_p53,'_', used_under_6,'.rda'))
   
 }
 
@@ -393,9 +390,6 @@ if (model_type == 'rf'){
                       get_plot = TRUE,
                       data_type = 'null')
   
-  t.test(x = temp_con$positive[temp_con$real == 'positive'], 
-         y = temp_con$positive[temp_con$real == 'negative'])
-  
   if(use_null_450 == 'used_null_450_all'){
     temp_con_wt <- temp_con[temp_con$WT == 1,]
     temp_con_mut <- temp_con[temp_con$MUT == 1,]
@@ -416,9 +410,6 @@ if (model_type == 'rf'){
                         get_plot = TRUE,
                         data_type = 'null')
   }
-  
-  t1 <- temp_con_mut[temp_con_mut$age_sample_collection < 72,,]
-  t2 <- temp_con_mut[temp_con_mut$positive  > 0.5,]
   
   # ConfusionMatrixInfo(data = temp_450_wt,
   #                     other_title = paste0('null 450 wt','_',combat,'_' , method, '_', size, '_',
@@ -469,6 +460,10 @@ if (model_type == 'rf'){
 
 
 
+
+
+
+
 # CONTROLS
 if(model_type == 'enet'){
   
@@ -478,7 +473,7 @@ if(model_type == 'enet'){
   temp_con$pred_class <- as.factor(ifelse(temp_con$controls_age_pred > optimal_thresh, 'positive', 'negative'))
   temp_con$pred_class <- factor(temp_con$pred_class, levels = c('positive', 'negative'))
   
- 
+  
   
   temp_valid$real <- as.factor(ifelse(temp_valid$age_diagnosis <= age_cutoff, 'positive', 'negative'))
   temp_valid$real <- factor(temp_valid$real, levels = c('positive', 'negative'))
