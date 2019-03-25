@@ -27,6 +27,7 @@ library(RColorBrewer)
 registerDoParallel(6)
 
 
+set.seed(1)
 
 
 ##########

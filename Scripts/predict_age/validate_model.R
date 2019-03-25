@@ -172,7 +172,7 @@ if(model_type == 'enet'){
   
   
   optimal_thresh = 0.5
-
+  
 }
 
 
@@ -238,7 +238,7 @@ if(use_cancer){
 }
 # load cases
 cases_450 <- as.data.frame(cbind(WT = 0, as.data.frame(class.ind(cases_450$p53_germline)), 
-                   cases_450))
+                                 cases_450))
 
 
 # load cases
@@ -249,7 +249,7 @@ cases_850 <- as.data.frame(cbind(WT = 0, as.data.frame(class.ind(cases_850$p53_g
 
 # load cases
 con_all <- cbind(as.data.frame(class.ind(con_all$p53_germline)), 
-                                 con_all)
+                 con_all)
 
 
 
@@ -478,7 +478,7 @@ if(model_type == 'enet'){
   temp_con$pred_class <- as.factor(ifelse(temp_con$controls_age_pred > optimal_thresh, 'positive', 'negative'))
   temp_con$pred_class <- factor(temp_con$pred_class, levels = c('positive', 'negative'))
   
- 
+  
   
   temp_valid$real <- as.factor(ifelse(temp_valid$age_diagnosis <= age_cutoff, 'positive', 'negative'))
   temp_valid$real <- factor(temp_valid$real, levels = c('positive', 'negative'))
