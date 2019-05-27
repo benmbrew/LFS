@@ -1,20 +1,19 @@
 source('all_functions.R')
 
 
-
 # next do swan with standardize and not
 # set fixed variables
 # set fixed variables
 size = 'full'
-model_type = 'enet'
-null_450= TRUE
+model_type = 'rf'
+null_450 = TRUE
 null_450_all = FALSE
 use_p53 = FALSE
 gender = TRUE
-use_cancer = FALSE
+use_cancer = TRUE
 method = 'noob'
 include_under_6 = FALSE
-combat = 'combat_1'
+combat = 'normal'
 alpha_val = 0.1
 train_alpha = FALSE
 train_lambda = FALSE
@@ -367,7 +366,6 @@ if (model_type == 'rf'){
   # temp_valid$pred_class <- as.factor(ifelse(temp_valid$positive > optimal_thresh, 'positive', 'negative'))
   # temp_valid$pred_class <- factor(temp_valid$pred_class, levels = c('positive', 'negative'))
   # temp_valid$real <- factor(temp_valid$real, levels = c('positive', 'negative'))
-  # 
   
   
   temp_valid$pred_class <- as.factor(ifelse(temp_valid$positive > optimal_thresh, 'positive', 'negative'))
@@ -382,7 +380,8 @@ if (model_type == 'rf'){
                       actual = 'real',
                       cutoff = optimal_thresh,
                       get_plot = TRUE,
-                      data_type = 'valid')
+                      data_type = 'valid',
+                      points = FALSE)
   
   ConfusionMatrixInfo(data = temp_con,
                       other_title = paste0('null all','_',combat,'_' , method, '_', size, '_',
@@ -391,7 +390,11 @@ if (model_type == 'rf'){
                       actual = 'real',
                       cutoff = optimal_thresh,
                       get_plot = TRUE,
-                      data_type = 'null')
+                      data_type = 'null',
+                      points = FALSE)
+  
+  temp_con$acc <- caret::confusionMatrix(table(temp_con$pred_class, temp_con$real))$overall[[1]]
+  acc <-  round(caret::confusionMatrix(table(temp_con$pred_class, temp_con$real))$overall[[1]], 2)
   
   t.test(x = temp_con$positive[temp_con$real == 'positive'], 
          y = temp_con$positive[temp_con$real == 'negative'])
@@ -406,7 +409,8 @@ if (model_type == 'rf'){
                         actual = 'real',
                         cutoff = optimal_thresh,
                         get_plot = TRUE,
-                        data_type = 'null')
+                        data_type = 'null',
+                        points = FALSE)
     
     ConfusionMatrixInfo(data = temp_con_mut,
                         other_title = '',
@@ -414,7 +418,8 @@ if (model_type == 'rf'){
                         actual = 'real',
                         cutoff = optimal_thresh,
                         get_plot = TRUE,
-                        data_type = 'null')
+                        data_type = 'null',
+                        points = FALSE)
   }
   
   t1 <- temp_con_mut[temp_con_mut$age_sample_collection < 72,,]

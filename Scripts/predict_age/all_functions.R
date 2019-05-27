@@ -2654,7 +2654,7 @@ AccuracyCutoffInfo <- function( test, predict, actual )
 # predict <- 'positive'
 # actual = 'real'
 # cutoff = 0.5
-ConfusionMatrixInfo <- function( data, predict, actual, cutoff, get_plot, other_title, data_type)
+ConfusionMatrixInfo <- function( data, predict, actual, cutoff, get_plot, other_title, data_type, points)
 {	
   # extract the column ;
   # relevel making 1 appears on the more commonly seen position in 
@@ -2663,10 +2663,11 @@ ConfusionMatrixInfo <- function( data, predict, actual, cutoff, get_plot, other_
   actual  <- relevel( as.factor( data[[actual]] ), "positive" )
   if(data_type == 'null') {
     age <- data$age_sample_collection
+    show_legend <- FALSE
     
   } else {
     age <- data$age_diagnosis
-    
+    show_legend <- TRUE
   }
   result <- data.table( actual = actual, predict = predict, age = age)
   
@@ -2691,20 +2692,39 @@ ConfusionMatrixInfo <- function( data, predict, actual, cutoff, get_plot, other_
   library(ggrepel)
   # jittering : can spread the points along the x axis 
   result$age <- round(result$age/12)
-  plot <- ggplot( result, aes( actual, predict, color = type ) ) + 
-    geom_point(size = 0, show.legend = FALSE) +
-    scale_color_manual(name = 'Result',
-                       values = c('red', 'orange','green', 'blue'),
-                       breaks = c( "TP", "FN", "FP", "TN" ))+
-    geom_violin( fill = "white", color = NA ) +
-    geom_hline( yintercept = cutoff, color = 'black', alpha = 0.6, linetype = 2 ) + 
-    geom_text(aes(label = age),alpha = 0.7, cex = 5,position=position_jitter(width = 0.4, height = 0), show.legend = FALSE)+
-    geom_vline(xintercept = 1.5, linetype = 2) +
-    scale_y_continuous( limits = c( 0, 1 ) ) + 
-    guides( col = guide_legend( nrow = 2 ) ) + # adjust the legend to have two rows  
-    ggtitle( sprintf( other_title,"_Cutoff at %.2f", cutoff ) ) +
-    theme(text = element_text(size=14)) + 
-    xlab(x_lab) + ylab('Predicted probability of onset') + theme_base(base_size = 18)
+  
+  if(points){
+    plot <- ggplot( result, aes( actual, predict, color = type ) ) + 
+      geom_jitter(size = 2, alpha = 0.5, show.legend = show_legend) +
+      scale_color_manual(name = 'Result',
+                         values = c('red', 'orange','green', 'blue'),
+                         breaks = c( "TP", "FN", "FP", "TN" ))+
+      geom_violin( fill = "lightgrey", color = NA , alpha = 0.3) +
+      geom_hline( yintercept = cutoff, color = 'black', alpha = 0.6, linetype = 2 ) + 
+      geom_vline(xintercept = 1.5, linetype = 2) +
+      scale_y_continuous( limits = c( 0, 1 ) ) + 
+      guides( col = guide_legend( nrow = 2 ) ) + # adjust the legend to have two rows  
+      ggtitle( sprintf( other_title,"_Cutoff at %.2f", cutoff ) ) +
+      theme(text = element_text(size=14)) + 
+      xlab(x_lab) + ylab('Predicted probability of onset') + theme_base(base_size = 18)
+    
+  } else {
+    plot <- ggplot( result, aes( actual, predict, color = type ) ) + 
+      geom_point(size = 0, show.legend = FALSE) +
+      scale_color_manual(name = 'Result',
+                         values = c('red', 'orange','green', 'blue'),
+                         breaks = c( "TP", "FN", "FP", "TN" ))+
+      geom_violin( fill = "lightgrey", color = NA, alhpa = 0.5 ) +
+      geom_hline( yintercept = cutoff, color = 'black', alpha = 0.6, linetype = 2 ) + 
+      geom_text(aes(label = age),alpha = 0.7, cex = 5,position=position_jitter(width = 0.4, height = 0), show.legend = FALSE)+
+      geom_vline(xintercept = 1.5, linetype = 2) +
+      scale_y_continuous( limits = c( 0, 1 ) ) + 
+      guides( col = guide_legend( nrow = 2 ) ) + # adjust the legend to have two rows  
+      ggtitle( sprintf( other_title,"_Cutoff at %.2f", cutoff ) ) +
+      theme(text = element_text(size=14)) + 
+      xlab(x_lab) + ylab('Predicted probability of onset') + theme_base(base_size = 18)
+    
+  }
   
   
   
@@ -2714,6 +2734,8 @@ ConfusionMatrixInfo <- function( data, predict, actual, cutoff, get_plot, other_
     return(as.data.frame(result))
   }
 }
+
+
 
 
 # [ROCInfo] : 

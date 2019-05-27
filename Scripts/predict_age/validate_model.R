@@ -5,13 +5,13 @@ source('all_functions.R')
 # next do swan with standardize and not
 # set fixed variables
 # set fixed variables
-size = 'full'
-model_type = 'enet'
+size = 'used_bh'
+model_type = 'rf'
 null_450= TRUE
 null_450_all = FALSE
 use_p53 = FALSE
 gender = TRUE
-use_cancer = FALSE
+use_cancer = TRUE
 method = 'noob'
 include_under_6 = FALSE
 combat = 'combat_1'
@@ -127,6 +127,10 @@ if(size =='used_bh'){
   # 
 }
 
+temp <- c(cases_450$ids, cases_850$ids, con_850$ids, con_mut$ids, con_wt$ids)
+temp <- temp[!duplicated(temp)]
+
+write_csv(as.data.frame(temp), '~/Desktop/malkin_ids.csv')
 optimal_thesh = 0.5
 lambda_val = 0.05
 
@@ -382,16 +386,17 @@ if (model_type == 'rf'){
                       actual = 'real',
                       cutoff = optimal_thresh,
                       get_plot = TRUE,
-                      data_type = 'valid')
+                      data_type = 'valid',
+                      points = TRUE)
   
   ConfusionMatrixInfo(data = temp_con,
-                      other_title = paste0('null all','_',combat,'_' , method, '_', size, '_',
-                                           num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_',beta_thresh, '_',optimal_thresh),
+                      other_title ='', 
                       predict = 'positive',
                       actual = 'real',
                       cutoff = optimal_thresh,
                       get_plot = TRUE,
-                      data_type = 'null')
+                      data_type = 'null',
+                      points = TRUE)
   
   t.test(x = temp_con$positive[temp_con$real == 'positive'], 
          y = temp_con$positive[temp_con$real == 'negative'])
@@ -448,7 +453,19 @@ if (model_type == 'rf'){
   
   # plot mean preds
   dev.off()
-  plot(perf_s)
+  plot(perf_s, 
+       col=adjustcolor("blue", alpha.f = 0.7), 
+       lwd= 4,
+       lty = 2,
+       pch = 1,
+       cex = 2,
+       cex.lab = 1.5,
+       cex.axis = 1.5,
+       type = 'l',
+       main="ROC curve")
+  axis(1)
+  axis(2)
+  
   abline(a = 0, b =1)
   temp <- round(roc(temp_valid$real, temp_valid$positive)[[9]][1], 2)
   legend(x = 0.8, y = 0.2, legend = paste0('AUC = ', temp))
