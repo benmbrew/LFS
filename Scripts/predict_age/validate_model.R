@@ -5,7 +5,7 @@ source('all_functions.R')
 # next do swan with standardize and not
 # set fixed variables
 # set fixed variables
-size = 'used_bh'
+size = 'full'
 model_type = 'rf'
 null_450= TRUE
 null_450_all = FALSE
@@ -102,18 +102,18 @@ rf_important_results <- list()
 
 
 if(size =='used_bh'){
-  cases_450 <-  readRDS(paste0('../../Data/', method,'/cases_450_small_cv', combat,'.rda'))
-  cases_850 <- readRDS(paste0('../../Data/', method,'/cases_850_small_cv', combat,'.rda'))
-  con_mut <- readRDS(paste0('../../Data/', method,'/con_mut_small_cv', combat,'.rda'))
-  con_850 <- readRDS( paste0('../../Data/', method,'/con_850_small_cv', combat,'.rda'))
-  con_wt <- readRDS(paste0('../../Data/', method,'/con_wt_small_cv', combat,'.rda'))
+  cases_450 <-  readRDS(paste0('../../Data/', method,'/cases_450_small_', combat,'.rda'))
+  cases_850 <- readRDS(paste0('../../Data/', method,'/cases_850_small_', combat,'.rda'))
+  con_mut <- readRDS(paste0('../../Data/', method,'/con_mut_small_', combat,'.rda'))
+  con_850 <- readRDS( paste0('../../Data/', method,'/con_850_small_', combat,'.rda'))
+  con_wt <- readRDS(paste0('../../Data/', method,'/con_wt_small_', combat,'.rda'))
   
 } else {
-  cases_450 <-  readRDS(paste0('../../Data/', method,'/cases_450_cv', combat,'.rda'))
-  cases_850 <- readRDS(paste0('../../Data/', method,'/cases_850_cv', combat,'.rda'))
-  con_mut <- readRDS(paste0('../../Data/', method,'/con_mut_cv', combat,'.rda'))
-  con_850 <- readRDS( paste0('../../Data/', method,'/con_850_cv', combat,'.rda'))
-  con_wt <- readRDS(paste0('../../Data/', method,'/con_wt_cv', combat,'.rda'))
+  cases_450 <-  readRDS(paste0('../../Data/', method,'/cases_450_norm_', combat,'.rda'))
+  cases_850 <- readRDS(paste0('../../Data/', method,'/cases_850_norm_', combat,'.rda'))
+  con_mut <- readRDS(paste0('../../Data/', method,'/con_mut_norm_', combat,'.rda'))
+  con_850 <- readRDS(paste0('../../Data/', method,'/con_850_norm_', combat,'.rda'))
+  con_wt <- readRDS(paste0('../../Data/', method,'/con_wt_norm_', combat,'.rda'))
   
   
   # # randomly sample from all cgs
@@ -126,11 +126,11 @@ if(size =='used_bh'){
   # cases_850 <- cases_850[c(clin_names, r_cgs)]
   # 
 }
-
-temp <- c(cases_450$ids, cases_850$ids, con_850$ids, con_mut$ids, con_wt$ids)
-temp <- temp[!duplicated(temp)]
-
-write_csv(as.data.frame(temp), '~/Desktop/malkin_ids.csv')
+# 
+# temp <- c(cases_450$ids, cases_850$ids, con_850$ids, con_mut$ids, con_wt$ids)
+# temp <- temp[!duplicated(temp)]
+# 
+# write_csv(as.data.frame(temp), '~/Desktop/malkin_ids.csv')
 optimal_thesh = 0.5
 lambda_val = 0.05
 
@@ -512,7 +512,8 @@ if(model_type == 'enet'){
                       cutoff = optimal_thresh,
                       other_title = paste0('valid','_',acc ,'_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_', is_lambda,'_',standardize_data,'_',alpha_num,'_',round(s_num, 4),'_', is_alpha),
                       get_plot = TRUE,
-                      data_type = 'valid')
+                      data_type = 'valid', 
+                      points = TRUE)
   
   # get confusion matrix function for plotting 
   ConfusionMatrixInfo(data = temp_450, 

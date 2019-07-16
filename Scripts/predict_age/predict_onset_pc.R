@@ -6,17 +6,17 @@ remove_wild_type <- function(m_or_beta_values){
   return(m_or_beta_values)
 }
 
-# strategy 
-# all methods, both models, both sizes
-# combat only normal, combat_1
 
+# next do swan with standardize and not
+# set fixed variables
+# set fixed variables
 size = 'used_bh'
 model_type = 'rf'
 null_450= TRUE
 null_450_all = FALSE
 use_p53 = FALSE
-gender = TRUE
-use_cancer = TRUE
+gender = FALSE
+use_cancer = FALSE
 method = 'noob'
 include_under_6 = FALSE
 combat = 'combat_1'
@@ -98,6 +98,11 @@ k_folds <- how_many_folds
 # create range for random sampling for cross validation
 seed_range <- c(1:how_many_seeds)
 
+# create list to store model
+all_test_results <- list()
+importance_results <- list()
+rf_pred_results <- list()
+rf_important_results <- list()
 
 
 if(size =='used_bh'){
@@ -125,13 +130,58 @@ if(size =='used_bh'){
   # cases_850 <- cases_850[c(clin_names, r_cgs)]
   # 
 }
-# create list to store model
-all_test_results <- list()
-importance_results <- list()
-rf_pred_results <- list()
-rf_pred_results_con <- list()
-rf_pred_results_valid <- list()
-rf_important_results <- list()
+
+optimal_thesh = 0.5
+lambda_val = 0.05
+
+
+if(model_type == 'enet'){
+  if(train_lambda){
+    
+    lambda_val <- 0.05
+    
+  } else if (mean_lambda) {
+    lambda_val <-  readRDS(paste0('pc_data_cv/mean_lambda',combat,'_' , method, '_', size, '_',
+                                  num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_',alpha_val,'_',beta_thresh,'.rda'))
+    
+  } else {
+    lambda_val <-  readRDS(paste0('pc_data_cv/optimal_lambda',combat,'_' , method, '_', size, '_',
+                                  num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_',alpha_val,'_',beta_thresh,'.rda'))
+  }
+} 
+
+if(model_type == 'enet'){
+  
+  if(train_cutoff){
+    optimal_thresh <- readRDS(paste0('pc_data_cv/optimal_cutoff_', combat,'_' , method, '_', size, '_',
+                                     num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_',alpha_val,'_',beta_thresh,'.rda'))
+    
+    # readRDS(paste0('pc_data_cv/mean_cutoff_', combat,'_' , method, '_', size, '_',
+    #                num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_',alpha_val,'_',beta_thresh,'.rda'))
+    # 
+    
+  } else {
+    optimal_thresh = 0.5
+  }
+  
+  if(train_alpha){
+    optimal_alpha <- readRDS(paste0('pc_data_cv/optimal_alpha',combat,'_' , method, '_', size, '_',
+                                    num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_',alpha_val,'_',beta_thresh,'.rda'))
+    
+  } else {
+    optimal_alpha = alpha_val
+  }
+  
+} else {
+  
+  
+  optimal_thresh = 0.5
+  
+  
+  
+  
+}
+
 
 ##########
 # load genomic methyl set (from controls) - you need genetic locations by probe from this object
@@ -146,293 +196,350 @@ g_ranges <- g_ranges[!duplicated(g_ranges$start),]
 g_ranges <- g_ranges[!grepl('ch', g_ranges$probe),]
 
 names(g_ranges)[1] <- 'chr'
+
 con_wt$tech <- '450k'
-
-if(use_null_450 == 'used_null_450_all'){
-  null_450_all <- rbind(con_mut,
-                        con_wt)
-  null_450_all$age <- null_450_all$age_sample_collection
-  if(!include_under_6){
-    null_450_all <- null_450_all[null_450_all$age > 72, ]
-    
-  }
-  cases_450$age <- cases_450$age_diagnosis
-  cases_450 <- rbind(cases_450,
-                 null_450_all)
-
-  cases_450 <- cases_450[!duplicated(cases_450$tm_donor),]
+if(use_cancer){
+  # remove cancer signature
+  bh_feats <- bump_hunter(dat_1 = cases_450, 
+                          dat_2 = con_mut , 
+                          bump = 'cancer', 
+                          boot_num = 5, 
+                          beta_thresh = beta_thresh,
+                          methyl_type = methyl_type,
+                          g_ranges = g_ranges)
   
+  # combine call controls 
+  con_all<- rbind(con_850, 
+                  con_mut,
+                  con_wt)
+  rm(con_mut)
+  rm(con_wt)
+  rm(con_850)
   
+  # get intersect_names
+  intersect_names <- names(cases_450)[grepl('^cg', names(cases_450))]
   
-} else  if(use_null_450 == 'used_null_450_mut'){
-  null_450_all <- con_mut
-  null_450_all$age <- null_450_all$age_sample_collection
-  if(!include_under_6){
-    null_450_all <- null_450_all[null_450_all$age > 72, ]
-    
-  }
-  cases_450$age <- cases_450$age_diagnosis
-  cases_450 <- rbind(cases_450,
-                     null_450_all)
+  # get feature list
+  colnames(bh_feats)[1] <- 'chr'
+  remove_features <- inner_join(bh_feats, g_ranges)$probe
   
-  cases_450 <- cases_450[!duplicated(cases_450$tm_donor),]
+  # take remove features out of colnames 
+  bh_features <- intersect_names[!intersect_names %in% remove_features]
   
+  # subset all data by bh_features
+  cases_450 <- remove_cancer_feats(cases_450, bh_feats = bh_features)
+  con_all <- remove_cancer_feats(con_all, bh_feats = bh_features)
+  cases_850 <- remove_cancer_feats(cases_850, bh_feats = bh_features)
+} else {
   
-}
+  # combine call controls 
+  con_all<- rbind(con_850, 
+                  con_mut,
+                  con_wt)
+  rm(con_mut)
+  rm(con_wt)
+  rm(con_850)
   
-  
-
-
-
-# create objects to indicate method and model details when saving
-
-# save image
-# save.image('~/Desktop/temp_valid.RData')
-cases_full <- cases_450
-controls_full <- con_850
-valid_full <- cases_850
-for(random_seed in 1:length(seed_range)) {
-  # prepare data sets for modelling
-  
-  run_model <- function(cases_full,
-                        controls_full,
-                        valid_full,
-                        model_type = model_type,
-                        age_cutoff = age_cutoff,
-                        k_folds = k_folds,
-                        tech = tech,
-                        gender = gender,
-                        beta_thresh = beta_thresh,
-                        methyl_type = methyl_type,
-                        g_ranges = g_ranges,
-                        standardize = standardize) {
-    
-    
-    
-    set.seed(random_seed)
-    
-    # get vector of random folds
-    fold_vec <- sample(1:k_folds, nrow(cases_full), replace = T)
-    
-    # test_data_results
-    
-    importance_rf <- list()
-    temp_results <- list()
-    temp_results_con <- list()
-    
-    
-    # combine 
-    for(i in 1:k_folds) {
-      
-      # get train and test index
-      train_index <- !grepl(i, fold_vec)
-      test_index <- !train_index
-      
-      # subset to get training and test data
-      train_cases <- cases_full[train_index, ]
-      test_cases <- cases_full[test_index, ]
-      
-      # get controls 450k mut
-      temp_con <- controls_full[controls_full$tech == '850k' & controls_full$p53_germline == 'MUT',]
-      temp_con <- temp_con[!duplicated(temp_con$tm_donor),]
-      temp_con$age <- temp_con$age_sample_collection
-      
-      # use cases training and controls to get bumphunter features
-      bh_feats <- bump_hunter(dat_1 = train_cases, 
-                              dat_2 = temp_con , 
-                              bump = 'cancer', 
-                              boot_num = 5, 
-                              beta_thresh = beta_thresh,
-                              methyl_type = methyl_type,
-                              g_ranges = g_ranges)
-      rm(temp_con)
-      
-      
-      # get intersect_names
-      intersect_names <- names(train_cases)[grepl('^cg', names(train_cases))]
-      
-      # get feature list
-      colnames(bh_feats)[1] <- 'chr'
-      remove_features <- inner_join(bh_feats, g_ranges)$probe
-      
-      # take remove features out of colnames 
-      bh_features <- intersect_names[!intersect_names %in% remove_features]
-      
-      if(model_type == 'enet'){
-        # function to predict with all test, controls, controls old, and valid
-        
-        run_enet_test(training_dat = train_cases,
-                      test_dat = test_cases,
-                      controls_dat = controls_full,
-                      valid_dat = cases_850,
-                      age_cutoff = age_cutoff,
-                      alpha_num = alpha_val,
-                      gender = gender,
-                      tech = tech,
-                      bh_features = bh_features,
-                      standardize = standardize)
-        
-        temp_results[[i]] <- mod_results[[i]][[1]]
-        temp_results_con[[i]] <- mod_results[[i]][[2]]
-      } else {
-        # mod_result  <- run_rf_all_test(training_dat = train_cases,
-        #                                test_dat = test_cases,
-        #                                controls_dat = controls_full,
-        #                                valid_dat = cases_850,
-        #                                age_cutoff = age_cutoff,
-        #                                gender = gender,
-        #                                tech = tech,
-        #                                bh_features = bh_features)
-        
-        mod_results  <- run_rf_test(training_dat = train_cases,
-                                         test_dat = test_cases,
-                                         controls_dat = controls_full,
-                                         valid_dat = cases_850,
-                                         age_cutoff = age_cutoff,
-                                         gender = gender,
-                                         tech = tech,
-                                         bh_features = bh_features)
-        
-        importance_rf[[i]] <- mod_results[[2]]
-        temp_results[[i]] <- mod_results[[1]]
-        temp_results_con[[i]] <- mod_results[[3]]
-        
-      
-      }
-      
-      
-      
-      print(i)
-    }
-    
-    test_result <- do.call('rbind',temp_results)
-    con_result <- do.call('rbind',temp_results_con)
-    importance_result <- do.call('rbind', importance_rf)
-    test_result$seed <- random_seed
-    con_result$seed <- random_seed
-
-   
-    
-    
-    # combine list of case and control result data frames and return all result objects (two dataframes and 4 lists)
-    
-   return(list(test_result, con_result, importance_result))
-  }
-  
-  if(model_type == 'rf'){
-    
-    
-    # run model with 5 k fold cross validation
-    temp_test_results <- run_model(cases_full = cases_450,
-                                   controls_full = con_850,
-                                   valid_full = cases_850,
-                                   model_type = model_type,
-                                   age_cutoff = age_cutoff,
-                                   k_folds = k_folds,
-                                   tech = tech,
-                                   gender = gender,
-                                   beta_thresh = beta_thresh,
-                                   g_ranges = g_ranges,
-                                   standardize = standardize)
-    rf_pred_results[[random_seed]] <- temp_test_results[[1]]
-    rf_pred_results_con[[random_seed]] <- temp_test_results[[2]]
-    rf_important_results[[random_seed]] <- temp_test_results[[3]]
-    
-    
-    message('finished working on random seed = ', random_seed)
-  } else {
-    
-    # run model with 5 k fold cross validation
-    all_test_results[[random_seed]] <- run_model(cases_full = cases_450,
-                                                 controls_full = con_850,
-                                                 valid_full = cases_850,
-                                                 model_type = model_type,
-                                                 age_cutoff = age_cutoff,
-                                                 k_folds = k_folds,
-                                                 tech = tech,
-                                                 gender = gender,
-                                                 beta_thresh = beta_thresh,
-                                                 g_ranges = g_ranges,
-                                                 standardize = standardize)
-    
-    message('finished working on random seed = ', random_seed)
-  }
-  
+  bh_features <- names(cases_450)[grepl('^cg', names(cases_450))]
   
 }
+# load cases
+cases_450 <- as.data.frame(cbind(WT = 0, as.data.frame(class.ind(cases_450$p53_germline)), 
+                                 cases_450))
 
 
-if(model_type == 'rf'){
-  final_dat <- do.call(rbind, rf_pred_results)
-  final_dat_con <- do.call(rbind, rf_pred_results_con)
-  # final_dat_val <- do.call(rbind, rf_pred_results_valid)
-  
-  final_importance <- do.call(rbind, rf_important_results )
-  # # save data
-  saveRDS(final_dat, paste0('pc_data_cv/new_results/', combat,'_' , method, '_',size, '_',
-                            num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'.rda'))
-  saveRDS(final_dat_con, paste0('pc_data_cv/new_results/', 'con_', combat,'_' , method, '_',size, '_',
-                            num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'.rda'))
-  
-  # saveRDS(final_dat_val, paste0('pc_data_cv/new_results/', 'valid_', combat,'_' , method, '_',size, '_',
-                                # num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'.rda'))
+# load cases
+cases_850 <- as.data.frame(cbind(WT = 0, as.data.frame(class.ind(cases_850$p53_germline)), 
+                                 cases_850))
+
+
+
+# load cases
+con_all <- cbind(as.data.frame(class.ind(con_all$p53_germline)), 
+                 con_all)
+
+
+
+optimal_thresh = 0.5
+lambda_val = 0.5
+# get s_num and alpha_value
+if(model_type == 'enet'){
+  # s_num = mean_lambda
+  s_num = lambda_val
+  # s_num <- round(model_params[[1]], 3)
+  # alpha_num <- round(model_params[[2]], 2)
   # 
-  # # save data
-  saveRDS(final_importance, paste0('pc_data_cv/new_results/', 'importance_', combat,'_' ,method, '_',size, '_',
-                                   num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'.rda'))
+  # creat list to store results for alpha
+  
+  alpha_num <- alpha_val
+  
+  
+  message('working on alpha = ', alpha_num)
+  result_list <- test_model_enet(cases = cases_450,
+                                 controls = con_all,
+                                 valid = cases_850,
+                                 null_450 = use_null_450,
+                                 use_6 = include_under_6,
+                                 use_p53 = use_p53,
+                                 age_cutoff = age_cutoff,
+                                 gender = gender,
+                                 tech = tech,
+                                 test_lambda = train_lambda,
+                                 alpha_value = alpha_num,
+                                 lambda_value = s_num,
+                                 control_age = FALSE,
+                                 bh_features = bh_features)
+  
+  con_dat <- result_list[[1]]
+  valid_dat <- result_list[[2]]
+  mod_dat <- result_list[[3]]
+  
+  
+  
+  
+  # read in cases_450
+  saveRDS(con_dat, paste0('pc_data_test/', 'con_test_', method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_', is_lambda,'_',standardize_data,'_',alpha_num,'_',s_num,'_', is_alpha,'_',optimal_thresh,'_',use_null_450,'_',removed_cancer,'_',use_p53,'_', used_under_6,'.rda'))
+  
+  saveRDS(valid_dat, paste0('pc_data_test/', 'valid_test_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_', is_lambda,'_',standardize_data,'_',alpha_num,'_',s_num,'_', is_alpha,'_',optimal_thresh,'_',use_null_450,'_',removed_cancer,'_',use_p53,'_', used_under_6,'.rda'))
+  saveRDS(mod_dat, paste0('pc_data_test/', 'model_test_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_', is_lambda,'_',standardize_data,'_',alpha_num,'_',s_num,'_',is_alpha,'_' ,optimal_thresh,'_',use_null_450,'_',removed_cancer,'_',use_p53,'_', used_under_6,'.rda'))
+  
   
   
 } else {
-  final_dat <- do.call(rbind, all_test_results)
   
-  # # save data
-  saveRDS(final_dat, paste0('pc_data_cv/new_results/',combat,'_' ,method, '_', size, '_',
-                            num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_', standardize_data,'.rda'))
+  
+  result_list <- test_model_rf(cases = cases_450,
+                               controls = con_all,
+                               valid = cases_850,
+                               null_450 = use_null_450,
+                               use_6 = include_under_6,
+                               use_p53 = use_p53,
+                               age_cutoff = age_cutoff,
+                               gender = gender,
+                               tech = tech,
+                               control_age = FALSE,
+                               optimal_cutoff = optimal_thresh,
+                               bh_features = bh_features)
+  
+  temp_valid <- result_list[[1]]
+  temp_con <- result_list[[2]]
+  temp_importance  <- result_list[[3]]
+  temp_model <- result_list[[4]]
+  
+  
+  saveRDS(temp_con, paste0('pc_data_test/', 'con_test_',method,'_',size,'_',is_gen,'_',combat,'_', model_type,'_',optimal_thresh,'_',use_null_450,'_',removed_cancer,'_',removed_cancer,'_',use_p53,'_', used_under_6,'.rda'))
+  
+  saveRDS(temp_valid, paste0('pc_data_test/', 'valid_test_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_',optimal_thresh,'_',use_null_450,'_',removed_cancer,'_', used_under_6,'.rda'))
+  
+  saveRDS(temp_importance, paste0('pc_data_test/', 'importance_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_',optimal_thresh,'_',use_null_450,'_',removed_cancer,'_',use_p53,'_', used_under_6,'.rda'))
+  saveRDS(temp_model, paste0('pc_data_test/', 'model_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_',optimal_thresh,'_',use_null_450,'_',removed_cancer, '_',use_p53,'_', used_under_6,'.rda'))
   
 }
 
 
-temp <- final_dat %>% 
-  group_by(tm_donor) %>% 
-  summarise(positive = mean(positive),
-            age = mean(age))
+if (model_type == 'rf'){
+  
+  # optimal_thresh = 0.5
+  temp_valid <- temp_valid[, c('MUT','WT','tm_donor','positive','real' ,'age_diagnosis', 'age_sample_collection', 'tech')]
+  temp_con <- temp_con[, c('MUT','WT','tm_donor','positive', 'real', 'age_sample_collection', 'tech')]
+  temp_con$pred_class <- as.factor(ifelse(temp_con$positive > optimal_thresh, 'positive', 'negative'))
+  temp_con$pred_class <- factor(temp_con$pred_class, levels = c('positive', 'negative'))
+  
+  # temp_group <- temp_con %>% group_by(tm_donor) %>% 
+  #   filter(p53_germline == 'MUT') %>%
+  #   mutate(mean_pred = mean(positive, na.rm = TRUE))
+  # temp_850 <- temp_con[temp_con$tech == '850k',]
+  # any(temp_850$p53_germline == 'WT')
+  # if(any(temp_850$p53_germline == 'WT')){
+  #   
+  #   temp_450_wt <- temp_850[temp_850$p53_germline == 'WT',]
+  #   temp_850 <- temp_850[temp_850$p53_germline == 'MUT',]
+  #   temp_450 <- temp_con[temp_con$tech == '450k',]
+  #   
+  #   
+  # } else {
+  #   temp_450 <- temp_con[temp_con$tech == '450k',]
+  #   
+  #   temp_450_wt <- temp_450[temp_450$p53_germline == 'WT',]
+  #   temp_450 <- temp_450[temp_450$p53_germline == 'MUT',]
+  #   
+  # }
+  # temp_450$real_label <- as.factor(ifelse(temp_450$age_sample_collection > 72, 'negative', 'positive'))
+  # temp_450_wt$real_label <- as.factor(ifelse(temp_450_wt$age_sample_collection > 72, 'negative', 'positive'))
+  # temp_850$real_label <- as.factor(ifelse(temp_850$age_sample_collection > 72, 'negative', 'positive'))
+  # temp_450$real_label <- factor(temp_450$real_label, levels = c('positive', 'negative'))
+  # temp_850$real_label <- factor(temp_850$real_label, levels = c('positive', 'negative'))
+  # temp_450_wt$real_label <- factor(temp_450_wt$real_label, levels = c('positive', 'negative'))
+  # 
+  # temp_valid$pred_class <- as.factor(ifelse(temp_valid$positive > optimal_thresh, 'positive', 'negative'))
+  # temp_valid$pred_class <- factor(temp_valid$pred_class, levels = c('positive', 'negative'))
+  # temp_valid$real <- factor(temp_valid$real, levels = c('positive', 'negative'))
+  # 
+  
+  
+  temp_valid$pred_class <- as.factor(ifelse(temp_valid$positive > optimal_thresh, 'positive', 'negative'))
+  temp_valid$pred_class <- factor(temp_valid$pred_class, levels = c('positive', 'negative'))
+  temp_valid$acc <- caret::confusionMatrix(table(temp_valid$pred_class, temp_valid$real))$overall[[1]]
+  acc <-  round(caret::confusionMatrix(table(temp_valid$pred_class, temp_valid$real))$overall[[1]], 2)
+  # get confusion matrix function for plotting
+  library(data.table)
+  ConfusionMatrixInfo(data = temp_valid,
+                      other_title = paste0('valid', '_',acc,'_',combat,'_' , method, '_', size, '_',
+                                           num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_',beta_thresh,'_',optimal_thresh ),
+                      predict = 'positive',
+                      actual = 'real',
+                      cutoff = optimal_thresh,
+                      get_plot = TRUE)
+  
+  ConfusionMatrixInfo(data = temp_con,
+                      other_title = paste0('null all','_',combat,'_' , method, '_', size, '_',
+                                           num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_',beta_thresh, '_',optimal_thresh),
+                      predict = 'positive',
+                      actual = 'real',
+                      cutoff = optimal_thresh,
+                      get_plot = TRUE)
+  
+  if(use_null_450 == 'used_null_450_all'){
+    temp_con_wt <- temp_con[temp_con$WT == 1,]
+    temp_con_mut <- temp_con[temp_con$MUT == 1,]
+    
+    ConfusionMatrixInfo(data = temp_con_wt,
+                        other_title = paste0('null wt','_',combat,'_' , method, '_', size, '_',
+                                             num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_',beta_thresh, '_',optimal_thresh),
+                        predict = 'positive',
+                        actual = 'real',
+                        cutoff = optimal_thresh,
+                        get_plot = TRUE)
+    
+    ConfusionMatrixInfo(data = temp_con_mut,
+                        other_title = paste0('null mut','_',combat,'_' , method, '_', size, '_',
+                                             num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_',beta_thresh, '_',optimal_thresh),
+                        predict = 'positive',
+                        actual = 'real',
+                        cutoff = optimal_thresh,
+                        get_plot = TRUE)
+  }
+  
+  # ConfusionMatrixInfo(data = temp_450_wt,
+  #                     other_title = paste0('null 450 wt','_',combat,'_' , method, '_', size, '_',
+  #                                          num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_',beta_thresh, '_',optimal_thresh),
+  #                     predict = 'positive',
+  #                     actual = 'real_label',
+  #                     cutoff = optimal_thresh,
+  #                     get_plot = TRUE)
+  # 
+  # 
+  # 
+  # ConfusionMatrixInfo(data = temp_850,
+  #                     other_title = paste0('null 850', '_',combat,'_' , method, '_', size, '_',
+  #                                          num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_',beta_thresh, '_',optimal_thresh),
+  #                     predict = 'positive',
+  #                     actual = 'real_label',
+  #                     cutoff = optimal_thresh,
+  #                     get_plot = TRUE)
+  # 
+  # get dataset of predictions and labels for both small and large data
+  pred_val <- prediction(temp_valid$positive, temp_valid$real)
+  # pred_con <- prediction(temp_valid_850$controls_age_pred, temp_valid_850$controls_age_label)
+  
+  # get performace objects
+  perf_s <- performance(prediction.obj = pred_val, measure = 'tpr', x.measure = 'fpr')
+  # perf_l <- performance(prediction.obj = pred_long, measure = 'tpr', x.measure = 'fpr')
+  
+  # plot mean preds
+  dev.off()
+  plot(perf_s)
+  abline(a = 0, b =1)
+  temp <- round(roc(temp_valid$real, temp_valid$positive)[[9]][1], 2)
+  legend(x = 0.8, y = 0.2, legend = paste0('AUC = ', temp))
+  
+  
+  # plot age as a function of prediction
+  ggplot(temp_valid,
+         aes(age_sample_collection, positive)) +
+    geom_point() +
+    labs(title = 'Age in months vs risk score',
+         x = 'Age (months)',
+         y = 'Mean risk score') +
+    geom_smooth(method = 'loess')
+  
+  
+  
+}
 
-temp$real <- as.factor(ifelse(temp$age < 72, 'positive', 'negative'))
-temp$real <- factor(temp$real, levels = c('positive', 'negative'))
-temp$pred_class <- as.factor(ifelse(temp$positive > 0.5, 'positive', 'negative'))
-temp$pred_class <- factor(temp$pred_class, levels = c('positive', 'negative'))
-temp$acc <- caret::confusionMatrix(table(temp$pred_class, temp$real))$overall[[1]]
 
 
-ConfusionMatrixInfo(data = temp, 
-                    predict = 'positive', 
-                    actual = 'real', 
-                    cutoff = 0.5, 
-                    get_plot = TRUE, 
-                    other_title = '', 
-                    data_type = 'valid')
-
-# get dataset of predictions and labels for both small and large data
-pred_val <- prediction(temp$positive, temp$real)
-# pred_con <- prediction(temp_valid_850$controls_age_pred, temp_valid_850$controls_age_label)
-
-# get performace objects
-perf_s <- performance(prediction.obj = pred_val, measure = 'tpr', x.measure = 'fpr')
-# perf_l <- performance(prediction.obj = pred_long, measure = 'tpr', x.measure = 'fpr')
-
-# plot mean preds
-dev.off()
-plot(perf_s)
-abline(a = 0, b =1)
-temp_roc <- round(roc(temp$real, temp$positive)[[9]][1], 2)
-legend(x = 0.8, y = 0.2, legend = paste0('AUC = ', temp_roc))
 
 
-# plot age as a function of prediction
-ggplot(temp,
-       aes(age, positive)) +
-  geom_point() +
-  labs(title = 'Age in months vs risk score',
-       x = 'Age (months)',
-       y = 'Mean risk score') +
-  geom_smooth(method = 'loess')
+
+
+# CONTROLS
+if(model_type == 'enet'){
+  
+  
+  temp_valid <- valid_dat[, c('tm_donor','valid_age_label',  'age_diagnosis', 'age_sample_collection', 'valid_age_pred','non_zero', 'alpha', 'tech')]
+  temp_con <- con_dat[, c('tm_donor','controls_age_label',  'age_sample_collection', 'controls_age_pred','non_zero', 'alpha', 'tech')]
+  temp_con$pred_class <- as.factor(ifelse(temp_con$controls_age_pred > optimal_thresh, 'positive', 'negative'))
+  temp_con$pred_class <- factor(temp_con$pred_class, levels = c('positive', 'negative'))
+  
+  
+  
+  temp_valid$real <- as.factor(ifelse(temp_valid$age_diagnosis <= 72, 'positive', 'negative'))
+  temp_valid$real <- factor(temp_valid$real, levels = c('positive', 'negative'))
+  temp_valid$pred_class <- as.factor(ifelse(temp_valid$valid_age_pred > optimal_thresh, 'positive', 'negative'))
+  
+  temp_valid$pred_class<- factor(temp_valid$pred_class, c('positive', 'negative'))
+  temp_valid$acc <- caret::confusionMatrix(table(temp_valid$pred_class, temp_valid$real))$overall[[1]]
+  acc <- round(unique(temp_valid$acc), 3)
+  # get confusion matrix function for plotting 
+  ConfusionMatrixInfo(data = temp_valid, 
+                      predict = 'valid_age_pred', 
+                      actual = 'real', 
+                      cutoff = optimal_thresh,
+                      other_title = paste0('valid','_',acc ,'_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_', is_lambda,'_',standardize_data,'_',alpha_num,'_',round(s_num, 4),'_', is_alpha),
+                      get_plot = TRUE)
+  
+  # get confusion matrix function for plotting 
+  ConfusionMatrixInfo(data = temp_450, 
+                      predict = 'mean_pred', 
+                      actual = 'controls_age_label', 
+                      cutoff = optimal_thresh,
+                      other_title = paste0('null 450','_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_', is_lambda,'_',standardize_data,'_',alpha_num,'_',round(s_num, 4),'_', is_alpha),
+                      get_plot = TRUE)
+  
+  # get confusion matrix function for plotting 
+  ConfusionMatrixInfo(data = temp_850, 
+                      predict = 'mean_pred', 
+                      actual = 'controls_age_label', 
+                      cutoff = optimal_thresh,
+                      other_title = paste0('null 850','_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_', is_lambda,'_',standardize_data,'_',alpha_num,'_',round(s_num, 4),'_', is_alpha),
+                      get_plot = TRUE)
+  
+  # get dataset of predictions and labels for both small and large data
+  pred_short <- prediction(temp_valid$valid_age_pred, temp_valid$real)
+  # pred_long <- prediction(sub_dat$preds, temp_valid$real)
+  
+  # get performace objects
+  perf_s <- performance(prediction.obj = pred_short, measure = 'tpr', x.measure = 'fpr')
+  # perf_l <- performance(prediction.obj = pred_long, measure = 'tpr', x.measure = 'fpr')
+  
+  # plot mean preds
+  plot(perf_s)
+  abline(a = 0, b =1)
+  temp <- round(roc(temp_valid$real, temp_valid$valid_age_pred)[[9]], 2)
+  legend(x = 0.8, y = 0.2, legend = paste0('AUC = ', temp[[1]]))
+  
+  # plot age as a function of prediction
+  ggplot(temp_valid, 
+         aes(age_sample_collection, valid_age_pred)) + 
+    geom_point() +
+    labs(title = 'Age in months vs risk score',
+         x = 'Age (months)',
+         y = 'Mean risk score') +
+    geom_smooth(method = 'loess')
+  
+  
+} 
+
+
+

@@ -4,7 +4,7 @@ source('all_functions.R')
 # next do swan with standardize and not
 # set fixed variables
 # set fixed variables
-size = 'full'
+size = 'used_bh'
 model_type = 'rf'
 null_450 = TRUE
 null_450_all = FALSE
@@ -13,7 +13,7 @@ gender = TRUE
 use_cancer = TRUE
 method = 'noob'
 include_under_6 = FALSE
-combat = 'normal'
+combat = 'combat_1'
 alpha_val = 0.1
 train_alpha = FALSE
 train_lambda = FALSE
@@ -319,10 +319,10 @@ if(model_type == 'enet'){
   temp_model <- result_list[[4]]
   
   
-  saveRDS(temp_con, paste0('pc_data_test/', 'con_test_',method,'_',size,'_',is_gen,'_',combat,'_', model_type,'_',optimal_thresh,'_',use_null_450,'_',removed_cancer,'_',removed_cancer,'_',use_p53,'_', used_under_6,'.rda'))
-  
-  saveRDS(temp_valid, paste0('pc_data_test/', 'valid_test_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_',optimal_thresh,'_',use_null_450,'_',removed_cancer,'_', used_under_6,'.rda'))
-  
+  # temp_con <-  readRDS(paste0('pc_data_test/', 'con_test_',method,'_',size,'_',is_gen,'_',combat,'_', model_type,'_',optimal_thresh,'_',use_null_450,'_',removed_cancer,'_',removed_cancer,'_',use_p53,'_', used_under_6,'.rda'))
+  # 
+  # temp_valid <- readRDS(paste0('pc_data_test/', 'valid_test_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_',optimal_thresh,'_',use_null_450,'_',removed_cancer,'_', used_under_6,'.rda'))
+  # 
   saveRDS(temp_importance, paste0('pc_data_test/', 'importance_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_',optimal_thresh,'_',use_null_450,'_',removed_cancer,'_',use_p53,'_', used_under_6,'.rda'))
   saveRDS(temp_model, paste0('pc_data_test/', 'model_',method,'_',size,'_',is_gen, '_',combat,'_', model_type,'_',optimal_thresh,'_',use_null_450,'_',removed_cancer, '_',use_p53,'_', used_under_6,'.rda'))
   
@@ -381,17 +381,16 @@ if (model_type == 'rf'){
                       cutoff = optimal_thresh,
                       get_plot = TRUE,
                       data_type = 'valid',
-                      points = FALSE)
+                      points = TRUE)
   
   ConfusionMatrixInfo(data = temp_con,
-                      other_title = paste0('null all','_',combat,'_' , method, '_', size, '_',
-                                           num_seeds, '_', k_folds, '_', is_gen, '_',model_type,'_',age_cutoff,'_',beta_thresh, '_',optimal_thresh),
+                      other_title = '',
                       predict = 'positive',
                       actual = 'real',
                       cutoff = optimal_thresh,
                       get_plot = TRUE,
                       data_type = 'null',
-                      points = FALSE)
+                      points = TRUE)
   
   temp_con$acc <- caret::confusionMatrix(table(temp_con$pred_class, temp_con$real))$overall[[1]]
   acc <-  round(caret::confusionMatrix(table(temp_con$pred_class, temp_con$real))$overall[[1]], 2)
@@ -453,10 +452,25 @@ if (model_type == 'rf'){
   
   # plot mean preds
   dev.off()
-  plot(perf_s)
+  plot(perf_s, lty = 'dotted', lwd = 3, 
+       cex.main=1.25, cex.lab=1.5, cex.axis=0.75)
   abline(a = 0, b =1)
   temp <- round(roc(temp_valid$real, temp_valid$positive)[[9]][1], 2)
   legend(x = 0.8, y = 0.2, legend = paste0('AUC = ', temp))
+  
+  
+  temp <- as.data.frame(cbind(x_val = unlist(perf_s@x.values), 
+                              y_val = unlist(perf_s@y.values)))
+  ggplot(temp, aes(x_val, y_val)) +
+    geom_line(size = 1.5, linetype = 2, col = 'blue') + 
+    labs(x = 'False positive rate',
+         y = 'True positive rate',
+         subtitle = 'AUC = 0.88') +
+    theme_base(base_size = 18) +
+    geom_abline(intercept = 0, slope = 1) + theme_bw(base_size = 18) +
+    theme(panel.border = element_blank(), panel.background = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank())
   
   
   # plot age as a function of prediction

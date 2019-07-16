@@ -1,22 +1,24 @@
-##########
-# get base directory for 2 batches from 850k
-##########
+# This script will read in 850k methylation data and preprocess it
+
+# get path to validation data 
 path_to_controls <- '../../Data/methyl_data/controls'
 path_to_valid <- '../../Data/methyl_data/validation'
 
-# set preprocessing method
+# set preprocessing method and methylation data type 
 method <- 'quan'
 methyl_type <- 'beta'
 
-# get functions
+# source all functions
 source('all_functions.R')
 
-# read in 450k data to get variable names to grab intersection
+# read in 450k data to get probe names in order to subset 850k data by those probe names
 cases <- readRDS(paste0('../../Data/', method,'/cases_450_beta.rda'))
+
+# get probe names
 features_450 <- colnames(cases)[12:ncol(cases)]
 rm(cases)
 ##########
-# read in meth array - Data/methyl_data/cases_toronto, cases_montreal, controls, validation
+# read in 850k controls (LFS no cancer) and cases (LFS cancer)
 ##########
 
 # controls
@@ -25,24 +27,7 @@ rgControls <- read.metharray.exp(path_to_controls, recursive = T)
 # valid
 rgValid <- read.metharray.exp(path_to_valid, recursive = T)
 
-##########
-# load genomic methyl set (from controls) - you need genetic locations by probe from this object
-# ##########
-# ratio_set <- readRDS('../../Data/model_data/raw_ratio_set.rda')
-# 
-# # get granges object
-# g_ranges <- as.data.frame(getLocations(ratio_set))
-# 
-# # get probes from rownames
-# g_ranges$probe <- rownames(g_ranges)
-# 
-# # remove ch and duplicatee
-# g_ranges <- g_ranges[!duplicated(g_ranges$start),]
-# g_ranges <- g_ranges[!grepl('ch', g_ranges$probe),]
-
-##########
 # read in clinical data
-##########
 clin <- read.csv('../../Data/clin_data/new_clin.csv', stringsAsFactors = F)
 
 # clean clinical ids

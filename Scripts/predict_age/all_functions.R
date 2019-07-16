@@ -2663,11 +2663,16 @@ ConfusionMatrixInfo <- function( data, predict, actual, cutoff, get_plot, other_
   actual  <- relevel( as.factor( data[[actual]] ), "positive" )
   if(data_type == 'null') {
     age <- data$age_sample_collection
-    show_legend <- FALSE
+    show_legend <- TRUE
+    legend_cols <- c('blue', 'blue', 'blue', 'blue')
+    breaks <- c("TN" )
+    
     
   } else {
     age <- data$age_diagnosis
     show_legend <- TRUE
+    legend_cols <- c('red', 'orange','blue', 'purple')
+    breaks <- c( "TP", "FN", "FP", "TN" )
   }
   result <- data.table( actual = actual, predict = predict, age = age)
   
@@ -2695,18 +2700,20 @@ ConfusionMatrixInfo <- function( data, predict, actual, cutoff, get_plot, other_
   
   if(points){
     plot <- ggplot( result, aes( actual, predict, color = type ) ) + 
-      geom_jitter(size = 2, alpha = 0.5, show.legend = show_legend) +
-      scale_color_manual(name = 'Result',
-                         values = c('red', 'orange','green', 'blue'),
-                         breaks = c( "TP", "FN", "FP", "TN" ))+
+      geom_jitter(size = 3, alpha = 0.8, show.legend = show_legend) +
+      scale_color_manual(name = '',
+                         values = legend_cols,
+                         breaks = breaks)+
       geom_violin( fill = "lightgrey", color = NA , alpha = 0.3) +
       geom_hline( yintercept = cutoff, color = 'black', alpha = 0.6, linetype = 2 ) + 
       geom_vline(xintercept = 1.5, linetype = 2) +
       scale_y_continuous( limits = c( 0, 1 ) ) + 
-      guides( col = guide_legend( nrow = 2 ) ) + # adjust the legend to have two rows  
       ggtitle( sprintf( other_title,"_Cutoff at %.2f", cutoff ) ) +
-      theme(text = element_text(size=14)) + 
-      xlab(x_lab) + ylab('Predicted probability of onset') + theme_base(base_size = 18)
+      theme(legend.position="bottom", text = element_text(size=16)) +
+      xlab(x_lab) + ylab('Predicted probability of onset') + theme_bw(base_size = 18) +
+      theme(panel.border = element_blank(), panel.background = element_blank(),
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank())
     
   } else {
     plot <- ggplot( result, aes( actual, predict, color = type ) ) + 
@@ -2722,7 +2729,10 @@ ConfusionMatrixInfo <- function( data, predict, actual, cutoff, get_plot, other_
       guides( col = guide_legend( nrow = 2 ) ) + # adjust the legend to have two rows  
       ggtitle( sprintf( other_title,"_Cutoff at %.2f", cutoff ) ) +
       theme(text = element_text(size=14)) + 
-      xlab(x_lab) + ylab('Predicted probability of onset') + theme_base(base_size = 18)
+      xlab(x_lab) + ylab('Predicted probability of onset')  + theme_bw(base_size = 18) +
+      theme(panel.border = element_blank(), panel.background = element_blank(),
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank())
     
   }
   

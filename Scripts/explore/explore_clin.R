@@ -29,11 +29,19 @@ clin <- read.csv('../../Data/clin_data/new_clin.csv')
 # keep only Mut, Cancer, not NA in age, and have methylation
 clin <- clin[clin$methyl_status == 'yes',]
 clin <- clin[clin$p53 == 'MUT',]
-clin <- clin[clin$cancer_diagnosis_diagnoses == 'Unaffected',]
+clin <- clin[clin$cancer_diagnosis_diagnoses != 'Unaffected',]
 # clin <- clin[!is.na(clin$age_diagnosis),]
 clin <- clin[!duplicated(clin$tm_donor),]
 clin <- clin[!duplicated(clin$blood_dna_malkin_lab),]
 clin <- clin[!is.na(clin$age_sample_collection),]
+
+library(ggplot2)
+library(ggthemes)
+ggplot(clin, aes(age_sample_collection, age_diagnosis)) +
+  geom_point(size = 2, alpha = 0.7) +
+  labs(x = 'Age of sample collection',
+       y = 'Age of onset') +
+  theme_base()
 
 
 summary(as.factor(clin$cancer_diagnosis_diagnoses))

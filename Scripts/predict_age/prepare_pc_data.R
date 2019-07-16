@@ -114,7 +114,7 @@ con_wt_small <- join_new_features(con_wt, new_features = bh_feats)
 # lfs probes 
 lfs_bump_probes <- colnames(cases_450)[grepl('^cg', colnames(cases_450))]
 
-rm(bh_feats)
+rm(bh_feats) 
 
 
 # add dummy tech variable for data sets with only one, replace family_name
