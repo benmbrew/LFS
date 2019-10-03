@@ -29,6 +29,7 @@ registerDoParallel(6)
 
 set.seed(1)
 
+class.ind(c('ben', 'xing', 'ben'))
 
 ##########
 # function that Loops through list, preprocesses, and convert to beta, m, and cn values 

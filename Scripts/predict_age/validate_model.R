@@ -5,13 +5,13 @@ source('all_functions.R')
 # next do swan with standardize and not
 # set fixed variables
 # set fixed variables
-size = 'full'
+size = 'used_bh'
 model_type = 'rf'
-null_450= TRUE
+null_450 = TRUE
 null_450_all = FALSE
 use_p53 = FALSE
 gender = TRUE
-use_cancer = TRUE
+use_cancer = FALSE
 method = 'noob'
 include_under_6 = FALSE
 combat = 'combat_1'
@@ -99,6 +99,7 @@ all_test_results <- list()
 importance_results <- list()
 rf_pred_results <- list()
 rf_important_results <- list()
+
 
 
 if(size =='used_bh'){
